@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DAWARICH_SYNC_LOOKAHEAD_DAYS,
   DAWARICH_SYNC_LOOKBACK_DAYS,
@@ -7,11 +8,18 @@ import {
   type DawarichSyncState,
 } from '@trek/shared';
 import { ADDON_IDS } from '../../addons';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { AddonsService } from '../addons/addons.service';
 import { logError, logInfo } from '../audit/audit-log.logger';
 import { getCountryFromCoords } from '../atlas/atlas-geo';
+import { DawarichVisitSuggestions } from '../../db/entities/DawarichVisitSuggestions.entity';
+import { DawarichVisitSuggestionsRepository } from '../../db/repositories/DawarichVisitSuggestions.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import { TripsRepository } from '../../db/repositories/Trips.repository';
+import { BucketList } from '../../db/entities/BucketList.entity';
+import { BucketListRepository } from '../../db/repositories/BucketList.repository';
+import { DawarichConnections } from '../../db/entities/DawarichConnections.entity';
+import { DawarichConnectionsRepository } from '../../db/repositories/DawarichConnections.repository';
 import { DawarichClient, DawarichError, type DawarichCreds } from './dawarich.client';
 import { DawarichService } from './dawarich.service';
 import { distanceMeters, localDateOf, normalizeVisit, syncWindow, visitHash } from './dawarich.helpers';
@@ -67,10 +75,13 @@ export class DawarichSyncService {
   private readonly inFlight = new Set<number>();
 
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(DawarichVisitSuggestions) private readonly suggestions: DawarichVisitSuggestionsRepository,
     private readonly addons: AddonsService,
     private readonly client: DawarichClient,
     private readonly dawarich: DawarichService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
+    @InjectRepository(BucketList) private readonly bucketList: BucketListRepository,
+    @InjectRepository(DawarichConnections) private readonly connections: DawarichConnectionsRepository,
     private readonly uow: UnitOfWork,
   ) {}
 
@@ -112,12 +123,9 @@ export class DawarichSyncService {
       // Not a failure and not a fresh result: the run that is already going will
       // record its own. Reporting the state the connection currently holds keeps
       // the card honest, and `alreadyRunning` lets the caller say so.
-      const current = this.db.get<{ last_sync_state: string }>(
-        'SELECT last_sync_state FROM dawarich_connections WHERE user_id = ?',
-        userId,
-      );
+      const currentState = await this.connections.getLastSyncState(userId);
       return {
-        state: (current?.last_sync_state as DawarichSyncState) ?? 'never',
+        state: (currentState as DawarichSyncState) ?? 'never',
         created: 0,
         updated: 0,
         missing: 0,
@@ -212,19 +220,7 @@ export class DawarichSyncService {
    * first time wants their last holiday filled in, not just today's.
    */
   private async listTripsToSync(userId: number): Promise<TripRow[]> {
-    return this.db.all<TripRow>(
-      `SELECT DISTINCT t.id, t.start_date, t.end_date
-         FROM trips t
-         LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
-        WHERE (t.user_id = ? OR m.user_id IS NOT NULL)
-          AND COALESCE(t.is_archived, 0) = 0
-          AND t.start_date IS NOT NULL
-          AND (t.end_date IS NULL OR t.end_date >= date('now', '-400 days'))
-          AND t.start_date <= date('now', '+1 day')
-        ORDER BY t.start_date DESC`,
-      userId,
-      userId,
-    );
+    return this.trips.listTripsToSync(userId);
   }
 
   /**
@@ -261,11 +257,7 @@ export class DawarichSyncService {
       seenIds.add(visit.sourceVisitId);
 
       const hash = visitHash(raw);
-      const existing = this.db.get<SuggestionRow>(
-        'SELECT * FROM dawarich_visit_suggestions WHERE user_id = ? AND source_visit_id = ?',
-        userId,
-        visit.sourceVisitId,
-      );
+      const existing = await this.suggestions.findByUserAndVisit(userId, visit.sourceVisitId);
 
       // Dawarich has no country code on a visit's place, so it is resolved here
       // from the coordinates against the same borders the Atlas draws. A code
@@ -278,30 +270,25 @@ export class DawarichSyncService {
       const ownerTripId = tripForVisit(visit.localDate, tripId, existing?.trip_id ?? null, trips);
 
       if (!existing) {
-        this.db.run(
-          `INSERT INTO dawarich_visit_suggestions
-             (user_id, source_visit_id, trip_id, name, lat, lng, started_at, ended_at,
-              duration_minutes, local_date, source_status, confidence, confidence_band,
-              country_code, state, source_hash, first_seen_at, last_seen_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?)`,
-          userId,
-          visit.sourceVisitId,
-          ownerTripId,
-          visit.name,
-          visit.lat,
-          visit.lng,
-          visit.startedAt,
-          visit.endedAt,
-          visit.durationMinutes,
-          visit.localDate,
-          visit.status,
-          visit.confidence,
-          visit.confidenceBand,
-          countryCode,
-          hash,
-          new Date().toISOString(),
-          new Date().toISOString(),
-        );
+        await this.suggestions.insertVisit({
+          user_id: userId,
+          source_visit_id: visit.sourceVisitId,
+          trip_id: ownerTripId,
+          name: visit.name,
+          lat: visit.lat,
+          lng: visit.lng,
+          started_at: visit.startedAt,
+          ended_at: visit.endedAt,
+          duration_minutes: visit.durationMinutes,
+          local_date: visit.localDate,
+          source_status: visit.status,
+          confidence: visit.confidence,
+          confidence_band: visit.confidenceBand,
+          country_code: countryCode,
+          source_hash: hash,
+          first_seen_at: new Date().toISOString(),
+          last_seen_at: new Date().toISOString(),
+        });
         created++;
         await this.matchBucketList(userId, visit.sourceVisitId, visit.lat, visit.lng, visit.durationMinutes);
         continue;
@@ -314,29 +301,22 @@ export class DawarichSyncService {
         // simply the better suggestion. Overwriting here loses nothing, and
         // that includes the trip: a stay parked on a neighbour by an earlier
         // run moves to the trip whose dates hold it.
-        this.db.run(
-          `UPDATE dawarich_visit_suggestions
-              SET name = ?, lat = ?, lng = ?, started_at = ?, ended_at = ?, duration_minutes = ?,
-                  local_date = ?, source_status = ?, confidence = ?, confidence_band = ?,
-                  country_code = ?, source_hash = ?, source_missing_at = NULL,
-                  trip_id = ?, last_seen_at = ?
-            WHERE id = ?`,
-          visit.name,
-          visit.lat,
-          visit.lng,
-          visit.startedAt,
-          visit.endedAt,
-          visit.durationMinutes,
-          visit.localDate,
-          visit.status,
-          visit.confidence,
-          visit.confidenceBand,
-          countryCode,
-          hash,
-          ownerTripId,
-          new Date().toISOString(),
-          existing.id,
-        );
+        await this.suggestions.updateNewVisit(existing.id, {
+          name: visit.name,
+          lat: visit.lat,
+          lng: visit.lng,
+          started_at: visit.startedAt,
+          ended_at: visit.endedAt,
+          duration_minutes: visit.durationMinutes,
+          local_date: visit.localDate,
+          source_status: visit.status,
+          confidence: visit.confidence,
+          confidence_band: visit.confidenceBand,
+          country_code: countryCode,
+          source_hash: hash,
+          trip_id: ownerTripId,
+          last_seen_at: new Date().toISOString(),
+        });
         if (changed) updated++;
         await this.matchBucketList(userId, visit.sourceVisitId, visit.lat, visit.lng, visit.durationMinutes);
         continue;
@@ -346,14 +326,7 @@ export class DawarichSyncService {
       // rather than on every tick, but nothing the user can see is rewritten.
       // `accepted_hash` is what they said yes to; the difference between that
       // and the current hash is what the UI reports.
-      this.db.run(
-        `UPDATE dawarich_visit_suggestions
-            SET source_hash = ?, source_missing_at = NULL, last_seen_at = ?
-          WHERE id = ?`,
-        hash,
-        new Date().toISOString(),
-        existing.id,
-      );
+      await this.suggestions.refreshHash(existing.id, hash, new Date().toISOString());
       if (changed) updated++;
     }
 
@@ -385,11 +358,7 @@ export class DawarichSyncService {
     // YYYY-MM-DD on both sides of the comparison, and a day of slack at each
     // end is deliberate: a row just outside the window is left alone rather
     // than deleted for not having been seen.
-    const candidates = this.db.all<{ id: number; source_visit_id: string; state: string }>(
-      `SELECT id, source_visit_id, state
-         FROM dawarich_visit_suggestions
-        WHERE user_id = ? AND trip_id = ?
-          AND local_date >= ? AND local_date <= ?`,
+    const candidates = await this.suggestions.listCandidatesForWindow(
       userId,
       tripId,
       localDateOf(from.toISOString()),
@@ -403,13 +372,9 @@ export class DawarichSyncService {
     await this.uow.transactional(async () => {
       for (const row of gone) {
         if (row.state === 'new') {
-          this.db.run('DELETE FROM dawarich_visit_suggestions WHERE id = ?', row.id);
+          await this.suggestions.deleteById(row.id);
         } else {
-          this.db.run(
-            'UPDATE dawarich_visit_suggestions SET source_missing_at = COALESCE(source_missing_at, ?) WHERE id = ?',
-            stamp,
-            row.id,
-          );
+          await this.suggestions.stampMissingIfUnset(row.id, stamp);
         }
       }
     });
@@ -439,19 +404,11 @@ export class DawarichSyncService {
     // degree of latitude is ~111 km, and longitude shrinks with latitude, so the
     // box is deliberately generous and the real test is the distance below.
     const degrees = (DAWARICH_BUCKET_MATCH_RADIUS_M / 111_000) * 2 + 0.01;
-    const nearby = this.db.all<{ id: number; lat: number; lng: number }>(
-      `SELECT id, lat, lng FROM bucket_list
-        WHERE user_id = ? AND lat IS NOT NULL AND lng IS NOT NULL
-          AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`,
-      userId,
-      lat - degrees,
-      lat + degrees,
-      lng - degrees,
-      lng + degrees,
-    );
+    const nearby = await this.bucketList.listInBoundingBox(userId, lat - degrees, lat + degrees, lng - degrees, lng + degrees);
 
     let best: { id: number; lat: number; lng: number; distance: number } | null = null;
     for (const item of nearby) {
+      if (item.lat === null || item.lng === null) continue;
       const distance = distanceMeters(lat, lng, item.lat, item.lng);
       if (distance > DAWARICH_BUCKET_MATCH_RADIUS_M) continue;
       if (!best || distance < best.distance) best = { id: item.id, lat: item.lat, lng: item.lng, distance };
@@ -483,20 +440,7 @@ export class DawarichSyncService {
     lng: number,
     durationMinutes: number,
   ): Promise<void> {
-    const holders = this.db.all<{
-      id: number;
-      source_visit_id: string;
-      lat: number | null;
-      lng: number | null;
-      duration_minutes: number;
-    }>(
-      `SELECT id, source_visit_id, lat, lng, duration_minutes
-         FROM dawarich_visit_suggestions
-        WHERE user_id = ? AND matched_bucket_list_item_id = ? AND source_visit_id <> ?`,
-      userId,
-      wish.id,
-      sourceVisitId,
-    );
+    const holders = await this.suggestions.listHoldersOfWish(userId, wish.id, sourceVisitId);
 
     for (const holder of holders) {
       if (holder.lat === null || holder.lng === null) continue;
@@ -508,17 +452,8 @@ export class DawarichSyncService {
     }
 
     await this.uow.transactional(async () => {
-      this.db.run(
-        'UPDATE dawarich_visit_suggestions SET matched_bucket_list_item_id = NULL WHERE user_id = ? AND matched_bucket_list_item_id = ?',
-        userId,
-        wish.id,
-      );
-      this.db.run(
-        'UPDATE dawarich_visit_suggestions SET matched_bucket_list_item_id = ? WHERE user_id = ? AND source_visit_id = ?',
-        wish.id,
-        userId,
-        sourceVisitId,
-      );
+      await this.suggestions.clearWishHolders(userId, wish.id);
+      await this.suggestions.assignWishHolder(userId, sourceVisitId, wish.id);
     });
   }
 }
@@ -527,13 +462,6 @@ interface TripRow {
   id: number;
   start_date: string | null;
   end_date: string | null;
-}
-
-interface SuggestionRow {
-  id: number;
-  trip_id: number | null;
-  state: string;
-  source_hash: string;
 }
 
 /**

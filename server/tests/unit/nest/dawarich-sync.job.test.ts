@@ -38,7 +38,7 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => logMock);
 
 import { DawarichSyncJob } from '../../../src/nest/integrations/dawarich-sync.job';
 import type { DawarichSyncService } from '../../../src/nest/integrations/dawarich-sync.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
 
 const SETTING_KEY = 'dawarich_poll_interval_minutes';
@@ -64,22 +64,22 @@ function makeJob(intervalSetting?: string, enabled = true) {
     // behaviour exactly, so every existing assertion below is unaffected.
     runOnBoot: vi.fn(async (_name: string, fn: () => void | Promise<void>) => { await fn(); }),
   };
-  // Shaped like the real `get<T>(sql, ...params)` rather than a bare `vi.fn()`
-  // so the stub cannot quietly drift from the signature the job calls; the
-  // statement and the key are the whole point of DAWARICH-JOB-002.
-  const db = {
-    get: vi.fn((_sql: string, ..._params: unknown[]) => (intervalSetting === undefined ? undefined : { value: intervalSetting })),
+  // Shaped like the real `AppSettingsRepository#getValue(key)` rather than a
+  // bare `vi.fn()` so the stub cannot quietly drift from the signature the
+  // job calls; the key itself is the whole point of DAWARICH-JOB-002.
+  const appSettings = {
+    getValue: vi.fn(async (_key: string) => (intervalSetting === undefined ? null : intervalSetting)),
   };
   const sync = {
     runSync: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     syncGloballyEnabled: vi.fn(() => false),
   };
   const job = new DawarichSyncJob(
-    db as unknown as DatabaseService,
+    appSettings as unknown as AppSettingsRepository,
     sync as unknown as DawarichSyncService,
     registrar as unknown as CronRegistrarService,
   );
-  return { job, registrar, db, sync, takeTick: () => onTick };
+  return { job, registrar, db: appSettings, sync, takeTick: () => onTick };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -98,7 +98,7 @@ describe('DawarichSyncJob bootstrap', () => {
     // other integration's cadence and nothing anywhere would fail.
     const { job, db } = makeJob('20');
     await job.onApplicationBootstrap();
-    expect(db.get).toHaveBeenCalledWith('SELECT value FROM app_settings WHERE key = ?', SETTING_KEY);
+    expect(db.getValue).toHaveBeenCalledWith(SETTING_KEY);
   });
 
   it('DAWARICH-JOB-003: clamps the interval to 5-59 minutes and falls back to 15 on anything else', async () => {
@@ -133,7 +133,7 @@ describe('DawarichSyncJob bootstrap', () => {
     const { job, registrar, db } = makeJob('15', false);
     await job.onApplicationBootstrap();
     expect(registrar.register).not.toHaveBeenCalled();
-    expect(db.get).not.toHaveBeenCalled();
+    expect(db.getValue).not.toHaveBeenCalled();
     expect(logMock.logInfo).not.toHaveBeenCalled();
   });
 
@@ -154,7 +154,7 @@ describe('DawarichSyncJob bootstrap', () => {
     const { job, db, registrar, takeTick } = makeJob('15');
     await job.onApplicationBootstrap();
     await takeTick()?.();
-    expect(db.get).toHaveBeenCalledTimes(1);
+    expect(db.getValue).toHaveBeenCalledTimes(1);
     expect(registrar.register).toHaveBeenCalledTimes(1);
     expect(registrar.unregister).not.toHaveBeenCalled();
   });
@@ -164,7 +164,7 @@ describe('DawarichSyncJob bootstrap', () => {
     registrar.runOnBoot.mockImplementationOnce(async () => { /* simulates no ORM available — fn never runs */ });
     await job.onApplicationBootstrap();
     expect(registrar.runOnBoot).toHaveBeenCalledWith('dawarich-sync-boot', expect.any(Function));
-    expect(db.get).not.toHaveBeenCalled();
+    expect(db.getValue).not.toHaveBeenCalled();
     // minutes keeps its 15-default (the interval read never ran) and the job
     // still registers, rather than never scheduling at all.
     expect(registrar.register).toHaveBeenCalledWith('dawarich-sync', '*/15 * * * *', expect.any(Function));

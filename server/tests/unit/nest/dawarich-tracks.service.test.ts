@@ -53,7 +53,7 @@ import type {
   DawarichTrackFeature,
 } from '../../../src/nest/integrations/dawarich.client';
 import type { DawarichService } from '../../../src/nest/integrations/dawarich.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { DawarichCapabilities } from '@trek/shared';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -138,10 +138,10 @@ interface Collaborators {
 }
 
 function harness(over: Collaborators = {}) {
-  const canAccessTrip = vi.fn().mockResolvedValue('access' in over ? over.access : TRIP_ACCESS);
-  const get = vi
+  const findAccessible = vi.fn().mockResolvedValue('access' in over ? over.access : TRIP_ACCESS);
+  const findDatesById = vi
     .fn()
-    .mockReturnValue(
+    .mockResolvedValue(
       'trip' in over ? over.trip : { start_date: '2026-05-01', end_date: '2026-05-03' },
     );
   const getCredentials = vi.fn().mockReturnValue('creds' in over ? over.creds : CREDS);
@@ -150,12 +150,12 @@ function harness(over: Collaborators = {}) {
   const listPoints = vi.fn().mockResolvedValue({ points: [], truncated: false });
 
   const service = new DawarichTracksService(
-    { canAccessTrip, get } as unknown as DatabaseService,
+    { findAccessible, findDatesById } as unknown as TripsRepository,
     { getCredentials, getCapabilities } as unknown as DawarichService,
     { listTracks, listPoints } as unknown as DawarichClient,
   );
 
-  return { service, canAccessTrip, get, getCredentials, getCapabilities, listTracks, listPoints };
+  return { service, canAccessTrip: findAccessible, get: findDatesById, getCredentials, getCapabilities, listTracks, listPoints };
 }
 
 beforeEach(() => {

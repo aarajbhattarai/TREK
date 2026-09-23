@@ -44,26 +44,15 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup (real in-memory SQLite, the pattern the other Dawarich service tests use) ──
 
-const { testDb, dbMock } = vi.hoisted(() => {
+const { testDb } = vi.hoisted(() => {
   const Database = require('better-sqlite3');
   const db = new Database(':memory:');
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
-  return {
-    testDb: db,
-    dbMock: {
-      db,
-      closeDb: () => {},
-      reinitialize: () => {},
-      getPlaceWithTags: () => null,
-      canAccessTrip: () => null,
-      isOwner: () => false,
-    },
-  };
+  return { testDb: db };
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
 // Same fixed key the global setup exports, pinned here so the at-rest round
 // trip cannot depend on what is lying in server/data.
 vi.mock('../../../src/config', () => ({
@@ -91,9 +80,11 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import type { DawarichConnectionsRepository } from '../../../src/db/repositories/DawarichConnections.repository';
 import { DawarichService } from '../../../src/nest/integrations/dawarich.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import type { TestOrm } from '../../helpers/test-orm';
+import { createTestDawarichConnectionsRepo } from '../../helpers/dawarich-repos';
+import { createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
 import {
   DawarichError,
   type DawarichClient,
@@ -114,7 +105,8 @@ const client = {
   findVisitsNear: vi.fn(),
 };
 
-const dbs = new DatabaseService(testDb);
+let t: TestOrm;
+let connections: DawarichConnectionsRepository;
 let svc: DawarichService;
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -255,23 +247,27 @@ const countryCodeAbsentCases: Array<[string, Partial<DawarichVisitRaw>]> = [
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  t = await sharedTestOrm(testDb);
+  connections = await createTestDawarichConnectionsRepo(testDb);
   svc = new DawarichService(
-    dbs,
+    connections,
     audit as unknown as AuditService,
     client as unknown as DawarichClient,
-    await createTestUnitOfWork(dbs.connection),
+    await createTestUnitOfWork(testDb),
   );
 });
 
 beforeEach(() => {
   resetTestDb(testDb);
+  t.clear();
   vi.clearAllMocks();
   checkSsrf.mockResolvedValue({ allowed: true, isPrivate: false, resolvedIp: IP });
   allEndpointsAnswer();
   USER = createUser(testDb).user.id;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 
@@ -759,11 +755,12 @@ describe('DawarichService saveSettings', () => {
 
   it('DAWARICH-SVC-070: the address write and the key write are one transaction, so a failed key write cannot leave the old key pointed at the new host', async () => {
     connect(USER, { url: 'https://old.example', apiKey: 'stored-key' });
-    const realRun = dbs.run.bind(dbs);
-    const spy = vi.spyOn(dbs, 'run').mockImplementation((sql: string, ...params: unknown[]) => {
-      if (sql.includes('SET api_key = ?')) throw new Error('disk I/O error');
-      return realRun(sql, ...params);
-    });
+    // Rollback proof (R7's transaction, one of the plan's eight): spy the
+    // SECOND write (the key) to throw and confirm the FIRST write (the
+    // address, already committed to the transactional connection) is rolled
+    // back with it — proving `saveSettings`'s `uow.transactional` wraps both,
+    // not just the address upsert.
+    const spy = vi.spyOn(connections, 'setApiKey').mockRejectedValue(new Error('disk I/O error'));
 
     try {
       await expect(svc.saveSettings(USER, 'https://new.example', 'fresh', false, true, IP)).rejects.toThrow(

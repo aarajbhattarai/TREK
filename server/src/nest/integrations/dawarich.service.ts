@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DAWARICH_KEY_MASK,
   type DawarichCapabilities,
@@ -6,7 +7,8 @@ import {
   type DawarichStatus,
   type DawarichSyncState,
 } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
+import { DawarichConnections } from '../../db/entities/DawarichConnections.entity';
+import { DawarichConnectionsRepository, type DawarichConnectionRow } from '../../db/repositories/DawarichConnections.repository';
 import { AuditService } from '../audit/audit.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { maybe_encrypt_api_key, decrypt_api_key } from '../common/crypto/apiKeyCrypto';
@@ -31,19 +33,14 @@ import { DawarichClient, DawarichError, type DawarichCreds } from './dawarich.cl
 @Injectable()
 export class DawarichService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(DawarichConnections) private readonly connections: DawarichConnectionsRepository,
     private readonly audit: AuditService,
     private readonly client: DawarichClient,
     private readonly uow: UnitOfWork,
   ) {}
 
-  private async readRow(userId: number): Promise<ConnRow | undefined> {
-    return this.db.get<ConnRow>(
-      `SELECT user_id, url, api_key, allow_insecure_tls, sync_enabled,
-              last_sync_at, last_sync_state, last_sync_error, capabilities
-         FROM dawarich_connections WHERE user_id = ?`,
-      userId,
-    );
+  private async readRow(userId: number): Promise<DawarichConnectionRow | null> {
+    return this.connections.findRow(userId);
   }
 
   /** Decrypted credentials for an outbound call, or null when nothing is connected. */
@@ -63,11 +60,7 @@ export class DawarichService {
 
   /** Every user whose connection is usable and whose background sync is on. */
   async listSyncableUserIds(): Promise<number[]> {
-    const rows = this.db.all<{ user_id: number }>(
-      `SELECT user_id FROM dawarich_connections
-        WHERE sync_enabled = 1 AND url IS NOT NULL AND url <> '' AND api_key IS NOT NULL`,
-    );
-    return rows.map((r) => r.user_id);
+    return this.connections.listSyncableUserIds();
   }
 
   /** The connection as the settings card shows it. The key is a mask, always. */
@@ -136,10 +129,7 @@ export class DawarichService {
       }
     }
 
-    const previousUrl = this.db.get<{ url: string | null }>(
-      'SELECT url FROM dawarich_connections WHERE user_id = ?',
-      userId,
-    )?.url ?? null;
+    const previousUrl = (await this.connections.getUrl(userId)) ?? null;
 
     const provided = (apiKey || '').trim();
     const newKey = provided && provided !== DAWARICH_KEY_MASK ? maybe_encrypt_api_key(provided) : undefined;
@@ -148,22 +138,14 @@ export class DawarichService {
     // key would point a credential minted for one instance at another one, and
     // the next sync would send it there.
     await this.uow.transactional(async () => {
-      this.db.run(
-        `INSERT INTO dawarich_connections (user_id, url, allow_insecure_tls, sync_enabled, updated_at)
-              VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-         ON CONFLICT(user_id) DO UPDATE SET
-              url = excluded.url,
-              allow_insecure_tls = excluded.allow_insecure_tls,
-              sync_enabled = excluded.sync_enabled,
-              updated_at = CURRENT_TIMESTAMP`,
-        userId,
-        trimmedUrl || null,
-        allowInsecureTls ? 1 : 0,
-        syncEnabled ? 1 : 0,
-      );
+      await this.connections.upsertConnection(userId, {
+        url: trimmedUrl || null,
+        allowInsecureTls,
+        syncEnabled,
+      });
 
       if (newKey !== undefined) {
-        this.db.run('UPDATE dawarich_connections SET api_key = ? WHERE user_id = ?', newKey, userId);
+        await this.connections.setApiKey(userId, newKey);
       }
 
       // A key belongs to the instance it was minted on. Pointing the connection
@@ -177,15 +159,9 @@ export class DawarichService {
       // this row no longer points at, and a fresh key does not make them true
       // of the new one.
       if (movedHost(previousUrl, trimmedUrl)) {
-        this.db.run(
-          `UPDATE dawarich_connections
-              SET capabilities = NULL, last_sync_state = 'never',
-                  last_sync_error = NULL, last_sync_at = NULL
-            WHERE user_id = ?`,
-          userId,
-        );
+        await this.connections.resetSyncState(userId);
         if (newKey === undefined) {
-          this.db.run('UPDATE dawarich_connections SET api_key = NULL WHERE user_id = ?', userId);
+          await this.connections.setApiKey(userId, null);
         }
       }
 
@@ -193,13 +169,7 @@ export class DawarichService {
       // anything. Keeping it would be storing a live credential for a server
       // nobody named.
       if (!trimmedUrl) {
-        this.db.run(
-          `UPDATE dawarich_connections
-              SET api_key = NULL, capabilities = NULL, last_sync_state = 'never',
-                  last_sync_error = NULL, last_sync_at = NULL
-            WHERE user_id = ?`,
-          userId,
-        );
+        await this.connections.clearForRemovedUrl(userId);
       }
     });
 
@@ -215,7 +185,7 @@ export class DawarichService {
    * destroying user content on its way out. What goes is the credential.
    */
   async disconnect(userId: number, clientIp: string | null): Promise<void> {
-    this.db.run('DELETE FROM dawarich_connections WHERE user_id = ?', userId);
+    await this.connections.disconnect(userId);
     await this.audit.writeAudit({ userId, action: 'dawarich.disconnected', ip: clientIp, details: {} });
   }
 
@@ -338,36 +308,12 @@ export class DawarichService {
   }
 
   async storeCapabilities(userId: number, capabilities: DawarichCapabilities): Promise<void> {
-    this.db.run(
-      'UPDATE dawarich_connections SET capabilities = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
-      JSON.stringify(capabilities),
-      userId,
-    );
+    await this.connections.storeCapabilities(userId, JSON.stringify(capabilities));
   }
 
   async recordSyncResult(userId: number, state: DawarichSyncState, error: string | null): Promise<void> {
-    this.db.run(
-      `UPDATE dawarich_connections
-          SET last_sync_at = ?, last_sync_state = ?, last_sync_error = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ?`,
-      new Date().toISOString(),
-      state,
-      error,
-      userId,
-    );
+    await this.connections.recordSyncResult(userId, { lastSyncAt: new Date().toISOString(), state, error });
   }
-}
-
-interface ConnRow {
-  user_id: number;
-  url: string | null;
-  api_key: string | null;
-  allow_insecure_tls: number | null;
-  sync_enabled: number | null;
-  last_sync_at: string | null;
-  last_sync_state: string | null;
-  last_sync_error: string | null;
-  capabilities: string | null;
 }
 
 /**

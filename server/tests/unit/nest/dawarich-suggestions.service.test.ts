@@ -14,34 +14,15 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup (real in-memory SQLite — same pattern as the other service tests) ──
 
-const { testDb, dbMock } = vi.hoisted(() => {
+const { testDb } = vi.hoisted(() => {
   const Database = require('better-sqlite3');
   const db = new Database(':memory:');
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    // A spy rather than a constant: the acceptance re-reads the place it just
-    // created so the broadcast carries the `source` mark, and the fallback for
-    // a re-read that finds nothing is a branch of its own. armStubs() gives it
-    // the real lookup; one case takes it away again.
-    getPlaceWithTags: vi.fn(),
-    canAccessTrip: (tripId: unknown, userId: number) =>
-      db.prepare(`
-        SELECT t.id, t.user_id FROM trips t
-        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
-        WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)
-      `).get(userId, tripId, userId),
-    isOwner: (tripId: unknown, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
-  };
-  return { testDb: db, dbMock: mock };
+  return { testDb: db };
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -55,7 +36,6 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createDay, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import {
   AcceptError,
   DawarichSuggestionsService,
@@ -67,7 +47,15 @@ import type { PlacesService } from '../../../src/nest/places/places.service';
 import type { AssignmentsService } from '../../../src/nest/assignments/assignments.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { createTestUnitOfWork, createTestDatabaseService } from '../../helpers/test-uow';
+import type { DawarichVisitSuggestionsRepository } from '../../../src/db/repositories/DawarichVisitSuggestions.repository';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import { BucketList } from '../../../src/db/entities/BucketList.entity';
+import type { PlacesRepository } from '../../../src/db/repositories/Places.repository';
+import type { BucketListRepository } from '../../../src/db/repositories/BucketList.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import type { TestOrm } from '../../helpers/test-orm';
+import { createTestDawarichVisitSuggestionsRepo } from '../../helpers/dawarich-repos';
+import { createTestPlacesRepo, createTestTripsRepo, createTestUnitOfWork, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
 
 // ── Collaborator stubs ───────────────────────────────────────────────────────
 //
@@ -114,20 +102,39 @@ const assignmentsStub = { dayExists: vi.fn(), createAssignment: vi.fn(), broadca
 const permissionsStub = { checkPermission: vi.fn() };
 const journeyStub = { canEdit: vi.fn(), createEntry: vi.fn() };
 
-let dbs: DatabaseService;
+let t: TestOrm;
+let suggestions: DawarichVisitSuggestionsRepository;
+let trips: TripsRepository;
+let placesRepo: PlacesRepository;
+let bucketList: BucketListRepository;
+let users: UsersRepository;
 let svc: DawarichSuggestionsService;
 beforeAll(async () => {
-  dbs = await createTestDatabaseService(testDb);
+  // Table creation is the OTHER beforeAll below (line-order-later, same
+  // pre-test phase) — ORM init here does not need the schema to exist yet
+  // (it only introspects lazily, per query), so the order between these two
+  // top-level beforeAll hooks is unobservable.
+  t = await sharedTestOrm(testDb);
+  suggestions = await createTestDawarichVisitSuggestionsRepo(testDb);
+  trips = await createTestTripsRepo(testDb);
+  placesRepo = await createTestPlacesRepo(testDb);
+  bucketList = t.repo(BucketList);
+  users = await createTestUsersRepo(testDb);
   svc = new DawarichSuggestionsService(
-  dbs,
-  dawarichStub as unknown as DawarichService,
-  clientStub as unknown as DawarichClient,
-  atlasStub as unknown as AtlasService,
-  placesStub as unknown as PlacesService,
-  assignmentsStub as unknown as AssignmentsService,
-  permissionsStub as unknown as PermissionsService,
-  journeyStub as unknown as JourneyDomainService, await createTestUnitOfWork(dbs.connection),
-);
+    suggestions,
+    dawarichStub as unknown as DawarichService,
+    clientStub as unknown as DawarichClient,
+    atlasStub as unknown as AtlasService,
+    placesStub as unknown as PlacesService,
+    assignmentsStub as unknown as AssignmentsService,
+    permissionsStub as unknown as PermissionsService,
+    journeyStub as unknown as JourneyDomainService,
+    trips,
+    placesRepo,
+    bucketList,
+    users,
+    await createTestUnitOfWork(testDb),
+  );
 });
 
 const CREATED_ENTRY_ID = 7702;
@@ -146,13 +153,9 @@ function insertPlaceRow(tripId: string, body: { name?: string; lat?: number; lng
 }
 
 function armStubs(): void {
-  // The real helper's job, minus the tag join nothing here asserts on: the row
-  // as it stands after the acceptance stamped `source` on it.
-  dbMock.getPlaceWithTags
-    .mockReset()
-    .mockImplementation(
-      (placeId: unknown) => testDb.prepare('SELECT * FROM places WHERE id = ?').get(placeId) ?? null,
-    );
+  // `placesRepo.findWithTagsAndRatings` is the REAL repository method now
+  // (Plan 3h Task 3) — no reset/reimplementation needed by default; only
+  // DAWARICH-SUG-061 overrides it, locally, with its own `vi.spyOn`.
   dawarichStub.getConnection.mockReset().mockReturnValue({ ...CONNECTION });
   dawarichStub.getCredentials.mockReset().mockReturnValue({ ...CREDS });
   clientStub.findVisitsNear.mockReset();
@@ -306,10 +309,12 @@ beforeEach(() => {
   // dawarich_visit_suggestions is not in the shared helper's reset list, so it
   // is cleared here rather than by widening a list every other suite shares.
   testDb.exec('DELETE FROM dawarich_visit_suggestions');
+  t.clear();
   armStubs();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 
@@ -481,6 +486,36 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     // The hash is frozen at acceptance, which is what makes "changed since" answerable.
     expect(row.accepted_hash).toBe(row.source_hash);
     expect(result.suggestion.sourceChanged).toBe(false);
+  });
+
+  it("DAWARICH-SUG-065: DWS11's self-column-copy — accepted_hash freezes the CURRENT source_hash at UPDATE time, not the stale value accept() read when it started", async () => {
+    // `markAccepted`'s `accepted_hash = source_hash` has to be a column-ref
+    // expression (`columnRef`), never a bound parameter: binding would freeze
+    // whatever `source_hash` held at the moment the repository call was
+    // BUILT, which is wrong the instant a concurrent write (a sync tick
+    // racing the same accept-flow) changes `source_hash` before this
+    // specific UPDATE commits. Proven by mutating the row's `source_hash`
+    // from INSIDE the same `uow.transactional` block `acceptAsPlace` opens —
+    // `placesStub.create` fires mid-transaction, strictly before
+    // `markAccepted` — so this is a genuine "changed between the read and
+    // the write", not merely "changed before either ran".
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const id = seedSuggestion({ userId: user.id, tripId: trip.id, sourceHash: 'hash-at-accept-start' });
+
+    placesStub.create.mockImplementationOnce((tripId: string, body: { name?: string; lat?: number; lng?: number }) => {
+      testDb.prepare('UPDATE dawarich_visit_suggestions SET source_hash = ? WHERE id = ?').run('hash-changed-concurrently', id);
+      return insertPlaceRow(tripId, body);
+    });
+
+    await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+
+    const row = rowOf(id);
+    expect(row.source_hash).toBe('hash-changed-concurrently');
+    // A bound-at-read-time literal would have frozen 'hash-at-accept-start'
+    // here instead — the whole point of the column-ref form.
+    expect(row.accepted_hash).toBe('hash-changed-concurrently');
+    expect(row.accepted_hash).not.toBe('hash-at-accept-start');
   });
 
   it('DAWARICH-SUG-008: a stay with no trip anywhere is a 400 rather than a place nobody can see', async () => {
@@ -1293,11 +1328,10 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
-    // Plan 3c Task 0b: `getPlaceWithTags` is `PlacesRepository
-    // .findWithTagsAndRatings` now (not `db/database.ts`'s deleted free
-    // function `dbMock.getPlaceWithTags` used to stand in for), so the
-    // "re-read comes back empty" case is spied directly on `dbs`.
-    const getPlaceWithTagsSpy = vi.spyOn(dbs, 'getPlaceWithTags').mockResolvedValueOnce(null);
+    // Plan 3h Task 3: the re-read is `PlacesRepository.findWithTagsAndRatings`
+    // now, injected directly (no more `DatabaseService.getPlaceWithTags`
+    // indirection) — spied directly on the real repository instance.
+    const getPlaceWithTagsSpy = vi.spyOn(placesRepo, 'findWithTagsAndRatings').mockResolvedValueOnce(null);
 
     const result = await svc.accept(user.id, id, { target: 'place', tripId: trip.id }, 'socket-3');
     getPlaceWithTagsSpy.mockRestore();

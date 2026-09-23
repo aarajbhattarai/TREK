@@ -48,7 +48,14 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { DawarichSyncService } from '../../../src/nest/integrations/dawarich-sync.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { BucketList } from '../../../src/db/entities/BucketList.entity';
+import type { BucketListRepository } from '../../../src/db/repositories/BucketList.repository';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import type { DawarichVisitSuggestionsRepository } from '../../../src/db/repositories/DawarichVisitSuggestions.repository';
+import type { DawarichConnectionsRepository } from '../../../src/db/repositories/DawarichConnections.repository';
+import type { TestOrm } from '../../helpers/test-orm';
+import { createTestDawarichConnectionsRepo, createTestDawarichVisitSuggestionsRepo } from '../../helpers/dawarich-repos';
+import { createTestTripsRepo, createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
 import { DawarichError } from '../../../src/nest/integrations/dawarich.client';
 import type { DawarichClient, DawarichCreds, DawarichVisitRaw } from '../../../src/nest/integrations/dawarich.client';
 import type { DawarichService } from '../../../src/nest/integrations/dawarich.service';
@@ -113,6 +120,11 @@ const dawarich = {
 // Direct construction over the shared test connection — no TestingModule
 // (repo convention for DI-native service unit tests).
 const dbs = new DatabaseService(testDb);
+let t: TestOrm;
+let suggestions: DawarichVisitSuggestionsRepository;
+let trips: TripsRepository;
+let bucketList: BucketListRepository;
+let connections: DawarichConnectionsRepository;
 let addons: AddonsService;
 let svc: DawarichSyncService;
 
@@ -227,8 +239,22 @@ function withVisits(...visits: DawarichVisitRaw[]): void {
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  t = await sharedTestOrm(testDb);
+  suggestions = await createTestDawarichVisitSuggestionsRepo(testDb);
+  trips = await createTestTripsRepo(testDb);
+  bucketList = t.repo(BucketList);
+  connections = await createTestDawarichConnectionsRepo(testDb);
   addons = await createTestAddonsService(testDb, dbs);
-  svc = new DawarichSyncService(dbs, addons, client, dawarich, await createTestUnitOfWork(dbs.connection));
+  svc = new DawarichSyncService(
+    suggestions,
+    addons,
+    client,
+    dawarich,
+    trips,
+    bucketList,
+    connections,
+    await createTestUnitOfWork(testDb),
+  );
 });
 
 beforeEach(() => {
@@ -238,6 +264,7 @@ beforeEach(() => {
   // otherwise outlive their user and leak into the next case.
   testDb.exec('DELETE FROM dawarich_visit_suggestions');
   testDb.exec('DELETE FROM dawarich_connections');
+  t.clear();
   vi.clearAllMocks();
   probeCapabilities.mockResolvedValue(CAPABILITIES);
 
@@ -247,7 +274,8 @@ beforeEach(() => {
   connect(USER);
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 
@@ -785,6 +813,43 @@ describe('DawarichSyncService — bucket-list matching', () => {
     const all = rows();
     expect(all.find((r) => r.source_visit_id === '842')!.matched_bucket_list_item_id).toBe(wish);
     expect(all.find((r) => r.source_visit_id === '990')!.matched_bucket_list_item_id).toBeNull();
+  });
+
+  it('DAWARICH-SYNC-079: DSY12/DSY13 clear-then-set ordering — two rows already (wrongly) claiming the same wish end with exactly one holder, the new winner, never two or zero', async () => {
+    // A state that should not arise from ordinary matching (claimWish already
+    // clears every previous holder before assigning), but the ordering proof
+    // has to hold even from a seeded, already-inconsistent starting point:
+    // DSY12 (clear every existing holder) must run and complete BEFORE DSY13
+    // (assign the new one), in the SAME transaction — reversed, or run as two
+    // independent statements, a concurrent read between them could observe
+    // either two holders or zero.
+    const wish = bucketItem('Brandenburger Tor', LAT, LNG);
+    testDb
+      .prepare(
+        `INSERT INTO dawarich_visit_suggestions
+           (user_id, source_visit_id, trip_id, name, lat, lng, started_at, ended_at, duration_minutes,
+            local_date, source_status, state, source_hash, matched_bucket_list_item_id)
+         VALUES (?, '970', ?, 'Old holder A', ?, ?, '2019-01-01T10:00:00Z', '2019-01-01T12:00:00Z', 60,
+                 '2019-01-01', 'suggested', 'new', 'deadbeef-a', ?)`,
+      )
+      .run(USER, TRIP, LAT, LNG, wish);
+    testDb
+      .prepare(
+        `INSERT INTO dawarich_visit_suggestions
+           (user_id, source_visit_id, trip_id, name, lat, lng, started_at, ended_at, duration_minutes,
+            local_date, source_status, state, source_hash, matched_bucket_list_item_id)
+         VALUES (?, '971', ?, 'Old holder B', ?, ?, '2019-01-01T10:00:00Z', '2019-01-01T12:00:00Z', 60,
+                 '2019-01-01', 'suggested', 'new', 'deadbeef-b', ?)`,
+      )
+      .run(USER, TRIP, LAT, LNG, wish);
+
+    withVisits(visit({ id: 972 }));
+    await svc.syncUser(USER);
+
+    const all = rows();
+    const holders = all.filter((r) => r.matched_bucket_list_item_id === wish);
+    expect(holders).toHaveLength(1);
+    expect(holders[0]!.source_visit_id).toBe('972');
   });
 
   it('DAWARICH-SYNC-036: a suggestion still in state "new" is re-matched on a later run', async () => {

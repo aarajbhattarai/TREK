@@ -1136,3 +1136,22 @@ describe('PlacesRepository.findChargingProbe (CH1)', () => {
     expect(typed).toEqual({ name: 'Just a stop', lat: 48.8566, lng: 2.3522, stop_type: null });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3h Task 3 (`DawarichSuggestionsService::acceptAsPlace`) — additive.
+// ---------------------------------------------------------------------------
+
+describe('PlacesRepository.setSource (DWS7)', () => {
+  it('DWS7-001: stamps source without touching updated_at, matching the legacy statement\'s own column list', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Imported stay' });
+    const before = testDb.prepare('SELECT updated_at FROM places WHERE id = ?').get(place.id) as { updated_at: string | null };
+
+    await places.setSource(place.id, 'dawarich');
+
+    const row = testDb.prepare('SELECT source, updated_at FROM places WHERE id = ?').get(place.id) as { source: string | null; updated_at: string | null };
+    expect(row.source).toBe('dawarich');
+    expect(row.updated_at).toBe(before.updated_at);
+  });
+});

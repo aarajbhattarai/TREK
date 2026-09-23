@@ -988,6 +988,200 @@ export class PlacesRepository extends TrekRepository<Places> {
       .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('tm.user_id', '=', user_id)]))
       .execute();
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 3 (`DawarichSuggestionsService`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * DWS7 (`dawarich-suggestions.service.ts::acceptAsPlace`) — `UPDATE places
+   * SET source = 'dawarich' WHERE id = ?`. No `updated_at` stamp — the
+   * legacy statement never wrote one for this column (same "no stamp"
+   * shape {@link setRouteColor} above already documents for a different
+   * column). Cross-domain write from the Dawarich integration (3h) into
+   * this 3c-owned table.
+   */
+  async setSource(id: number, source: string): Promise<void> {
+    await this.nativeUpdate({ id }, { source });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 2 (`CollectionsService`) — additive, cross-domain. Flagged in
+  // the task's own report per its brief: these touch `places`, a 3c-owned
+  // table, from the collections cluster's own copy/import surface.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * CL45 (`importablePlaces`) — the trip's places as offered to the
+   * collection import dialog, one row per place with two correlated scalar
+   * subqueries resolving the EARLIEST day it is assigned to (a place can
+   * sit on several days): `SELECT p.id AS place_id, p.name, p.address,
+   * p.lat, p.lng, p.category_id, p.image_url, p.google_place_id,
+   * p.google_ftid, p.osm_id, (SELECT MIN(d.day_number) FROM day_assignments
+   * da JOIN days d ON d.id=da.day_id WHERE da.place_id=p.id AND
+   * d.trip_id=p.trip_id) AS day_number, (SELECT d.date FROM day_assignments
+   * da JOIN days d ON d.id=da.day_id WHERE da.place_id=p.id AND
+   * d.trip_id=p.trip_id ORDER BY d.day_number ASC LIMIT 1) AS date FROM
+   * places p WHERE p.trip_id=? ORDER BY p.name COLLATE NOCASE`. Kysely — a
+   * correlated scalar subquery has no MikroORM QueryBuilder expression
+   * (`JourneysRepository.listForUser`'s own `eb.selectFrom(...).whereRef
+   * (...).as(...)` precedent, the closest analog: five correlated
+   * subqueries over a `LEFT JOIN`). `ORDER BY ... COLLATE NOCASE` is
+   * Kysely's own native `OrderByItemBuilder.collate('nocase')` — a portable
+   * Kysely API, not a raw SQLite fragment, so it needs no
+   * `sql-functions.ts` dialect wrapper (rule 5 covers dialect FUNCTIONS,
+   * not Kysely's own builder surface).
+   */
+  async listImportable(tripId: number): Promise<ImportablePlaceRow[]> {
+    return await this.kysely<ImportablePlacesKyselyDB>()
+      .selectFrom('places as p')
+      .select((eb) => [
+        'p.id as place_id', 'p.name', 'p.address', 'p.lat', 'p.lng', 'p.category_id', 'p.image_url',
+        'p.google_place_id', 'p.google_ftid', 'p.osm_id',
+        eb
+          .selectFrom('day_assignments as da')
+          .innerJoin('days as d', 'd.id', 'da.day_id')
+          .select((eb2) => eb2.fn.min<number | null>('d.day_number').as('m'))
+          .whereRef('da.place_id', '=', 'p.id')
+          .whereRef('d.trip_id', '=', 'p.trip_id')
+          .as('day_number'),
+        eb
+          .selectFrom('day_assignments as da2')
+          .innerJoin('days as d2', 'd2.id', 'da2.day_id')
+          .select('d2.date')
+          .whereRef('da2.place_id', '=', 'p.id')
+          .whereRef('d2.trip_id', '=', 'p.trip_id')
+          .orderBy('d2.day_number', 'asc')
+          .limit(1)
+          .as('date'),
+      ])
+      .where('p.trip_id', '=', tripId)
+      .orderBy('p.name', (ob) => ob.collate('nocase').asc())
+      .execute();
+  }
+
+  /**
+   * CL57 (`setStatusFromTrip`) — `SELECT id, name, lat, lng,
+   * google_place_id, google_ftid, osm_id FROM places WHERE trip_id=? AND id
+   * IN (...)`. `$in` for the dynamic list (rule 17b), the same
+   * `scopedIds`-shaped raw `trip_id` condition above.
+   */
+  async listByTripAndIds(trip_id: number, ids: number[]): Promise<PlaceMatchRow[]> {
+    if (ids.length === 0) return [];
+    return await this.qb('p')
+      .select(['p.id', 'p.name', 'p.lat', 'p.lng', 'p.google_place_id', 'p.google_ftid', 'p.osm_id'])
+      .where('p.trip_id = ?', [trip_id])
+      .andWhere({ id: { $in: ids } })
+      .execute<PlaceMatchRow[]>('all', false);
+  }
+
+  /**
+   * CL63 (`copyToTrip`'s trip dedup set) — `SELECT name, lat, lng,
+   * google_place_id, google_ftid, osm_id FROM places WHERE trip_id=?`.
+   */
+  async dedupCandidatesForTrip(trip_id: number): Promise<Omit<PlaceMatchRow, 'id'>[]> {
+    return await this.qb('p')
+      .select(['p.name', 'p.lat', 'p.lng', 'p.google_place_id', 'p.google_ftid', 'p.osm_id'])
+      .where({ trip: trip_id })
+      .execute<Omit<PlaceMatchRow, 'id'>[]>('all', false);
+  }
+
+  /**
+   * CL64 (`copyToTrip`, PREPARED/looped, TX) — `INSERT INTO places (trip_id,
+   * name, description, lat, lng, address, category_id, price, currency,
+   * notes, image_url, google_place_id, google_ftid, website, phone,
+   * osm_id) VALUES (...)` — a genuinely NARROWER 16-column insert than
+   * {@link insertPlace}'s full 25-column shape (no `place_time`/`end_time`/
+   * `duration_minutes`/`transport_mode`/`route_geometry`/`route_color`/
+   * `stop_type`/`fill_percent`/`amap_poi_id`): the legacy statement leaves
+   * those to the table's own `DEFAULT` clauses
+   * (`Migration20200101000000_baseline_schema.ts`: `duration_minutes
+   * INTEGER DEFAULT 60`, `transport_mode TEXT DEFAULT 'walking'`,
+   * `reservation_status TEXT DEFAULT 'none'`), unlike `insertPlace`'s own
+   * caller (`PlacesService.create`), which always resolves and writes every
+   * one of those columns itself. Kysely (a narrower insert-only interface,
+   * `CollectionsRepository`'s own `CollectionPlacesWriteKyselyDB`
+   * precedent for the identical "narrower than the full entity" shape) so
+   * this genuinely different column set never widens `insertPlace`'s own
+   * required-field list. Returns the generated id.
+   */
+  async insertFromCollectionPlace(row: {
+    trip_id: number;
+    name: string;
+    description: string | null;
+    lat: number | null;
+    lng: number | null;
+    address: string | null;
+    category_id: number | null;
+    price: number | null;
+    currency: string | null;
+    notes: string | null;
+    image_url: string | null;
+    google_place_id: string | null;
+    google_ftid: string | null;
+    website: string | null;
+    phone: string | null;
+    osm_id: string | null;
+  }): Promise<number> {
+    const result = await this.kysely<PlacesNarrowInsertKyselyDB>().insertInto('places').values(row).executeTakeFirstOrThrow();
+    return Number(result.insertId);
+  }
+}
+
+/** {@link PlacesRepository.listImportable}'s row shape (CL45). */
+export interface ImportablePlaceRow {
+  place_id: number;
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  category_id: number | null;
+  image_url: string | null;
+  google_place_id: string | null;
+  google_ftid: string | null;
+  osm_id: string | null;
+  day_number: number | null;
+  date: string | null;
+}
+
+/** {@link PlacesRepository.listByTripAndIds}/{@link PlacesRepository.dedupCandidatesForTrip}'s shared narrow projection (CL57/CL63). */
+export interface PlaceMatchRow {
+  id: number;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  google_place_id: string | null;
+  google_ftid: string | null;
+  osm_id: string | null;
+}
+
+/** {@link PlacesRepository.listImportable}'s narrow `places`/`day_assignments`/`days` shape (CL45). */
+interface ImportablePlacesKyselyDB {
+  places: { id: number; trip_id: number; name: string; address: string | null; lat: number | null; lng: number | null; category_id: number | null; image_url: string | null; google_place_id: string | null; google_ftid: string | null; osm_id: string | null };
+  day_assignments: { place_id: number; day_id: number };
+  days: { id: number; trip_id: number; day_number: number; date: string };
+}
+
+/** {@link PlacesRepository.insertFromCollectionPlace}'s narrow insert-only shape (CL64). */
+interface PlacesNarrowInsertKyselyDB {
+  places: {
+    trip_id: number;
+    name: string;
+    description: string | null;
+    lat: number | null;
+    lng: number | null;
+    address: string | null;
+    category_id: number | null;
+    price: number | null;
+    currency: string | null;
+    notes: string | null;
+    image_url: string | null;
+    google_place_id: string | null;
+    google_ftid: string | null;
+    website: string | null;
+    phone: string | null;
+    osm_id: string | null;
+  };
 }
 
 /** {@link PlacesRepository.listAddressesForUser}'s narrow `places`/`trips`/`trip_members`/`place_regions` shape. */

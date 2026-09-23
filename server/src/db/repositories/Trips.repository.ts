@@ -1,5 +1,5 @@
 import type { Trips } from '../entities/Trips.entity';
-import { currentTimestamp } from '../dialect/sql-functions';
+import { coalesceParam, currentTimestamp, nowDateOffset } from '../dialect/sql-functions';
 import type { AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -843,6 +843,47 @@ export class TripsRepository extends TrekRepository<Trips> {
       .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('tm.user_id', '=', user_id)]))
       .executeTakeFirst();
     return { trips: Number(row?.trips ?? 0), days: Number(row?.days ?? 0) };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 3 (`DawarichSyncService`/`DawarichTracksService`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * DSY2 (`dawarich-sync.service.ts::listTripsToSync`) — `SELECT DISTINCT
+   * t.id, t.start_date, t.end_date FROM trips t LEFT JOIN trip_members m ON
+   * m.trip_id = t.id AND m.user_id = ? WHERE (t.user_id = ? OR m.user_id IS
+   * NOT NULL) AND COALESCE(t.is_archived, 0) = 0 AND t.start_date IS NOT
+   * NULL AND (t.end_date IS NULL OR t.end_date >= date('now', '-400 days'))
+   * AND t.start_date <= date('now', '+1 day') ORDER BY t.start_date DESC`.
+   * `accessibleTripsQuery` for the LEFT JOIN/OR half (the same join builder
+   * `findAccessible`/`listReachableActiveTrips` share); `coalesceParam` for
+   * the `COALESCE(is_archived, 0) = 0` guard (mirrors a nullable column the
+   * same way the legacy statement does, even though `is_archived` is
+   * effectively never NULL in practice); `nowDateOffset` (Task 0) for both
+   * `date('now', …)` literal-offset forms — expressible entirely through
+   * the QueryBuilder, so no `nowDateOffsetKysely` twin was needed for this
+   * site (Task 0's own CONTROLLER NOTE flagged this as a possibility, not a
+   * certainty).
+   */
+  async listTripsToSync(user_id: number): Promise<{ id: number; start_date: string | null; end_date: string | null }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    return await this.accessibleTripsQuery(user_id)
+      .select(['t.id', 't.start_date', 't.end_date'], true)
+      .andWhere({ [coalesceParam(platform, 'is_archived', 0)]: 0 })
+      .andWhere({ start_date: { $ne: null } })
+      .andWhere({ $or: [{ end_date: null }, { end_date: { $gte: nowDateOffset(platform, -400) } }] })
+      .andWhere({ start_date: { $lte: nowDateOffset(platform, 1) } })
+      .orderBy({ 't.start_date': 'desc' })
+      .execute<{ id: number; start_date: string | null; end_date: string | null }[]>('all', false);
+  }
+
+  /** DTR1 (`dawarich-tracks.service.ts::forTrip`) — `SELECT start_date, end_date FROM trips WHERE id = ?`. */
+  async findDatesById(id: number): Promise<{ start_date: string | null; end_date: string | null } | undefined> {
+    return await this.qb('t')
+      .select(['t.start_date', 't.end_date'])
+      .where({ id })
+      .execute<{ start_date: string | null; end_date: string | null } | undefined>('get', false);
   }
 }
 

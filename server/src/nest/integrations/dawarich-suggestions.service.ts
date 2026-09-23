@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DAWARICH_BUCKET_MATCH_MIN_MINUTES,
   DAWARICH_BUCKET_MATCH_RADIUS_M,
@@ -12,7 +13,6 @@ import {
   type DawarichSuggestion,
   type DawarichSuggestionList,
 } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { AtlasService } from '../atlas/atlas.service';
 import { PlacesService } from '../places/places.service';
@@ -20,6 +20,16 @@ import { AssignmentsService } from '../assignments/assignments.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { JourneyDomainService } from '../journey/journey-domain.service';
 import { NAME_TO_CODE } from '../atlas/atlas-geo';
+import { DawarichVisitSuggestions } from '../../db/entities/DawarichVisitSuggestions.entity';
+import { DawarichVisitSuggestionsRepository, type SuggestionJoinRow, type SuggestionRow } from '../../db/repositories/DawarichVisitSuggestions.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Places } from '../../db/entities/Places.entity';
+import { PlacesRepository } from '../../db/repositories/Places.repository';
+import { BucketList } from '../../db/entities/BucketList.entity';
+import { BucketListRepository } from '../../db/repositories/BucketList.repository';
+import { Users } from '../../db/entities/Users.entity';
+import { UsersRepository } from '../../db/repositories/Users.repository';
 import { DawarichClient, type DawarichCreds } from './dawarich.client';
 import { DawarichService } from './dawarich.service';
 import { minutesBetween, toNumber } from './dawarich.helpers';
@@ -46,7 +56,7 @@ import { minutesBetween, toNumber } from './dawarich.helpers';
 @Injectable()
 export class DawarichSuggestionsService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(DawarichVisitSuggestions) private readonly suggestions: DawarichVisitSuggestionsRepository,
     private readonly dawarich: DawarichService,
     private readonly client: DawarichClient,
     private readonly atlas: AtlasService,
@@ -54,6 +64,10 @@ export class DawarichSuggestionsService {
     private readonly assignments: AssignmentsService,
     private readonly permissions: PermissionsService,
     private readonly journey: JourneyDomainService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(BucketList) private readonly bucketList: BucketListRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
     private readonly uow: UnitOfWork,
   ) {}
 
@@ -67,26 +81,7 @@ export class DawarichSuggestionsService {
   async list(userId: number, filter: { tripId?: number; state?: string }): Promise<DawarichSuggestionList> {
     await this.reopenOrphaned(userId);
 
-    const clauses = ['s.user_id = ?'];
-    const params: unknown[] = [userId];
-    if (filter.tripId !== undefined) {
-      clauses.push('s.trip_id = ?');
-      params.push(filter.tripId);
-    }
-    if (filter.state) {
-      clauses.push('s.state = ?');
-      params.push(filter.state);
-    }
-
-    const rows = this.db.all<SuggestionJoinRow>(
-      `SELECT s.*, t.title AS trip_title, b.name AS matched_bucket_name
-         FROM dawarich_visit_suggestions s
-         LEFT JOIN trips t ON t.id = s.trip_id
-         LEFT JOIN bucket_list b ON b.id = s.matched_bucket_list_item_id
-        WHERE ${clauses.join(' AND ')}
-        ORDER BY s.started_at DESC, s.id DESC`,
-      ...params,
-    );
+    const rows = await this.suggestions.list(userId, filter);
 
     const connection = await this.dawarich.getConnection(userId);
     return {
@@ -116,36 +111,11 @@ export class DawarichSuggestionsService {
    * still refused the row as already accepted.
    */
   private async reopenOrphaned(userId: number): Promise<void> {
-    this.db.run(
-      `UPDATE dawarich_visit_suggestions
-          SET state = 'new', target = NULL, accepted_hash = NULL,
-              accepted_place_id = NULL, accepted_journal_entry_id = NULL,
-              accepted_bucket_list_item_id = NULL
-        WHERE user_id = ? AND state = 'accepted'
-          AND (
-            (target = 'place' AND accepted_place_id IS NULL)
-            OR (target = 'bucket_list' AND accepted_bucket_list_item_id IS NULL)
-            OR (target = 'journal' AND (
-                  accepted_journal_entry_id IS NULL
-                  OR NOT EXISTS (
-                    SELECT 1 FROM journey_entries je WHERE je.id = accepted_journal_entry_id
-                  )
-               ))
-          )`,
-      userId,
-    );
+    await this.suggestions.reopenOrphaned(userId);
   }
 
   async getOne(userId: number, id: number): Promise<DawarichSuggestion | null> {
-    const row = this.db.get<SuggestionJoinRow>(
-      `SELECT s.*, t.title AS trip_title, b.name AS matched_bucket_name
-         FROM dawarich_visit_suggestions s
-         LEFT JOIN trips t ON t.id = s.trip_id
-         LEFT JOIN bucket_list b ON b.id = s.matched_bucket_list_item_id
-        WHERE s.id = ? AND s.user_id = ?`,
-      id,
-      userId,
-    );
+    const row = await this.suggestions.getOne(userId, id);
     return row ? toWire(row) : null;
   }
 
@@ -158,15 +128,11 @@ export class DawarichSuggestionsService {
    * "undo" would have to guess whether to delete it.
    */
   async setState(userId: number, id: number, state: 'new' | 'dismissed'): Promise<DawarichSuggestion | null> {
-    const row = this.db.get<{ id: number; state: string }>(
-      'SELECT id, state FROM dawarich_visit_suggestions WHERE id = ? AND user_id = ?',
-      id,
-      userId,
-    );
+    const row = await this.suggestions.findStateForUser(id, userId);
     if (!row) return null;
     if (row.state === 'accepted') return this.getOne(userId, id);
 
-    this.db.run('UPDATE dawarich_visit_suggestions SET state = ? WHERE id = ?', state, id);
+    await this.suggestions.setState(id, state);
     return this.getOne(userId, id);
   }
 
@@ -178,11 +144,7 @@ export class DawarichSuggestionsService {
    * atlas domain's `BucketItemExistsError` is the precedent.
    */
   async accept(userId: number, id: number, body: DawarichAccept, sid?: string): Promise<DawarichAcceptResult> {
-    const row = this.db.get<SuggestionRow>(
-      'SELECT * FROM dawarich_visit_suggestions WHERE id = ? AND user_id = ?',
-      id,
-      userId,
-    );
+    const row = await this.suggestions.findForUser(id, userId);
     if (!row) throw new AcceptError('not_found', 'Suggestion not found', 404);
     if (row.state === 'accepted') throw new AcceptError('already_accepted', 'Suggestion has already been accepted', 409);
 
@@ -212,7 +174,7 @@ export class DawarichSuggestionsService {
     const tripId = body.tripId ?? row.trip_id;
     if (!tripId) throw new AcceptError('trip_required', 'A trip is required to create a place', 400);
 
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) throw new AcceptError('not_found', 'Trip not found', 404);
 
     // Being on the roster is not permission to write to it. Every other way of
@@ -253,14 +215,14 @@ export class DawarichSuggestionsService {
       // is not part of the create contract and should not become something a
       // request body can set — a place claims to come from a recording only
       // because this path made it.
-      this.db.run("UPDATE places SET source = 'dawarich' WHERE id = ?", id);
+      await this.placesRepo.setSource(id, 'dawarich');
 
       const day = body.dayId !== undefined ? await this.assignments.createAssignment(body.dayId, id, null) : undefined;
       await this.markAccepted(row.id, 'place', { placeId: id });
       // Re-read, so what goes out on the wire carries the source: everyone else
       // on the trip should see the Dawarich mark on it too, not only the person
       // who accepted it.
-      return { created: (await this.db.getPlaceWithTags(id)) ?? place, placeId: id, assignment: day };
+      return { created: (await this.placesRepo.findWithTagsAndRatings(id)) ?? place, placeId: id, assignment: day };
     });
 
     // Outside the transaction, because both reach past the database: a
@@ -348,20 +310,11 @@ export class DawarichSuggestionsService {
     if (!itemId) {
       throw new AcceptError('bucket_required', 'A bucket-list entry is required', 400);
     }
-    const item = this.db.get<{ id: number }>(
-      'SELECT id FROM bucket_list WHERE id = ? AND user_id = ?',
-      itemId,
-      userId,
-    );
+    const item = await this.bucketList.findForUser(itemId, userId);
     if (!item) throw new AcceptError('not_found', 'Bucket-list entry not found', 404);
 
     await this.uow.transactional(async () => {
-      this.db.run(
-        "UPDATE bucket_list SET visited_at = ?, visited_source = 'dawarich' WHERE id = ? AND user_id = ?",
-        row.started_at,
-        itemId,
-        userId,
-      );
+      await this.bucketList.markVisited(itemId, userId, row.started_at);
       await this.markAccepted(row.id, 'bucket_list', { bucketItemId: itemId });
     });
 
@@ -382,10 +335,10 @@ export class DawarichSuggestionsService {
    * somebody came through would not be a permission.
    */
   private async requirePermission(action: 'place_edit' | 'day_edit', tripOwnerId: number, userId: number): Promise<void> {
-    const actor = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId);
+    const role = await this.users.getRole(userId);
     const allowed = await this.permissions.checkPermission(
       action,
-      actor?.role ?? 'user',
+      role ?? 'user',
       tripOwnerId,
       userId,
       tripOwnerId !== userId,
@@ -405,18 +358,12 @@ export class DawarichSuggestionsService {
     target: 'place' | 'journal' | 'bucket_list',
     ids: { placeId?: number; journalEntryId?: number; bucketItemId?: number },
   ): Promise<void> {
-    this.db.run(
-      `UPDATE dawarich_visit_suggestions
-          SET state = 'accepted', target = ?, accepted_place_id = ?,
-              accepted_journal_entry_id = ?, accepted_bucket_list_item_id = ?,
-              accepted_hash = source_hash
-        WHERE id = ?`,
+    await this.suggestions.markAccepted(id, {
       target,
-      ids.placeId ?? null,
-      ids.journalEntryId ?? null,
-      ids.bucketItemId ?? null,
-      id,
-    );
+      placeId: ids.placeId ?? null,
+      journalEntryId: ids.journalEntryId ?? null,
+      bucketItemId: ids.bucketItemId ?? null,
+    });
   }
 
   // ── Bucket-list scan ───────────────────────────────────────────────────────
@@ -438,12 +385,7 @@ export class DawarichSuggestionsService {
     const creds = await this.dawarich.getCredentials(userId);
     if (!creds) throw new AcceptError('not_connected', 'Dawarich is not connected', 400);
 
-    const items = this.db.all<BucketRow>(
-      `SELECT id, name, lat, lng, visited_at
-         FROM bucket_list WHERE user_id = ?
-        ORDER BY (visited_at IS NOT NULL), created_at DESC, id DESC`,
-      userId,
-    );
+    const items: BucketRow[] = await this.bucketList.listForScan(userId);
     const withCoords = items.filter((item) => item.lat !== null && item.lng !== null);
     const skipped = items.length - withCoords.length;
     const batch = withCoords.slice(0, DAWARICH_BUCKET_SCAN_LIMIT);
@@ -526,13 +468,7 @@ export class DawarichSuggestionsService {
         // knows better: the caller's own value first, then the stay this wish
         // was matched to, then the clock.
         const stamp = visitedAt ?? (await this.matchedStayStart(userId, itemId)) ?? now;
-        const result = this.db.run(
-          "UPDATE bucket_list SET visited_at = ?, visited_source = 'dawarich' WHERE id = ? AND user_id = ? AND visited_at IS NULL",
-          stamp,
-          itemId,
-          userId,
-        );
-        updated += result.changes;
+        updated += await this.bucketList.markVisitedIfUnset(itemId, userId, stamp);
       }
     });
     return updated;
@@ -540,24 +476,12 @@ export class DawarichSuggestionsService {
 
   /** When the stay that claimed this wish began, if one did. */
   private async matchedStayStart(userId: number, itemId: number): Promise<string | null> {
-    const row = this.db.get<{ started_at: string }>(
-      `SELECT started_at FROM dawarich_visit_suggestions
-        WHERE user_id = ? AND matched_bucket_list_item_id = ?
-        ORDER BY started_at DESC LIMIT 1`,
-      userId,
-      itemId,
-    );
-    return row?.started_at ?? null;
+    return this.suggestions.matchedStayStart(userId, itemId);
   }
 
   /** Undo a tick. Clears the source with it, so the entry reads as untouched again. */
   async clearBucketVisit(userId: number, itemId: number): Promise<boolean> {
-    const result = this.db.run(
-      'UPDATE bucket_list SET visited_at = NULL, visited_source = NULL WHERE id = ? AND user_id = ?',
-      itemId,
-      userId,
-    );
-    return result.changes > 0;
+    return this.bucketList.clearVisited(itemId, userId);
   }
 
   // ── Atlas ──────────────────────────────────────────────────────────────────
@@ -697,40 +621,6 @@ function toWire(row: SuggestionJoinRow): DawarichSuggestion {
 function isoFromUnix(seconds: number | null | undefined): string | null {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return null;
   return new Date(seconds * 1000).toISOString();
-}
-
-interface SuggestionRow {
-  id: number;
-  user_id: number;
-  source_visit_id: string;
-  trip_id: number | null;
-  name: string;
-  lat: number | null;
-  lng: number | null;
-  started_at: string;
-  ended_at: string;
-  duration_minutes: number;
-  local_date: string;
-  source_status: string;
-  confidence: number | null;
-  confidence_band: string | null;
-  country_code: string | null;
-  state: string;
-  target: string | null;
-  accepted_place_id: number | null;
-  accepted_journal_entry_id: number | null;
-  accepted_bucket_list_item_id: number | null;
-  matched_bucket_list_item_id: number | null;
-  source_hash: string;
-  accepted_hash: string | null;
-  source_missing_at: string | null;
-  first_seen_at: string;
-  last_seen_at: string;
-}
-
-interface SuggestionJoinRow extends SuggestionRow {
-  trip_title: string | null;
-  matched_bucket_name: string | null;
 }
 
 interface BucketRow {

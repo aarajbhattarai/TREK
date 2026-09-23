@@ -886,3 +886,60 @@ describe('TripsRepository.listOwnedOrMember — AT1 parity with the legacy state
     expect(legacy).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3h Task 3 (`DawarichSyncService`/`DawarichTracksService`) — additive.
+// ---------------------------------------------------------------------------
+
+describe('TripsRepository.listTripsToSync (DSY2)', () => {
+  const LEGACY_LIST_TRIPS_TO_SYNC = `
+    SELECT DISTINCT t.id, t.start_date, t.end_date
+       FROM trips t
+       LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
+      WHERE (t.user_id = ? OR m.user_id IS NOT NULL)
+        AND COALESCE(t.is_archived, 0) = 0
+        AND t.start_date IS NOT NULL
+        AND (t.end_date IS NULL OR t.end_date >= date('now', '-400 days'))
+        AND t.start_date <= date('now', '+1 day')
+      ORDER BY t.start_date DESC
+  `;
+
+  it('TRIPREPO-060: byte-identical to the legacy statement — owned, member-of and archived/undated/out-of-window trips filtered the same way', async () => {
+    const { user: caller } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const owned = createTrip(testDb, caller.id, { start_date: '2026-01-05', end_date: '2026-01-10' });
+    const memberOf = createTrip(testDb, stranger.id, { start_date: '2026-02-01', end_date: '2026-02-05' });
+    addTripMember(testDb, memberOf.id, caller.id);
+    createTrip(testDb, caller.id, { start_date: '2020-01-01', end_date: '2020-01-02' }); // long past — end_date < -400d
+    createTrip(testDb, caller.id); // no dates at all — start_date IS NULL
+    const archived = createTrip(testDb, caller.id, { start_date: '2026-01-05', end_date: '2026-01-10' });
+    testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(archived.id);
+    createTrip(testDb, stranger.id, { start_date: '2026-01-05', end_date: '2026-01-10' }); // not the caller's at all
+
+    const legacy = testDb.prepare(LEGACY_LIST_TRIPS_TO_SYNC).all(caller.id, caller.id);
+    const rows = await trips.listTripsToSync(caller.id);
+
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id).sort()).toEqual([owned.id, memberOf.id].sort());
+  });
+
+  it('TRIPREPO-061: no syncable trips returns an empty array, matching the legacy statement', async () => {
+    const { user: caller } = createUser(testDb);
+    const legacy = testDb.prepare(LEGACY_LIST_TRIPS_TO_SYNC).all(caller.id, caller.id);
+    expect(await trips.listTripsToSync(caller.id)).toEqual(legacy);
+    expect(legacy).toEqual([]);
+  });
+});
+
+describe('TripsRepository.findDatesById (DTR1)', () => {
+  it('TRIPREPO-062: returns start_date/end_date only, matching a legacy narrow SELECT', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2026-05-01', end_date: '2026-05-03' });
+    const legacy = testDb.prepare('SELECT start_date, end_date FROM trips WHERE id = ?').get(trip.id);
+    expect(await trips.findDatesById(trip.id)).toEqual(legacy);
+  });
+
+  it('TRIPREPO-063: undefined for a trip that does not exist', async () => {
+    expect(await trips.findDatesById(999999)).toBeUndefined();
+  });
+});

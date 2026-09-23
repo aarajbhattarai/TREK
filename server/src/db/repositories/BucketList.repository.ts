@@ -40,6 +40,10 @@ interface BucketListInsertKyselyDB {
 interface BucketListWriteKyselyDB {
   bucket_list: { id: number; user_id: number; name: string; notes: string | null; lat: number | null; lng: number | null; country_code: string | null; target_date: string | null };
 }
+/** The narrow `bucket_list` shape Plan 3h Task 3's visited-tick writes (DWS9/13/15) need. */
+interface BucketListVisitKyselyDB {
+  bucket_list: { id: number; user_id: number; visited_at: string | null; visited_source: string | null };
+}
 
 /** The six columns `findDuplicate`'s #1898 dedup identity compares (`AT31`). */
 export interface BucketListIdentity {
@@ -67,6 +71,10 @@ export class BucketListRepository extends TrekRepository<BucketList> {
 
   private writeDb() {
     return this.kysely<BucketListWriteKyselyDB>();
+  }
+
+  private visitDb() {
+    return this.kysely<BucketListVisitKyselyDB>();
   }
 
   /** AT30 (`bucketList`) — `SELECT * FROM bucket_list WHERE user_id = ? ORDER BY created_at DESC`. */
@@ -190,5 +198,102 @@ export class BucketListRepository extends TrekRepository<BucketList> {
   /** AT38 (`deleteBucketItem`) — `DELETE FROM bucket_list WHERE id = ? AND user_id = ?`. */
   async deleteForUser(id: number | string, userId: number): Promise<void> {
     await this.writeDb().deleteFrom('bucket_list').where('id', '=', id as number).where('user_id', '=', userId).execute();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 3 (`DawarichSuggestionsService`/`DawarichSyncService`) —
+  // additive. Cross-domain reads/writes from the Dawarich integration (3h)
+  // into this 3f-owned table.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * DWS9 — `acceptAsBucketTick`: `UPDATE bucket_list SET visited_at = ?,
+   * visited_source = 'dawarich' WHERE id = ? AND user_id = ?`,
+   * unconditional (DWS8's own `findForUser`-shaped guard read already
+   * confirmed the row exists and belongs to the caller before this write).
+   */
+  async markVisited(id: number, userId: number, visitedAt: string): Promise<void> {
+    await this.visitDb()
+      .updateTable('bucket_list')
+      .set({ visited_at: visitedAt, visited_source: 'dawarich' })
+      .where('id', '=', id)
+      .where('user_id', '=', userId)
+      .execute();
+  }
+
+  /**
+   * DWS12 — `scanBucketList`: `SELECT id, name, lat, lng, visited_at FROM
+   * bucket_list WHERE user_id = ? ORDER BY (visited_at IS NOT NULL),
+   * created_at DESC, id DESC`. The boolean-expression `ORDER BY` key is
+   * portable SQL — no dialect helper needed.
+   */
+  async listForScan(userId: number): Promise<{ id: number; name: string; lat: number | null; lng: number | null; visited_at: string | null }[]> {
+    return await this.readDb()
+      .selectFrom('bucket_list')
+      .select(['id', 'name', 'lat', 'lng', 'visited_at'])
+      .where('user_id', '=', userId)
+      .orderBy((eb) => eb('visited_at', 'is not', null))
+      .orderBy('created_at', 'desc')
+      .orderBy('id', 'desc')
+      .execute();
+  }
+
+  /**
+   * DWS13 — `confirmBucketVisits` (looped inside the SERVICE's own
+   * `uow.transactional` block): `UPDATE bucket_list SET visited_at = ?,
+   * visited_source = 'dawarich' WHERE id = ? AND user_id = ? AND visited_at
+   * IS NULL` — conditional, won't clobber an existing tick. Returns the
+   * affected-row count so the caller can total how many were actually
+   * updated.
+   */
+  async markVisitedIfUnset(id: number, userId: number, visitedAt: string): Promise<number> {
+    const result = await this.visitDb()
+      .updateTable('bucket_list')
+      .set({ visited_at: visitedAt, visited_source: 'dawarich' })
+      .where('id', '=', id)
+      .where('user_id', '=', userId)
+      .where('visited_at', 'is', null)
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows ?? 0);
+  }
+
+  /** DWS15 — `clearBucketVisit`: `UPDATE bucket_list SET visited_at = NULL, visited_source = NULL WHERE id = ? AND user_id = ?`. Returns whether a row was actually touched. */
+  async clearVisited(id: number, userId: number): Promise<boolean> {
+    const result = await this.visitDb()
+      .updateTable('bucket_list')
+      .set({ visited_at: null, visited_source: null })
+      .where('id', '=', id)
+      .where('user_id', '=', userId)
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows ?? 0) > 0;
+  }
+
+  /**
+   * DSY10 — `dawarich-sync.service.ts::matchBucketList`'s bounding-box
+   * pre-filter: `SELECT id, lat, lng FROM bucket_list WHERE user_id = ? AND
+   * lat IS NOT NULL AND lng IS NOT NULL AND lat BETWEEN ? AND ? AND lng
+   * BETWEEN ? AND ?`. A rough box only — the real distance test (haversine)
+   * stays in the SERVICE, in JS. Typed `lat`/`lng` nullable to match the
+   * column's own schema type; the `IS NOT NULL` conditions guarantee they
+   * are never actually null in a returned row.
+   */
+  async listInBoundingBox(
+    userId: number,
+    latMin: number,
+    latMax: number,
+    lngMin: number,
+    lngMax: number,
+  ): Promise<{ id: number; lat: number | null; lng: number | null }[]> {
+    return await this.readDb()
+      .selectFrom('bucket_list')
+      .select(['id', 'lat', 'lng'])
+      .where('user_id', '=', userId)
+      .where('lat', 'is not', null)
+      .where('lng', 'is not', null)
+      .where('lat', '>=', latMin)
+      .where('lat', '<=', latMax)
+      .where('lng', '>=', lngMin)
+      .where('lng', '<=', lngMax)
+      .execute();
   }
 }

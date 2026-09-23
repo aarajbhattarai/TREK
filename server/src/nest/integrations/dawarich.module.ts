@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AddonsModule } from '../addons/addons.module';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
@@ -9,6 +10,13 @@ import { AssignmentsDomainModule } from '../assignments/assignments-domain.modul
 import { JourneyDomainModule } from '../journey/journey-domain.module';
 import { SchedulingModule } from '../scheduling/scheduling.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
+import { DawarichConnections } from '../../db/entities/DawarichConnections.entity';
+import { DawarichVisitSuggestions } from '../../db/entities/DawarichVisitSuggestions.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { BucketList } from '../../db/entities/BucketList.entity';
+import { Users } from '../../db/entities/Users.entity';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
 import { DawarichClient } from './dawarich.client';
 import { DawarichController } from './dawarich.controller';
 import { DawarichMcp } from './dawarich.mcp';
@@ -33,9 +41,22 @@ import { DawarichTracksService } from './dawarich-tracks.service';
  * than `AssignmentsModule`, and `JourneyDomainModule` rather than
  * `JourneyModule`, so accepting a suggestion does not drag two controller
  * stacks and both photo providers into this graph.
+ *
+ * `MikroOrmModule.forFeature` registers every entity this module's own
+ * services' `@InjectRepository` constructors need (Plan 3h Task 3):
+ * `DawarichConnections`/`DawarichVisitSuggestions` (this domain's own two
+ * tables) plus the cross-domain repositories `DawarichSuggestionsService`/
+ * `DawarichSyncService`/`DawarichTracksService`/`DawarichSyncJob` reach —
+ * `Trips` (3c, access + sync candidates), `Places` (3c, the `source` stamp),
+ * `BucketList` (3f, ticks/scan/bounding-box), `Users` (3b, the role lookup
+ * `requirePermission` needs) and `AppSettings` (3a, the poll-interval
+ * setting) — every module that CONSTRUCTS these services needs its own
+ * registration of the entity, not only the entity's own home module (the
+ * program-wide BOOT GATE rule).
  */
 @Module({
   imports: [
+    MikroOrmModule.forFeature([DawarichConnections, DawarichVisitSuggestions, Trips, Places, BucketList, Users, AppSettings]),
     AddonsModule,
     AuditModule,
     // The MCP tools ask AuthService whether the caller is the demo user, the
