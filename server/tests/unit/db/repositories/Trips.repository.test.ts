@@ -152,3 +152,86 @@ describe('TripsRepository.setEndDate (Plan 3c Task 2, DY35)', () => {
     expect((testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(trip.id) as { end_date: string | null }).end_date).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 6 — TripMembersService (TM7/TM9/TM13) and TripReadModelService
+// (TR-A/TR-B). Appended per this task's file-ownership rule (additive
+// methods only, this repository is shared across tasks).
+// ---------------------------------------------------------------------------
+
+describe('TripsRepository — TripMembersService / TripReadModelService (Plan 3c Task 6)', () => {
+  it('TRIPREPO-014: getTitle (TM7) reads the title, null for a missing trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Readable' });
+    expect(await trips.getTitle(trip.id)).toBe('Readable');
+    expect(await trips.getTitle(999999)).toBeNull();
+  });
+
+  it('TRIPREPO-015: getTitle binds a string id raw, the same `0x10`/`007`-shaped id parity seam TripsRepository documents', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Stringy' });
+    expect(await trips.getTitle(String(trip.id))).toBe('Stringy');
+    expect(await trips.getTitle('not-a-number')).toBeNull();
+  });
+
+  it('TRIPREPO-016: findIdTitleOwner (TM9) returns {id, title, user_id}, undefined for a missing trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Handover' });
+    expect(await trips.findIdTitleOwner(trip.id)).toEqual({ id: trip.id, title: 'Handover', user_id: user.id });
+    expect(await trips.findIdTitleOwner(999999)).toBeUndefined();
+  });
+
+  it('TRIPREPO-017: setOwner (TM13, security-sensitive) writes user_id verbatim', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: newOwner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    await trips.setOwner(trip.id, newOwner.id);
+    expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(newOwner.id);
+  });
+
+  it('TRIPREPO-018: setOwner binds a string trip id raw — the same seam its docstring documents', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: newOwner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    await trips.setOwner(String(trip.id), newOwner.id);
+    expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(newOwner.id);
+  });
+
+  describe('findRaw (TR-B, shared with TripsService.getRaw once Task 7 lands)', () => {
+    it('TRIPREPO-019: every scalar column comes back, feed_token included (the JS strip is the caller\'s job)', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id, { title: 'Full Row', description: 'desc', start_date: '2026-01-01', end_date: '2026-01-05' });
+      testDb.prepare('UPDATE trips SET feed_token = ?, cover_image = ? WHERE id = ?').run('secret-token', 'cover.png', trip.id);
+      const legacyRow = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(trip.id);
+      const row = await trips.findRaw(trip.id);
+      expect(row).toEqual(legacyRow);
+      expect(row?.feed_token).toBe('secret-token');
+    });
+
+    it('TRIPREPO-020: NULL-bearing nullable columns come back null, not undefined (rule 16); a missing trip is null', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const row = await trips.findRaw(trip.id);
+      expect(row).toMatchObject({ description: null, start_date: null, end_date: null, cover_image: null, feed_token: null });
+      expect(await trips.findRaw(999999)).toBeNull();
+    });
+
+    it('TRIPREPO-021: binds a string trip id raw, the same seam every other method here preserves', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id, { title: 'Stringy Raw' });
+      expect((await trips.findRaw(String(trip.id)))?.title).toBe('Stringy Raw');
+      expect(await trips.findRaw('not-a-number')).toBeNull();
+    });
+
+    // D-shape (rule 20): `findRaw` is a `qb().execute('get', false)`
+    // projection with an explicit `t.*` select, never hydrating an entity
+    // into the identity map by construction — proven anyway.
+    it('TRIPREPO-022 (D-shape): a title written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id, { title: 'Before' });
+      await t.repo(Trips).find({}, { disableIdentityMap: false }); // populate the identity map with an unrelated read
+      testDb.prepare('UPDATE trips SET title = ? WHERE id = ?').run('After', trip.id);
+      expect((await trips.findRaw(trip.id))?.title).toBe('After');
+    });
+  });
+});

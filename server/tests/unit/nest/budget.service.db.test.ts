@@ -72,7 +72,7 @@ import { CollabService } from '../../../src/nest/collab/collab.service';
 import { VacayService } from '../../../src/nest/vacay/vacay.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm, createTestTripsRepo, createTestTripMembersRepo } from '../../helpers/test-uow';
 
 
 
@@ -111,6 +111,9 @@ beforeAll(async () => {
   new RealtimeService(),
   notificationsStub(),
   await createTestUnitOfWork(testDb),
+  await createTestTripsRepo(testDb),
+  await createTestTripMembersRepo(testDb),
+  await createTestUsersRepo(testDb),
 );
   createGuest = (...args) => membersSvc.createGuest(...args);
   deleteGuest = (...args) => membersSvc.deleteGuest(...args);

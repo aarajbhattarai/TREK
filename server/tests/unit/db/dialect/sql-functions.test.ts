@@ -7,6 +7,7 @@ import { createUser } from '../../../helpers/factories';
 import { Users } from '../../../../src/db/entities/Users.entity';
 import {
   absDifference,
+  caseWhenEquals,
   coalesce,
   coalesceParam,
   columnIncrementedBy,
@@ -427,5 +428,31 @@ describe('sql-functions (sqlite)', () => {
     class FakePlatform extends Platform {}
     const foreign = new FakePlatform();
     expect(() => lowerTrim(foreign, 'u.name')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3c Task 6 — `TripMembersRepository.listWithUserAndInviter`'s `role`
+  // column (TM2): `CASE WHEN u.id = ? THEN 'owner' ELSE 'member' END`.
+  it("SQLF-030: caseWhenEquals renders CASE WHEN <col> = ? THEN ? ELSE ? END, matching a hand-written statement", async () => {
+    const { user: a } = createUser(testDb);
+    const { user: b } = createUser(testDb);
+    const platform = t.em.getPlatform();
+
+    const rows = await t.em.createQueryBuilder(Users, 'u')
+      .select(['u.id', caseWhenEquals(platform, 'u.id', a.id, 'owner', 'member').as('role')])
+      .where({ id: { $in: [a.id, b.id] } })
+      .orderBy({ id: 'asc' })
+      .execute('all', false);
+    expect(rows).toEqual([{ id: a.id, role: 'owner' }, { id: b.id, role: 'member' }]);
+
+    const expected = testDb
+      .prepare('SELECT id, CASE WHEN id = ? THEN ? ELSE ? END as role FROM users WHERE id IN (?, ?) ORDER BY id ASC')
+      .all(a.id, 'owner', 'member', a.id, b.id);
+    expect(rows).toEqual(expected);
+  });
+
+  it('SQLF-031: an unknown platform fails closed for caseWhenEquals', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => caseWhenEquals(foreign, 'u.id', 1, 'owner', 'member')).toThrow(/no implementation for platform FakePlatform/);
   });
 });

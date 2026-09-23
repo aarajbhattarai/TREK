@@ -765,3 +765,125 @@ describe('UsersRepository', () => {
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(user.id)).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 6 — TripMembersService's guest lifecycle (TM3/TM4/TM10/TM16/
+// TM19/TM20). Appended after the existing `describe('UsersRepository', ...)`
+// block per this task's file-ownership rule (additive methods only).
+// ---------------------------------------------------------------------------
+
+describe('UsersRepository — TripMembersService (Plan 3c Task 6)', () => {
+  describe('findOwnerSummary (TM3)', () => {
+    it('USERSREPO-059: prefers display_name over username, matching the legacy COALESCE', async () => {
+      const { user } = createUser(testDb, { username: 'raw-handle' });
+      testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Displayed Name', user.id);
+      expect(await users.findOwnerSummary(user.id)).toEqual({
+        id: user.id, username: 'Displayed Name', email: user.email, avatar: null,
+      });
+    });
+
+    it('USERSREPO-060: falls back to username when display_name is NULL; a missing user id is null, not a throw', async () => {
+      const { user } = createUser(testDb, { username: 'bare-handle' });
+      expect(await users.findOwnerSummary(user.id)).toEqual({
+        id: user.id, username: 'bare-handle', email: user.email, avatar: null,
+      });
+      expect(await users.findOwnerSummary(999999)).toBeNull();
+    });
+
+    it('USERSREPO-061: a NULL avatar comes back null, not undefined (rule 16)', async () => {
+      const { user } = createUser(testDb);
+      testDb.prepare('UPDATE users SET avatar = ? WHERE id = ?').run('me.png', user.id);
+      expect((await users.findOwnerSummary(user.id))?.avatar).toBe('me.png');
+    });
+
+    // D-shape (rule 20): `findOwnerSummary` is a `qb().execute('get', false)`
+    // projection, which never hydrates an entity into the identity map by
+    // construction — proven anyway, the same "not required, proven
+    // regardless" shape `AssignmentParticipantsRepository`'s D-shape tests
+    // document. The FIRST, wider setup read passes `{ disableIdentityMap:
+    // false }` explicitly per the program rule.
+    it('USERSREPO-062 (D-shape): a display_name written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+      const { user } = createUser(testDb, { username: 'fresh-owner' });
+      await t.repo(Users).find({}, { disableIdentityMap: false }); // populate the identity map with an unrelated read
+      testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Fresh Name', user.id);
+      expect(await users.findOwnerSummary(user.id)).toEqual({
+        id: user.id, username: 'Fresh Name', email: user.email, avatar: null,
+      });
+    });
+  });
+
+  describe('findInvitableByEmailOrUsername (TM4)', () => {
+    it('USERSREPO-063: matches on email OR username, case-SENSITIVE (unlike findByEmailCI/findIdByEmailCI above)', async () => {
+      const { user: byEmail } = createUser(testDb, { email: 'invitee@example.test', username: 'invitee-handle' });
+      expect(await users.findInvitableByEmailOrUsername('invitee@example.test')).toEqual({
+        id: byEmail.id, username: 'invitee-handle', email: 'invitee@example.test', avatar: null,
+      });
+      expect(await users.findInvitableByEmailOrUsername('invitee-handle')).toEqual({
+        id: byEmail.id, username: 'invitee-handle', email: 'invitee@example.test', avatar: null,
+      });
+      // Case-sensitive: an uppercased email must NOT match (program rule 18
+      // only applies where the legacy statement itself folds case — TM4's does not).
+      expect(await users.findInvitableByEmailOrUsername('INVITEE@EXAMPLE.TEST')).toBeNull();
+    });
+
+    it('USERSREPO-064: excludes guests — a trip-scoped guest can never be re-invited through the box', async () => {
+      const { user: guest } = createUser(testDb, { email: 'guest-look@example.test', username: 'guest-handle' });
+      testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(guest.id);
+      expect(await users.findInvitableByEmailOrUsername('guest-look@example.test')).toBeNull();
+      expect(await users.findInvitableByEmailOrUsername('guest-handle')).toBeNull();
+    });
+
+    it('USERSREPO-065: no match returns null, not a throw', async () => {
+      expect(await users.findInvitableByEmailOrUsername('nobody@example.test')).toBeNull();
+    });
+  });
+
+  describe('findIdEmailGuest (TM10)', () => {
+    it('USERSREPO-066: reads id/email/is_guest; a missing user is null', async () => {
+      const { user } = createUser(testDb, { email: 'target@example.test' });
+      expect(await users.findIdEmailGuest(user.id)).toEqual({ id: user.id, email: 'target@example.test', is_guest: 0 });
+      testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
+      expect(await users.findIdEmailGuest(user.id)).toEqual({ id: user.id, email: 'target@example.test', is_guest: 1 });
+      expect(await users.findIdEmailGuest(999999)).toBeNull();
+    });
+  });
+
+  describe('insertGuest (TM16, security-sensitive)', () => {
+    it('USERSREPO-067: writes the fixed literal columns and the given display_name; returns the generated id', async () => {
+      const id = await users.insertGuest({ username: 'guest-abc', email: 'guest-abc@guests.invalid', display_name: 'Ida' });
+      const row = testDb.prepare('SELECT username, email, password_hash, role, is_guest, display_name FROM users WHERE id = ?').get(id);
+      expect(row).toEqual({
+        username: 'guest-abc', email: 'guest-abc@guests.invalid', password_hash: '', role: 'user', is_guest: 1, display_name: 'Ida',
+      });
+    });
+  });
+
+  describe('renameGuest / deleteGuest (TM19/TM20, security-sensitive, belt-and-braces is_guest = 1)', () => {
+    it('USERSREPO-068: renameGuest updates display_name + updated_at only for an is_guest = 1 row', async () => {
+      const id = await users.insertGuest({ username: 'guest-rn', email: 'guest-rn@guests.invalid', display_name: 'Old' });
+      await users.renameGuest(id, 'New Name');
+      const row = testDb.prepare('SELECT display_name, updated_at FROM users WHERE id = ?').get(id) as { display_name: string; updated_at: string | null };
+      expect(row.display_name).toBe('New Name');
+      expect(row.updated_at).not.toBeNull();
+    });
+
+    it('USERSREPO-069: renameGuest is a no-op on a real (non-guest) user id — the belt-and-braces predicate, pinned', async () => {
+      const { user } = createUser(testDb, { username: 'real-user' });
+      testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Untouched', user.id);
+      await users.renameGuest(user.id, 'Attempted Rename');
+      expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(user.id) as { display_name: string }).display_name).toBe('Untouched');
+    });
+
+    it('USERSREPO-070: deleteGuest removes only an is_guest = 1 row', async () => {
+      const id = await users.insertGuest({ username: 'guest-del', email: 'guest-del@guests.invalid', display_name: 'Gone' });
+      await users.deleteGuest(id);
+      expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(id)).toBeUndefined();
+    });
+
+    it('USERSREPO-071: deleteGuest is a no-op on a real (non-guest) user id — the belt-and-braces predicate, pinned', async () => {
+      const { user } = createUser(testDb, { username: 'real-user-2' });
+      await users.deleteGuest(user.id);
+      expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(user.id)).toBeDefined();
+    });
+  });
+});

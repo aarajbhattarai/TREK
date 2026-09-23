@@ -65,8 +65,10 @@ import { TripMembersService } from '../../../src/nest/trip-members/trip-members.
 import { NotFoundError, ValidationError } from '../../../src/nest/common/domain-errors';
 import type { User } from '../../../src/types';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTripsRepo, createTestTripMembersRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { EntityManager } from '@mikro-orm/core';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 // Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the `beforeAll`
 // below, before any `dbs()` call — `canAccessTrip`/`isOwner`/`rosterUserIds`/
@@ -79,42 +81,21 @@ const dbs = () => new DatabaseService(testDb, dbsEm);
 
 let budgetSvc: BudgetService;
 let roster: TripMembersService;
+let tripsRepo: TripsRepository;
+let usersRepo: UsersRepository;
 beforeAll(async () => {
   dbsEm = (await sharedTestOrm(testDb)).em;
+  tripsRepo = await createTestTripsRepo(testDb);
+  usersRepo = await createTestUsersRepo(testDb);
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
-  roster = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection));
+  roster = new TripMembersService(
+    dbs(), budgetSvc,
+    new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), usersRepo),
+    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+    new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection),
+    tripsRepo, await createTestTripMembersRepo(testDb), usersRepo,
+  );
 });
-
-/**
- * A roster whose connection reports "no such row" for the first result of every
- * statement containing `match`. Both fallbacks it serves sit behind a FOREIGN
- * KEY, so the missing row cannot be produced through the real schema — freezing
- * the read is the only way to keep those branches honest. Same Proxy shape as
- * the failingConnection helper in trips.service.test.ts.
- */
-async function rosterWithMissingRow(match: string) {
-  const conn = new Proxy(testDb, {
-    get(target, prop) {
-      if (prop === 'prepare') {
-        return (sql: string) => {
-          const stmt = target.prepare(sql);
-          if (!sql.includes(match)) return stmt;
-          return new Proxy(stmt, {
-            get(s, p) {
-              if (p === 'get') return () => undefined;
-              const v = (s as any)[p];
-              return typeof v === 'function' ? v.bind(s) : v;
-            },
-          });
-        };
-      }
-      const v = (target as any)[prop];
-      return typeof v === 'function' ? v.bind(target) : v;
-    },
-  });
-  const frozen = { connection: conn, canAccessTrip: dbMock.canAccessTrip, isOwner: dbMock.isOwner } as unknown as DatabaseService;
-  return new TripMembersService(frozen, budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection));
-}
 
 beforeAll(() => {
   createTables(testDb);
@@ -216,6 +197,11 @@ describe('TripMembersService delegation', () => {
 // ── addMember fallbacks ──────────────────────────────────────────────────────
 
 describe('addMember fallbacks', () => {
+  // R8 (Plan 3c program brief item 8): the SQL-text-keyed Proxy fault
+  // injection this test used to build (`rosterWithMissingRow`, keyed on the
+  // literal `'SELECT title FROM trips WHERE id = ?'` fragment) is rewritten
+  // onto a repository-level fault — `TripsRepository.getTitle` resolving
+  // `null`, the shape it already returns on a genuine miss.
   it("MEMBERS-SVC-007: addMember still reports a title when the trip row cannot be read ('Untitled')", async () => {
     const { user: owner } = createUser(testDb);
     const { user: invitee } = createUser(testDb);
@@ -224,8 +210,13 @@ describe('addMember fallbacks', () => {
     // The title only feeds the invite notification, and it is read after the
     // membership is inserted — losing that row must not cost the invitee their
     // access or throw on an undefined title.
-    const broken = await rosterWithMissingRow('SELECT title FROM trips WHERE id = ?');
-    const result = await broken.addMember(trip.id, invitee.email, owner.id, owner.id);
+    const spy = vi.spyOn(tripsRepo, 'getTitle').mockResolvedValueOnce(null);
+    let result;
+    try {
+      result = await roster.addMember(trip.id, invitee.email, owner.id, owner.id);
+    } finally {
+      spy.mockRestore();
+    }
     expect(result.tripTitle).toBe('Untitled');
     expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id)).toBeDefined();
   });
@@ -266,6 +257,9 @@ describe('transferOwnership guard rails', () => {
     expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(owner.id);
   });
 
+  // R8: the same rewrite as MEMBERS-SVC-007 above, on `UsersRepository.getEmail`
+  // (TM12) instead of `TripsRepository.getTitle` — `findIdEmailGuest`'s own
+  // read for the new owner (TM10) is untouched, so only the fromEmail leg fails.
   it('MEMBERS-SVC-011: completes with an empty fromEmail when the former owner cannot be read', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
@@ -275,8 +269,13 @@ describe('transferOwnership guard rails', () => {
     // fromEmail is audit detail only; an unreadable row must not abort the
     // handover halfway, which would leave the owner pointer and the member rows
     // disagreeing about who owns the trip.
-    const broken = await rosterWithMissingRow('SELECT email FROM users WHERE id = ?');
-    const result = await broken.transferOwnership(trip.id, member.id, owner.id);
+    const spy = vi.spyOn(usersRepo, 'getEmail').mockResolvedValueOnce(null);
+    let result;
+    try {
+      result = await roster.transferOwnership(trip.id, member.id, owner.id);
+    } finally {
+      spy.mockRestore();
+    }
     expect(result.fromEmail).toBe('');
     expect(result.toEmail).toBe(member.email);
     expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(member.id);

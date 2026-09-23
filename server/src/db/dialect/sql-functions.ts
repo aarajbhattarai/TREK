@@ -266,3 +266,26 @@ export function maxOf(platform: Platform, ref: string, aliasName: string): RawQu
   return unsupported(platform);
 }
 
+// ---------------------------------------------------------------------------
+// Plan 3c Task 6 — `TripMembersRepository.listWithUserAndInviter`
+// (`trip-members.service.ts:117`, TM2): the `role` column, a `CASE WHEN`
+// comparing the joined user's id against the trip's owner id.
+// ---------------------------------------------------------------------------
+
+/**
+ * `CASE WHEN <col> = ? THEN ? ELSE ? END`, for use as a `.select()` value
+ * (chain `.as(aliasName)` at the call site, the same way `coalesce()`'s
+ * callers do — this file does not bake the alias into the SQL text itself
+ * for this one, unlike `countAll`/`minOf`/`maxOf`, because `.as()` already
+ * covers it and a `value`-bearing fragment cannot reuse `alias()`'s bare
+ * identifier validation the same way an aggregate's literal alias does).
+ * `value`/`whenTrue`/`whenFalse` are all bound as parameters, never
+ * interpolated — even though today's only caller (TM2's owner/member role
+ * label) passes fixed literal strings, parity is by VALUE, not by whether
+ * the string happens to be a source-code literal at the call site.
+ */
+export function caseWhenEquals(platform: Platform, ref: string, value: number, whenTrue: string, whenFalse: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(`CASE WHEN ${column(ref)} = ? THEN ? ELSE ? END`, [value, whenTrue, whenFalse]);
+  return unsupported(platform);
+}
+

@@ -91,7 +91,7 @@ import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.se
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
-  createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
+  createTestTripMembersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
 } from '../../helpers/test-uow';
 
@@ -168,6 +168,11 @@ beforeAll(async () => {
   new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
+  await createTestPlacesRepo(dbs().connection),
+  await createTestTagsRepo(dbs().connection),
+  await createTestPlaceRatingsRepo(dbs().connection),
+  await createTestTripMembersRepo(dbs().connection),
+  await createTestDayAssignmentsRepo(dbs().connection),
 );
   svc = new TripsService(
   dbs(),
@@ -182,9 +187,9 @@ beforeAll(async () => {
   await createTestUnitOfWork(dbs().connection),
   (await sharedTestOrm(testDb)).em,
 );
-  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection));
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
   readModelSvc = new TripReadModelService(
-  dbs(), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
+  await createTestTripsRepo(dbs().connection), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
   new PackingService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
   new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
   new CollabService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection)),
@@ -1252,15 +1257,6 @@ describe('quirk fixes', () => {
     );
   }
 
-  /** Same frozen connection, for the guest deletion that now lives on the roster. */
-  async function failingMembers(match: string) {
-    return new TripMembersService(
-      failingConnection(match), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)),
-      new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
-      notificationsStub(), await createTestUnitOfWork(dbs().connection),
-    );
-  }
-
   it('TRIP-SVC-051: remove is atomic — a failed trip DELETE keeps the journey entries intact', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -1279,14 +1275,25 @@ describe('quirk fixes', () => {
     expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(trip.id)).toBeDefined();
   });
 
+  // R8 (Plan 3c program brief item 8): the SQL-text-keyed `failingConnection`
+  // Proxy this test used to build a `failingMembers(match)` service around is
+  // rewritten as a repository-level fault (Task 6 converted `deleteGuest` off
+  // `this.db.prepare(...)` entirely, onto `UsersRepository.deleteGuest` — the
+  // Proxy could never trigger any more, since no statement text runs through
+  // `this.db` inside `deleteGuest`'s transaction).
   it('TRIP-SVC-052: deleteGuest is atomic — a failed user DELETE rolls the budget re-split back', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     const { member: guest } = await membersSvc.createGuest(trip.id, 'Gia', owner.id);
     const item = await budgetSvc.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, guest.id] });
 
-    const broken = await failingMembers('DELETE FROM users WHERE id = ? AND is_guest = 1');
-    await expect(broken.deleteGuest(trip.id, guest.id)).rejects.toThrow('boom');
+    const usersRepo = await createTestUsersRepo(dbs().connection);
+    const spy = vi.spyOn(usersRepo, 'deleteGuest').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(membersSvc.deleteGuest(trip.id, guest.id)).rejects.toThrow('boom');
+    } finally {
+      spy.mockRestore();
+    }
 
     // Neither the guest nor their split membership was touched.
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(guest.id)).toBeDefined();

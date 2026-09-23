@@ -134,3 +134,209 @@ describe('TripMembersRepository — listUserIdsByTrip / exists / addMember (Plan
     expect(row2).toEqual({ invited_by: null });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 6 — TripMembersService (TM2/TM8/TM14/TM15/TM18). Appended
+// after Task 1's own suite above, per this task's file-ownership rule.
+// ---------------------------------------------------------------------------
+
+/** TM2's statement, run raw on the same rows — the parity oracle every assertion below is checked against. */
+function legacyListWithUserAndInviter(tripId: number, ownerId: number): unknown {
+  return testDb.prepare(`
+    SELECT u.id, COALESCE(u.display_name, u.username) AS username, u.email, u.avatar, u.is_guest,
+      CASE WHEN u.id = ? THEN 'owner' ELSE 'member' END as role,
+      m.added_at,
+      COALESCE(ib.display_name, ib.username) as invited_by_username
+    FROM trip_members m
+    JOIN users u ON u.id = m.user_id
+    LEFT JOIN users ib ON ib.id = m.invited_by
+    WHERE m.trip_id = ?
+    ORDER BY m.added_at ASC
+  `).all(ownerId, tripId);
+}
+
+describe('TripMembersRepository.listWithUserAndInviter (TM2, Plan 3c Task 6)', () => {
+  it('TMEMREPO-011: parity with the legacy statement on a fully seeded roster — a member with display_name, one without, a guest, an inviter with/without display_name, NULL avatars', async () => {
+    const { user: owner } = createUser(testDb, { username: 'owner-handle' });
+    const trip = createTrip(testDb, owner.id);
+
+    const { user: inviterWithName } = createUser(testDb, { username: 'inviter-1' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Inviter One', inviterWithName.id);
+    const { user: inviterBare } = createUser(testDb, { username: 'inviter-2' });
+
+    const { user: memberWithDisplayName } = createUser(testDb, { username: 'member-1-handle' });
+    testDb.prepare('UPDATE users SET display_name = ?, avatar = ? WHERE id = ?').run('Member One', 'm1.png', memberWithDisplayName.id);
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(trip.id, memberWithDisplayName.id, inviterWithName.id);
+
+    const { user: memberBare } = createUser(testDb, { username: 'member-2-handle' });
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(trip.id, memberBare.id, inviterBare.id);
+
+    const { user: memberNoInviter } = createUser(testDb, { username: 'member-3-handle' });
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, NULL)').run(trip.id, memberNoInviter.id);
+
+    const { user: guest } = createUser(testDb, { username: 'guest-handle' });
+    testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(guest.id);
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(trip.id, guest.id, owner.id);
+
+    testDb.prepare('UPDATE trip_members SET added_at = ? WHERE trip_id = ? AND user_id = ?').run('2026-01-01 00:00:00', trip.id, memberWithDisplayName.id);
+    testDb.prepare('UPDATE trip_members SET added_at = ? WHERE trip_id = ? AND user_id = ?').run('2026-01-02 00:00:00', trip.id, memberBare.id);
+    testDb.prepare('UPDATE trip_members SET added_at = ? WHERE trip_id = ? AND user_id = ?').run('2026-01-03 00:00:00', trip.id, memberNoInviter.id);
+    testDb.prepare('UPDATE trip_members SET added_at = ? WHERE trip_id = ? AND user_id = ?').run('2026-01-04 00:00:00', trip.id, guest.id);
+
+    const rows = await tripMembers.listWithUserAndInviter(trip.id, owner.id);
+    expect(rows).toEqual(legacyListWithUserAndInviter(trip.id, owner.id));
+    expect(rows).toEqual([
+      { id: memberWithDisplayName.id, username: 'Member One', email: memberWithDisplayName.email, avatar: 'm1.png', is_guest: 0, role: 'member', added_at: '2026-01-01 00:00:00', invited_by_username: 'Inviter One' },
+      { id: memberBare.id, username: 'member-2-handle', email: memberBare.email, avatar: null, is_guest: 0, role: 'member', added_at: '2026-01-02 00:00:00', invited_by_username: 'inviter-2' },
+      { id: memberNoInviter.id, username: 'member-3-handle', email: memberNoInviter.email, avatar: null, is_guest: 0, role: 'member', added_at: '2026-01-03 00:00:00', invited_by_username: null },
+      { id: guest.id, username: 'guest-handle', email: guest.email, avatar: null, is_guest: 1, role: 'member', added_at: '2026-01-04 00:00:00', invited_by_username: 'owner-handle' },
+    ]);
+  });
+
+  it('TMEMREPO-012: the trip owner\'s own row (if ever a member) reports role "owner"', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, NULL)').run(trip.id, owner.id);
+    const rows = await tripMembers.listWithUserAndInviter(trip.id, owner.id);
+    expect(rows).toEqual([expect.objectContaining({ id: owner.id, role: 'owner' })]);
+  });
+
+  it('TMEMREPO-013: an owner-only trip (no members row) returns an empty array', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    expect(await tripMembers.listWithUserAndInviter(trip.id, owner.id)).toEqual([]);
+  });
+
+  // D-shape (rule 20): a `qb().execute('all', false)` projection, which
+  // never hydrates an entity into the identity map by construction — proven
+  // anyway, the `AssignmentParticipantsRepository`/`PlaceRatingsRepository`
+  // precedent shape.
+  it('TMEMREPO-014 (D-shape): a member added after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: fresh } = createUser(testDb, { username: 'fresh-member' });
+    const trip = createTrip(testDb, owner.id);
+    await t.repo(TripMembers).find({}, { disableIdentityMap: false }); // populate the identity map with an unrelated read
+    addTripMember(testDb, trip.id, fresh.id);
+    const rows = await tripMembers.listWithUserAndInviter(trip.id, owner.id);
+    expect(rows).toEqual([expect.objectContaining({ id: fresh.id, username: 'fresh-member' })]);
+  });
+});
+
+describe('TripMembersRepository.isGuestOfTrip (TM18, security-sensitive, Plan 3c Task 6)', () => {
+  it('TMEMREPO-015: true only for a guest who is actually a member of THIS trip', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: guest } = createUser(testDb, { username: 'guest-scoped' });
+    testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(guest.id);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, guest.id);
+
+    expect(await tripMembers.isGuestOfTrip(trip.id, guest.id)).toBe(true);
+  });
+
+  it('TMEMREPO-016: false for a real member (not a guest)', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+    expect(await tripMembers.isGuestOfTrip(trip.id, member.id)).toBe(false);
+  });
+
+  it('TMEMREPO-017: false for a guest of a DIFFERENT trip — the scoping guard that keeps guest mutations trip-local', async () => {
+    const { user: ownerA } = createUser(testDb);
+    const { user: ownerB } = createUser(testDb);
+    const { user: guest } = createUser(testDb, { username: 'guest-of-a' });
+    testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(guest.id);
+    const tripA = createTrip(testDb, ownerA.id);
+    const tripB = createTrip(testDb, ownerB.id);
+    addTripMember(testDb, tripA.id, guest.id);
+
+    expect(await tripMembers.isGuestOfTrip(tripA.id, guest.id)).toBe(true);
+    expect(await tripMembers.isGuestOfTrip(tripB.id, guest.id)).toBe(false);
+  });
+
+  it('TMEMREPO-018: false for a nonexistent user id', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    expect(await tripMembers.isGuestOfTrip(trip.id, 999999)).toBe(false);
+  });
+});
+
+describe('TripMembersRepository.addIgnoringConflict / remove (TM8/TM14/TM15, security-sensitive, Plan 3c Task 6)', () => {
+  it('TMEMREPO-019: addIgnoringConflict inserts a fresh row', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: former } = createUser(testDb);
+    const { user: newOwner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    await tripMembers.addIgnoringConflict(trip.id, former.id, newOwner.id);
+    const row = testDb.prepare('SELECT trip_id, user_id, invited_by FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, former.id);
+    expect(row).toEqual({ trip_id: trip.id, user_id: former.id, invited_by: newOwner.id });
+  });
+
+  it('TMEMREPO-020: addIgnoringConflict is a true no-op (not a throw) when the (trip, user) row already exists', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+    // The existing row's invited_by (NULL, from addTripMember) must survive —
+    // an upsert-merge would overwrite it, which is NOT what `INSERT OR IGNORE` does.
+    await expect(tripMembers.addIgnoringConflict(trip.id, member.id, owner.id)).resolves.toBeUndefined();
+    const row = testDb.prepare('SELECT invited_by FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, member.id);
+    expect(row).toEqual({ invited_by: null });
+    expect((testDb.prepare('SELECT COUNT(*) AS n FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, member.id) as { n: number }).n).toBe(1);
+  });
+
+  it('TMEMREPO-021: remove deletes exactly the (trip, user) row, leaving other members untouched', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: memberA } = createUser(testDb);
+    const { user: memberB } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, memberA.id);
+    addTripMember(testDb, trip.id, memberB.id);
+
+    await tripMembers.remove(trip.id, memberA.id);
+    expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, memberA.id)).toBeUndefined();
+    expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, memberB.id)).toBeDefined();
+  });
+
+  it('TMEMREPO-022: remove on a missing row is a silent no-op', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    await expect(tripMembers.remove(trip.id, 999999)).resolves.toBeUndefined();
+  });
+
+  it('TMEMREPO-023: remove binds a string trip id raw, the same seam rosterUserIds/listUserIdsByTrip document', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+    await tripMembers.remove(String(trip.id), member.id);
+    expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, member.id)).toBeUndefined();
+  });
+});
+
+// Rule 15's exact trap, caught on a compiled boot (`DELETE /api/trips/:id/
+// members/abc` 500'd with `no such column: NaN` before this guard existed):
+// `TripMembersController.removeMember`/`renameGuest`/`deleteGuest` still do a
+// bare `Number.parseInt(userId)` on the route's `:userId`, unvalidated — a
+// non-numeric id parses to `NaN`, which MikroORM/Kysely inline as the
+// literal SQL token `NaN` even through a raw `?` placeholder.
+describe('NaN user_id — rule 15 (a non-numeric route id parses to NaN, must not 500)', () => {
+  it('TMEMREPO-024: remove(tripId, NaN) is a silent no-op, matching the legacy better-sqlite3 bind', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+    await expect(tripMembers.remove(trip.id, NaN)).resolves.toBeUndefined();
+    // The real member row survives — NaN must not accidentally match anything.
+    expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, member.id)).toBeDefined();
+  });
+
+  it('TMEMREPO-025: isGuestOfTrip(tripId, NaN) resolves false, matching the legacy 404 Guest not found', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: guest } = createUser(testDb);
+    testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(guest.id);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, guest.id);
+    await expect(tripMembers.isGuestOfTrip(trip.id, NaN)).resolves.toBe(false);
+  });
+});

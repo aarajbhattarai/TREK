@@ -1,4 +1,5 @@
 import type { Trips } from '../entities/Trips.entity';
+import type { AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
 /** What a trip-scoped request learns about the trip once access is verified. */
@@ -7,6 +8,32 @@ export interface TripAccess {
   user_id: number;
   currency: string | null;
 }
+
+/**
+ * `SELECT * FROM trips WHERE id = ?`, every scalar column — the row
+ * `TripReadModelService.getTripSummary` (TR-B) and, once Task 7 lands,
+ * `TripsService.getRaw` (TP22) both need, `feed_token` included: the
+ * `withoutFeedToken()` JS strip that guards the credential stays in the
+ * SERVICE (TR-B's ruling), so this repository method must hand the column
+ * back intact for that strip to have something to delete.
+ */
+export interface TripRawRow {
+  id: number;
+  user_id: number;
+  title: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  currency: string | null;
+  cover_image: string | null;
+  is_archived: number | null;
+  reminder_days: number | null;
+  feed_token: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+const _tripRawRowKeys: AssertRowKeys<TripRawRow, Trips> = true;
 
 export class TripsRepository extends TrekRepository<Trips> {
   /**
@@ -131,5 +158,70 @@ export class TripsRepository extends TrekRepository<Trips> {
       .orderBy({ 't.created_at': 'desc' })
       .execute<{ id: number }[]>('all', false);
     return rows.map((r) => r.id);
+  }
+
+  /**
+   * `SELECT title FROM trips WHERE id = ?` (`trip-members.service.ts:156`,
+   * TM7) — `addMember`'s notification-body read; the caller applies its own
+   * `?? 'Untitled'` fallback (D4). Raw-bind (D4's T5 escape hatch), the same
+   * `number | string` seam `findAccessible` documents.
+   */
+  async getTitle(trip_id: number | string): Promise<string | null> {
+    const row = await this.qb('t')
+      .select(['t.title'])
+      .where('t.id = ?', [trip_id])
+      .execute<{ title: string } | undefined>('get', false);
+    return row?.title ?? null;
+  }
+
+  /**
+   * `SELECT id, title, user_id FROM trips WHERE id = ?`
+   * (`trip-members.service.ts:180`, TM9) — `transferOwnership`'s first
+   * check-then-act read (miss → 404 `'Trip not found'`; wrong owner → 400
+   * `'Only the owner can transfer ownership'`, both decided by the caller).
+   * Raw-bind, the same seam as `getTitle` above.
+   */
+  async findIdTitleOwner(trip_id: number | string): Promise<{ id: number; title: string; user_id: number } | undefined> {
+    return this.qb('t')
+      .select(['t.id', 't.title', 't.user'])
+      .where('t.id = ?', [trip_id])
+      .execute<{ id: number; title: string; user_id: number } | undefined>('get', false);
+  }
+
+  /**
+   * `UPDATE trips SET user_id = ? WHERE id = ?` (`trip-members.service.ts:196`,
+   * TM13) — security-sensitive: the ownership handover itself, the first of
+   * `transferOwnership`'s three transactional statements. `qb().update()`
+   * rather than `nativeUpdate`: `nativeUpdate`'s typed `FilterQuery` rejects
+   * a `string` against `id`'s branded `number` type the same way `find`'s
+   * does, and `trip_id` here is still the route's unconverted string.
+   */
+  async setOwner(trip_id: number | string, user_id: number): Promise<void> {
+    await this.qb('t')
+      .update({ user: user_id })
+      .where('t.id = ?', [trip_id])
+      .execute('run');
+  }
+
+  /**
+   * `SELECT * FROM trips WHERE id = ?` — `TripReadModelService.getTripSummary`'s
+   * trip read (`trip-read-model.service.ts:52`, TR-B) and, once Task 7 lands,
+   * `TripsService.getRaw` (TP22, `trips.service.ts:389`) — one method, two
+   * sites, per the inventory's own note that they are the identical
+   * statement. `feed_token` comes back intact; `withoutFeedToken()` stays a
+   * JS strip in each CALLER (TR-B's ruling — this repository never blanks
+   * it itself, unlike `TRIP_SELECT`'s `NULL AS feed_token` SQL-side trick).
+   * `.select(['t.*'])` — MikroORM's QueryBuilder recognises the bare
+   * `<alias>.*` marker (verified against `QueryBuilder.js`'s own
+   * `prepareFields`, not assumed) and emits every column unprefixed, the
+   * same `SELECT t.*` shape the legacy statement used. Raw-bind, the same
+   * `number | string` seam `getTitle`/`findIdTitleOwner` above preserve.
+   */
+  async findRaw(trip_id: number | string): Promise<TripRawRow | null> {
+    const row = await this.qb('t')
+      .select(['t.*'])
+      .where('t.id = ?', [trip_id])
+      .execute<TripRawRow | undefined>('get', false);
+    return row ?? null;
   }
 }

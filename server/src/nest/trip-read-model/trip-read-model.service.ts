@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { DaysService } from '../days/days.service';
 import { AccommodationsService } from '../accommodations/accommodations.service';
 import { BudgetService } from '../budget/budget.service';
@@ -24,7 +26,7 @@ import { withoutFeedToken } from '../trips/trips.service';
 @Injectable()
 export class TripReadModelService {
   constructor(
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
     private readonly members: TripMembersService,
     private readonly days: DaysService,
     private readonly accommodations: AccommodationsService,
@@ -37,25 +39,15 @@ export class TripReadModelService {
     private readonly files: FilesService,
   ) {}
 
-  private get db() {
-    return this.dbs.connection;
-  }
-
-  private async getOwner(tripId: string | number): Promise<{ user_id: number } | undefined> {
-    return this.db.prepare('SELECT user_id FROM trips WHERE id = ?').get(tripId) as { user_id: number } | undefined;
-  }
-
   // ── Trip summary (used by MCP get_trip_summary tool) ──────────────────────
 
   async getTripSummary(tripId: number, viewerUserId?: number) {
-    const trip = withoutFeedToken(
-      this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Record<string, unknown> | undefined,
-    );
+    const trip = withoutFeedToken(await this.tripsRepo.findRaw(tripId));
     if (!trip) return null;
 
-    const ownerRow = await this.getOwner(tripId);
-    if (!ownerRow) return null;
-    const { owner, members } = await this.members.listMembers(tripId, ownerRow.user_id);
+    const ownerId = await this.tripsRepo.getOwnerId(tripId);
+    if (ownerId === null) return null;
+    const { owner, members } = await this.members.listMembers(tripId, ownerId);
 
     const { days: rawDays } = await this.days.list(tripId);
     const days = rawDays.map(({ notes_items, ...day }) => ({ ...day, notes: notes_items }));

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../database/database.service';
 import type { User } from '../../types';
 import { avatarUrl } from '../common/avatarUrl';
@@ -13,6 +14,12 @@ import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { emitUserDeleted } from '../../plugin-user-lifecycle';
 import { NotFoundError, ValidationError } from '../common/domain-errors';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 
 export interface AddMemberResult {
   member: { id: number; username: string; email: string; avatar?: string | null; role: string; avatar_url: string | null };
@@ -68,8 +75,19 @@ export class TripMembersService {
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
   ) {}
 
+  /**
+   * Task 7: `TripsService` still owns `TRIP_SELECT` and its own raw
+   * `this.dbs.connection` handle (`trips.service.ts:166-168`) — `getTripForViewer`
+   * below is this service's one documented raw-SQL survivor, importing the
+   * projection rather than copying it, unchanged until Task 7 converts
+   * `TripsService` itself and this call points at a repository method
+   * instead (`TripsRepository.findForViewer`, per the inventory's proposal).
+   */
   private get db() {
     return this.dbs.connection;
   }
@@ -88,7 +106,8 @@ export class TripMembersService {
   }
 
   /** The trip in list shape, for the re-read a handover broadcasts. Same query the
-   *  trip routes use, imported rather than copied so the two cannot drift. */
+   *  trip routes use, imported rather than copied so the two cannot drift.
+   *  // Task 7: converts once TripsService itself does — see the class docstring above. */
   async getTripForViewer(tripId: string | number, userId: number) {
     return this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId });
   }
@@ -113,24 +132,14 @@ export class TripMembersService {
   async listMembers(tripId: string | number, tripOwnerId: number) {
     // u.is_guest rides along (#1362) so guests stay assignable everywhere a member is,
     // while the UI can badge them and suppress owner-only actions. The owner is never a guest.
-    const members = this.db.prepare(`
-      SELECT u.id, COALESCE(u.display_name, u.username) AS username, u.email, u.avatar, u.is_guest,
-        CASE WHEN u.id = ? THEN 'owner' ELSE 'member' END as role,
-        m.added_at,
-        COALESCE(ib.display_name, ib.username) as invited_by_username
-      FROM trip_members m
-      JOIN users u ON u.id = m.user_id
-      LEFT JOIN users ib ON ib.id = m.invited_by
-      WHERE m.trip_id = ?
-      ORDER BY m.added_at ASC
-    `).all(tripOwnerId, tripId) as { id: number; username: string; email: string; avatar: string | null; is_guest: number; role: string; added_at: string; invited_by_username: string | null }[];
+    const members = await this.tripMembersRepo.listWithUserAndInviter(tripId, tripOwnerId);
 
     // Quirk fix on top of the 1:1 move: the owner row prefers display_name like
     // every member row does (the legacy query read the raw username only).
-    const owner = this.db.prepare('SELECT id, COALESCE(display_name, username) AS username, email, avatar FROM users WHERE id = ?').get(tripOwnerId) as Pick<User, 'id' | 'username' | 'email' | 'avatar'>;
+    const owner = await this.usersRepo.findOwnerSummary(tripOwnerId);
 
     return {
-      owner: { ...owner, role: 'owner', is_guest: false, avatar_url: avatarUrl(owner) },
+      owner: { ...owner, role: 'owner', is_guest: false, avatar_url: avatarUrl(owner!) },
       members: members.map(m => ({ ...m, is_guest: !!m.is_guest, avatar_url: avatarUrl(m) })),
     };
   }
@@ -140,31 +149,34 @@ export class TripMembersService {
 
     // Guests (#1362) are not invitable accounts — exclude them so a trip-scoped guest
     // can never be resolved (and re-attached to another trip) through the invite box.
-    const target = this.db.prepare(
-      'SELECT id, username, email, avatar FROM users WHERE (email = ? OR username = ?) AND COALESCE(is_guest, 0) = 0'
-    ).get(identifier.trim(), identifier.trim()) as Pick<User, 'id' | 'username' | 'email' | 'avatar'> | undefined;
+    const target = await this.usersRepo.findInvitableByEmailOrUsername(identifier.trim());
 
     if (!target) throw new NotFoundError('User not found');
 
     if (target.id === tripOwnerId)
       throw new ValidationError('Trip owner is already a member');
 
-    const existing = this.db.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(tripId, target.id);
+    const existing = await this.tripMembersRepo.exists(tripId, target.id);
     if (existing) throw new ValidationError('User already has access');
 
-    this.db.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripId, target.id, invitedByUserId);
+    // `Number(tripId)`, not the raw string: `addMember`'s INSERT needs the
+    // real `Primary<Trips>` type (its docstring). Safe here — `tripId` has
+    // already matched a real trip through the inline `canAccessTrip` check
+    // above this method's controller call, which only succeeds for a string
+    // SQLite's own affinity rules already recognise as numeric.
+    await this.tripMembersRepo.addMember(Number(tripId), target.id, invitedByUserId);
 
-    const tripInfo = this.db.prepare('SELECT title FROM trips WHERE id = ?').get(tripId) as { title: string } | undefined;
+    const tripTitle = await this.tripsRepo.getTitle(tripId);
 
     return {
       member: { ...target, role: 'member', avatar_url: avatarUrl(target) },
       targetUserId: target.id,
-      tripTitle: tripInfo?.title || 'Untitled',
+      tripTitle: tripTitle || 'Untitled',
     };
   }
 
   async removeMember(tripId: string | number, targetUserId: number): Promise<void> {
-    this.db.prepare('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?').run(tripId, targetUserId);
+    await this.tripMembersRepo.remove(tripId, targetUserId);
   }
 
   /**
@@ -178,27 +190,31 @@ export class TripMembersService {
     newOwnerId: number,
     currentOwnerId: number,
   ): Promise<TransferOwnershipResult> {
-    const trip = this.db.prepare('SELECT id, title, user_id FROM trips WHERE id = ?').get(tripId) as { id: number; title: string; user_id: number } | undefined;
+    const trip = await this.tripsRepo.findIdTitleOwner(tripId);
     if (!trip) throw new NotFoundError('Trip not found');
     if (trip.user_id !== currentOwnerId) throw new ValidationError('Only the owner can transfer ownership');
     if (newOwnerId === currentOwnerId) throw new ValidationError('You already own this trip');
 
-    const newOwner = this.db.prepare('SELECT id, email, is_guest FROM users WHERE id = ?').get(newOwnerId) as { id: number; email: string; is_guest?: number } | undefined;
+    const newOwner = await this.usersRepo.findIdEmailGuest(newOwnerId);
     if (!newOwner) throw new NotFoundError('User not found');
     // A guest (#1362) can never log in, so it must never become the owner of a trip.
     if (newOwner.is_guest) throw new ValidationError('Cannot transfer ownership to a guest');
 
-    const isMember = this.db.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(tripId, newOwnerId);
+    const isMember = await this.tripMembersRepo.exists(tripId, newOwnerId);
     if (!isMember) throw new ValidationError('New owner must be a trip member');
 
-    const fromEmail = (this.db.prepare('SELECT email FROM users WHERE id = ?').get(currentOwnerId) as { email: string } | undefined)?.email || '';
+    const fromEmail = (await this.usersRepo.getEmail(currentOwnerId)) || '';
 
+    // `Number(tripId)` at the two writes below that need the real
+    // `Primary<Trips>` type (`setOwner`'s docstring / `addIgnoringConflict`'s
+    // docstring) — safe: this route runs behind `TripOwnerGuard`, so `tripId`
+    // has already matched a real trip through its raw-bind `isOwner` check.
     await this.uow.transactional(async () => {
-      this.db.prepare('UPDATE trips SET user_id = ? WHERE id = ?').run(newOwnerId, tripId);
+      await this.tripsRepo.setOwner(tripId, newOwnerId);
       // The new owner is no longer a plain member…
-      this.db.prepare('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?').run(tripId, newOwnerId);
+      await this.tripMembersRepo.remove(tripId, newOwnerId);
       // …and the former owner keeps access as a member.
-      this.db.prepare('INSERT OR IGNORE INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripId, currentOwnerId, newOwnerId);
+      await this.tripMembersRepo.addIgnoringConflict(Number(tripId), currentOwnerId, newOwnerId);
     });
 
     return { tripTitle: trip.title, fromEmail, toEmail: newOwner.email };
@@ -219,12 +235,12 @@ export class TripMembersService {
     const email = `guest-${randomUUID()}@guests.invalid`;
     const username = `guest-${randomUUID()}`;
 
+    // `Number(tripId)` for the same reason `addMember`'s docstring gives:
+    // `createGuest`'s route runs behind `TripOwnerGuard`, so `tripId` has
+    // already matched a real trip through its raw-bind `isOwner` check.
     const guestId = await this.uow.transactional(async () => {
-      const res = this.db.prepare(
-        "INSERT INTO users (username, email, password_hash, role, is_guest, display_name) VALUES (?, ?, '', 'user', 1, ?)"
-      ).run(username, email, display);
-      const newGuestId = Number(res.lastInsertRowid);
-      this.db.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripId, newGuestId, invitedByUserId);
+      const newGuestId = await this.usersRepo.insertGuest({ username, email, display_name: display });
+      await this.tripMembersRepo.addMember(Number(tripId), newGuestId, invitedByUserId);
       return newGuestId;
     });
 
@@ -233,9 +249,7 @@ export class TripMembersService {
 
   /** Confirms a user id is a guest of THIS trip, so guest mutations stay trip-scoped. */
   private async guestOfTrip(tripId: string | number, guestUserId: number): Promise<boolean> {
-    return !!this.db.prepare(
-      'SELECT u.id FROM users u JOIN trip_members m ON m.user_id = u.id WHERE u.id = ? AND m.trip_id = ? AND u.is_guest = 1'
-    ).get(guestUserId, tripId);
+    return this.tripMembersRepo.isGuestOfTrip(tripId, guestUserId);
   }
 
   async renameGuest(tripId: string | number, guestUserId: number, name: string): Promise<boolean> {
@@ -246,7 +260,7 @@ export class TripMembersService {
 
     // Rename only the display name — no global-uniqueness dedup, so a rename to a name
     // another trip's guest already uses no longer produces "Name 2" (#1446).
-    this.db.prepare('UPDATE users SET display_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_guest = 1').run(display, guestUserId);
+    await this.usersRepo.renameGuest(guestUserId, display);
     return true;
   }
 
@@ -266,7 +280,7 @@ export class TripMembersService {
       await this.budget.removeUserFromBudgetItems(guestUserId);
       // Deleting the guest's users row cascades its membership and every assignment join
       // (trip_members, budget/packing/assignment links) via the ON DELETE foreign keys.
-      this.db.prepare('DELETE FROM users WHERE id = ? AND is_guest = 1').run(guestUserId);
+      await this.usersRepo.deleteGuest(guestUserId);
     });
     await emitUserDeleted(guestUserId); // deliver the erasure to any active plugin now
     return true;

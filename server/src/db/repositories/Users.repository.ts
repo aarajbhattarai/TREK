@@ -1,6 +1,6 @@
 import { Users } from '../entities/Users.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { columnIncrementedBy, currentTimestamp, lower, lowerParam } from '../dialect/sql-functions';
+import { coalesce, columnIncrementedBy, currentTimestamp, lower, lowerParam } from '../dialect/sql-functions';
 import { TrekRepository } from './_shared/trek-repository';
 
 /**
@@ -76,6 +76,22 @@ export interface NewUserRow {
   oidc_sub?: string | null;
   oidc_issuer?: string | null;
   avatar?: string | null;
+}
+
+/**
+ * `TripMembersService.createGuest` (TM16, `trip-members.service.ts:222-224`) —
+ * a credential-less guest account (#1362). Additive, NOT a widening of
+ * `NewUserRow` above (Plan 3b Task 1's shape, covering only the AU10/O14
+ * real-account column sets): this method's `password_hash`/`role`/`is_guest`
+ * are fixed literals the caller can never override, which is the whole
+ * point — a second, narrower method keeps the "credential-less account"
+ * invariant IN the method rather than in caller discipline (Task 6 brief's
+ * explicit ruling).
+ */
+export interface NewGuestUserRow {
+  username: string;
+  email: string;
+  display_name: string;
 }
 
 /** `UserProfileService.updateApiKeys` (UP3) — the four encrypted key columns, already resolved by the service. */
@@ -919,6 +935,120 @@ export class UsersRepository extends TrekRepository<Users> {
   async getRoleAndWeatherKey(id: number): Promise<{ role: string; openweather_api_key: string | null } | null> {
     const row = await this.findOne({ id }, { fields: ['role', 'openweather_api_key'] });
     return row ? { role: row.role, openweather_api_key: row.openweather_api_key ?? null } : null;
+  }
+
+  // ---------------------------------------------------------------------
+  // TM3 — TripMembersService.listMembers's owner row
+  // ---------------------------------------------------------------------
+
+  /**
+   * `SELECT id, COALESCE(display_name, username) AS username, email, avatar
+   *  FROM users WHERE id = ?` (`trip-members.service.ts:129`, TM3). The
+   * legacy statement's own docstring records this COALESCE as a quirk fix on
+   * top of the 1:1 move (the ORIGINAL raw statement read the bare
+   * `username`) — kept exactly as the code already stands, not re-litigated.
+   */
+  async findOwnerSummary(id: number): Promise<{ id: number; username: string; email: string; avatar: string | null } | null> {
+    const platform = this.getEntityManager().getPlatform();
+    const row = await this.qb('u')
+      .select(['u.id', coalesce(platform, 'u.display_name', 'u.username').as('username'), 'u.email', 'u.avatar'])
+      .where({ id })
+      .execute<{ id: number; username: string; email: string; avatar: string | null } | undefined>('get', false);
+    return row ? { id: row.id, username: row.username, email: row.email, avatar: row.avatar ?? null } : null;
+  }
+
+  // ---------------------------------------------------------------------
+  // TM4 — TripMembersService.addMember's invite-target lookup
+  // ---------------------------------------------------------------------
+
+  /**
+   * `SELECT id, username, email, avatar FROM users WHERE (email = ? OR
+   *  username = ?) AND COALESCE(is_guest, 0) = 0` (`trip-members.service.ts:142-144`,
+   * TM4) — case-SENSITIVE (unlike `findByEmailCI`/`findIdByEmailCI` above;
+   * kept exactly as written, program rule 18 only applies where the legacy
+   * statement itself folds case), guests excluded so a trip-scoped guest can
+   * never be resolved (and re-attached to another trip) through the invite
+   * box. `identifier` is bound to both sides — the caller passes the SAME
+   * already-trimmed string for both the email and username branch, matching
+   * the legacy statement's `identifier.trim()` bound twice. `is_guest: 0` is
+   * exact parity for `COALESCE(is_guest, 0) = 0` (`countNonGuest`'s
+   * docstring above: the column is `NOT NULL DEFAULT 0`, so no row can store
+   * `NULL` there).
+   */
+  async findInvitableByEmailOrUsername(identifier: string): Promise<{ id: number; username: string; email: string; avatar: string | null } | null> {
+    const row = await this.findOne(
+      { $or: [{ email: identifier }, { username: identifier }], is_guest: 0 },
+      { fields: ['id', 'username', 'email', 'avatar'] },
+    );
+    return row ? { id: row.id, username: row.username, email: row.email, avatar: row.avatar ?? null } : null;
+  }
+
+  // ---------------------------------------------------------------------
+  // TM10 — TripMembersService.transferOwnership's new-owner guest check
+  // ---------------------------------------------------------------------
+
+  /** `SELECT id, email, is_guest FROM users WHERE id = ?` (`trip-members.service.ts:185`, TM10) — guest → 400 `'Cannot transfer ownership to a guest'` (caller's decision). */
+  async findIdEmailGuest(id: number): Promise<{ id: number; email: string; is_guest: number } | null> {
+    const row = await this.findOne({ id }, { fields: ['id', 'email', 'is_guest'] });
+    return row ? { id: row.id, email: row.email, is_guest: row.is_guest } : null;
+  }
+
+  // ---------------------------------------------------------------------
+  // TM16 — TripMembersService.createGuest (Plan 3c Task 6, security-sensitive)
+  // ---------------------------------------------------------------------
+
+  /**
+   * `INSERT INTO users (username, email, password_hash, role, is_guest,
+   *  display_name) VALUES (?, ?, '', 'user', 1, ?)` (`trip-members.service.ts:222-224`,
+   * TM16) — security-sensitive: creates a credential-less account (#1362).
+   * `password_hash`/`role`/`is_guest` are fixed literals, never a caller
+   * input (see `NewGuestUserRow`'s docstring above for why this is its own
+   * method rather than a widened `insertUser`). Returns the generated id
+   * only — the legacy caller reads `res.lastInsertRowid` and never re-selects
+   * the row.
+   */
+  async insertGuest(row: NewGuestUserRow): Promise<number> {
+    return this.insert({
+      username: row.username,
+      email: row.email,
+      password_hash: '',
+      role: 'user',
+      is_guest: 1,
+      display_name: row.display_name,
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // TM19 — TripMembersService.renameGuest (security-sensitive)
+  // ---------------------------------------------------------------------
+
+  /**
+   * `UPDATE users SET display_name = ?, updated_at = CURRENT_TIMESTAMP WHERE
+   *  id = ? AND is_guest = 1` (`trip-members.service.ts:248`, TM19) —
+   * security-sensitive: the `AND is_guest = 1` is a SECOND guard (belt and
+   * braces) on top of `TripMembersRepository.isGuestOfTrip`'s trip-scoping
+   * check that runs before this is ever called (#1362) — pinned by a test
+   * that this method, called directly on a real non-guest id, updates the
+   * row count of exactly zero rows.
+   */
+  async renameGuest(id: number, displayName: string): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate({ id, is_guest: 1 }, { display_name: displayName, updated_at: currentTimestamp(platform) });
+  }
+
+  // ---------------------------------------------------------------------
+  // TM20 — TripMembersService.deleteGuest (security-sensitive: account erasure)
+  // ---------------------------------------------------------------------
+
+  /**
+   * `DELETE FROM users WHERE id = ? AND is_guest = 1` (`trip-members.service.ts:268`,
+   * TM20) — security-sensitive: account erasure, the same belt-and-braces
+   * `is_guest = 1` predicate as `renameGuest` above. Cascades `trip_members`
+   * and every assignment/budget/packing join via the entity's FK delete
+   * rules, unchanged by this conversion.
+   */
+  async deleteGuest(id: number): Promise<void> {
+    await this.nativeDelete({ id, is_guest: 1 });
   }
 
   // ---------------------------------------------------------------------
