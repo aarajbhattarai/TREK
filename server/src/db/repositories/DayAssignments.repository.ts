@@ -559,4 +559,76 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
       .orderBy({ 'd.day_number': 'asc', 'da.order_index': 'asc' })
       .execute<{ day_number: number; date: string | null; title: string | null; name: string; lat: number; lng: number }[]>('all', false);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 8 (`TripsService.copy`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP48 (`trips.service.ts::copy`'s assignments read) — `SELECT da.* FROM
+   * day_assignments da JOIN days d ON d.id = da.day_id WHERE d.trip_id = ?`,
+   * no `ORDER BY` (matching the legacy statement, which relies on SQLite's
+   * own rowid-ascending scan order — the copy loop's insertion order tracks
+   * the source's own, same reasoning as `PlacesRepository.listAllForTrip`).
+   */
+  async listAllForTrip(trip_id: number | string): Promise<DayAssignmentRow[]> {
+    return this.qb('da')
+      .join('da.day', 'd')
+      .select(['da.*'])
+      .where('d.trip_id = ?', [trip_id])
+      .execute<DayAssignmentRow[]>('all', false);
+  }
+
+  /**
+   * TP49 (`trips.service.ts::copy`'s assignment INSERT) — the 10-column
+   * `INSERT INTO day_assignments (day_id, place_id, order_index, notes,
+   * reservation_status, reservation_notes, reservation_datetime,
+   * assignment_time, assignment_end_time, end_day) VALUES (...)`. A
+   * different column set from AS8's `insertAssignment` (5 columns: `day_id`,
+   * `place_id`, `order_index`, `notes`, `accommodation_id` — no reservation/
+   * time/end_day fields, and `accommodation_id` is stamped separately here,
+   * AFTER the bookings loop, via {@link setAccommodation} below, TP57) — the
+   * copy carries a source assignment's reservation snapshot and timing
+   * verbatim, values already fully resolved by the caller (`a.end_day ?? 0`
+   * stays the service's own decision, `DaysRepository.createDay`'s split).
+   */
+  async insertAssignmentCopy(input: {
+    day_id: number;
+    place_id: number;
+    order_index: number | null;
+    notes: string | null;
+    reservation_status: string | null;
+    reservation_notes: string | null;
+    reservation_datetime: string | null;
+    assignment_time: string | null;
+    assignment_end_time: string | null;
+    end_day: number;
+  }): Promise<number> {
+    return await this.insert({
+      day: input.day_id,
+      place: input.place_id,
+      order_index: input.order_index,
+      notes: input.notes,
+      reservation_status: input.reservation_status,
+      reservation_notes: input.reservation_notes,
+      reservation_datetime: input.reservation_datetime,
+      assignment_time: input.assignment_time,
+      assignment_end_time: input.assignment_end_time,
+      end_day: input.end_day,
+    });
+  }
+
+  /**
+   * TP57 (`trips.service.ts::copy`'s post-bookings-loop stamp) — `UPDATE
+   * day_assignments SET accommodation_id = ? WHERE id = ?`. Run once per
+   * copied stay-stop, AFTER the `day_accommodations` bookings are copied
+   * (Plan 3d's own table — the bookings loop itself stays raw, `// TPn —
+   * Plan 3d`), because only then does the copied accommodation's id exist
+   * to stamp on. `accommodation_id` is a plain `p.integer()` column on this
+   * entity, not a relation (`AssignmentTimeSortKyselyDB`'s docstring), so a
+   * typed `nativeUpdate` partial reaches it directly.
+   */
+  async setAccommodation(id: number, accommodation_id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { accommodation_id });
+  }
 }

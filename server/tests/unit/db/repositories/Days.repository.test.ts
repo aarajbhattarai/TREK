@@ -251,17 +251,25 @@ describe('DaysRepository — Task 2 additions', () => {
       const withAssignment = createDay(testDb, trip.id);
       const withNote = createDay(testDb, trip.id);
       const withAccomStart = createDay(testDb, trip.id);
+      // Task 7 review M1: a check-out day (#1083) — this day is ONLY ever
+      // `end_day_id` of the booking, never `start_day_id`. The original
+      // version of this test set BOTH start and end to the same day, which
+      // never actually exercised the `{ endDay: day_id }` half of the `$or`
+      // — that half could be deleted from `isEmptyDay` and this test would
+      // still pass, because the day would still match via `startDay`. A
+      // genuinely two-day-spanning accommodation is required to pin it.
       const withAccomEnd = createDay(testDb, trip.id);
       const place = createPlace(testDb, trip.id);
       createDayAssignment(testDb, withAssignment.id, place.id);
       createDayNote(testDb, withNote.id, trip.id);
-      createDayAccommodation(testDb, trip.id, place.id, withAccomStart.id, withAccomStart.id);
-      createDayAccommodation(testDb, trip.id, place.id, withAccomEnd.id, withAccomEnd.id);
+      createDayAccommodation(testDb, trip.id, place.id, withAccomStart.id, withAccomEnd.id);
 
       expect(await days.isEmptyDay(empty.id)).toBe(true);
       expect(await days.isEmptyDay(withAssignment.id)).toBe(false);
       expect(await days.isEmptyDay(withNote.id)).toBe(false);
       expect(await days.isEmptyDay(withAccomStart.id)).toBe(false);
+      // Mutation-proof: this day is NEVER `start_day_id` for any accommodation
+      // — it can only read `false` here via the `{ endDay: day_id }` clause.
       expect(await days.isEmptyDay(withAccomEnd.id)).toBe(false);
     });
   });
@@ -294,5 +302,32 @@ describe('DaysRepository — Task 2 additions', () => {
       createDay(testDb, trip.id);
       expect(await days.listTrailingEmptyIds(trip.id, 0)).toEqual([]);
     });
+  });
+});
+
+// ── Plan 3c Task 8 (`TripsService.copy`, TP39) — additive ───────────────────
+
+describe('DaysRepository.insertDayCopy (TP39)', () => {
+  it('DAYREPO-025: writes the 5-column copy set (trip_id, day_number, date, notes, title) verbatim, no read-back', async () => {
+    const { user } = createUser(testDb);
+    const src = createTrip(testDb, user.id);
+    const dst = createTrip(testDb, user.id);
+    const srcDay = createDay(testDb, src.id, { date: '2026-03-01', title: 'Arrival' });
+    testDb.prepare('UPDATE days SET notes = ? WHERE id = ?').run('Bring passport', srcDay.id);
+
+    const newId = await days.insertDayCopy({
+      trip_id: dst.id, day_number: srcDay.day_number, date: srcDay.date, notes: 'Bring passport', title: srcDay.title,
+    });
+
+    const row = testDb.prepare('SELECT trip_id, day_number, date, notes, title FROM days WHERE id = ?').get(newId);
+    expect(row).toEqual({ trip_id: dst.id, day_number: srcDay.day_number, date: '2026-03-01', notes: 'Bring passport', title: 'Arrival' });
+  });
+
+  it('DAYREPO-026: null date/notes/title are written as NULL, not coerced', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const newId = await days.insertDayCopy({ trip_id: trip.id, day_number: 1, date: null, notes: null, title: null });
+    const row = testDb.prepare('SELECT date, notes, title FROM days WHERE id = ?').get(newId);
+    expect(row).toEqual({ date: null, notes: null, title: null });
   });
 });

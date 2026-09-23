@@ -514,6 +514,33 @@ export class PlacesRepository extends TrekRepository<Places> {
   }
 
   /**
+   * PL24 (`PlacesService.buildDedupSet`'s read) — `SELECT name, lat, lng,
+   * google_place_id, google_ftid, osm_id, amap_poi_id FROM places WHERE
+   * trip_id = ?`, the exact projection the legacy statement named. Task 4's
+   * ruling left this raw under `PlacesService` because the dedup semantics
+   * (names lowercased+trimmed in JS, coordinates collected only for unnamed
+   * rows, provider ids collected for every row) are a JS decision, not a SQL
+   * one — Task 5 review L6 pointed out that leaving the SQL itself raw
+   * still contradicted the deliverable's "PL15/16/18/22 + PI2 are the only
+   * allowed survivors" grep. This method is the additive repository seam
+   * that resolves that: it carries only the projection, none of the JS
+   * folding logic, which stays in `PlacesService.buildDedupSet` exactly as
+   * it was.
+   */
+  async listDedupInputs(trip_id: string): Promise<{
+    name: string | null; lat: number | null; lng: number | null;
+    google_place_id: string | null; google_ftid: string | null; osm_id: string | null; amap_poi_id: string | null;
+  }[]> {
+    return this.qb('p')
+      .select(['p.name', 'p.lat', 'p.lng', 'p.google_place_id', 'p.google_ftid', 'p.osm_id', 'p.amap_poi_id'])
+      .where('p.trip_id = ?', [trip_id])
+      .execute<{
+        name: string | null; lat: number | null; lng: number | null;
+        google_place_id: string | null; google_ftid: string | null; osm_id: string | null; amap_poi_id: string | null;
+      }[]>('all', false);
+  }
+
+  /**
    * PI1 (`place-image.ts:27`) — `SELECT 1 FROM places WHERE image_url = ?
    * LIMIT 1`. Trip-agnostic on purpose (an uploaded image is ref-counted
    * across every trip, not just the one it was uploaded from — a place
@@ -714,5 +741,97 @@ export class PlacesRepository extends TrekRepository<Places> {
       .where({ trip: trip_id })
       .orderBy({ 'p.created_at': 'desc' })
       .execute<PlaceRow[]>('all', false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 8 (`TripsService.copy`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP40 (`trips.service.ts::copy`'s places read) — `SELECT * FROM places
+   * WHERE trip_id = ?`, no `ORDER BY` at all (unlike RP2's `listForTripOrdered`
+   * above, which adds `ORDER BY created_at DESC` for the RPC list view). The
+   * legacy statement relies on SQLite's own rowid-ascending scan order for a
+   * plain, unindexed `WHERE trip_id = ?` — reproduced here the same way, by
+   * NOT adding an `ORDER BY`, so the copy's places are inserted (and so
+   * relatively ordered) the same way the legacy loop did.
+   */
+  async listAllForTrip(trip_id: number | string): Promise<PlaceRow[]> {
+    return await this.qb('p')
+      .select(['p.*'])
+      .where('p.trip_id = ?', [trip_id])
+      .execute<PlaceRow[]>('all', false);
+  }
+
+  /**
+   * TP41 (`trips.service.ts::copy`'s place INSERT) — the 28-column
+   * `INSERT INTO places (...)` the copy loop builds, three columns wider
+   * than PL4's `insertPlace` (`reservation_status`, `reservation_notes`,
+   * `reservation_datetime` — a copy carries the source place's reservation
+   * fields verbatim; `PlacesService.create` never sets them at creation
+   * time, which is why PL4's own column set omits them). Every value here
+   * is copied straight off the source row with no coercion of its own — the
+   * copy loop's job is to remap `trip_id`, nothing else.
+   */
+  async insertPlaceCopy(input: {
+    trip_id: number;
+    name: string;
+    description: string | null;
+    lat: number | null;
+    lng: number | null;
+    address: string | null;
+    category_id: number | null;
+    price: number | null;
+    currency: string | null;
+    reservation_status: string | null;
+    reservation_notes: string | null;
+    reservation_datetime: string | null;
+    place_time: string | null;
+    end_time: string | null;
+    duration_minutes: number | null;
+    notes: string | null;
+    image_url: string | null;
+    google_place_id: string | null;
+    google_ftid: string | null;
+    website: string | null;
+    phone: string | null;
+    transport_mode: string | null;
+    osm_id: string | null;
+    amap_poi_id: string | null;
+    route_geometry: string | null;
+    route_color: string | null;
+    stop_type: string | null;
+    fill_percent: number | null;
+  }): Promise<number> {
+    return await this.insert({
+      trip: input.trip_id,
+      name: input.name,
+      description: input.description,
+      lat: input.lat,
+      lng: input.lng,
+      address: input.address,
+      category: input.category_id,
+      price: input.price,
+      currency: input.currency,
+      reservation_status: input.reservation_status,
+      reservation_notes: input.reservation_notes,
+      reservation_datetime: input.reservation_datetime,
+      place_time: input.place_time,
+      end_time: input.end_time,
+      duration_minutes: input.duration_minutes,
+      notes: input.notes,
+      image_url: input.image_url,
+      google_place_id: input.google_place_id,
+      google_ftid: input.google_ftid,
+      website: input.website,
+      phone: input.phone,
+      transport_mode: input.transport_mode,
+      osm_id: input.osm_id,
+      amap_poi_id: input.amap_poi_id,
+      route_geometry: input.route_geometry,
+      route_color: input.route_color,
+      stop_type: input.stop_type,
+      fill_percent: input.fill_percent,
+    });
   }
 }

@@ -5,14 +5,18 @@ import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { addTripMember, createDay, createPlace, createTrip, createUser } from '../../../helpers/factories';
 import { Trips } from '../../../../src/db/entities/Trips.entity';
 import type { TripsRepository } from '../../../../src/db/repositories/Trips.repository';
+import { UnitOfWork } from '../../../../src/nest/database/unit-of-work';
+import { withRequestContext } from '../../../../src/nest/database/request-context';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
 let trips: TripsRepository;
+let uow: UnitOfWork;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
   trips = t.repo(Trips);
+  uow = new UnitOfWork(t.em);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });
@@ -437,6 +441,46 @@ describe('TripsRepository.findForViewer / listForUser / activeTrip (Plan 3c Task
       expect(await trips.activeTrip(user.id, '2026-06-10')).toBeUndefined();
     });
   });
+
+  // Task 7 security review L2, absorbed here (Task 8 touches the same file):
+  // `findForViewer`/`listForUser`/`activeTrip` each build their own Kysely
+  // query via `this.kysely()` (`TrekRepository.kysely()`, validated first —
+  // see its own docstring), which is the SAME escape hatch every write
+  // method in this repository resolves its transactional fork through. The
+  // OAUTHTOKREPO-012 shape proves that directly rather than by doc comment:
+  // a write made — and READ BACK through these three methods — inside an
+  // open `uow.transactional` that then rolls back must be invisible again
+  // once the transaction is gone; if any of the three resolved on a SEPARATE
+  // connection instead, it would never have seen the write in the first
+  // place (a much louder failure, not merely a rollback bug).
+  it('TRIPREPO-037 (rollback-proved): findForViewer/listForUser/activeTrip join the ambient transaction — a rolled-back write is visible inside it, gone once it rolls back', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Before', start_date: '2026-01-01', end_date: '2026-01-02' });
+
+    let caught: unknown;
+    try {
+      await withRequestContext(t.orm, async () => {
+        await uow.transactional(async () => {
+          await trips.updateTripRow(trip.id, {
+            title: 'After', description: null, start_date: '2026-01-01', end_date: '2026-01-02',
+            currency: 'EUR', is_archived: 0, cover_image: null, reminder_days: 3,
+          });
+          // Seen INSIDE the open transaction — the write and the read share
+          // one connection.
+          expect((await trips.findForViewer(trip.id, user.id))?.title).toBe('After');
+          expect((await trips.listForUser(user.id, null)).find((row) => row.id === trip.id)?.title).toBe('After');
+          expect((await trips.activeTrip(user.id, '2026-01-01'))?.title).toBe('After');
+          throw new Error('force rollback');
+        });
+      });
+    } catch (e) { caught = e; }
+    expect((caught as Error).message).toBe('force rollback');
+
+    // Outside, after the rollback: every one of the three reads the ORIGINAL title.
+    expect((await trips.findForViewer(trip.id, user.id))?.title).toBe('Before');
+    expect((await trips.listForUser(user.id, null)).find((row) => row.id === trip.id)?.title).toBe('Before');
+    expect((await trips.activeTrip(user.id, '2026-01-01'))?.title).toBe('Before');
+  });
 });
 
 describe('TripsRepository.insertTrip / updateTripRow / setCoverImage / deleteById (Plan 3c Task 7)', () => {
@@ -481,5 +525,80 @@ describe('TripsRepository.insertTrip / updateTripRow / setCoverImage / deleteByI
     await trips.deleteById(trip.id);
     expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(trip.id)).toBeUndefined();
     expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(other.id)).toBeDefined();
+  });
+});
+
+// ── Plan 3c Task 8 (`TripsService.copy`, TP37) — additive ───────────────────
+
+describe('TripsRepository.insertTripCopy (TP37)', () => {
+  it('TRIPREPO-039: writes the 8-column copy set, is_archived hard-coded to 0 regardless of the caller', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: newOwner } = createUser(testDb);
+    const newId = await trips.insertTripCopy({
+      user_id: newOwner.id, title: 'Clone', description: 'd', start_date: '2026-01-01', end_date: '2026-01-05',
+      currency: 'USD', cover_image: 'c.png', reminder_days: 7,
+    });
+    const row = testDb.prepare('SELECT user_id, title, description, start_date, end_date, currency, cover_image, is_archived, reminder_days FROM trips WHERE id = ?').get(newId);
+    expect(row).toEqual({
+      user_id: newOwner.id, title: 'Clone', description: 'd', start_date: '2026-01-01', end_date: '2026-01-05',
+      currency: 'USD', cover_image: 'c.png', is_archived: 0, reminder_days: 7,
+    });
+    // The source trip (never touched) proves is_archived: 0 is a literal, not a copied value.
+    testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(owner.id);
+  });
+
+  it('TRIPREPO-040: an archived source still produces an unarchived copy', async () => {
+    const { user } = createUser(testDb);
+    const src = createTrip(testDb, user.id, { title: 'Archived source' });
+    testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(src.id);
+    const newId = await trips.insertTripCopy({
+      user_id: user.id, title: 'Clone', description: null, start_date: null, end_date: null,
+      currency: null, cover_image: null, reminder_days: 3,
+    });
+    expect((testDb.prepare('SELECT is_archived FROM trips WHERE id = ?').get(newId) as { is_archived: number }).is_archived).toBe(0);
+  });
+});
+
+// ── Task 7 security review M1, absorbed here (Task 8 touches the same file) ──
+//
+// The trip access predicate (`t.user_id = ? OR EXISTS a trip_members row`) is
+// written out FOUR times in this file: once as the shared QB helper
+// `accessibleTripsQuery` (`findAccessible`/`listAccessibleIds`), and three
+// more times by hand in the Kysely methods (`findForViewer`, `listForUser`,
+// `activeTrip`) — a different builder API that cannot share the QB helper.
+// A single Kysely `.$call()` helper for the latter three was evaluated and
+// set aside for this task (real typing risk across three different `DB`
+// shapes on a security-sensitive predicate, under this task's own time
+// budget) in favor of the review's own stated fallback: a cross-method
+// parity test proving all five agree on who can see a trip. A future task
+// unifying the three Kysely copies should keep this test green as its own
+// regression guard.
+describe('Cross-method access parity (Task 7 security review M1, absorbed)', () => {
+  it('TRIPREPO-041: owner, member, stranger and an admin with no membership get the identical accessible/inaccessible verdict from all five access-checking methods', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const { user: admin } = createUser(testDb);
+    testDb.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(admin.id);
+    const today = new Date().toISOString().slice(0, 10);
+    const trip = createTrip(testDb, owner.id, { start_date: today, end_date: today });
+    addTripMember(testDb, trip.id, member.id);
+
+    const cases: Array<[string, number, boolean]> = [
+      ['owner', owner.id, true],
+      ['member', member.id, true],
+      ['stranger', stranger.id, false],
+      // An admin role grants no DB-level bypass here — role-gated access (if
+      // any) is a higher layer's decision, never this repository's.
+      ['admin, not a member', admin.id, false],
+    ];
+
+    for (const [, viewerId, expected] of cases) {
+      expect(!!(await trips.findAccessible(trip.id, viewerId))).toBe(expected);
+      expect((await trips.listAccessibleIds(viewerId)).includes(trip.id)).toBe(expected);
+      expect(!!(await trips.findForViewer(trip.id, viewerId))).toBe(expected);
+      expect((await trips.listForUser(viewerId, null)).some((row) => row.id === trip.id)).toBe(expected);
+      expect((await trips.activeTrip(viewerId, today))?.id === trip.id).toBe(expected);
+    }
   });
 });

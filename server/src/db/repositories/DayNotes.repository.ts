@@ -74,4 +74,48 @@ export class DayNotesRepository extends TrekRepository<DayNotes> {
     const notes = await this.find({ day: { $in: day_ids } }, { orderBy: { sort_order: 'asc', created_at: 'asc' } });
     return notes.map((n) => toRow(n) as DayNoteRow);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 8 (`TripsService.copy`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP70 (`trips.service.ts::copy`'s day-notes read) — `SELECT * FROM
+   * day_notes WHERE trip_id = ?`, no `ORDER BY` (matching the legacy
+   * statement — the copy loop only needs `dayMap` to remap `day_id`, never
+   * relies on read order).
+   */
+  async listByTrip(trip_id: number | string): Promise<DayNoteRow[]> {
+    return await this.qb('n')
+      .select(['n.*'])
+      .where('n.trip_id = ?', [trip_id])
+      .execute<DayNoteRow[]>('all', false);
+  }
+
+  /**
+   * TP71 (`trips.service.ts::copy`'s day-note INSERT) — `INSERT INTO
+   * day_notes (day_id, trip_id, text, time, icon, sort_order) VALUES (?, ?,
+   * ?, ?, ?, ?)`. A narrower column set than `createNote`'s (no `color` —
+   * the legacy copy statement never names that column, so it is left to
+   * its own nullable-with-no-default, i.e. `NULL`, the same way `createNote`'s
+   * own docstring describes an unnamed column). No read-back: the copy loop
+   * discards the note's own id.
+   */
+  async insertNoteCopy(input: {
+    day_id: number;
+    trip_id: number;
+    text: string;
+    time: string | null;
+    icon: string | null;
+    sort_order: number | null;
+  }): Promise<number> {
+    return await this.insert({
+      day: input.day_id,
+      trip: input.trip_id,
+      text: input.text,
+      time: input.time,
+      icon: input.icon,
+      sort_order: input.sort_order,
+    });
+  }
 }

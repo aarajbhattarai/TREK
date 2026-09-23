@@ -452,9 +452,15 @@ describe('Task 6 review items — rollback and concurrency', () => {
     // loses the race either throws the app-level 'User already has access'
     // (TM5 caught it) or rejects on the table's own UNIQUE(trip_id, user_id)
     // constraint (TM6 raced past TM5) — both are acceptable, unchanged
-    // outcomes; what must hold is that at most one membership row exists.
+    // outcomes; what must hold is exactly one winner and one loser, and at
+    // most one membership row (Task 7 review L6: pin the exact 1/1 split,
+    // not merely "at least one" — a `>= 1` assertion would also pass if the
+    // race somehow let both calls through, which is precisely the bug this
+    // test exists to catch).
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
-    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    const rejected = results.filter((r) => r.status === 'rejected');
+    expect(fulfilled.length).toBe(1);
+    expect(rejected.length).toBe(1);
     const count = testDb.prepare('SELECT COUNT(*) as n FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id) as { n: number };
     expect(count.n).toBe(1);
   });

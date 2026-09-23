@@ -116,3 +116,41 @@ describe('DayNotesRepository.listByDayIds (DY4)', () => {
     expect(rows).toEqual([expect.objectContaining({ id: note.id, text: 'Fresh text' })]);
   });
 });
+
+// ── Plan 3c Task 8 (`TripsService.copy`, TP70/TP71) — additive ──────────────
+
+describe('DayNotesRepository.listByTrip (TP70)', () => {
+  it('NOTEREPO-009: every note of the trip, scoped by trip_id (not day_id)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const note = createDayNote(testDb, day.id, trip.id, { text: 'Keep' });
+    const otherDay = createDay(testDb, other.id);
+    createDayNote(testDb, otherDay.id, other.id, { text: 'Not this trip' });
+
+    const rows = await notes.listByTrip(trip.id);
+    expect(rows.map((r) => r.id)).toEqual([note.id]);
+  });
+
+  it('NOTEREPO-010: a trip with no notes returns []', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await notes.listByTrip(trip.id)).toEqual([]);
+  });
+});
+
+describe('DayNotesRepository.insertNoteCopy (TP71)', () => {
+  it('NOTEREPO-011: writes the 6-column copy set (no color — left NULL, unlike createNote)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+
+    const newId = await notes.insertNoteCopy({
+      day_id: day.id, trip_id: trip.id, text: 'Copied note', time: '09:00', icon: '🎒', sort_order: 5,
+    });
+
+    const row = testDb.prepare('SELECT day_id, trip_id, text, time, icon, sort_order, color FROM day_notes WHERE id = ?').get(newId);
+    expect(row).toEqual({ day_id: day.id, trip_id: trip.id, text: 'Copied note', time: '09:00', icon: '🎒', sort_order: 5, color: null });
+  });
+});

@@ -1118,6 +1118,75 @@ describe('folded quirk branches', () => {
     await expect(svc.updateTrip(trip.id, owner.id, { start_date: '2025-06-10', end_date: '2025-06-01' }, 'user')).rejects.toThrow('End date must be after start date');
   });
 
+  it('TRIP-SVC-071 (Task 7 security review L1, absorbed): a stored NULL is_archived pre-image stays NULL through an unrelated update, never folded to 0', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Legacy row' });
+    // A pre-migration row (or any row the `is_archived` column default never
+    // touched) can genuinely hold NULL — the legacy statement wrote it back
+    // unfolded whenever the request itself never sent `is_archived`.
+    testDb.prepare('UPDATE trips SET is_archived = NULL WHERE id = ?').run(trip.id);
+
+    await svc.updateTrip(trip.id, user.id, { title: 'Renamed' }, 'user');
+
+    expect((testDb.prepare('SELECT is_archived FROM trips WHERE id = ?').get(trip.id) as { is_archived: number | null }).is_archived).toBeNull();
+
+    // Explicitly archiving still writes 1/0 as before — only the "untouched, was NULL" path is preserved.
+    await svc.updateTrip(trip.id, user.id, { is_archived: true }, 'user');
+    expect((testDb.prepare('SELECT is_archived FROM trips WHERE id = ?').get(trip.id) as { is_archived: number | null }).is_archived).toBe(1);
+  });
+
+  it('TRIP-SVC-072 (Task 7 security review L2, absorbed): the trip UPDATE (TP25) commits before the days-regeneration transaction — a failed regen leaves the new dates in place', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Ordering', start_date: '2025-06-01', end_date: '2025-06-03' });
+
+    const daysRepo = await createTestDaysRepo(dbs().connection);
+    const spy = vi.spyOn(daysRepo, 'listOrderedForReorder').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(svc.updateTrip(trip.id, user.id, { start_date: '2025-07-01', end_date: '2025-07-03' }, 'user')).rejects.toThrow('boom');
+    } finally {
+      spy.mockRestore();
+    }
+
+    // TP25's own write already landed — R5/§18.6's documented, unfixed quirk:
+    // it runs BEFORE generateDays' transaction, so a regen failure never
+    // rolls it back with the day rows it failed to regenerate.
+    const row = testDb.prepare('SELECT start_date, end_date FROM trips WHERE id = ?').get(trip.id) as { start_date: string; end_date: string };
+    expect(row).toEqual({ start_date: '2025-07-01', end_date: '2025-07-03' });
+    // The day rows themselves never got touched by the failed regen — still
+    // the original 3, on their original dates.
+    expect(getDays(trip.id)).toHaveLength(3);
+    expect(getDays(trip.id).map(d => d.date)).toEqual(['2025-06-01', '2025-06-02', '2025-06-03']);
+  });
+
+  it('TRIP-SVC-073 (Task 7 security review L2, absorbed): the two-phase renumber avoids a UNIQUE(trip_id, day_number) collision on a genuine swap', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id); // undated — no auto-generated days
+    // A dateless day sits BETWEEN two dated ones. Regenerating a 3-day range
+    // over this reassigns day_number so the dateless day and the LATER dated
+    // day trade places — a genuine swap (2↔3), not just a compaction. A
+    // single positive-only pass would try to write day_number=2 for dayC
+    // while dayB still holds it, colliding with `UNIQUE(trip_id,
+    // day_number)`; the two-phase renumber (negative pass first) avoids it.
+    const dayA = createDay(testDb, trip.id, { day_number: 1, date: '2025-01-01' });
+    const dayB = createDay(testDb, trip.id, { day_number: 2 });
+    const dayC = createDay(testDb, trip.id, { day_number: 3, date: '2025-01-02' });
+    const place = createPlace(testDb, trip.id);
+    const assignmentOnB = createDayAssignment(testDb, dayB.id, place.id);
+
+    await svc.generateDays(trip.id, '2025-01-01', '2025-01-03');
+
+    const daysAfter = getDays(trip.id);
+    expect(daysAfter).toHaveLength(3);
+    const byId = new Map(daysAfter.map(d => [d.id, d]));
+    expect(byId.get(dayA.id)).toMatchObject({ day_number: 1, date: '2025-01-01' });
+    expect(byId.get(dayC.id)).toMatchObject({ day_number: 2, date: '2025-01-02' });
+    expect(byId.get(dayB.id)).toMatchObject({ day_number: 3, date: '2025-01-03' });
+    // dayB's own identity (and its assignment) survived the swap — renumbered
+    // in place, never deleted-and-recreated.
+    expect(getAssignments(dayB.id)).toHaveLength(1);
+    expect(getAssignments(dayB.id)[0].id).toBe(assignmentOnB.id);
+  });
+
   it('TRIP-SVC-065: updateTrip refuses a range past MAX_TRIP_DAYS before touching the row', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Week', start_date: '2026-07-01', end_date: '2026-07-07' });
@@ -1218,6 +1287,190 @@ describe('folded quirk branches', () => {
 
     // Missing source throws the byte-identical error.
     await expect(svc.copy(99999, user.id)).rejects.toThrow('Trip not found');
+  });
+});
+
+// ── Plan 3c Task 8 deliverable: whole-copy parity + rollback ─────────────────
+
+describe('copy — whole-trip parity (Task 8)', () => {
+  it('TRIP-SVC-069: every table copy touches is byte-identical to the source modulo ids/timestamps, with ids consistently remapped', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id, {
+      title: 'Full Fixture', start_date: '2025-09-01', end_date: '2025-09-03',
+    });
+    testDb.prepare("UPDATE trips SET description = 'A full trip', currency = 'EUR', cover_image = 'cover.png', reminder_days = 5 WHERE id = ?").run(trip.id);
+    addTripMember(testDb, trip.id, member.id);
+    const days = getDays(trip.id);
+    testDb.prepare("UPDATE days SET notes = 'Pack light', title = 'Arrival' WHERE id = ?").run(days[0].id);
+    testDb.prepare("UPDATE days SET notes = 'Checkout' WHERE id = ?").run(days[1].id);
+
+    const stop = createPlace(testDb, trip.id, { name: 'Hotel Full', description: 'Nice place' });
+    const track = createPlace(testDb, trip.id, { name: 'Scenic road' });
+    testDb.prepare("UPDATE places SET reservation_status = 'booked', reservation_notes = 'rn', reservation_datetime = '2025-09-01T14:00', route_color = '#ff0000', stop_type = 'hotel', fill_percent = 80 WHERE id = ?").run(stop.id);
+
+    const tag = Number(testDb.prepare("INSERT INTO tags (name, user_id) VALUES ('beach', ?)").run(owner.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO place_tags (place_id, tag_id) VALUES (?, ?)').run(stop.id, tag);
+
+    const assignment = createDayAssignment(testDb, days[0].id, stop.id);
+    testDb.prepare(`UPDATE day_assignments SET reservation_status = 'booked', reservation_notes = 'arn', reservation_datetime = '2025-09-01T15:00',
+      assignment_time = '15:00', assignment_end_time = '16:00', end_day = 1 WHERE id = ?`).run(assignment.id);
+    testDb.prepare('INSERT INTO assignment_participants (assignment_id, user_id) VALUES (?, ?), (?, ?)').run(assignment.id, owner.id, assignment.id, member.id);
+
+    testDb.prepare('INSERT INTO roadtrip_vias (day_id, after_order_index, sequence, lat, lng) VALUES (?, 0, 0, 48.1, 2.1)').run(days[0].id);
+    testDb.prepare('INSERT INTO roadtrip_day_tracks (day_id, place_id, stray_km) VALUES (?, ?, 2.5)').run(days[0].id, track.id);
+    testDb.prepare("INSERT INTO roadtrip_preferences (trip_id, key, value) VALUES (?, 'avoid_tolls', 'true')").run(trip.id);
+    testDb.prepare('INSERT INTO roadtrip_day_boundaries (trip_id, day_number, from_assignment_id, to_assignment_id, fraction) VALUES (?, 1, ?, NULL, 0.5)').run(trip.id, assignment.id);
+
+    const accomId = Number(testDb.prepare(
+      "INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_out) VALUES (?, ?, ?, ?, '15:00', '11:00')",
+    ).run(trip.id, stop.id, days[0].id, days[1].id).lastInsertRowid);
+    testDb.prepare('UPDATE day_assignments SET accommodation_id = ? WHERE id = ?').run(accomId, assignment.id);
+
+    const resId = Number(testDb.prepare(`
+      INSERT INTO reservations (trip_id, day_id, end_day_id, place_id, assignment_id, accommodation_id, title, status, type)
+      VALUES (?, ?, ?, ?, ?, ?, 'Stay', 'confirmed', 'hotel')
+    `).run(trip.id, days[0].id, days[1].id, stop.id, assignment.id, accomId).lastInsertRowid);
+
+    const itemId = Number(testDb.prepare(
+      "INSERT INTO budget_items (trip_id, category, name, total_price, reservation_id, currency) VALUES (?, 'Accommodation', 'Hotel', 300, ?, 'EUR')",
+    ).run(trip.id, resId).lastInsertRowid);
+    testDb.prepare('INSERT INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, 1, 150), (?, ?, 0, 150)')
+      .run(itemId, owner.id, itemId, member.id);
+    testDb.prepare('INSERT INTO budget_item_payers (budget_item_id, user_id, amount) VALUES (?, ?, 300)').run(itemId, owner.id);
+    testDb.prepare("INSERT INTO budget_category_order (trip_id, category, sort_order) VALUES (?, 'Accommodation', 1)").run(trip.id);
+
+    const bagId = Number(testDb.prepare("INSERT INTO packing_bags (trip_id, name) VALUES (?, 'Carry-on')").run(trip.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO packing_items (trip_id, name, checked, bag_id) VALUES (?, ?, 1, ?)').run(trip.id, 'Shared tent', bagId);
+    testDb.prepare('INSERT INTO packing_items (trip_id, name, checked, is_private, owner_id) VALUES (?, ?, 1, 1, ?)').run(trip.id, "Owner's diary", owner.id);
+    testDb.prepare('INSERT INTO packing_items (trip_id, name, checked, is_private, owner_id) VALUES (?, ?, 1, 1, ?)').run(trip.id, "Member's meds", member.id);
+
+    createDayNote(testDb, days[0].id, trip.id, { text: 'Remember passport', time: '08:00', icon: '🛂', sort_order: 1 });
+    testDb.prepare("INSERT INTO todo_items (trip_id, name, checked, category, sort_order) VALUES (?, 'Book taxi', 1, 'travel', 1)").run(trip.id);
+
+    // ── copy, run by the OWNER (so their own private item copies, member's does not) ──
+    const newTripId = await svc.copy(trip.id, owner.id, 'Full Copy');
+
+    // trips
+    const newTrip = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(newTripId) as any;
+    expect(newTrip).toMatchObject({
+      user_id: owner.id, title: 'Full Copy', description: 'A full trip',
+      start_date: '2025-09-01', end_date: '2025-09-03', currency: 'EUR',
+      cover_image: 'cover.png', is_archived: 0, reminder_days: 5,
+    });
+
+    // days
+    const newDays = getDays(newTripId);
+    expect(newDays).toHaveLength(3);
+    expect(newDays.map(d => ({ day_number: d.day_number, date: d.date }))).toEqual(
+      days.map(d => ({ day_number: d.day_number, date: d.date })),
+    );
+    expect((testDb.prepare('SELECT notes, title FROM days WHERE id = ?').get(newDays[0].id) as any)).toEqual({ notes: 'Pack light', title: 'Arrival' });
+    expect((testDb.prepare('SELECT notes FROM days WHERE id = ?').get(newDays[1].id) as any).notes).toBe('Checkout');
+
+    // places
+    const newStop = testDb.prepare('SELECT * FROM places WHERE trip_id = ? AND name = ?').get(newTripId, 'Hotel Full') as any;
+    const newTrack = testDb.prepare('SELECT * FROM places WHERE trip_id = ? AND name = ?').get(newTripId, 'Scenic road') as any;
+    expect(newStop).toMatchObject({
+      description: 'Nice place', reservation_status: 'booked', reservation_notes: 'rn',
+      reservation_datetime: '2025-09-01T14:00', route_color: '#ff0000', stop_type: 'hotel', fill_percent: 80,
+    });
+
+    // place_tags
+    expect((testDb.prepare('SELECT tag_id FROM place_tags WHERE place_id = ?').get(newStop.id) as any).tag_id).toBe(tag);
+
+    // day_assignments (+ the TP57 accommodation stamp)
+    const newAssignment = getAssignments(newDays[0].id)[0] as any;
+    const newAssignmentFull = testDb.prepare('SELECT * FROM day_assignments WHERE id = ?').get(newAssignment.id) as any;
+    expect(newAssignmentFull).toMatchObject({
+      place_id: newStop.id, reservation_status: 'booked', reservation_notes: 'arn',
+      reservation_datetime: '2025-09-01T15:00', assignment_time: '15:00', assignment_end_time: '16:00', end_day: 1,
+    });
+
+    // assignment_participants
+    const newParticipants = testDb.prepare('SELECT user_id FROM assignment_participants WHERE assignment_id = ?').all(newAssignment.id) as any[];
+    expect(newParticipants.map(p => p.user_id).sort((a, b) => a - b)).toEqual([owner.id, member.id].sort((a, b) => a - b));
+
+    // roadtrip_vias / roadtrip_day_tracks
+    const newVia = testDb.prepare('SELECT after_order_index, sequence, lat, lng FROM roadtrip_vias WHERE day_id = ?').get(newDays[0].id) as any;
+    expect(newVia).toEqual({ after_order_index: 0, sequence: 0, lat: 48.1, lng: 2.1 });
+    const newTrackRow = testDb.prepare('SELECT place_id, stray_km FROM roadtrip_day_tracks WHERE day_id = ?').get(newDays[0].id) as any;
+    expect(newTrackRow).toEqual({ place_id: newTrack.id, stray_km: 2.5 });
+
+    // roadtrip_preferences / roadtrip_day_boundaries
+    expect((testDb.prepare("SELECT value FROM roadtrip_preferences WHERE trip_id = ? AND key = 'avoid_tolls'").get(newTripId) as any).value).toBe('true');
+    const newBoundary = testDb.prepare('SELECT day_number, from_assignment_id, to_assignment_id, fraction FROM roadtrip_day_boundaries WHERE trip_id = ?').get(newTripId) as any;
+    expect(newBoundary).toEqual({ day_number: 1, from_assignment_id: newAssignment.id, to_assignment_id: null, fraction: 0.5 });
+
+    // day_accommodations, and the assignment's accommodation_id stamped at the NEW accommodation
+    const newAccom = testDb.prepare('SELECT id, place_id, start_day_id, end_day_id, check_in, check_out FROM day_accommodations WHERE trip_id = ?').get(newTripId) as any;
+    expect(newAccom).toMatchObject({ place_id: newStop.id, start_day_id: newDays[0].id, end_day_id: newDays[1].id, check_in: '15:00', check_out: '11:00' });
+    expect(newAssignmentFull.accommodation_id).toBe(newAccom.id);
+
+    // reservations
+    const newRes = testDb.prepare('SELECT * FROM reservations WHERE trip_id = ?').get(newTripId) as any;
+    expect(newRes).toMatchObject({
+      day_id: newDays[0].id, end_day_id: newDays[1].id, place_id: newStop.id, assignment_id: newAssignment.id,
+      title: 'Stay', status: 'confirmed', type: 'hotel', ingest_state: 'live',
+    });
+    expect(Number(newRes.accommodation_id)).toBe(newAccom.id);
+
+    // budget_items / members / payers / category order
+    const newItem = testDb.prepare('SELECT * FROM budget_items WHERE trip_id = ?').get(newTripId) as any;
+    expect(newItem).toMatchObject({ category: 'Accommodation', name: 'Hotel', total_price: 300, reservation_id: newRes.id, currency: 'EUR' });
+    const newMembers = testDb.prepare('SELECT user_id, paid, amount FROM budget_item_members WHERE budget_item_id = ? ORDER BY user_id').all(newItem.id) as any[];
+    expect(newMembers).toEqual([owner.id, member.id].sort((a, b) => a - b).map((uid) =>
+      uid === owner.id ? { user_id: owner.id, paid: 1, amount: 150 } : { user_id: member.id, paid: 0, amount: 150 },
+    ));
+    const newPayers = testDb.prepare('SELECT user_id, amount FROM budget_item_payers WHERE budget_item_id = ?').all(newItem.id) as any[];
+    expect(newPayers).toEqual([{ user_id: owner.id, amount: 300 }]);
+    expect((testDb.prepare("SELECT sort_order FROM budget_category_order WHERE trip_id = ? AND category = 'Accommodation'").get(newTripId) as any).sort_order).toBe(1);
+
+    // packing_bags / packing_items (incl. the TP68 privacy filter — the copIER is the owner)
+    const newBag = testDb.prepare("SELECT id FROM packing_bags WHERE trip_id = ? AND name = 'Carry-on'").get(newTripId) as any;
+    const newPacking = testDb.prepare('SELECT name, checked, is_private, owner_id, bag_id FROM packing_items WHERE trip_id = ? ORDER BY name').all(newTripId) as any[];
+    expect(newPacking.map(p => p.name)).toEqual(['Owner\'s diary', 'Shared tent']); // member's private item is NOT copied
+    expect(newPacking.find(p => p.name === 'Shared tent')).toMatchObject({ checked: 0, is_private: 0, owner_id: null, bag_id: newBag.id });
+    expect(newPacking.find(p => p.name === "Owner's diary")).toMatchObject({ checked: 0, is_private: 1, owner_id: owner.id });
+
+    // day_notes
+    const newNote = testDb.prepare('SELECT day_id, text, time, icon, sort_order FROM day_notes WHERE trip_id = ?').get(newTripId) as any;
+    expect(newNote).toEqual({ day_id: newDays[0].id, text: 'Remember passport', time: '08:00', icon: '🛂', sort_order: 1 });
+
+    // todo_items — reset to unchecked, no assignee
+    const newTodo = testDb.prepare('SELECT name, checked, category, sort_order, assigned_user_id FROM todo_items WHERE trip_id = ?').get(newTripId) as any;
+    expect(newTodo).toEqual({ name: 'Book taxi', checked: 0, category: 'travel', sort_order: 1, assigned_user_id: null });
+
+    // The source trip is untouched.
+    expect(testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id)).toEqual({ n: 3 });
+    expect(testDb.prepare('SELECT COUNT(*) AS n FROM packing_items WHERE trip_id = ?').get(trip.id)).toEqual({ n: 3 });
+  });
+
+  it('TRIP-SVC-070 (mutation-proved): copy is atomic — a failing late insert leaves no new trip and no partial rows', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Rollback source', start_date: '2025-10-01', end_date: '2025-10-02' });
+    const days = getDays(trip.id);
+    const place = createPlace(testDb, trip.id, { name: 'Doomed place' });
+    createDayAssignment(testDb, days[0].id, place.id);
+    const tripsBefore = (testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n;
+    const daysBefore = (testDb.prepare('SELECT COUNT(*) AS n FROM days').get() as { n: number }).n;
+
+    const dayNotesRepo = await createTestDayNotesRepo(dbs().connection);
+    const spy = vi.spyOn(dayNotesRepo, 'insertNoteCopy').mockRejectedValueOnce(new Error('boom'));
+    createDayNote(testDb, days[0].id, trip.id, { text: 'Triggers the late failure' });
+    try {
+      await expect(svc.copy(trip.id, user.id, 'Never lands')).rejects.toThrow('boom');
+    } finally {
+      spy.mockRestore();
+    }
+
+    // No new trip, and every earlier insert in the same transaction (trips/days/
+    // places/assignments/…) rolled back with it — nothing partially lands.
+    expect((testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n).toBe(tripsBefore);
+    expect((testDb.prepare('SELECT COUNT(*) AS n FROM days').get() as { n: number }).n).toBe(daysBefore);
+    expect(testDb.prepare("SELECT id FROM trips WHERE title = 'Never lands'").get()).toBeUndefined();
+    // The source trip itself is untouched.
+    expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(trip.id)).toBeDefined();
   });
 });
 

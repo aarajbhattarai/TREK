@@ -286,3 +286,35 @@ describe('AssignmentParticipantsRepository.deleteForAssignment / insertIgnore (A
     expect(rows).toEqual([{ user_id: p1.id }]);
   });
 });
+
+// ── Plan 3c Task 8 (`TripsService.copy`, TP53) — additive ───────────────────
+
+describe('AssignmentParticipantsRepository.listForTrip (TP53)', () => {
+  it('ASSIGNPARTREPO-015: the two-hop join scopes participants to the trip, returning only assignment_id/user_id', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: p1 } = createUser(testDb);
+    const { user: p2 } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    const other = createTrip(testDb, owner.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const assignment = createDayAssignment(testDb, day.id, place.id);
+    addParticipant(assignment.id, p1.id);
+    addParticipant(assignment.id, p2.id);
+
+    const otherDay = createDay(testDb, other.id);
+    const otherPlace = createPlace(testDb, other.id);
+    const otherAssignment = createDayAssignment(testDb, otherDay.id, otherPlace.id);
+    addParticipant(otherAssignment.id, p1.id);
+
+    const rows = await participants.listForTrip(trip.id);
+    expect(rows.map((r) => r.user_id).sort((a, b) => a - b)).toEqual([p1.id, p2.id].sort((a, b) => a - b));
+    expect(rows.every((r) => r.assignment_id === assignment.id)).toBe(true);
+  });
+
+  it('ASSIGNPARTREPO-016: a trip with no participants returns []', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await participants.listForTrip(trip.id)).toEqual([]);
+  });
+});

@@ -172,6 +172,34 @@ export class DaysRepository extends TrekRepository<Days> {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 8 (`TripsService.copy`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP39 (`trips.service.ts::copy`'s day INSERT) — `INSERT INTO days
+   * (trip_id, day_number, date, notes, title) VALUES (?, ?, ?, ?, ?)`. A
+   * different column set from both `insertDay` (DY31/DY34, no `notes`/
+   * `title`) and `createDay` (no `title`): the copy carries a source day's
+   * `notes` AND `title` verbatim, with no read-back — the caller only needs
+   * the generated id for `dayMap`.
+   */
+  async insertDayCopy(input: {
+    trip_id: number;
+    day_number: number;
+    date: string | null;
+    notes: string | null;
+    title: string | null;
+  }): Promise<number> {
+    return await this.insert({
+      trip: input.trip_id,
+      day_number: input.day_number,
+      date: input.date,
+      notes: input.notes,
+      title: input.title,
+    });
+  }
+
   /** DY21 — `SELECT id, day_number FROM days WHERE trip_id = ? AND date = ? LIMIT 1`. */
   async findByTripAndDate(trip_id: number, date: string): Promise<DayIdAndNumberRow | undefined> {
     const row = await this.qb('d')

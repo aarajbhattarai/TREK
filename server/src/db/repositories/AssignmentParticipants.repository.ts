@@ -1,5 +1,5 @@
 import type { AssignmentParticipants } from '../entities/AssignmentParticipants.entity';
-import { coalesce } from '../dialect/sql-functions';
+import { coalesce, columnRef } from '../dialect/sql-functions';
 import { TrekRepository } from './_shared/trek-repository';
 
 /** One assignment's participant, from `QueryHelpersService.loadParticipantsByAssignmentIds` (QH3). */
@@ -127,5 +127,36 @@ export class AssignmentParticipantsRepository extends TrekRepository<AssignmentP
       user_ids.map((user_id) => ({ assignment: assignment_id, user: user_id })),
       { onConflictFields: ['assignment', 'user'], onConflictAction: 'ignore' },
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 8 (`TripsService.copy`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP53 (`trips.service.ts::copy`'s participants read) — `SELECT ap.* FROM
+   * assignment_participants ap JOIN day_assignments da ON da.id =
+   * ap.assignment_id JOIN days d ON d.id = da.day_id WHERE d.trip_id = ?`,
+   * the two-hop join scoping participant rows to a trip. Only `assignment_id`/
+   * `user_id` are returned — the legacy `ap.*`'s own `id` column is never
+   * used by the copy loop, only the two FK values it re-inserts (TP54, via
+   * {@link insertIgnore} above, once per row).
+   *
+   * `ap.assignment` is ALSO the target of this query's own `.join('ap.assignment',
+   * 'da')` — selecting it bare here would resolve through the join and emit
+   * `da__id`, not the FK scalar (`DayAssignmentsRepository
+   * .assignmentWithPlaceSelect`'s `category_id` docstring documents the same
+   * trap) — `columnRef` selects the literal `assignment_id` column instead.
+   * `ap.user` is NOT separately joined here, so it selects fine as `user_id`
+   * (`TripsRepository.getOwnerId`'s `'t.user'` precedent).
+   */
+  async listForTrip(trip_id: number | string): Promise<{ assignment_id: number; user_id: number }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    return this.qb('ap')
+      .join('ap.assignment', 'da')
+      .join('da.day', 'd')
+      .select([columnRef(platform, 'ap.assignment_id').as('assignment_id'), 'ap.user'])
+      .where('d.trip_id = ?', [trip_id])
+      .execute<{ assignment_id: number; user_id: number }[]>('all', false);
   }
 }

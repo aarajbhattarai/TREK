@@ -46,6 +46,18 @@ interface PlaceTagsKyselyDB {
   place_tags: { place_id: number; tag_id: number };
 }
 
+/**
+ * `place_tags` joined to `places` for TP46 (`trips.service.ts::copy`'s
+ * place-tags read) — `trip_id` widened to `number | string` (D4's T5 escape
+ * hatch, `TripsRepository.findAccessible`'s precedent) so the raw-bind seam
+ * matches `TripsService.copy`'s own `sourceTripId: string | number`
+ * parameter.
+ */
+interface PlaceTagsForTripKyselyDB {
+  place_tags: { place_id: number; tag_id: number };
+  places: { id: number; trip_id: number | string };
+}
+
 export class TagsRepository extends TrekRepository<Tags> {
   /**
    * `SELECT * FROM tags WHERE user_id = ? ORDER BY name ASC`, via the shared
@@ -236,6 +248,28 @@ export class TagsRepository extends TrekRepository<Tags> {
     await this.kysely<PlaceTagsKyselyDB>()
       .deleteFrom('place_tags')
       .where('place_id', '=', place_id)
+      .execute();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 8 (`TripsService.copy`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP46 (`trips.service.ts::copy`'s place-tags read) — `SELECT pt.* FROM
+   * place_tags pt JOIN places p ON p.id = pt.place_id WHERE p.trip_id = ?`,
+   * every `place_tags` pair for every place in a trip. Kysely (the pivot has
+   * no entity mapping of its own, `PlaceTagsKyselyDB`'s own docstring); TP47
+   * (the `INSERT OR IGNORE` write half) reuses {@link insertIgnore} above,
+   * called once per row with a single-element `tag_ids` array — the same
+   * shape the legacy per-row loop wrote in.
+   */
+  async listPlaceTagsForTrip(trip_id: number | string): Promise<{ place_id: number; tag_id: number }[]> {
+    return await this.kysely<PlaceTagsForTripKyselyDB>()
+      .selectFrom('place_tags as pt')
+      .innerJoin('places as p', 'p.id', 'pt.place_id')
+      .select(['pt.place_id', 'pt.tag_id'])
+      .where('p.trip_id', '=', trip_id)
       .execute();
   }
 }

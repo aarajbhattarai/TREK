@@ -8,7 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
-import { createCategory, createDay, createDayAssignment, createPlace, createTrip, createUser } from '../../../helpers/factories';
+import { createCategory, createDay, createDayAccommodation, createDayAssignment, createPlace, createTrip, createUser } from '../../../helpers/factories';
 import { DayAssignments } from '../../../../src/db/entities/DayAssignments.entity';
 import type { DayAssignmentsRepository } from '../../../../src/db/repositories/DayAssignments.repository';
 import { UnitOfWork } from '../../../../src/nest/database/unit-of-work';
@@ -639,5 +639,73 @@ describe('DayAssignmentsRepository.listItineraryForGpx (PL30)', () => {
     const place = createPlace(testDb, other.id, { lat: 5, lng: 6 });
     createDayAssignment(testDb, day.id, place.id);
     expect(await assignments.listItineraryForGpx(trip.id)).toEqual([]);
+  });
+});
+
+// ── Plan 3c Task 8 (`TripsService.copy`, TP48/TP49/TP57) — additive ─────────
+
+describe('DayAssignmentsRepository.listAllForTrip (TP48)', () => {
+  it('ASSIGNREPO-027: every assignment of the trip, no ORDER BY guarantee, scoped by the day→trip join', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a1 = createDayAssignment(testDb, day.id, place.id);
+    const otherDay = createDay(testDb, other.id);
+    const otherPlace = createPlace(testDb, other.id);
+    createDayAssignment(testDb, otherDay.id, otherPlace.id);
+
+    const rows = await assignments.listAllForTrip(trip.id);
+    expect(rows.map((r) => r.id)).toEqual([a1.id]);
+  });
+
+  it('ASSIGNREPO-028: an empty trip returns []', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await assignments.listAllForTrip(trip.id)).toEqual([]);
+  });
+});
+
+describe('DayAssignmentsRepository.insertAssignmentCopy (TP49)', () => {
+  it('ASSIGNREPO-029: writes the 10-column copy set verbatim, no accommodation_id (stamped separately, TP57)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+
+    const newId = await assignments.insertAssignmentCopy({
+      day_id: day.id, place_id: place.id, order_index: 2, notes: 'n',
+      reservation_status: 'booked', reservation_notes: 'rn', reservation_datetime: '2026-01-01T10:00',
+      assignment_time: '10:00', assignment_end_time: '11:00', end_day: 0,
+    });
+
+    const row = testDb.prepare(`
+      SELECT day_id, place_id, order_index, notes, reservation_status, reservation_notes,
+        reservation_datetime, assignment_time, assignment_end_time, end_day, accommodation_id
+      FROM day_assignments WHERE id = ?
+    `).get(newId);
+    expect(row).toEqual({
+      day_id: day.id, place_id: place.id, order_index: 2, notes: 'n',
+      reservation_status: 'booked', reservation_notes: 'rn', reservation_datetime: '2026-01-01T10:00',
+      assignment_time: '10:00', assignment_end_time: '11:00', end_day: 0, accommodation_id: null,
+    });
+  });
+});
+
+describe('DayAssignmentsRepository.setAccommodation (TP57)', () => {
+  it('ASSIGNREPO-030: stamps accommodation_id onto exactly the given assignment', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const assignment = createDayAssignment(testDb, day.id, place.id);
+    const other = createDayAssignment(testDb, day.id, place.id);
+    const accom = createDayAccommodation(testDb, trip.id, place.id, day.id, day.id);
+
+    await assignments.setAccommodation(assignment.id, accom.id);
+
+    expect((testDb.prepare('SELECT accommodation_id FROM day_assignments WHERE id = ?').get(assignment.id) as { accommodation_id: number }).accommodation_id).toBe(accom.id);
+    expect((testDb.prepare('SELECT accommodation_id FROM day_assignments WHERE id = ?').get(other.id) as { accommodation_id: number | null }).accommodation_id).toBeNull();
   });
 });

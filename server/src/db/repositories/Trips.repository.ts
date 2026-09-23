@@ -81,6 +81,16 @@ interface TripSelectKyselyDB {
   places: { id: number; trip_id: number };
 }
 
+// Task 7 review L4, absorbed here (Task 8 touches the same file): the 13
+// hand-listed columns of `TripSelectKyselyDB['trips']` above are a second,
+// independently-typed copy of `Trips`'s own scalar columns (Kysely's typed
+// `DB` argument can't be derived from the entity metadata the way `qb()`'s
+// generics are) — this fails `tsc` the moment a column is added to or
+// removed from `Trips` without updating this interface to match, instead of
+// silently drifting (the same drift guard `_tripRawRowKeys`/`_dayRowKeys`/…
+// already give every hand-written row interface in this program).
+const _tripSelectKyselyDbKeys: AssertRowKeys<TripSelectKyselyDB['trips'], Trips> = true;
+
 /** TP21's output row (inventory §11c) — `relevance` is the computed sort key, never sent to the client (the controller destructures `{id, title, start_date, end_date}` only). */
 export interface ActiveTripRow {
   id: number;
@@ -366,7 +376,7 @@ export class TripsRepository extends TrekRepository<Trips> {
       .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('m.user_id', 'is not', null)]));
     if (archived !== null) query = query.where('t.is_archived', '=', archived);
     const rows = await query.orderBy('t.created_at', 'desc').execute();
-    return rows as unknown as TripSelectRow[];
+    return rows as TripSelectRow[];
   }
 
   /**
@@ -460,6 +470,46 @@ export class TripsRepository extends TrekRepository<Trips> {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 8 (`TripsService.copy`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP37 (`trips.service.ts::copy`'s INSERT) — `INSERT INTO trips (user_id,
+   * title, description, start_date, end_date, currency, cover_image,
+   * is_archived, reminder_days) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`. A
+   * DIFFERENT column set from `insertTrip` (TP18, `create`'s own INSERT):
+   * this one also writes `cover_image` (verbatim from the source row) and
+   * `is_archived` as a hard-coded literal `0` — a copy is never archived,
+   * regardless of the source's own flag, so `is_archived` takes no
+   * parameter at all here, matching the legacy statement's own `0` literal
+   * rather than a bound value. The `title || src.title` fallback and the
+   * `reminder_days ?? 3` default are the SERVICE's own decisions (already
+   * resolved before this call), same split as `insertTrip`.
+   */
+  async insertTripCopy(input: {
+    user_id: number;
+    title: string;
+    description: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    currency: string | null;
+    cover_image: string | null;
+    reminder_days: number;
+  }): Promise<number> {
+    return await this.insert({
+      user: input.user_id,
+      title: input.title,
+      description: input.description,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      currency: input.currency,
+      cover_image: input.cover_image,
+      is_archived: 0,
+      reminder_days: input.reminder_days,
+    });
+  }
+
   /**
    * TP25 (`trips.service.ts::updateTrip`) — `UPDATE trips SET title=?,
    * description=?, start_date=?, end_date=?, currency=?, is_archived=?,
@@ -471,6 +521,14 @@ export class TripsRepository extends TrekRepository<Trips> {
    * legacy statement. Named `updateTripRow` (not `updateTrip`, the
    * deliverable list's own name) to keep it unambiguous next to
    * `TripsService.updateTrip`, which calls it.
+   *
+   * `is_archived: number | null` (Task 7 security review L1, absorbed here
+   * — not `number`): the caller's own pre-image fallback
+   * (`data.is_archived !== undefined ? … : trip.is_archived`) can legitimately
+   * be `null` (a stored `NULL` the request never touched), and the legacy
+   * statement bound that value through unfolded — a `number`-only signature
+   * here would tempt a caller to paper over that with its own `?? 0`, the
+   * exact regression the review found.
    */
   async updateTripRow(id: number, data: {
     title: string;
@@ -478,7 +536,7 @@ export class TripsRepository extends TrekRepository<Trips> {
     start_date: string | null;
     end_date: string | null;
     currency: string;
-    is_archived: number;
+    is_archived: number | null;
     cover_image: string | null;
     reminder_days: number;
   }): Promise<void> {

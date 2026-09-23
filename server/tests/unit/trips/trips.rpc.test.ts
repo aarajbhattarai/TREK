@@ -147,6 +147,42 @@ describe('TripsRpc reads', () => {
     const res = await f.host().dispatch(req('trips.getDays', { tripId: 1 }), 42);
     expect((res as { result: unknown }).result).toEqual([{ id: 3 }]);
   });
+
+  // Task 7 review B's L5 (absorbed here — the RP1 `getById` feed_token strip
+  // was untested): `build()`'s own `Trips.findRaw` stub always returns
+  // `feed_token: null`, which can never distinguish "the key was stripped"
+  // from "the key was never populated" — a fake returning a real-looking
+  // token is the only way to prove `withoutFeedToken` actually ran.
+  // Mutation: removing the `withoutFeedToken(...)` call in
+  // `trips.rpc.ts::getById` turns this red (`result.feed_token` becomes
+  // `'sekret'`).
+  it("TRIPS-RPC-020 getById strips feed_token — the anonymous ICS feed's sole credential never reaches a plugin", async () => {
+    const f = build();
+    const em = {
+      getRepository: vi.fn((entity: unknown) => {
+        if (entity === Trips) {
+          return {
+            findRaw: vi.fn(async (id: number) => ({ id, title: 'Japan', feed_token: 'sekret' })),
+            getOwnerId: vi.fn(async () => 42),
+          };
+        }
+        throw new Error(`unexpected entity ${String(entity)}`);
+      }),
+    } as unknown as EntityManager;
+    const db = {
+      canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+      prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
+    } as unknown as DatabaseService;
+    const permissions = { checkPermission: vi.fn(() => true) } as unknown as PermissionsService;
+    const guards = new PluginGuards(db, permissions, { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService);
+    const rpc = new TripsRpc(f.trips, f.reservations, f.days, f.membership, f.realtime, guards, f.accommodations, f.roster, em);
+    const host = new PluginRpcHost('p', new Set(ALL_TRIP_GRANTS), makeDeps(), createTestPluginRegistry([rpc]));
+
+    const res = await host.dispatch(req('trips.getById', { tripId: 1 }), 42);
+    const result = (res as { result: Record<string, unknown> }).result;
+    expect(result.title).toBe('Japan');
+    expect('feed_token' in result).toBe(false);
+  });
 });
 
 describe('TripsRpc writes', () => {

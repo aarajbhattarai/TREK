@@ -385,3 +385,30 @@ describe('TagsRepository.insertIgnore / deleteForPlace (PL5/PL12/PL13 — place_
     expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(other.id)).toHaveLength(1);
   });
 });
+
+// ── Plan 3c Task 8 (`TripsService.copy`, TP46) — additive ───────────────────
+
+describe('TagsRepository.listPlaceTagsForTrip (TP46)', () => {
+  it('PLACETAGSREPO-004: every place_tags pair for every place of the trip, scoped via the places join', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    const otherPlace = createPlace(testDb, other.id);
+    const tagA = createTag(testDb, user.id, { name: 'A' });
+    const tagB = createTag(testDb, user.id, { name: 'B' });
+    await tags.insertIgnore(place.id, [tagA.id, tagB.id]);
+    await tags.insertIgnore(otherPlace.id, [tagA.id]);
+
+    const rows = await tags.listPlaceTagsForTrip(trip.id);
+    expect(rows.map((r) => r.tag_id).sort((a, b) => a - b)).toEqual([tagA.id, tagB.id].sort((a, b) => a - b));
+    expect(rows.every((r) => r.place_id === place.id)).toBe(true);
+  });
+
+  it('PLACETAGSREPO-005: a trip with no tagged places returns []', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    createPlace(testDb, trip.id);
+    expect(await tags.listPlaceTagsForTrip(trip.id)).toEqual([]);
+  });
+});

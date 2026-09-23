@@ -5,6 +5,11 @@ import { DatabaseService } from '../database/database.service';
 import { Trips } from '../../db/entities/Trips.entity';
 import { Days } from '../../db/entities/Days.entity';
 import { Users } from '../../db/entities/Users.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import { AssignmentParticipants } from '../../db/entities/AssignmentParticipants.entity';
+import { Tags } from '../../db/entities/Tags.entity';
+import { DayNotes } from '../../db/entities/DayNotes.entity';
 import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -46,22 +51,6 @@ export function withoutFeedToken<T>(row: T): T {
   if (row && typeof row === 'object') delete (row as Record<string, unknown>).feed_token;
   return row;
 }
-
-// `NULL AS feed_token` after `t.*` rather than an explicit column list: the
-// duplicate name wins in the row object, so the credential is blanked once here
-// instead of at each of the nine call sites, and the next migration that adds a
-// column does not have to remember to extend a hand-maintained list.
-export const TRIP_SELECT = `
-  SELECT t.*,
-    NULL AS feed_token,
-    (SELECT COUNT(*) FROM days d WHERE d.trip_id = t.id) as day_count,
-    (SELECT COUNT(*) FROM places p WHERE p.trip_id = t.id) as place_count,
-    CASE WHEN t.user_id = :userId THEN 1 ELSE 0 END as is_owner,
-    u.username as owner_username,
-    (SELECT COUNT(*) FROM trip_members tm WHERE tm.trip_id = t.id) as shared_count
-  FROM trips t
-  JOIN users u ON u.id = t.user_id
-`;
 
 interface CreateTripData {
   title: string;
@@ -192,6 +181,29 @@ export class TripsService {
 
   private get daysRepo() {
     return this.em.getRepository(Days);
+  }
+
+  // Plan 3c Task 8 (`copy`'s own 6 owned tables): resolved the same way
+  // `tripsRepo`/`daysRepo` above are — `this.em.getRepository(...)`, not a
+  // new constructor parameter.
+  private get placesRepo() {
+    return this.em.getRepository(Places);
+  }
+
+  private get dayAssignmentsRepo() {
+    return this.em.getRepository(DayAssignments);
+  }
+
+  private get assignmentParticipantsRepo() {
+    return this.em.getRepository(AssignmentParticipants);
+  }
+
+  private get tagsRepo() {
+    return this.em.getRepository(Tags);
+  }
+
+  private get dayNotesRepo() {
+    return this.em.getRepository(DayNotes);
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
@@ -425,7 +437,12 @@ export class TripsService {
       start_date: newStart || null,
       end_date: newEnd || null,
       currency: newCurrency,
-      is_archived: newArchived ?? 0,
+      // Task 7 security review L1 (absorbed here): `newArchived` is already
+      // `trip.is_archived` verbatim when `data.is_archived` was never sent —
+      // the legacy statement bound that value AS-IS, including a stored
+      // `NULL`. A `?? 0` fold here would write `0` in that case instead,
+      // silently un-nulling a column the caller never asked to change.
+      is_archived: newArchived,
       cover_image: newCover ?? null,
       reminder_days: newReminder,
     });
@@ -578,42 +595,47 @@ export class TripsService {
    * Packing items and to-dos are reset to unchecked. Returns the new trip's ID.
    */
   async copy(sourceTripId: string | number, newOwnerId: number, title?: string): Promise<number> {
-    const src = this.db.prepare('SELECT * FROM trips WHERE id = ?').get(sourceTripId) as any;
+    const src = await this.tripsRepo.findRaw(sourceTripId); // TP36
     if (!src) throw new NotFoundError('Trip not found');
 
     const newTitle = title || src.title;
 
     return await this.uow.transactional(async () => {
-      const tripResult = this.db.prepare(`
-        INSERT INTO trips (user_id, title, description, start_date, end_date, currency, cover_image, is_archived, reminder_days)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
-      `).run(newOwnerId, newTitle, src.description, src.start_date, src.end_date, src.currency, src.cover_image, src.reminder_days ?? 3);
-      const newTripId = tripResult.lastInsertRowid;
+      const newTripId = await this.tripsRepo.insertTripCopy({ // TP37
+        user_id: newOwnerId,
+        title: newTitle,
+        description: src.description,
+        start_date: src.start_date,
+        end_date: src.end_date,
+        currency: src.currency,
+        cover_image: src.cover_image,
+        reminder_days: src.reminder_days ?? 3,
+      });
 
-      const oldDays = this.db.prepare('SELECT * FROM days WHERE trip_id = ? ORDER BY day_number').all(sourceTripId) as any[];
-      const dayMap = new Map<number, number | bigint>();
-      const insertDay = this.db.prepare('INSERT INTO days (trip_id, day_number, date, notes, title) VALUES (?, ?, ?, ?, ?)');
+      const oldDays = await this.daysRepo.listByTrip(Number(sourceTripId)); // TP38
+      const dayMap = new Map<number, number>();
       for (const d of oldDays) {
-        const r = insertDay.run(newTripId, d.day_number, d.date, d.notes, d.title);
-        dayMap.set(d.id, r.lastInsertRowid);
+        const newDayId = await this.daysRepo.insertDayCopy({ // TP39
+          trip_id: newTripId, day_number: d.day_number, date: d.date, notes: d.notes, title: d.title,
+        });
+        dayMap.set(d.id, newDayId);
       }
 
-      const oldPlaces = this.db.prepare('SELECT * FROM places WHERE trip_id = ?').all(sourceTripId) as any[];
-      const placeMap = new Map<number, number | bigint>();
-      const insertPlace = this.db.prepare(`
-        INSERT INTO places (trip_id, name, description, lat, lng, address, category_id, price, currency,
-          reservation_status, reservation_notes, reservation_datetime, place_time, end_time,
-          duration_minutes, notes, image_url, google_place_id, google_ftid, website, phone, transport_mode, osm_id,
-          amap_poi_id, route_geometry, route_color, stop_type, fill_percent)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      const oldPlaces = await this.placesRepo.listAllForTrip(sourceTripId); // TP40
+      const placeMap = new Map<number, number>();
       for (const p of oldPlaces) {
-        const r = insertPlace.run(newTripId, p.name, p.description, p.lat, p.lng, p.address, p.category_id,
-          p.price, p.currency, p.reservation_status, p.reservation_notes, p.reservation_datetime,
-          p.place_time, p.end_time, p.duration_minutes, p.notes, p.image_url, p.google_place_id,
-          p.google_ftid, p.website, p.phone, p.transport_mode, p.osm_id, p.amap_poi_id, p.route_geometry,
-          p.route_color, p.stop_type, p.fill_percent);
-        placeMap.set(p.id, r.lastInsertRowid);
+        const newPlaceId = await this.placesRepo.insertPlaceCopy({ // TP41
+          trip_id: newTripId, name: p.name, description: p.description, lat: p.lat, lng: p.lng,
+          address: p.address, category_id: p.category_id, price: p.price, currency: p.currency,
+          reservation_status: p.reservation_status, reservation_notes: p.reservation_notes,
+          reservation_datetime: p.reservation_datetime, place_time: p.place_time, end_time: p.end_time,
+          duration_minutes: p.duration_minutes, notes: p.notes, image_url: p.image_url,
+          google_place_id: p.google_place_id, google_ftid: p.google_ftid, website: p.website, phone: p.phone,
+          transport_mode: p.transport_mode, osm_id: p.osm_id, amap_poi_id: p.amap_poi_id,
+          route_geometry: p.route_geometry, route_color: p.route_color, stop_type: p.stop_type,
+          fill_percent: p.fill_percent,
+        });
+        placeMap.set(p.id, newPlaceId);
       }
 
       // The road-trip shaping goes with the copy. A via is not decoration: it is
@@ -624,18 +646,18 @@ export class TripsService {
       // from. Both tables are keyed by day, so they ride on `dayMap`.
       const oldVias = this.db.prepare(`
         SELECT v.* FROM roadtrip_vias v JOIN days d ON d.id = v.day_id WHERE d.trip_id = ?
-      `).all(sourceTripId) as any[];
+      `).all(sourceTripId) as any[]; // TP42 — Plan 3d
       const insertVia = this.db.prepare(
         'INSERT INTO roadtrip_vias (day_id, after_order_index, sequence, lat, lng) VALUES (?, ?, ?, ?, ?)',
       );
       for (const v of oldVias) {
         const newDayId = dayMap.get(v.day_id);
-        if (newDayId) insertVia.run(newDayId, v.after_order_index, v.sequence, v.lat, v.lng);
+        if (newDayId) insertVia.run(newDayId, v.after_order_index, v.sequence, v.lat, v.lng); // TP43 — Plan 3d
       }
 
       const oldTracks = this.db.prepare(`
         SELECT t.* FROM roadtrip_day_tracks t JOIN days d ON d.id = t.day_id WHERE d.trip_id = ?
-      `).all(sourceTripId) as any[];
+      `).all(sourceTripId) as any[]; // TP44 — Plan 3d
       const insertTrack = this.db.prepare(
         'INSERT INTO roadtrip_day_tracks (day_id, place_id, stray_km) VALUES (?, ?, ?)',
       );
@@ -645,61 +667,49 @@ export class TripsService {
         // the row rather than point it at the original, the way the assignment
         // and accommodation loops below skip an id they cannot map.
         const newPlaceId = placeMap.get(t.place_id);
-        if (newDayId && newPlaceId) insertTrack.run(newDayId, newPlaceId, t.stray_km);
+        if (newDayId && newPlaceId) insertTrack.run(newDayId, newPlaceId, t.stray_km); // TP45 — Plan 3d
       }
 
-      const oldTags = this.db.prepare(`
-        SELECT pt.* FROM place_tags pt JOIN places p ON p.id = pt.place_id WHERE p.trip_id = ?
-      `).all(sourceTripId) as any[];
-      const insertTag = this.db.prepare('INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)');
+      const oldTags = await this.tagsRepo.listPlaceTagsForTrip(sourceTripId); // TP46
       for (const t of oldTags) {
         const newPlaceId = placeMap.get(t.place_id);
-        if (newPlaceId) insertTag.run(newPlaceId, t.tag_id);
+        if (newPlaceId) await this.tagsRepo.insertIgnore(newPlaceId, [t.tag_id]); // TP47
       }
 
-      const oldAssignments = this.db.prepare(`
-        SELECT da.* FROM day_assignments da JOIN days d ON d.id = da.day_id WHERE d.trip_id = ?
-      `).all(sourceTripId) as any[];
-      const assignmentMap = new Map<number, number | bigint>();
-      const insertAssignment = this.db.prepare(`
-        INSERT INTO day_assignments (day_id, place_id, order_index, notes, reservation_status, reservation_notes, reservation_datetime, assignment_time, assignment_end_time, end_day)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      const oldAssignments = await this.dayAssignmentsRepo.listAllForTrip(sourceTripId); // TP48
+      const assignmentMap = new Map<number, number>();
       for (const a of oldAssignments) {
         const newDayId = dayMap.get(a.day_id);
         const newPlaceId = placeMap.get(a.place_id);
         if (newDayId && newPlaceId) {
-          const r = insertAssignment.run(newDayId, newPlaceId, a.order_index, a.notes,
-            a.reservation_status, a.reservation_notes, a.reservation_datetime,
-            a.assignment_time, a.assignment_end_time, a.end_day ?? 0);
-          assignmentMap.set(a.id, r.lastInsertRowid);
+          const newAssignmentId = await this.dayAssignmentsRepo.insertAssignmentCopy({ // TP49
+            day_id: newDayId, place_id: newPlaceId, order_index: a.order_index, notes: a.notes,
+            reservation_status: a.reservation_status, reservation_notes: a.reservation_notes,
+            reservation_datetime: a.reservation_datetime, assignment_time: a.assignment_time,
+            assignment_end_time: a.assignment_end_time, end_day: a.end_day ?? 0,
+          });
+          assignmentMap.set(a.id, newAssignmentId);
         }
       }
 
-      this.db.prepare('INSERT INTO roadtrip_preferences (trip_id, key, value) SELECT ?, key, value FROM roadtrip_preferences WHERE trip_id = ?').run(newTripId, sourceTripId);
+      this.db.prepare('INSERT INTO roadtrip_preferences (trip_id, key, value) SELECT ?, key, value FROM roadtrip_preferences WHERE trip_id = ?').run(newTripId, sourceTripId); // TP50 — Plan 3d
       const oldBoundaries = this.db.prepare('SELECT * FROM roadtrip_day_boundaries WHERE trip_id = ?').all(sourceTripId) as {
         day_number: number; from_assignment_id: number; to_assignment_id: number | null; fraction: number;
-      }[];
+      }[]; // TP51 — Plan 3d
       const insertBoundary = this.db.prepare('INSERT INTO roadtrip_day_boundaries (trip_id, day_number, from_assignment_id, to_assignment_id, fraction) VALUES (?, ?, ?, ?, ?)');
       for (const boundary of oldBoundaries) {
         const from = assignmentMap.get(boundary.from_assignment_id);
         const to = boundary.to_assignment_id === null ? null : assignmentMap.get(boundary.to_assignment_id);
-        if (from && to !== undefined) insertBoundary.run(newTripId, boundary.day_number, from, to, boundary.fraction);
+        if (from && to !== undefined) insertBoundary.run(newTripId, boundary.day_number, from, to, boundary.fraction); // TP52 — Plan 3d
       }
 
-      const oldParticipants = this.db.prepare(`
-        SELECT ap.* FROM assignment_participants ap
-        JOIN day_assignments da ON da.id = ap.assignment_id
-        JOIN days d ON d.id = da.day_id
-        WHERE d.trip_id = ?
-      `).all(sourceTripId) as any[];
-      const insertParticipant = this.db.prepare('INSERT OR IGNORE INTO assignment_participants (assignment_id, user_id) VALUES (?, ?)');
+      const oldParticipants = await this.assignmentParticipantsRepo.listForTrip(sourceTripId); // TP53
       for (const ap of oldParticipants) {
         const newAssignmentId = assignmentMap.get(ap.assignment_id);
-        if (newAssignmentId) insertParticipant.run(newAssignmentId, ap.user_id);
+        if (newAssignmentId) await this.assignmentParticipantsRepo.insertIgnore(newAssignmentId, [ap.user_id]); // TP54
       }
 
-      const oldAccom = this.db.prepare('SELECT * FROM day_accommodations WHERE trip_id = ?').all(sourceTripId) as any[];
+      const oldAccom = this.db.prepare('SELECT * FROM day_accommodations WHERE trip_id = ?').all(sourceTripId) as any[]; // TP55 — Plan 3d
       const accomMap = new Map<number, number | bigint>();
       const insertAccom = this.db.prepare(`
         INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes)
@@ -710,7 +720,7 @@ export class TripsService {
         const newStartDay = dayMap.get(a.start_day_id);
         const newEndDay = dayMap.get(a.end_day_id);
         if (newPlaceId && newStartDay && newEndDay) {
-          const r = insertAccom.run(newTripId, newPlaceId, newStartDay, newEndDay, a.check_in, a.check_in_end, a.check_out, a.confirmation, a.notes);
+          const r = insertAccom.run(newTripId, newPlaceId, newStartDay, newEndDay, a.check_in, a.check_in_end, a.check_out, a.confirmation, a.notes); // TP56 — Plan 3d
           accomMap.set(a.id, r.lastInsertRowid);
         }
       }
@@ -719,15 +729,14 @@ export class TripsService {
       // copy draws the hotel twice: once as the stop and once as the overnight block,
       // which is the duplicate the mirror exists to remove. Stamped afterwards rather
       // than at insert time, because the bookings are copied after the stops.
-      const stampCopiedStop = this.db.prepare('UPDATE day_assignments SET accommodation_id = ? WHERE id = ?');
       for (const a of oldAssignments) {
         if (!a.accommodation_id) continue;
         const newAssignmentId = assignmentMap.get(a.id);
         const newAccomId = accomMap.get(a.accommodation_id);
-        if (newAssignmentId && newAccomId) stampCopiedStop.run(newAccomId, newAssignmentId);
+        if (newAssignmentId && newAccomId) await this.dayAssignmentsRepo.setAccommodation(newAssignmentId, Number(newAccomId)); // TP57
       }
 
-      const oldReservations = this.db.prepare('SELECT * FROM reservations WHERE trip_id = ?').all(sourceTripId) as any[];
+      const oldReservations = this.db.prepare('SELECT * FROM reservations WHERE trip_id = ?').all(sourceTripId) as any[]; // TP58 — Plan 3d
       // The external_* / sync_enabled columns are deliberately not copied: the
       // duplicate must not inherit the source's external sync identity.
       const reservationMap = new Map<number, number | bigint>();
@@ -752,11 +761,11 @@ export class TripsService {
           // ingest_state travels with the copy: a staged booking must not turn
           // 'live' just because the trip was duplicated, or it lands in the
           // duplicate's public feed.
-          r.metadata, r.day_plan_position, r.needs_review ?? 0, r.ingest_state ?? 'live');
+          r.metadata, r.day_plan_position, r.needs_review ?? 0, r.ingest_state ?? 'live'); // TP59 — Plan 3d
         reservationMap.set(r.id, rr.lastInsertRowid);
       }
 
-      const oldBudget = this.db.prepare('SELECT * FROM budget_items WHERE trip_id = ?').all(sourceTripId) as any[];
+      const oldBudget = this.db.prepare('SELECT * FROM budget_items WHERE trip_id = ?').all(sourceTripId) as any[]; // TP60 — Plan 3e
       const budgetMap = new Map<number, number | bigint>();
       const insertBudget = this.db.prepare(`
         INSERT INTO budget_items (trip_id, category, name, total_price, persons, days, note, sort_order,
@@ -766,36 +775,36 @@ export class TripsService {
       for (const b of oldBudget) {
         const br = insertBudget.run(newTripId, b.category, b.name, b.total_price, b.persons, b.days, b.note, b.sort_order,
           b.reservation_id ? (reservationMap.get(b.reservation_id) ?? null) : null,
-          b.currency, b.exchange_rate ?? 1, b.expense_date, b.ticket_json, b.paid_by_user_id);
+          b.currency, b.exchange_rate ?? 1, b.expense_date, b.ticket_json, b.paid_by_user_id); // TP61 — Plan 3e
         budgetMap.set(b.id, br.lastInsertRowid);
       }
 
       const oldBudgetMembers = this.db.prepare(`
         SELECT bm.* FROM budget_item_members bm JOIN budget_items b ON b.id = bm.budget_item_id WHERE b.trip_id = ?
-      `).all(sourceTripId) as any[];
+      `).all(sourceTripId) as any[]; // TP62 — Plan 3e
       const insertBudgetMember = this.db.prepare('INSERT OR IGNORE INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, ?, ?)');
       for (const bm of oldBudgetMembers) {
         const newItemId = budgetMap.get(bm.budget_item_id);
-        if (newItemId) insertBudgetMember.run(newItemId, bm.user_id, bm.paid ?? 0, bm.amount);
+        if (newItemId) insertBudgetMember.run(newItemId, bm.user_id, bm.paid ?? 0, bm.amount); // TP63 — Plan 3e
       }
 
       const oldBudgetPayers = this.db.prepare(`
         SELECT bp.* FROM budget_item_payers bp JOIN budget_items b ON b.id = bp.budget_item_id WHERE b.trip_id = ?
-      `).all(sourceTripId) as any[];
+      `).all(sourceTripId) as any[]; // TP64 — Plan 3e
       const insertBudgetPayer = this.db.prepare('INSERT OR IGNORE INTO budget_item_payers (budget_item_id, user_id, amount) VALUES (?, ?, ?)');
       for (const bp of oldBudgetPayers) {
         const newItemId = budgetMap.get(bp.budget_item_id);
-        if (newItemId) insertBudgetPayer.run(newItemId, bp.user_id, bp.amount ?? 0);
+        if (newItemId) insertBudgetPayer.run(newItemId, bp.user_id, bp.amount ?? 0); // TP65 — Plan 3e
       }
 
-      const oldBags = this.db.prepare('SELECT * FROM packing_bags WHERE trip_id = ?').all(sourceTripId) as any[];
+      const oldBags = this.db.prepare('SELECT * FROM packing_bags WHERE trip_id = ?').all(sourceTripId) as any[]; // TP66 — Plan 3e
       const bagMap = new Map<number, number | bigint>();
       const insertBag = this.db.prepare(`
         INSERT INTO packing_bags (trip_id, name, color, weight_limit_grams, sort_order)
         VALUES (?, ?, ?, ?, ?)
       `);
       for (const bag of oldBags) {
-        const r = insertBag.run(newTripId, bag.name, bag.color, bag.weight_limit_grams, bag.sort_order);
+        const r = insertBag.run(newTripId, bag.name, bag.color, bag.weight_limit_grams, bag.sort_order); // TP67 — Plan 3e
         bagMap.set(bag.id, r.lastInsertRowid);
       }
 
@@ -807,7 +816,7 @@ export class TripsService {
       // recipient rows are not carried over, and the copy has its own roster.
       const oldPacking = this.db.prepare(
         'SELECT * FROM packing_items WHERE trip_id = ? AND (is_private = 0 OR owner_id = ?)'
-      ).all(sourceTripId, newOwnerId) as any[];
+      ).all(sourceTripId, newOwnerId) as any[]; // TP68 — Plan 3e (security-sensitive: the privacy filter)
       const insertPacking = this.db.prepare(`
         INSERT INTO packing_items (trip_id, name, checked, category, sort_order, weight_grams, bag_id, is_private, owner_id, updated_at)
         VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -816,44 +825,44 @@ export class TripsService {
         const isPrivate = p.is_private ? 1 : 0;
         insertPacking.run(newTripId, p.name, p.category, p.sort_order, p.weight_grams,
           p.bag_id ? (bagMap.get(p.bag_id) ?? null) : null,
-          isPrivate, isPrivate ? newOwnerId : null);
+          isPrivate, isPrivate ? newOwnerId : null); // TP69 — Plan 3e
       }
 
-      const oldNotes = this.db.prepare('SELECT * FROM day_notes WHERE trip_id = ?').all(sourceTripId) as any[];
-      const insertNote = this.db.prepare(`
-        INSERT INTO day_notes (day_id, trip_id, text, time, icon, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
+      const oldNotes = await this.dayNotesRepo.listByTrip(sourceTripId); // TP70
       for (const n of oldNotes) {
         const newDayId = dayMap.get(n.day_id);
-        if (newDayId) insertNote.run(newDayId, newTripId, n.text, n.time, n.icon, n.sort_order);
+        if (newDayId) {
+          await this.dayNotesRepo.insertNoteCopy({ // TP71
+            day_id: newDayId, trip_id: newTripId, text: n.text, time: n.time, icon: n.icon, sort_order: n.sort_order,
+          });
+        }
       }
 
-      const oldTodos = this.db.prepare('SELECT * FROM todo_items WHERE trip_id = ?').all(sourceTripId) as any[];
+      const oldTodos = this.db.prepare('SELECT * FROM todo_items WHERE trip_id = ?').all(sourceTripId) as any[]; // TP72 — Plan 3e
       const insertTodo = this.db.prepare(`
         INSERT INTO todo_items (trip_id, name, checked, category, sort_order, due_date, description, assigned_user_id, priority)
         VALUES (?, ?, 0, ?, ?, ?, ?, NULL, ?)
       `);
       for (const t of oldTodos) {
-        insertTodo.run(newTripId, t.name, t.category, t.sort_order, t.due_date, t.description, t.priority);
+        insertTodo.run(newTripId, t.name, t.category, t.sort_order, t.due_date, t.description, t.priority); // TP73 — Plan 3e
       }
 
-      const oldCategoryOrder = this.db.prepare('SELECT category, sort_order FROM budget_category_order WHERE trip_id = ?').all(sourceTripId) as any[];
+      const oldCategoryOrder = this.db.prepare('SELECT category, sort_order FROM budget_category_order WHERE trip_id = ?').all(sourceTripId) as any[]; // TP74 — Plan 3e
       const insertCategoryOrder = this.db.prepare(`
         INSERT INTO budget_category_order (trip_id, category, sort_order)
         VALUES (?, ?, ?)
       `);
       for (const o of oldCategoryOrder) {
-        insertCategoryOrder.run(newTripId, o.category, o.sort_order);
+        insertCategoryOrder.run(newTripId, o.category, o.sort_order); // TP75 — Plan 3e
       }
 
-      return Number(newTripId);
+      return newTripId;
     });
   }
 
-  /** Re-read a freshly copied trip in list shape (mirrors the route's TRIP_SELECT query). */
+  /** TP76 — Re-read a freshly copied trip in list shape via `TripsRepository.findForViewer` (the same private `tripSelectQuery` builder `get()`/`list()` use; the creator/copier always owns the new trip, so the access predicate is trivially satisfied — `create`'s TP19 precedent). The `TRIP_SELECT` string constant this used to re-render by hand is deleted — `tripSelectQuery` is the one source for the projection now (Task 7 review, absorbed here). */
   async getCopiedTrip(newTripId: number, userId: number) {
-    return this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId: newTripId });
+    return await this.tripsRepo.findForViewer(newTripId, userId);
   }
 
 }
