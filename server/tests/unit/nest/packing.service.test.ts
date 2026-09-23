@@ -60,7 +60,6 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, createTrip, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { PackingService, isInvalidBagRef } from '../../../src/nest/packing/packing.service';
 // Was packing.bridge, deleted with the other three that had no consumer outside the
@@ -68,7 +67,7 @@ import { PackingService, isInvalidBagRef } from '../../../src/nest/packing/packi
 const bridgeListItems = (tripId: string | number, viewerId?: number) => svc.listItems(tripId, viewerId);
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestDatabaseService } from '../../helpers/test-uow';
 
 let svc: PackingService;
 
@@ -77,7 +76,7 @@ let svc: PackingService;
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new PackingService(new DatabaseService(testDb), permissionsStub, new RealtimeService(), notificationsStub(send), await createTestUnitOfWork(testDb));
+  svc = new PackingService(await createTestDatabaseService(testDb), permissionsStub, new RealtimeService(), notificationsStub(send), await createTestUnitOfWork(testDb));
 });
 
 beforeEach(() => {

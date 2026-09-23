@@ -49,11 +49,13 @@ vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.
 
 import { db as testDb } from '../../src/db/database';
 import { MikroORM } from '@mikro-orm/core';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import request from 'supertest';
 import type { Application } from 'express';
 import { buildApp } from '../../src/bootstrap';
 import { CronRegistrarService } from '../../src/nest/scheduling/cron-registrar.service';
 import { PluginRuntimeService } from '../../src/nest/plugins/plugin-runtime.service';
+import { PlaceShadowRetentionJob } from '../../src/nest/place-shadow/place-shadow.job';
 import { StorageService } from '../../src/nest/storage/storage.service';
 import { Users } from '../../src/db/entities/Users.entity';
 import { createUser } from '../helpers/factories';
@@ -128,6 +130,47 @@ describe('ORM request-context seams populated in production', () => {
       expect(found).toBeTruthy();
     } finally {
       spy.mockRestore();
+    }
+  });
+
+  /**
+   * Plan 3c Task 0b (R9, inventory §12b): `PlaceShadowRetentionJob` only
+   * `register()`s a nightly tick — it has no `runOnBoot` sweep, so
+   * `boot-sweeps-request-context.test.ts`'s BOOT-SWEEP-001 cannot see it at
+   * all. `CronRegistrarService.register()` already wraps every registered
+   * tick in `withRequestContext` unconditionally (fail-closed on a missing
+   * `orm`, `cron-registrar.service.ts:87-92`) — but nothing before this task
+   * drove THIS job's own `onApplicationBootstrap` against the real,
+   * production-wired registrar to prove the whole path (register → a real
+   * `cron` `CronJob` lands in `SchedulerRegistry` → firing its tick resolves
+   * with no missing-context error) actually holds, the Plan 3a `*-003`
+   * per-job pattern for a register-only job.
+   */
+  it('SEAM-003: PlaceShadowRetentionJob registers against the real CronRegistrarService, and firing its tick runs inside the same request context with no missing-context error', async () => {
+    const registrar = app.get(CronRegistrarService);
+    const isEnabledSpy = vi.spyOn(registrar, 'isEnabled').mockReturnValue(true);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      testDb.prepare(`
+        INSERT INTO place_shadow_picks (created_at, query, source, live_rank, live_count, picked_name, picked_lat, picked_lng)
+        VALUES (datetime('now', '-999 days'), 'seam-003', 'nominatim', 1, 1, 'expired pick', 0, 0)
+      `).run();
+
+      app.get(PlaceShadowRetentionJob).onApplicationBootstrap();
+      const job = app.get(SchedulerRegistry).getCronJob('place-shadow-retention');
+      await job.fireOnTick();
+
+      const suspicious = errSpy.mock.calls
+        .map((args) => args.map(String).join(' '))
+        .filter((line) => /cannotUseGlobalContext|global EntityManager/i.test(line));
+      expect(suspicious).toEqual([]);
+
+      const remaining = testDb.prepare("SELECT COUNT(*) as n FROM place_shadow_picks WHERE query = 'seam-003'").get() as { n: number };
+      expect(remaining.n).toBe(0);
+    } finally {
+      registrar.unregister('place-shadow-retention');
+      isEnabledSpy.mockRestore();
+      errSpy.mockRestore();
     }
   });
 });

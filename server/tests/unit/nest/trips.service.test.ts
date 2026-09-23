@@ -92,7 +92,16 @@ import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, s
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
-const dbs = () => new DatabaseService(testDb);
+//
+// Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the first
+// `beforeAll` below, before any `dbs()` call — `canAccessTrip`/`isOwner`/
+// `rosterUserIds`/`getPlaceWithTags` resolve `TripsRepository`/
+// `TripMembersRepository`/`PlacesRepository` through it now, not through
+// `db/database.ts`'s deleted free functions. Kept as a module-level variable
+// (not threaded through `dbs()`'s signature) so the many existing `dbs()`
+// call sites in this file stay unchanged.
+let dbsEm: import('@mikro-orm/core').EntityManager | undefined;
+const dbs = () => new DatabaseService(testDb, dbsEm);
 
 
 // Same collaborator set the container hands PlacesService (see places.service.test.ts).
@@ -122,6 +131,7 @@ let svc: TripsService;
 let membersSvc: TripMembersService;
 let readModelSvc: TripReadModelService;
 beforeAll(async () => {
+  dbsEm = (await sharedTestOrm(testDb)).em;
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
   daysSvc = new DaysService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()), await createTestUnitOfWork(dbs().connection));
   placesSvc = new PlacesService(
@@ -147,6 +157,7 @@ beforeAll(async () => {
   undefined as never, // unsplash — not exercised here
   coversFx.storage,
   await createTestUnitOfWork(dbs().connection),
+  (await sharedTestOrm(testDb)).em,
 );
   membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection));
   readModelSvc = new TripReadModelService(
@@ -1214,6 +1225,7 @@ describe('quirk fixes', () => {
       undefined as never,
       coversFx.storage,
       await createTestUnitOfWork(dbs().connection),
+      (await sharedTestOrm(testDb)).em,
     );
   }
 

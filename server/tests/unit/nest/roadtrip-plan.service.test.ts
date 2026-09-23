@@ -10,6 +10,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RoadtripPlanService } from '../../../src/nest/roadtrip/roadtrip-plan.service';
 import { createDay, createDayAssignment, createPlace, createTrip, createUser } from '../../helpers/factories';
 import { resetTestDb } from '../../helpers/test-db';
+import { sharedTestOrm } from '../../helpers/test-uow';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -39,7 +40,7 @@ function hourlyRouter() {
   };
 }
 
-function setup() {
+async function setup() {
   const { user } = createUser(db);
   const trip = createTrip(db, user.id);
   const day = createDay(db, trip.id);
@@ -50,7 +51,7 @@ function setup() {
   });
   db.prepare("UPDATE day_assignments SET assignment_time = '09:00' WHERE id = ?").run(visits[0].id);
   const plans = new RoadtripPlanService(
-    new DatabaseService(db),
+    new DatabaseService(db, (await sharedTestOrm(db)).em),
     { getUserSettings: () => ({}) } as never,
     { read: () => ({}) } as never,
     hourlyRouter() as never,
@@ -66,7 +67,7 @@ beforeEach(() => {
 
 describe('a visit end time on the road trip', () => {
   it('is read from the visit, and from the place when the visit has none', async () => {
-    const { user, trip, visits, plans } = setup();
+    const { user, trip, visits, plans } = await setup();
     db.prepare("UPDATE day_assignments SET assignment_end_time = '14:00' WHERE id = ?").run(visits[1].id);
     db.prepare(
       "UPDATE places SET end_time = '18:00' WHERE id = (SELECT place_id FROM day_assignments WHERE id = ?)",
@@ -82,7 +83,7 @@ describe('a visit end time on the road trip', () => {
   });
 
   it('is when the drive leaves the stop, in place of its stay', async () => {
-    const { user, trip, visits, plans } = setup();
+    const { user, trip, visits, plans } = await setup();
     db.prepare("UPDATE day_assignments SET assignment_end_time = '14:00' WHERE id = ?").run(visits[1].id);
 
     const { calculated } = await plans.calculate(trip.id, user.id);
@@ -98,7 +99,7 @@ describe('a visit end time on the road trip', () => {
   });
 
   it('is reported when the drive gets there after it', async () => {
-    const { user, trip, visits, plans } = setup();
+    const { user, trip, visits, plans } = await setup();
     db.prepare("UPDATE day_assignments SET assignment_end_time = '09:30' WHERE id = ?").run(visits[1].id);
 
     const { calculated } = await plans.calculate(trip.id, user.id);
@@ -108,7 +109,7 @@ describe('a visit end time on the road trip', () => {
   });
 
   it('leaves a stop without one to its stay', async () => {
-    const { user, trip, plans } = setup();
+    const { user, trip, plans } = await setup();
 
     const { calculated } = await plans.calculate(trip.id, user.id);
 

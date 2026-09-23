@@ -50,6 +50,10 @@ const { db } = vi.hoisted(() => {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
   tmp.exec(`CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, created_at TEXT);`);
   tmp.exec(`CREATE TABLE place_tags (place_id INTEGER NOT NULL, tag_id INTEGER NOT NULL);`);
+  // TripAccessGuard now reads TripsRepository.findAccessible directly
+  // (Plan 3c Task 0b), a real join against trip_members.
+  tmp.exec('CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, currency TEXT);');
+  tmp.exec('CREATE TABLE trip_members (trip_id INTEGER NOT NULL, user_id INTEGER NOT NULL);');
   // StorageRegistryService (behind StorageModule, now in this module chain) reads
   // this at onModuleInit.
   tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
@@ -98,6 +102,11 @@ describe('Assignments e2e (real auth guard + temp SQLite)', () => {
   beforeAll(async () => {
     seedUser(db as never, { id: 1 });
     seedUser(db as never, { id: 2, username: 'peer', email: 'peer@example.test' });
+    // Plan 3c Task 0b: TripAccessGuard reads TripsRepository.findAccessible
+    // directly now, a real query — `canAccessTrip.mockReturnValue(...)` no
+    // longer intercepts it, so trip 5's real row (owned by user 1) is
+    // seeded once here rather than faked per test.
+    db.prepare("INSERT INTO trips (id, user_id, title) VALUES (5, 1, 'Trip')").run();
     db.prepare('INSERT INTO days (id, trip_id) VALUES (3, 5), (4, 5)').run();
     db.prepare('INSERT INTO places (id, trip_id, name) VALUES (2, 5, ?)').run('Louvre');
     app = await build();
@@ -106,7 +115,6 @@ describe('Assignments e2e (real auth guard + temp SQLite)', () => {
   });
 
   beforeEach(() => {
-    canAccessTrip.mockReturnValue({ id: 5, user_id: 1 });
     checkPermission.mockReturnValue(true);
     db.prepare('DELETE FROM day_assignments').run();
     db.prepare('DELETE FROM assignment_participants').run();
@@ -331,7 +339,11 @@ describe('Assignments e2e (real auth guard + temp SQLite)', () => {
     const FOREIGN_TRIP = 9;
 
     beforeEach(() => {
-      canAccessTrip.mockImplementation((tripId: unknown) => (Number(tripId) === 5 ? { id: 5, user_id: 1 } : undefined));
+      // Plan 3c Task 0b: real access now — trip 9 exists but is owned by
+      // user 2 (not the caller, user 1, and not a member), so
+      // TripsRepository.findAccessible genuinely refuses it, the same
+      // outcome `canAccessTrip.mockImplementation` used to fake.
+      db.prepare('INSERT OR IGNORE INTO trips (id, user_id, title) VALUES (?, 2, ?)').run(FOREIGN_TRIP, 'Their trip');
       db.prepare('INSERT OR IGNORE INTO days (id, trip_id) VALUES (30, ?), (31, ?)').run(FOREIGN_TRIP, FOREIGN_TRIP);
       db.prepare('INSERT OR IGNORE INTO places (id, trip_id, name) VALUES (20, ?, ?)').run(FOREIGN_TRIP, 'Their hotel');
     });

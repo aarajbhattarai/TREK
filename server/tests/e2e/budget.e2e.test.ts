@@ -104,10 +104,20 @@ describe('Budget e2e (real auth guard + temp SQLite, real budget SQL)', () => {
   });
 
   it('404 when the trip is not accessible', async () => {
-    canAccessTrip.mockReturnValue(undefined);
-    const res = await request(server).get(`/api/trips/${tripId}/budget`).set('Cookie', sessionCookie(1));
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Trip not found' });
+    // Plan 3c Task 0b: TripAccessGuard reads TripsRepository.findAccessible
+    // directly now, a real query — `canAccessTrip.mockReturnValue(...)` no
+    // longer intercepts it. The trip row is seeded once in `beforeAll` (not
+    // re-seeded per test), so it is removed and restored around this one
+    // assertion instead.
+    db.prepare('DELETE FROM trips WHERE id = ?').run(tripId);
+    try {
+      const res = await request(server).get(`/api/trips/${tripId}/budget`).set('Cookie', sessionCookie(1));
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+    } finally {
+      db.prepare("INSERT INTO trips (id, user_id, title, currency) VALUES (?, 1, 'E2E Trip', 'EUR')").run(tripId);
+      db.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, 2)').run(tripId);
+    }
   });
 
   it('201 on create with permission, then 200 list returns the stored row', async () => {

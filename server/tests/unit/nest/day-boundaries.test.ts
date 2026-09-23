@@ -23,7 +23,7 @@ function setup() {
     get: (sql: string, ...params: unknown[]) => raw.prepare(sql).get(...params),
     all: (sql: string, ...params: unknown[]) => raw.prepare(sql).all(...params),
     run: (sql: string, ...params: unknown[]) => raw.prepare(sql).run(...params),
-    canAccessTrip: vi.fn(() => true),
+    canAccessTrip: vi.fn(async () => true),
   };
   const service = new DayBoundariesService(db as unknown as DatabaseService);
   const realtime = { broadcast: vi.fn() };
@@ -68,9 +68,9 @@ it('MCP checks demo, trip access and edit permission before saving', async () =>
   s.auth.isDemoUser.mockReturnValue(true);
   await s.mcp.save(request, ctx);
   s.auth.isDemoUser.mockReturnValue(false);
-  s.db.canAccessTrip.mockReturnValue(false);
+  s.db.canAccessTrip.mockResolvedValue(false);
   await s.mcp.save(request, ctx);
-  s.db.canAccessTrip.mockReturnValue(true);
+  s.db.canAccessTrip.mockResolvedValue(true);
   s.guards.hasTripPermission.mockReturnValue(false);
   await s.mcp.save(request, ctx);
   expect(await s.service.list(10)).toEqual([]);

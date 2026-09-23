@@ -24,6 +24,13 @@ import { OauthTokens } from '../../src/db/entities/OauthTokens.entity';
 import type { OauthTokensRepository } from '../../src/db/repositories/OauthTokens.repository';
 import { PasswordResetTokens } from '../../src/db/entities/PasswordResetTokens.entity';
 import type { PasswordResetTokensRepository } from '../../src/db/repositories/PasswordResetTokens.repository';
+import { Trips } from '../../src/db/entities/Trips.entity';
+import type { TripsRepository } from '../../src/db/repositories/Trips.repository';
+import { TripMembers } from '../../src/db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../src/db/repositories/TripMembers.repository';
+import { Places } from '../../src/db/entities/Places.entity';
+import type { PlacesRepository } from '../../src/db/repositories/Places.repository';
+import { DatabaseService } from '../../src/nest/database/database.service';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -276,4 +283,62 @@ export function createTestPasswordResetTokensRepo(db: Database.Database): Promis
   const pending = sharedTestOrm(db).then((t) => t.repo(PasswordResetTokens));
   passwordResetTokensPerHandle.set(db, pending);
   return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 0b (trip-access primitives onto TripsRepository/
+// TripMembersRepository/PlacesRepository) — appended at the end per the
+// task's own file-ownership rule. Same memoisation-per-handle pattern as
+// every helper above.
+// ---------------------------------------------------------------------------
+
+const tripsRepoPerHandle = new WeakMap<Database.Database, Promise<TripsRepository>>();
+const tripMembersRepoPerHandle = new WeakMap<Database.Database, Promise<TripMembersRepository>>();
+const placesRepoPerHandle = new WeakMap<Database.Database, Promise<PlacesRepository>>();
+
+/** The `TripsRepository` a hand-constructed `DatabaseService`/`TripAccessGuard` double needs. */
+export function createTestTripsRepo(db: Database.Database): Promise<TripsRepository> {
+  const existing = tripsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Trips));
+  tripsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `TripMembersRepository` `DatabaseService.rosterUserIds` needs. */
+export function createTestTripMembersRepo(db: Database.Database): Promise<TripMembersRepository> {
+  const existing = tripMembersRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(TripMembers));
+  tripMembersRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `PlacesRepository` `DatabaseService.getPlaceWithTags` needs. */
+export function createTestPlacesRepo(db: Database.Database): Promise<PlacesRepository> {
+  const existing = placesRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Places));
+  placesRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/**
+ * A `DatabaseService` bound to the suite's own better-sqlite3 handle, with
+ * its `EntityManager` wired through `sharedTestOrm` — so `canAccessTrip`/
+ * `isOwner`/`rosterUserIds`/`getPlaceWithTags` (Plan 3c Task 0b, now
+ * repository-backed rather than delegating to `db/database.ts`'s deleted
+ * free functions) work on a directly-constructed instance the same way they
+ * do through Nest DI in production. `sharedTestOrm`'s ORM is built with
+ * `allowGlobalContext: true` (`test-orm.ts`), so these calls need no
+ * `withRequestContext` wrapper here, unlike production.
+ *
+ * A file that only needs `new DatabaseService(db)`'s other methods
+ * (`prepare`/`get`/`all`/`run`) does not need this helper — the
+ * `EntityManager` constructor argument is `@Optional()`, and only these four
+ * methods use it.
+ */
+export async function createTestDatabaseService(db: Database.Database): Promise<DatabaseService> {
+  const t = await sharedTestOrm(db);
+  return new DatabaseService(db, t.em);
 }

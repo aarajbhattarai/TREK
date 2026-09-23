@@ -59,6 +59,7 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember, createPlace, createReservation, createDay, createDayAssignment, setAppSetting } from '../../helpers/factories';
 import { DatabaseService, type TripAccess } from '../../../src/nest/database/database.service';
+import { sharedTestOrm } from '../../helpers/test-uow';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { FilesService } from '../../../src/nest/files/files.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
@@ -96,9 +97,19 @@ beforeAll(() => {
   runMigrations(testDb);
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   resetTestDb(testDb);
   vi.clearAllMocks();
+  // Plan 3c Task 0b: `svc`'s `DatabaseService` is constructed at module load,
+  // before any `beforeAll`/`beforeEach` can resolve a real `EntityManager` —
+  // spied directly on that instance, routed to a real `DatabaseService` built
+  // with one. Re-applied every test (not `beforeAll`) because `afterEach`
+  // below `vi.restoreAllMocks()`s it away after each one.
+  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  vi.spyOn(svc['db'] as DatabaseService, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
+  vi.spyOn(svc['db'] as DatabaseService, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
+  vi.spyOn(svc['db'] as DatabaseService, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
+  vi.spyOn(svc['db'] as DatabaseService, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
 });
 
 afterEach(() => {

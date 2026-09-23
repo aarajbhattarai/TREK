@@ -58,14 +58,15 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { db as dbConn } from '../../../src/db/database';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
 
-const dbs = new DatabaseService(dbConn);
+let dbs: DatabaseService;
 let svc: JourneyDomainService;
 
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  dbs = new DatabaseService(dbConn, (await sharedTestOrm(testDb)).em);
   svc = new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(testDb));
 });
 

@@ -134,7 +134,7 @@ describe('Open charging data before the stop exists', () => {
 
   it('serves the route and the MCP tool from one contract and one access check', async () => {
     const charging = { read: vi.fn(), lookup: vi.fn(async () => empty('unknown')) };
-    const db = { canAccessTrip: vi.fn(() => false) };
+    const db = { canAccessTrip: vi.fn(async () => false) };
     const tool = new ChargingMcp(charging as never, db as never, {} as never);
     const input = { lat: 48.1, lng: 11.5, name: 'Ladepark Nord' };
 
@@ -142,7 +142,7 @@ describe('Open charging data before the stop exists', () => {
     // TripAccessGuard refuses it on the route.
     expect((await tool.lookup({ tripId: 3, ...input }, { userId: 5 } as never)).isError).toBe(true);
     expect(charging.lookup).not.toHaveBeenCalled();
-    db.canAccessTrip.mockReturnValue(true);
+    db.canAccessTrip.mockResolvedValue(true);
     await tool.lookup({ tripId: 3, ...input }, { userId: 5 } as never);
     await new ChargingLookupController(charging as never).lookup(input as unknown as ChargingLookupDto);
 

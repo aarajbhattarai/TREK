@@ -238,6 +238,47 @@ describe('WS rooms', () => {
     }
   });
 
+  /**
+   * Plan 3c Task 0b (R9): `handleJoin`'s `this.db.canAccessTrip(...)` call
+   * (`realtime.gateway.ts:173`) is now `TripsRepository.findAccessible`
+   * underneath `DatabaseService`, reached through the request context
+   * `TrekWsAdapter`'s `@SubscribeMessage` wrapper forks
+   * (`nest/realtime/trek-ws.adapter.ts:273`, pinned generically by
+   * SEAM-001/BOOT-SWEEP-001) — no ratchet existed for this SPECIFIC seam
+   * before this task (inventory §12b). WS-004 above already proves the happy
+   * path returns `{type:'joined'}`, which requires the repository read to
+   * have succeeded; this test makes that explicit and structural, the same
+   * `cannotUseGlobalContext`/"global EntityManager" console-error filter
+   * `boot-sweeps-request-context.test.ts` uses, so a regression that routes
+   * `handleJoin` around the adapter's request context fails HERE by message,
+   * not only by an indirect "joined never arrived" timeout.
+   */
+  it('WS-SEAM-001 — handleJoin\'s repository read runs inside the WS request context (no cannotUseGlobalContext)', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const token = createEphemeralToken(user.id, 'ws')!;
+
+      const client = await connectWs(token);
+      try {
+        await client.next(); // welcome
+        client.send({ type: 'join', tripId: trip.id });
+        const msg = await client.next();
+        expect(msg.type).toBe('joined');
+      } finally {
+        client.close();
+      }
+
+      const suspicious = errSpy.mock.calls
+        .map((args) => args.map(String).join(' '))
+        .filter((line) => /cannotUseGlobalContext|global EntityManager/i.test(line));
+      expect(suspicious).toEqual([]);
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
   it('WS-006 — leave room receives left confirmation', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);

@@ -72,7 +72,7 @@ import { CollabService } from '../../../src/nest/collab/collab.service';
 import { VacayService } from '../../../src/nest/vacay/vacay.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
 
 
 
@@ -80,7 +80,14 @@ import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } 
 // TripsService before, and on the deleted services/tripService before that);
 // deleteGuest routes through the SAME BudgetService domain SQL
 // (removeUserFromBudgetItems) under test.
-const dbs = () => new DatabaseService(testDb);
+//
+// Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the `beforeAll`
+// below, before any `dbs()`/`new DatabaseService(testDb)` call —
+// `canAccessTrip`/`isOwner`/`rosterUserIds`/`getPlaceWithTags` resolve
+// `TripsRepository`/`TripMembersRepository`/`PlacesRepository` through it
+// now, not through `db/database.ts`'s deleted free functions.
+let dbsEm: import('@mikro-orm/core').EntityManager | undefined;
+const dbs = () => new DatabaseService(testDb, dbsEm);
 
 
 let budget: BudgetService;
@@ -88,8 +95,9 @@ let membersSvc: TripMembersService;
 let createGuest: typeof membersSvc.createGuest;
 let deleteGuest: typeof membersSvc.deleteGuest;
 beforeAll(async () => {
+  dbsEm = (await sharedTestOrm(testDb)).em;
   budget = new BudgetService(
-  new DatabaseService(testDb),
+  dbs(),
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   new ExchangeRatesService(),
   new RealtimeService(),

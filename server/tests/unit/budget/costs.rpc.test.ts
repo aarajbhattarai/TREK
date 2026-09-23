@@ -33,7 +33,7 @@ function build(opts: { addonOn?: boolean; canEdit?: boolean; missing?: boolean }
   } as unknown as BudgetService & Record<string, ReturnType<typeof vi.fn>>;
   const realtime = { broadcast: vi.fn() } as unknown as RealtimeService & { broadcast: ReturnType<typeof vi.fn> };
   const db = {
-    canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+    canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
     prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
   } as unknown as DatabaseService;
   const guards = new PluginGuards(

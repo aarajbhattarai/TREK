@@ -7,7 +7,7 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from './test-uow';
 
 /**
  * AccommodationsService over a test connection.
@@ -16,9 +16,14 @@ import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
  * real AssignmentsService rather than a stub: the stop is a row these cases read
  * back, and it has to come out of the same connection. Five collaborators deep is
  * why this is a helper and not five copies across the suites.
+ *
+ * Plan 3c Task 0b: the `DatabaseService` built here needs a real
+ * `EntityManager` now — `AccommodationsService.stampLodging` reaches
+ * `getPlaceWithTags`, which is `PlacesRepository.findWithTagsAndRatings`
+ * (not `db/database.ts`'s deleted free function).
  */
 export async function makeAccommodationsService(conn: Database): Promise<AccommodationsService> {
-  return accommodationsOver(new DatabaseService(conn));
+  return accommodationsOver(new DatabaseService(conn, (await sharedTestOrm(conn)).em));
 }
 
 /**

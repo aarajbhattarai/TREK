@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { canAccessTrip, pluginsEnabled } = vi.hoisted(() => ({
-  canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
+  canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
   pluginsEnabled: vi.fn(() => true),
 }));
 vi.mock('../../../src/db/database', () => ({ db: { prepare: () => ({ get: () => undefined }) }, canAccessTrip }));
@@ -30,7 +30,7 @@ function controller(invoke: (id: string) => unknown, providers = ['p1']) {
 const sec = (over: Record<string, unknown> = {}) => ({ title: 'Weather', ...over });
 
 describe('PdfSectionsController', () => {
-  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockReturnValue({ id: 1 } as never); });
+  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockResolvedValue({ id: 1 } as never); });
 
   it('gates: disabled / bad tripId / no user / non-member all return [] (no plugin calls on the first)', async () => {
     pluginsEnabled.mockReturnValue(false);
@@ -41,7 +41,7 @@ describe('PdfSectionsController', () => {
 
     expect((await controller(() => [sec()]).c.get('abc', req(5))).sections).toEqual([]);
     expect((await controller(() => [sec()]).c.get('1', req(undefined))).sections).toEqual([]);
-    canAccessTrip.mockReturnValue(undefined as never);
+    canAccessTrip.mockResolvedValue(undefined as never);
     expect((await controller(() => [sec()]).c.get('1', req(5))).sections).toEqual([]);
   });
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { canAccessTrip, pluginsEnabled } = vi.hoisted(() => ({
-  canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
+  canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
   pluginsEnabled: vi.fn(() => true),
 }));
 vi.mock('../../../src/db/database', () => ({ db: {}, canAccessTrip }));
@@ -24,14 +24,14 @@ function controller(over: Partial<PluginHooks> = {}) {
 }
 
 describe('TripWarningsController', () => {
-  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockReturnValue({ id: 1 } as never); });
+  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockResolvedValue({ id: 1 } as never); });
 
   it('returns [] when disabled / no user / no access', async () => {
     pluginsEnabled.mockReturnValue(false);
     expect(await controller().c.get('1', req(5))).toEqual({ warnings: [] });
     pluginsEnabled.mockReturnValue(true);
     expect(await controller().c.get('1', req(undefined))).toEqual({ warnings: [] });
-    canAccessTrip.mockReturnValue(undefined as never);
+    canAccessTrip.mockResolvedValue(undefined as never);
     expect(await controller().c.get('1', req(5))).toEqual({ warnings: [] });
   });
 

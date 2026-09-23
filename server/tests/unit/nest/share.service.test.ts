@@ -73,11 +73,12 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   t = await sharedTestOrm(testDb);
+  const dbs = new DatabaseService(testDb, t.em);
   svc = new ShareService(
-    new DatabaseService(testDb),
+    dbs,
     new SettingsService(await createTestUnitOfWork(testDb), await createTestAppSettingsRepo(testDb), await createTestSettingsRepo(testDb)),
     permissionsStub,
-    new QueryHelpersService(new DatabaseService(testDb)),
+    new QueryHelpersService(dbs),
     photoCacheStub,
     await createTestUnitOfWork(testDb),
   );

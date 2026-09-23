@@ -48,12 +48,12 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { TodoService } from '../../../src/nest/todo/todo.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
 
 let svc: TodoService;
 beforeAll(async () => {
   const uow = await createTestUnitOfWork(testDb);
-  svc = new TodoService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow);
+  svc = new TodoService(await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow);
 });
 
 beforeAll(() => {

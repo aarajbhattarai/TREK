@@ -40,7 +40,7 @@ const ALL = new Set([
 
 function guardsFor() {
   const db = {
-    canAccessTrip: vi.fn(() => ({ id: 1, user_id: 42 })),
+    canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
     prepare: vi.fn(() => ({ get: () => ({ role: 'user' }), all: () => [] })),
   } as unknown as DatabaseService;
   return {

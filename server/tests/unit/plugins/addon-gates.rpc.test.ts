@@ -56,7 +56,7 @@ function spyService(calls: string[], name: string) {
 function build(addonOn: boolean) {
   const calls: string[] = [];
   const db = {
-    canAccessTrip: vi.fn(() => ({ id: 1, user_id: 42 })),
+    canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
     prepare: vi.fn(() => ({ get: () => ({ role: 'user' }), all: () => [] })),
   } as unknown as DatabaseService;
   const guards = new PluginGuards(

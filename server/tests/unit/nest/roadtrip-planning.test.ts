@@ -59,7 +59,7 @@ function setup() {
     fill_percent: null,
   }));
   const db = {
-    canAccessTrip: vi.fn(() => true),
+    canAccessTrip: vi.fn(async () => true),
     all: vi.fn((sql: string) => (sql.includes('FROM day_assignments') ? visits : days)),
   };
   const router = {
@@ -177,7 +177,7 @@ describe('browser-independent roadtrip calculation', () => {
   });
   it('checks trip access before reading or routing', async () => {
     const s = setup();
-    s.db.canAccessTrip.mockReturnValue(false);
+    s.db.canAccessTrip.mockResolvedValue(false);
     await expect(s.plans.calculate(20, 5)).rejects.toThrow();
     expect(s.db.all).not.toHaveBeenCalled();
     expect(s.router.route).not.toHaveBeenCalled();
@@ -189,11 +189,11 @@ describe('browser-independent roadtrip calculation', () => {
     const s = setup();
     const mcp = new RoadtripPlanningMcp(s.plans, {} as never, {} as never);
     const reason = (res: { content: { text: string }[]; isError?: boolean }) => [res.isError, res.content[0].text];
-    s.db.canAccessTrip.mockReturnValue(false);
+    s.db.canAccessTrip.mockResolvedValue(false);
     expect(reason(await mcp.context({ tripId: 20 }, ctx))).toEqual([true, 'Trip not found']);
     expect(reason(await mcp.calculate({ tripId: 20, includeGeometry: false }, ctx))).toEqual([true, 'Trip not found']);
     expect(reason(await mcp.corridor({ tripId: 20, dayNumber: 1, category: 'fuel', widthKm: 5, offset: 0 } as never, ctx))).toEqual([true, 'Trip not found']);
-    s.db.canAccessTrip.mockReturnValue(true);
+    s.db.canAccessTrip.mockResolvedValue(true);
     const window = await mcp.calculate({ tripId: 10, includeGeometry: false, settings: { roadtrip_day_start: '18:00', roadtrip_day_end: '08:00' } }, ctx);
     expect(reason(window)).toEqual([true, 'Day end must be later than day start.']);
     expect(s.router.route).not.toHaveBeenCalled();
@@ -376,7 +376,7 @@ describe('MCP trip preferences authorization', () => {
     const s = setup();
     const tool = new RoadtripPreferencesMcp(s.preferences, { isDemoUser: () => false } as never, {} as never, s.db as never, { hasTripPermission: () => true } as never);
     expect(JSON.stringify(await tool.read({ tripId: 10 }, ctx))).toContain('100');
-    s.db.canAccessTrip.mockReturnValue(false);
+    s.db.canAccessTrip.mockResolvedValue(false);
     expect((await tool.read({ tripId: 10 }, ctx)).isError).toBe(true);
     expect((await tool.update({ tripId: 10, settings: {} }, ctx)).isError).toBe(true);
   });

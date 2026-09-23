@@ -104,8 +104,18 @@ export class TripCardContributionsController {
       .filter((n) => Number.isInteger(n) && n > 0)
       .slice(0, MAX_TRIP_IDS);
     const uniqueRequested = [...new Set(requested)];
-    const accessFlags = await Promise.all(uniqueRequested.map((id) => this.dbs.canAccessTrip(id, userId)));
-    const accessible = uniqueRequested.filter((_, i) => accessFlags[i]);
+    // Sequential, not `Promise.all` (Plan 3c Task 0b, task-0a-review-security.md
+    // F-A5): the 0a async sweep's `Promise.all` was a runtime no-op then (every
+    // read settled on the SAME synchronous free function), but `canAccessTrip`
+    // is a genuine repository read now — dispatching `uniqueRequested.length`
+    // of them concurrently would run up to `MAX_TRIP_IDS` queries against one
+    // forked EntityManager at once, which MikroORM does not support. `accessible`
+    // is passed positionally to `hooks.tripCards` below, so the order this
+    // produces (the filtered `uniqueRequested` order) is load-bearing.
+    const accessible: number[] = [];
+    for (const id of uniqueRequested) {
+      if (await this.dbs.canAccessTrip(id, userId)) accessible.push(id);
+    }
     if (accessible.length === 0) return { contributions: [] };
     const allowed = new Set(accessible);
 

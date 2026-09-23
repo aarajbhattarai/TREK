@@ -119,7 +119,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const places = new PlacesService(dbs, permissions, realtime, new MapsService(dbs, photoCache, appSettings, usersRepo), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection));
   // After accommodations: a hotel booking writes the stay's day stop through it.
   const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadRepository(dbs), accommodations, await createTestUnitOfWork(dbs.connection));
-  const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection));
+  const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection), (await sharedTestOrm(dbs.connection)).em);
   const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const guards = new PluginGuards(dbs, permissions, addons);
 

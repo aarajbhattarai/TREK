@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { canAccessTrip, pluginsEnabled } = vi.hoisted(() => ({
-  canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
+  canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
   pluginsEnabled: vi.fn(() => true),
 }));
 vi.mock('../../../src/db/database', () => ({ db: { prepare: () => ({ get: () => undefined }) }, canAccessTrip }));
@@ -31,7 +31,7 @@ const col = (over: Record<string, unknown> = {}) => ({ kind: 'column', entityId:
 const act = (over: Record<string, unknown> = {}) => ({ kind: 'action', entityId: 1, id: 'a1', label: 'Go', target: { kind: 'frame', sub: '/ui' }, ...over });
 
 describe('ViewContributionsController', () => {
-  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockReturnValue({ id: 1 } as never); });
+  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockResolvedValue({ id: 1 } as never); });
 
   it('gates: disabled / unknown view / no user / non-member all return [] (no plugin calls on the first two)', async () => {
     pluginsEnabled.mockReturnValue(false);
@@ -52,7 +52,7 @@ describe('ViewContributionsController', () => {
     }
 
     expect((await controller(() => [col()]).c.get('places', '1', req(undefined))).contributions).toEqual([]);
-    canAccessTrip.mockReturnValue(undefined as never);
+    canAccessTrip.mockResolvedValue(undefined as never);
     expect((await controller(() => [col()]).c.get('day', '1', req(5))).contributions).toEqual([]);
   });
 

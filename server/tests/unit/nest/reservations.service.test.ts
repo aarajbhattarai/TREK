@@ -48,7 +48,6 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation, createBudgetItem, createPlace, createDay, createDayAccommodation, createDayAssignment, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { ReservationsService } from '../../../src/nest/reservations/reservations.service';
 import { ReservationsReadRepository } from '../../../src/nest/reservations/reservations-read.repository';
@@ -76,11 +75,12 @@ const bridge = {
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestDatabaseService } from '../../helpers/test-uow';
 
 let svc: ReservationsService;
 beforeAll(async () => {
-  svc = new ReservationsService(new DatabaseService(testDb), permissionsStub, budget as unknown as BudgetService, new RealtimeService(), notificationsStub(notif.send), new ReservationsReadRepository(new DatabaseService(testDb)), await makeAccommodationsService(testDb), await createTestUnitOfWork(testDb));
+  const dbs = await createTestDatabaseService(testDb);
+  svc = new ReservationsService(dbs, permissionsStub, budget as unknown as BudgetService, new RealtimeService(), notificationsStub(notif.send), new ReservationsReadRepository(dbs), await makeAccommodationsService(testDb), await createTestUnitOfWork(testDb));
 });
 
 beforeAll(() => { createTables(testDb); runMigrations(testDb); });

@@ -129,10 +129,19 @@ describe('Reservations + accommodations e2e (real auth guard + temp SQLite, real
   });
 
   it('404 when trip not accessible (reservations)', async () => {
-    canAccessTrip.mockReturnValue(undefined);
-    const res = await request(server).get(`/api/trips/${tripId}/reservations`).set('Cookie', sessionCookie(1));
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Trip not found' });
+    // Plan 3c Task 0b: TripAccessGuard reads TripsRepository.findAccessible
+    // directly now, a real query — `canAccessTrip.mockReturnValue(...)` no
+    // longer intercepts it. The trip row is seeded once in `beforeAll` (not
+    // re-seeded per test), so it is removed and restored around this one
+    // assertion instead.
+    db.prepare('DELETE FROM trips WHERE id = ?').run(tripId);
+    try {
+      const res = await request(server).get(`/api/trips/${tripId}/reservations`).set('Cookie', sessionCookie(1));
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+    } finally {
+      db.prepare("INSERT INTO trips (id, user_id, title) VALUES (?, 1, 'E2E Trip')").run(tripId);
+    }
   });
 
   it('201 create reservation (real insert + booking notification), 400 without title', async () => {
@@ -249,10 +258,16 @@ describe('Reservations + accommodations e2e (real auth guard + temp SQLite, real
   });
 
   it('404 when trip not accessible (accommodations)', async () => {
-    canAccessTrip.mockReturnValue(undefined);
-    const res = await request(server).get(`/api/trips/${tripId}/accommodations`).set('Cookie', sessionCookie(1));
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Trip not found' });
+    // See the reservations 404 case above for why this deletes/restores the
+    // real row instead of mocking canAccessTrip.
+    db.prepare('DELETE FROM trips WHERE id = ?').run(tripId);
+    try {
+      const res = await request(server).get(`/api/trips/${tripId}/accommodations`).set('Cookie', sessionCookie(1));
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+    } finally {
+      db.prepare("INSERT INTO trips (id, user_id, title) VALUES (?, 1, 'E2E Trip')").run(tripId);
+    }
   });
 
   it('400 accommodation create without refs', async () => {

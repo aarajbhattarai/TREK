@@ -13,7 +13,7 @@ import {
   TRIP_OWNER_KEY,
   TripOwnerGuard,
 } from '../../../src/nest/permissions/trip-owner.guard';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { EntityManager } from '@mikro-orm/core';
 import type { User } from '../../../src/types';
 
 const owner = { id: 42, role: 'user' } as User;
@@ -22,13 +22,25 @@ const admin = { id: 99, role: 'admin' } as User;
 /** Trip 5 belongs to user 42; user 7 is a member. Nobody else can reach it. */
 const TRIP = { id: 5, user_id: 42 };
 
+/**
+ * Plan 3c Task 0b (task-0a-review-security.md F-A1): the guard now injects
+ * `EntityManager` and resolves `TripsRepository` inside `canActivate` (the
+ * `TripAccessGuard`/`JwtAuthGuard` precedent), instead of `DatabaseService
+ * .canAccessTrip` — this guard is the SOLE access check on
+ * `trip-members.controller.ts`'s four owner-only routes (no class-level
+ * `TripAccessGuard` there), so it gets the same direct-repository wiring.
+ */
 function makeGuard(meta: { message: string; param?: string } | undefined = { message: 'Only the owner can do this' }) {
-  const canAccessTrip = vi.fn((tripId: number, userId: number) =>
+  // async, not a bare sync return: `TripOwnerGuard.canActivate` awaits this
+  // call, and a synchronous double would not catch a dropped `await` there
+  // (task-0a mechanics review F1).
+  const findAccessible = vi.fn(async (tripId: number, userId: number) =>
     tripId === 5 && (userId === 42 || userId === 7) ? TRIP : undefined,
   );
+  const em = { getRepository: vi.fn(() => ({ findAccessible })) } as unknown as EntityManager;
   const reflector = { getAllAndOverride: vi.fn(() => meta) } as unknown as Reflector;
-  const guard = new TripOwnerGuard({ canAccessTrip } as unknown as DatabaseService, reflector);
-  return { guard, canAccessTrip };
+  const guard = new TripOwnerGuard(em, reflector);
+  return { guard, canAccessTrip: findAccessible };
 }
 
 function ctx(request: Record<string, unknown>) {
@@ -77,9 +89,10 @@ describe('TripOwnerGuard', () => {
     // returns true for every admin and the trip actions are admin-lowerable, so routing
     // ownership through it would hand admins other people's trips. The guard does not
     // inject it at all.
-    const canAccessTrip = vi.fn(() => TRIP);
+    const findAccessible = vi.fn(async () => TRIP);
+    const em = { getRepository: vi.fn(() => ({ findAccessible })) } as unknown as EntityManager;
     const reflector = { getAllAndOverride: vi.fn(() => ({ message: 'Only the owner can transfer ownership' })) } as unknown as Reflector;
-    const guard = new TripOwnerGuard({ canAccessTrip } as unknown as DatabaseService, reflector);
+    const guard = new TripOwnerGuard(em, reflector);
     expect(await thrown(() => guard.canActivate(ctx({ user: admin, params: { tripId: '5' } })))).toEqual({
       status: 403,
       body: { error: 'Only the owner can transfer ownership' },
@@ -129,9 +142,10 @@ describe('TripOwnerGuard', () => {
 
   it('OWNER-010: without metadata it still refuses a non-owner, with a generic message', async () => {
     // Built inline: passing undefined to makeGuard would hit its own default.
-    const canAccessTrip = vi.fn(() => TRIP);
+    const findAccessible = vi.fn(async () => TRIP);
+    const em = { getRepository: vi.fn(() => ({ findAccessible })) } as unknown as EntityManager;
     const reflector = { getAllAndOverride: vi.fn(() => undefined) } as unknown as Reflector;
-    const guard = new TripOwnerGuard({ canAccessTrip } as unknown as DatabaseService, reflector);
+    const guard = new TripOwnerGuard(em, reflector);
     expect(await thrown(() => guard.canActivate(ctx({ user: member, params: { tripId: '5' } })))).toEqual({
       status: 403,
       body: { error: 'Only the trip owner can do this' },

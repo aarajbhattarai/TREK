@@ -51,7 +51,7 @@ function build(opts: { canEdit?: boolean; before?: Item | undefined; updated?: I
   Object.assign(packing, data);
   const guards = new PluginGuards(
     {
-      canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+      canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
       prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
     } as unknown as DatabaseService,
     { checkPermission: vi.fn(() => opts.canEdit ?? true) } as unknown as PermissionsService,

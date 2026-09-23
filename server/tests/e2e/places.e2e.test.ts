@@ -40,7 +40,10 @@ const { db } = vi.hoisted(() => {
   // The assignment=unassigned/assigned filters join these.
   tmp.exec('CREATE TABLE days (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, day_number INTEGER, date TEXT, title TEXT);');
   // The GPX export reads the trip title for <metadata> and the filename.
-  tmp.exec('CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT);');
+  tmp.exec('CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, user_id INTEGER, currency TEXT);');
+  // TripAccessGuard now reads TripsRepository.findAccessible directly
+  // (Plan 3c Task 0b), a real join against trip_members.
+  tmp.exec('CREATE TABLE trip_members (trip_id INTEGER NOT NULL, user_id INTEGER NOT NULL);');
   tmp.exec(`CREATE TABLE day_assignments (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
     place_id INTEGER NOT NULL, order_index INTEGER DEFAULT 0);`);
   // reclaimPlaceImage ref-counts an uploaded thumbnail across both tables.
@@ -127,6 +130,13 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
 
   beforeEach(() => {
     db.exec('DELETE FROM trips; DELETE FROM places; DELETE FROM place_tags; DELETE FROM place_ratings; DELETE FROM day_assignments; DELETE FROM days;');
+    // Plan 3c Task 0b: TripAccessGuard reads TripsRepository.findAccessible
+    // directly now, a real query — `canAccessTrip.mockReturnValue(...)` no
+    // longer intercepts it, so trip 5's real row is (re-)seeded every test
+    // instead, owned by user 1, matching what the mock used to fake. GPX
+    // tests below re-seed their own data-bearing row with `INSERT OR
+    // REPLACE` over this default.
+    db.prepare("INSERT INTO trips (id, title, user_id) VALUES (5, 'Trip', 1)").run();
     canAccessTrip.mockReturnValue({ id: 5, user_id: 1 });
     checkPermission.mockReturnValue(true);
   });
@@ -196,7 +206,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
 
     // And it fires ahead of the trip-access 404 it used to follow (documented
     // parity shift of the ratchet — the todo/trips precedent).
-    canAccessTrip.mockReturnValue(undefined);
+    db.prepare('DELETE FROM trips WHERE id = 5').run();
     const noTrip = await request(server).post('/api/trips/5/places').set('Cookie', sessionCookie(1)).send({});
     expect(noTrip.status).toBe(400);
   });
@@ -306,7 +316,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   });
 
   it('404 trip when not accessible', async () => {
-    canAccessTrip.mockReturnValue(undefined);
+    db.prepare('DELETE FROM trips WHERE id = 5').run();
     const res = await request(server).get('/api/trips/5/places').set('Cookie', sessionCookie(1));
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'Trip not found' });
@@ -328,7 +338,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   });
 
   it('the guarded read routes 404 an inaccessible trip without touching the place', async () => {
-    canAccessTrip.mockReturnValue(undefined);
+    db.prepare('DELETE FROM trips WHERE id = 5').run();
     for (const path of ['/api/trips/5/places/9', '/api/trips/5/places/9/image']) {
       const res = await request(server).get(path).set('Cookie', sessionCookie(1));
       expect(res.status).toBe(404);
@@ -342,7 +352,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   // ── GPX export ────────────────────────────────────────────────────────────
   describe('GET export.gpx (#1442)', () => {
     const seedTrip = () => {
-      db.prepare("INSERT INTO trips (id, title) VALUES (5, 'Alpine week')").run();
+      db.prepare("INSERT OR REPLACE INTO trips (id, title, user_id) VALUES (5, 'Alpine week', 1)").run();
       db.prepare("INSERT INTO places (id, trip_id, name, lat, lng) VALUES (1, 5, 'Trailhead', 47.1, 11.2)").run();
       db.prepare("INSERT INTO places (id, trip_id, name, lat, lng, route_geometry) VALUES (2, 5, 'Ridge', 47.2, 11.3, '[[47.2,11.3],[47.25,11.35]]')").run();
       db.prepare("INSERT INTO days (id, trip_id, day_number, date, title) VALUES (1, 5, 1, '2026-05-01', 'Warm up')").run();
@@ -366,7 +376,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
     // ERR_INVALID_CHAR before the first body byte. Now the header folds to
     // ASCII and carries the real name RFC 5987-encoded.
     it('a non-ASCII trip title exports 200 with a filename* header instead of a 500 (#2165)', async () => {
-      db.prepare('INSERT INTO trips (id, title) VALUES (5, ?)').run('沖縄 4泊5日');
+      db.prepare('INSERT OR REPLACE INTO trips (id, title, user_id) VALUES (5, ?, 1)').run('沖縄 4泊5日');
       db.prepare('INSERT INTO places (id, trip_id, name, lat, lng) VALUES (1, 5, ?, 26.217, 127.719)').run('首里城');
 
       const res = await request(server).get('/api/trips/5/places/export.gpx').set('Cookie', sessionCookie(1));
@@ -400,7 +410,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
     });
 
     it('404s an empty trip rather than handing over a file that imports as nothing', async () => {
-      db.prepare("INSERT INTO trips (id, title) VALUES (5, 'Nothing here')").run();
+      db.prepare("INSERT OR REPLACE INTO trips (id, title, user_id) VALUES (5, 'Nothing here', 1)").run();
       const res = await request(server).get('/api/trips/5/places/export.gpx').set('Cookie', sessionCookie(1));
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Nothing to export' });
@@ -408,7 +418,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
 
     it('404s a trip the caller cannot reach, and 401s without a cookie', async () => {
       seedTrip();
-      canAccessTrip.mockReturnValue(undefined);
+      db.prepare('DELETE FROM trips WHERE id = 5').run();
       const res = await request(server).get('/api/trips/5/places/export.gpx').set('Cookie', sessionCookie(1));
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Trip not found' });
@@ -428,7 +438,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   // before the pipe, so guarding create would answer 404 where the suite above
   // pins a 400. This is the non-regression pin for that decision.
   it('a bad create body still 400s ahead of the trip 404', async () => {
-    canAccessTrip.mockReturnValue(undefined);
+    db.prepare('DELETE FROM trips WHERE id = 5').run();
     const res = await request(server).post('/api/trips/5/places').set('Cookie', sessionCookie(1)).send({});
     expect(res.status).toBe(400);
   });

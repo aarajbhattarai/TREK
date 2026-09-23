@@ -5,7 +5,20 @@ import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createUser } from '../../../helpers/factories';
 import { Users } from '../../../../src/db/entities/Users.entity';
-import { columnIncrementedBy, columnRef, currentTimestamp, dateAdd, dateOf, lower, lowerParam } from '../../../../src/db/dialect/sql-functions';
+import {
+  absDifference,
+  coalesce,
+  coalesceParam,
+  columnIncrementedBy,
+  columnRef,
+  currentTimestamp,
+  dateAdd,
+  dateOf,
+  lower,
+  lowerParam,
+  nowMinusDays,
+  trim,
+} from '../../../../src/db/dialect/sql-functions';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -218,5 +231,99 @@ describe('sql-functions (sqlite)', () => {
 
     const none = await t.em.findOne(Users, { [lower(platform, 'email')]: lowerParam(platform, 'nobody@example.com') });
     expect(none).toBeNull();
+  });
+
+  // Plan 3c Task 0b (R6): no consumer yet — Tasks 1–8 wire these in as each
+  // converts the statement that needs them. Pinned here so a later task
+  // imports a tested helper instead of writing one inline.
+
+  it("SQLF-016: nowMinusDays renders datetime('now', '-N days'), matching a JS-computed date within a few seconds' tolerance", async () => {
+    const row = testDb.prepare(`SELECT ${nowMinusDays(t.em.getPlatform(), 5).sql} as d`).get() as { d: string };
+    const got = new Date(`${row.d.replace(' ', 'T')}Z`).getTime();
+    const expected = Date.now() - 5 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(got - expected)).toBeLessThan(10_000);
+  });
+
+  it('SQLF-016b: nowMinusDays(0) is "now", not one day back', async () => {
+    const row = testDb.prepare(`SELECT ${nowMinusDays(t.em.getPlatform(), 0).sql} as d`).get() as { d: string };
+    const got = new Date(`${row.d.replace(' ', 'T')}Z`).getTime();
+    expect(Math.abs(got - Date.now())).toBeLessThan(10_000);
+  });
+
+  it('SQLF-017: nowMinusDays rejects a non-integer or negative day count', () => {
+    expect(() => nowMinusDays(t.em.getPlatform(), 1.5)).toThrow(/non-negative integer day count/);
+    expect(() => nowMinusDays(t.em.getPlatform(), -1)).toThrow(/non-negative integer day count/);
+    expect(() => nowMinusDays(t.em.getPlatform(), Number.NaN)).toThrow(/non-negative integer day count/);
+  });
+
+  it('SQLF-018: trim strips leading/trailing whitespace', async () => {
+    const { user } = createUser(testDb, { username: '  Padded Name  ' });
+    const platform = t.em.getPlatform();
+    const row = await t.em.createQueryBuilder(Users, 'u')
+      .select([trim(platform, 'u.username').as('n')])
+      .where({ id: user.id })
+      .execute('get', false);
+    expect((row as { n: string }).n).toBe('Padded Name');
+  });
+
+  it('SQLF-019: coalesce(ref, fallbackRef) picks the first non-null column, else the second', async () => {
+    const { user: withName } = createUser(testDb, { username: 'has-display-name' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Display Name', withName.id);
+    const { user: withoutName } = createUser(testDb, { username: 'no-display-name' });
+    const platform = t.em.getPlatform();
+
+    const a = await t.em.createQueryBuilder(Users, 'u')
+      .select([coalesce(platform, 'u.display_name', 'u.username').as('name')])
+      .where({ id: withName.id })
+      .execute('get', false);
+    expect((a as { name: string }).name).toBe('Display Name');
+
+    const b = await t.em.createQueryBuilder(Users, 'u')
+      .select([coalesce(platform, 'u.display_name', 'u.username').as('name')])
+      .where({ id: withoutName.id })
+      .execute('get', false);
+    expect((b as { name: string }).name).toBe('no-display-name');
+  });
+
+  it('SQLF-020: coalesceParam(ref, value) writes COALESCE(col, ?) with the fallback bound, not another column', async () => {
+    const { user } = createUser(testDb);
+    const platform = t.em.getPlatform();
+    await t.em.createQueryBuilder(Users, 'u')
+      .update({ display_name: coalesceParam(platform, 'display_name', 'Fallback Name') })
+      .where({ id: user.id })
+      .execute('run');
+    t.clear();
+    expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(user.id) as { display_name: string }).display_name).toBe('Fallback Name');
+
+    await t.em.createQueryBuilder(Users, 'u')
+      .update({ display_name: coalesceParam(platform, 'display_name', 'Never Used') })
+      .where({ id: user.id })
+      .execute('run');
+    t.clear();
+    expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(user.id) as { display_name: string }).display_name).toBe('Fallback Name');
+  });
+
+  it('SQLF-021: absDifference is usable as a filter key, matching ABS(col - ?) <= tolerance', async () => {
+    const { user: near } = createUser(testDb);
+    testDb.prepare('UPDATE users SET login_count = 12 WHERE id = ?').run(near.id);
+    const { user: far } = createUser(testDb);
+    testDb.prepare('UPDATE users SET login_count = 100 WHERE id = ?').run(far.id);
+    const platform = t.em.getPlatform();
+
+    const rows = await t.em.find(Users, { [absDifference(platform, 'login_count', 10)]: { $lte: 5 } });
+    expect(rows.map((r) => r.id)).toEqual([near.id]);
+
+    const none = await t.em.find(Users, { [absDifference(platform, 'login_count', 10)]: { $lte: 0 } });
+    expect(none).toEqual([]);
+  });
+
+  it('SQLF-022: an unknown platform fails closed for every Plan 3c Task 0b helper', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => nowMinusDays(foreign, 1)).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => trim(foreign, 'u.name')).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => coalesce(foreign, 'u.a', 'u.b')).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => coalesceParam(foreign, 'u.a', 'x')).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => absDifference(foreign, 'u.lat', 1)).toThrow(/no implementation for platform FakePlatform/);
   });
 });

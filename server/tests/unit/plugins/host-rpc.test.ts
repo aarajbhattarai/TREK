@@ -96,6 +96,16 @@ const userSettings = {
 } as unknown as PluginUserSettingsService;
 
 const dbs = new DatabaseService(mockDb);
+// Plan 3c Task 0b: `canAccessTrip` is `TripsRepository.findAccessible` now,
+// which needs a real EntityManager over the full migrated schema — this
+// file's `mockDb` is a hand-trimmed `:memory:` table set (no `currency`
+// column on `trips`, among others), so a real repository read isn't
+// possible against it. Spied directly with the exact access rule the old
+// `db/database` mock factory above encoded (trip 1 belongs to user 5, user 6
+// is a member), which is now dead code for this purpose.
+vi.spyOn(dbs, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
+  Number(tripId) === 1 && (userId === 5 || userId === 6) ? { id: 1, user_id: 5, currency: null } : undefined,
+);
 const guards = new PluginGuards(dbs, permissions, addons);
 const registry = createTestPluginRegistry([
   new DbRpc(userSettings),

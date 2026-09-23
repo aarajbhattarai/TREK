@@ -60,6 +60,8 @@ import { createUser, createTrip } from '../../helpers/factories';
 import { mapDbError, pipeAsset, type ServiceResult } from '../../../src/nest/memories/memories.helpers';
 import { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
+import { Trips } from '../../../src/db/entities/Trips.entity';
+import { sharedTestOrm } from '../../helpers/test-uow';
 
 const access = new MemoriesAccessService(new DatabaseService(testDb));
 // A typed forwarder, not a `.bind` alias: a bound alias is typed `any`, which
@@ -67,9 +69,18 @@ const access = new MemoriesAccessService(new DatabaseService(testDb));
 const getAlbumIdFromLink = (...a: Parameters<MemoriesAccessService['getAlbumIdFromLink']>) => access.getAlbumIdFromLink(...a);
 import { SsrfBlockedError } from '../../../src/utils/ssrfGuard';
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  // Plan 3c Task 0b: `access` (and `DatabaseService.prototype.canAccessTrip`
+  // it holds a reference to) is constructed at module load, before any
+  // `beforeAll` can resolve a real `EntityManager` — patched onto the
+  // PROTOTYPE instead, which the already-constructed instance's method
+  // lookup still resolves through (`canAccessTrip` is not an own property).
+  const em = (await sharedTestOrm(testDb)).em;
+  vi.spyOn(DatabaseService.prototype, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
+    em.getRepository(Trips).findAccessible(tripId, userId),
+  );
 });
 
 beforeEach(() => {

@@ -30,7 +30,7 @@ const ctx = (actingUserId: number | undefined): PluginRpcContext => ({
 /** Trip 1 belongs to user 42 and only user 42 may reach it, mirroring rpc-host.test.ts. */
 function build(overrides: { role?: string | undefined; allow?: boolean; addonOn?: boolean } = {}) {
   const db = {
-    canAccessTrip: vi.fn((tripId: number, userId: number) =>
+    canAccessTrip: vi.fn(async (tripId: number, userId: number) =>
       tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined,
     ),
     prepare: vi.fn(() => ({
@@ -128,7 +128,7 @@ describe('PluginGuards — requireTripEdit and canEditAs', () => {
 
   it('PGUARD-014 a non-owner member is flagged as shared', async () => {
     const db = {
-      canAccessTrip: vi.fn(() => ({ id: 1, user_id: 7 })),
+      canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 7 })),
       prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
     } as unknown as DatabaseService;
     const permissions = { checkPermission: vi.fn(() => true) } as unknown as PermissionsService;

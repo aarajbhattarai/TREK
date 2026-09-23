@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { canAccessTrip, placeTrip, pluginsEnabled } = vi.hoisted(() => ({
-  canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
+  canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
   placeTrip: vi.fn((placeId: number) => (placeId === 7 ? { trip_id: 1 } : undefined)),
   pluginsEnabled: vi.fn(() => true),
 }));
@@ -9,7 +9,6 @@ vi.mock('../../../src/db/database', () => ({
   db: { prepare: () => ({ get: (placeId: number) => placeTrip(placeId) }) },
   canAccessTrip,
 }));
-import { db as dbConn } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
@@ -24,11 +23,11 @@ function controller(over: Partial<PluginHooks> = {}) {
     placeDetails: vi.fn(async (id: string) => (id === 'p2' ? [{ label: 'Rating', value: '4.5' }] : [{ label: 'Reviews', value: '12', url: 'https://x' }])),
     ...over,
   } as unknown as PluginHooks;
-  return { c: new PlaceDetailsController(runtime, new DatabaseService(dbConn)), runtime };
+  return { c: new PlaceDetailsController(runtime, { canAccessTrip, connection: { prepare: () => ({ get: (placeId: number) => placeTrip(placeId) }) } } as unknown as DatabaseService), runtime };
 }
 
 describe('PlaceDetailsController', () => {
-  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockReturnValue({ id: 1 } as never); });
+  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockResolvedValue({ id: 1 } as never); });
 
   it('returns [] when the runtime is disabled (no plugin calls)', async () => {
     pluginsEnabled.mockReturnValue(false);
@@ -40,7 +39,7 @@ describe('PlaceDetailsController', () => {
   it('returns [] for an unknown place or a place the caller cannot access', async () => {
     const { c } = controller();
     expect(await c.get('999', req(5))).toEqual({ providers: [] }); // place not found
-    canAccessTrip.mockReturnValue(undefined as never);
+    canAccessTrip.mockResolvedValue(undefined as never);
     expect(await c.get('7', req(5))).toEqual({ providers: [] }); // no access
   });
 

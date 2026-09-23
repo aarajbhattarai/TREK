@@ -55,12 +55,21 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
 let svc: AssignmentsService;
 beforeAll(async () => {
+  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
+  // `beforeAll` can resolve a real `EntityManager` — the four
+  // repository-backed methods are spied directly on this instance instead,
+  // routed to a real `DatabaseService` built with one.
+  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
+  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
+  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
+  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   svc = new AssignmentsService(
   dbs,
   new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),

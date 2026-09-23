@@ -30,7 +30,7 @@ const mockDb = vi.hoisted(() => {
     closeDb: () => {},
     reinitialize: () => {},
     getPlaceWithTags: () => null,
-    canAccessTrip: vi.fn(() => true),
+    canAccessTrip: vi.fn(async () => true),
     isOwner: () => false,
   };
 });

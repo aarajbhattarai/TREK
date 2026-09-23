@@ -138,7 +138,7 @@ interface Collaborators {
 }
 
 function harness(over: Collaborators = {}) {
-  const canAccessTrip = vi.fn().mockReturnValue('access' in over ? over.access : TRIP_ACCESS);
+  const canAccessTrip = vi.fn().mockResolvedValue('access' in over ? over.access : TRIP_ACCESS);
   const get = vi
     .fn()
     .mockReturnValue(

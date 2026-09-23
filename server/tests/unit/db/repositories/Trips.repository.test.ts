@@ -63,6 +63,14 @@ describe('TripsRepository.findAccessible — parity with canAccessTrip', () => {
     expect(await trips.isOwner(trip.id, member.id)).toBe(false);
   });
 
+  it('TRIPREPO-007: a missing trip id resolves to undefined, not a throw, for both findAccessible and isOwner', async () => {
+    const { user } = createUser(testDb);
+    const missingId = 999999;
+    expect(await trips.findAccessible(missingId, user.id)).toBeUndefined();
+    expect(legacy(missingId, user.id)).toBeUndefined();
+    expect(await trips.isOwner(missingId, user.id)).toBe(false);
+  });
+
   it('TRIPREPO-006: toObject on a trip omits the hidden relation and every unloaded collection', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);

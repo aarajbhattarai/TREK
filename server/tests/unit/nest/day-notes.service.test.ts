@@ -51,11 +51,11 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { DayNotesService } from '../../../src/nest/day-notes/day-notes.service';
 import type { DayNote } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
 
 let svc: DayNotesService;
 beforeAll(async () => {
-  svc = new DayNotesService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+  svc = new DayNotesService(await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
 });
 
 beforeAll(() => {

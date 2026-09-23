@@ -78,7 +78,7 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
@@ -126,6 +126,15 @@ async function makePlacesService(
 let accommodations: Awaited<ReturnType<typeof accommodationsOver>>;
 let svc: Awaited<ReturnType<typeof makePlacesService>>;
 beforeAll(async () => {
+  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
+  // `beforeAll` can resolve a real `EntityManager` — the four
+  // repository-backed methods are spied directly on this instance instead,
+  // routed to a real `DatabaseService` built with one.
+  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
+  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
+  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
+  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   accommodations = await accommodationsOver(dbs);
   svc = await makePlacesService();
 });

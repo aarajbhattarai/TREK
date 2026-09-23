@@ -127,3 +127,85 @@ export function lowerParam(platform: Platform, value: string): RawQueryFragment 
   return unsupported(platform);
 }
 
+// ---------------------------------------------------------------------------
+// Plan 3c Task 0b (R6) — no consumer yet: Tasks 1–8 wire these in as each
+// converts the statement that needs them (`place-shadow.service.ts:192`,
+// `places.service.ts:642,651-652`, the ~16 `COALESCE` sites across
+// `days`/`assignments`/`trip-members`/`places`). Added here, with their own
+// SQLF-0xx tests pinning the SQLite text against a raw statement, so a later
+// task imports a tested helper instead of writing one inline.
+// ---------------------------------------------------------------------------
+
+/**
+ * `datetime('now', '-N days')` — the SQLite clock shifted backwards by whole
+ * days, as TEXT (not a stored column's value — `dateAdd` above is the wrong
+ * shape for this: it shifts a *column*, not "now"). `days` is validated to be
+ * a non-negative integer and spelled directly into the fragment rather than
+ * bound: the legacy statement (`place-shadow.service.ts:192`) binds the
+ * WHOLE modifier string (`'-30 days'`) as one parameter, and MikroORM's raw
+ * fragments do not accept a placeholder inside the modifier argument of a
+ * SQLite date/time function — `datetime('now', ?)` with `'-30 days'` bound
+ * does work in raw SQLite, but composing that shape through a `raw()`
+ * fragment used as a QueryBuilder value needs the modifier already in the
+ * SQL text, the same way `dateAdd` above spells its own day count.
+ */
+export function nowMinusDays(platform: Platform, days: number): RawQueryFragment {
+  if (!Number.isInteger(days) || days < 0) {
+    throw new Error(`sql-functions: nowMinusDays needs a non-negative integer day count, got ${days}`);
+  }
+  if (platform instanceof SqlitePlatform) return raw(`datetime('now', '-${days} days')`);
+  return unsupported(platform);
+}
+
+/** `TRIM(<col>)`. Pairs with `lower()` for the `LOWER(TRIM(name))` shape (`places.service.ts:642`). */
+export function trim(platform: Platform, ref: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(`TRIM(${column(ref)})`);
+  return unsupported(platform);
+}
+
+/**
+ * `COALESCE(<col>, <fallbackCol>)` — both sides column references, for the
+ * `COALESCE(a, b)` SELECT-projection shape (`days.service.ts:93-94`,
+ * `assignments.service.ts:103-104`, `trip-members.service.ts:116-143`, …).
+ *
+ * Not composed by nesting a `RawQueryFragment` inside this one: MikroORM's
+ * `RawQueryFragment[Symbol.toPrimitive]` only returns a usable value for the
+ * `'string'` coercion hint (object-key position) — a template-literal
+ * `${fragment}` embed uses the `'default'` hint and throws
+ * (`node_modules/@mikro-orm/core/utils/RawQueryFragment.js`, verified
+ * directly, not assumed). So `coalesce`'s second argument is a second
+ * `column()`-validated identifier, spelled into the same fragment as the
+ * first — two columns, one statement, matching `lower`/`lowerParam`'s
+ * two-function split for the same reason (a filter KEY vs a bound VALUE
+ * are different shapes).
+ */
+export function coalesce(platform: Platform, ref: string, fallbackRef: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(`COALESCE(${column(ref)}, ${column(fallbackRef)})`);
+  return unsupported(platform);
+}
+
+/**
+ * `COALESCE(<col>, ?)` — the value-side twin of `coalesce()` above, for the
+ * `COALESCE(col, ?)` UPDATE-SET shape (`places.service.ts:344,351,363,…`).
+ * `value` is bound as a genuine parameter, never interpolated.
+ */
+export function coalesceParam(platform: Platform, ref: string, value: string | number | null): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(`COALESCE(${column(ref)}, ?)`, [value]);
+  return unsupported(platform);
+}
+
+/**
+ * `ABS(<col> - ?)`, for use as a filter KEY (the `'string'`-hint coercion
+ * `lower()` above relies on) so it composes with `$lte`/`$gte`:
+ * `{ [absDifference(platform, 'lat', targetLat)]: { $lte: tolerance } }`
+ * renders `WHERE ABS(lat - ?) <= ?`, matching `places.service.ts:651-652`'s
+ * `abs(lat - ?) <= ?` (and the sibling `lng` comparison at `:652`) exactly.
+ * Typed `RawQueryFragment & symbol`, same reason `lower()` is: only a
+ * `string | number | symbol` is a valid computed property name, and the
+ * brand only lives on that typing for values meant to be used as a key.
+ */
+export function absDifference(platform: Platform, ref: string, value: number): RawQueryFragment & symbol {
+  if (platform instanceof SqlitePlatform) return raw(`ABS(${column(ref)} - ?)`, [value]);
+  return unsupported(platform);
+}
+

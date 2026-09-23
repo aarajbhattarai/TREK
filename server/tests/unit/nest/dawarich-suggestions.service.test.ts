@@ -67,7 +67,7 @@ import type { PlacesService } from '../../../src/nest/places/places.service';
 import type { AssignmentsService } from '../../../src/nest/assignments/assignments.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestDatabaseService } from '../../helpers/test-uow';
 
 // ── Collaborator stubs ───────────────────────────────────────────────────────
 //
@@ -114,9 +114,10 @@ const assignmentsStub = { dayExists: vi.fn(), createAssignment: vi.fn(), broadca
 const permissionsStub = { checkPermission: vi.fn() };
 const journeyStub = { canEdit: vi.fn(), createEntry: vi.fn() };
 
-const dbs = new DatabaseService(testDb);
+let dbs: DatabaseService;
 let svc: DawarichSuggestionsService;
 beforeAll(async () => {
+  dbs = await createTestDatabaseService(testDb);
   svc = new DawarichSuggestionsService(
   dbs,
   dawarichStub as unknown as DawarichService,
@@ -1292,9 +1293,14 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
-    dbMock.getPlaceWithTags.mockReturnValue(null);
+    // Plan 3c Task 0b: `getPlaceWithTags` is `PlacesRepository
+    // .findWithTagsAndRatings` now (not `db/database.ts`'s deleted free
+    // function `dbMock.getPlaceWithTags` used to stand in for), so the
+    // "re-read comes back empty" case is spied directly on `dbs`.
+    const getPlaceWithTagsSpy = vi.spyOn(dbs, 'getPlaceWithTags').mockResolvedValueOnce(null);
 
     const result = await svc.accept(user.id, id, { target: 'place', tripId: trip.id }, 'socket-3');
+    getPlaceWithTagsSpy.mockRestore();
 
     expect(placesStub.broadcast).toHaveBeenCalledWith(
       String(trip.id),

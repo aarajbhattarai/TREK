@@ -54,7 +54,7 @@ import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/plac
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const photoCacheStub = { removeIfUnreferenced: vi.fn() } as unknown as PlacePhotoCacheService;
@@ -107,9 +107,18 @@ const geocoder = () => vi.fn(async (query: string) => {
 
 let tripId: string;
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
+  // `beforeAll` can resolve a real `EntityManager` — the four
+  // repository-backed methods are spied directly on this instance instead,
+  // routed to a real `DatabaseService` built with one.
+  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
+  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
+  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
+  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
 });
 
 beforeEach(() => {

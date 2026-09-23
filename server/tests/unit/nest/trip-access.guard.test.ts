@@ -18,27 +18,36 @@ import {
   TripAccessGuard,
 } from '../../../src/nest/permissions/trip-access.guard';
 import { Trip } from '../../../src/nest/permissions/trip.decorator';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { User } from '../../../src/types';
+import type { EntityManager } from '@mikro-orm/core';
 
 const owner = { id: 42, role: 'user' } as User;
 const member = { id: 7, role: 'user' } as User;
 /** Trip 5 belongs to user 42; user 7 is a member of it. Nothing else is reachable. */
 const TRIP = { id: 5, user_id: 42 };
 
+/**
+ * Plan 3c Task 0b: the guard now injects `EntityManager` and resolves
+ * `TripsRepository` inside `canActivate` (the `JwtAuthGuard` precedent),
+ * instead of `DatabaseService.canAccessTrip` — so the double here is an
+ * `EntityManager` whose `getRepository(Trips)` returns a `findAccessible`
+ * stand-in, not a `DatabaseService` stand-in.
+ */
 function makeGuard(options: { checkPermission?: ReturnType<typeof vi.fn>; action?: string } = {}) {
-  const canAccessTrip = vi.fn((tripId: number, userId: number) =>
+  // async, not a bare sync return: `TripAccessGuard.canActivate` awaits this
+  // call, and a synchronous double would not catch a dropped `await` there
+  // (a missing `await` on a genuinely async repository call leaves `trip` as
+  // an always-truthy Promise, never falling into the 404 branch — task-0a
+  // mechanics review F1).
+  const findAccessible = vi.fn(async (tripId: number, userId: number) =>
     tripId === 5 && (userId === 42 || userId === 7) ? TRIP : undefined,
   );
+  const em = { getRepository: vi.fn(() => ({ findAccessible })) } as unknown as EntityManager;
   const checkPermission = options.checkPermission ?? vi.fn(() => true);
   const reflector = { getAllAndOverride: vi.fn(() => options.action) } as unknown as Reflector;
-  const guard = new TripAccessGuard(
-    { canAccessTrip } as unknown as DatabaseService,
-    { checkPermission } as unknown as PermissionsService,
-    reflector,
-  );
-  return { guard, canAccessTrip, checkPermission, reflector };
+  const guard = new TripAccessGuard(em, { checkPermission } as unknown as PermissionsService, reflector);
+  return { guard, canAccessTrip: findAccessible, checkPermission, reflector };
 }
 
 /** The slice of ExecutionContext the guard reads. */

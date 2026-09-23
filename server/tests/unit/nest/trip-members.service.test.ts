@@ -65,13 +65,22 @@ import { TripMembersService } from '../../../src/nest/trip-members/trip-members.
 import { NotFoundError, ValidationError } from '../../../src/nest/common/domain-errors';
 import type { User } from '../../../src/types';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import type { EntityManager } from '@mikro-orm/core';
 
-const dbs = () => new DatabaseService(testDb);
+// Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the `beforeAll`
+// below, before any `dbs()` call — `canAccessTrip`/`isOwner`/`rosterUserIds`/
+// `getPlaceWithTags` resolve `TripsRepository`/`TripMembersRepository`/
+// `PlacesRepository` through it now, not through `db/database.ts`'s deleted
+// free functions. Kept as a module-level variable (not threaded through
+// `dbs()`'s signature) so the ~17 existing `dbs()` call sites stay unchanged.
+let dbsEm: EntityManager | undefined;
+const dbs = () => new DatabaseService(testDb, dbsEm);
 
 let budgetSvc: BudgetService;
 let roster: TripMembersService;
 beforeAll(async () => {
+  dbsEm = (await sharedTestOrm(testDb)).em;
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
   roster = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection));
 });

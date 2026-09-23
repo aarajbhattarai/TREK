@@ -51,7 +51,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { ImmichService } from '../../../src/nest/memories/immich.service';
 import type { SynologyService } from '../../../src/nest/memories/synology.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
 
 // The album-sync paths are the providers' half and have their own suites; these
 // cases never reach them, so stubs keep the graph small.
@@ -74,6 +74,13 @@ const removeAlbumLink = (...a: Parameters<Svc['removeAlbumLink']>) => svc.remove
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
+  // `beforeAll` can resolve a real `EntityManager` — `canAccessTrip` (the
+  // only one of the four primitives this suite's code paths reach) is spied
+  // directly on this instance, routed to a real `DatabaseService` built
+  // with one.
+  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
   svc = new UnifiedMemoriesService(
     dbs,
     new TrekPhotosRepository(dbs),

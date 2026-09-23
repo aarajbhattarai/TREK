@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { canAccessTrip, pluginsEnabled, tripDays } = vi.hoisted(() => ({
-  canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
+  canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
   pluginsEnabled: vi.fn(() => true),
   tripDays: { value: [{ id: 10 }, { id: 11 }] as Array<{ id: number }> },
 }));
@@ -16,7 +16,6 @@ vi.mock('../../../src/db/database', () => ({
   db: { prepare: () => ({ all: () => tripDays.value }) },
   canAccessTrip,
 }));
-import { db as dbConn } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
@@ -30,12 +29,12 @@ function controller(invoke: (id: string) => unknown, providers = ['p1']) {
     providersOf: vi.fn(() => providers),
     daySchedule: vi.fn(async (id: string) => invoke(id)),
   } as unknown as PluginHooks;
-  return { c: new DayScheduleController(runtime, new DatabaseService(dbConn)), runtime };
+  return { c: new DayScheduleController(runtime, { canAccessTrip, connection: { prepare: () => ({ all: () => tripDays.value }) } } as unknown as DatabaseService), runtime };
 }
 const item = (over: Record<string, unknown> = {}) => ({ id: 's1', dayId: 10, label: 'Charging', ...over });
 
 describe('DayScheduleController', () => {
-  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockReturnValue({ id: 1 } as never); });
+  beforeEach(() => { pluginsEnabled.mockReturnValue(true); canAccessTrip.mockResolvedValue({ id: 1 } as never); });
 
   it('gates: disabled / no user / non-member all return [] (no plugin calls on the first)', async () => {
     pluginsEnabled.mockReturnValue(false);
@@ -45,7 +44,7 @@ describe('DayScheduleController', () => {
     pluginsEnabled.mockReturnValue(true);
 
     expect((await controller(() => [item()]).c.get('1', req(undefined))).items).toEqual([]);
-    canAccessTrip.mockReturnValue(undefined as never);
+    canAccessTrip.mockResolvedValue(undefined as never);
     expect((await controller(() => [item()]).c.get('1', req(5))).items).toEqual([]);
   });
 

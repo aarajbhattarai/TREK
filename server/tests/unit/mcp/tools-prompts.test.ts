@@ -87,7 +87,8 @@ import type { TodoService } from '../../../src/nest/todo/todo.service';
 import type { CollabService } from '../../../src/nest/collab/collab.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import type { EntityManager } from '@mikro-orm/core';
 
 // The trip-summary prompt moved to the DI-discovered TripsMcp — its cases below
 // exercise it through a hand-built registry over a stub TripsService whose
@@ -106,7 +107,14 @@ const readModelStub = {
 // The three remaining prompts moved to their domains' @McpController classes:
 // packing-list, budget-overview and the static-token notice. Built over the same
 // in-memory DB so the cases below keep asserting real rows.
-const promptDbs = () => new DatabaseService(testDb);
+//
+// Plan 3c Task 0b: `promptEm` is resolved once in the first `beforeAll` below
+// (before any `promptDbs()` call) — `canAccessTrip`/`isOwner`/`rosterUserIds`/
+// `getPlaceWithTags` resolve `TripsRepository`/`TripMembersRepository`/
+// `PlacesRepository` through it now, not through `db/database.ts`'s deleted
+// free functions this file's `dbMock` used to stand in for.
+let promptEm: EntityManager | undefined;
+const promptDbs = () => new DatabaseService(testDb, promptEm);
 const authStub = { isDemoUser: () => false } as unknown as AuthService;
 
 
@@ -120,7 +128,8 @@ let packingMcp: PackingMcp;
 let budgetMcp: BudgetMcp;
 let tripPromptsMcp: TripPromptsMcp;
 beforeAll(async () => {
-  promptGuards = new McpToolGuardsService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+  promptEm = (await sharedTestOrm(testDb)).em;
+  promptGuards = new McpToolGuardsService(promptDbs(), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
   tripsMcp = new TripsMcp(
   tripsStub,
   { listItems: () => [] } as unknown as TodoService,

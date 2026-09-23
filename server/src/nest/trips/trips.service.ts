@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import path from 'path';
+import { EntityManager } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
+import { Trips } from '../../db/entities/Trips.entity';
 import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -161,6 +163,13 @@ export class TripsService {
     private readonly unsplash: UnsplashService,
     private readonly storage: StorageService,
     private readonly uow: UnitOfWork,
+    // Plan 3c Task 0b (task-0a-review-security.md F-A1): `canAccessTrip`/
+    // `isOwner` below resolve `TripsRepository` directly through this,
+    // rather than through `this.dbs.canAccessTrip`/`isOwner` — the third of
+    // the security review's three sites, alongside `TripAccessGuard` and
+    // `TripOwnerGuard`. `EntityManager` is `@Global()` (`MikroOrmModule
+    // .forRoot`'s core module), so no module needs new wiring.
+    private readonly em: EntityManager,
   ) {}
 
   private get db() {
@@ -168,12 +177,12 @@ export class TripsService {
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
-    const access = await this.dbs.canAccessTrip(tripId, userId);
+    const access = await this.em.getRepository(Trips).findAccessible(tripId, userId);
     return access as { user_id: number } | null | undefined;
   }
 
   async isOwner(tripId: string | number, userId: number): Promise<boolean> {
-    return await this.dbs.isOwner(tripId, userId);
+    return await this.em.getRepository(Trips).isOwner(tripId, userId);
   }
 
   async can(action: string, role: string, ownerId: number | null, userId: number, isMember: boolean): Promise<boolean> {

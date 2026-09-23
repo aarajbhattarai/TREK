@@ -133,10 +133,15 @@ import { PasswordResetTokens } from '../../src/db/entities/PasswordResetTokens.e
  * src/db/database flowing through (same pattern as todo.bridge.ts).
  */
 export async function createMcpTestRegistry(): Promise<McpRegistry> {
-  const dbService = new DatabaseService(db);
+  // Plan 3c Task 0b: `mcpOrm` built first (was built right after `dbService`)
+  // so its `EntityManager` can be threaded into `DatabaseService`'s
+  // constructor — `canAccessTrip`/`isOwner`/`rosterUserIds`/`getPlaceWithTags`
+  // resolve `TripsRepository`/`TripMembersRepository`/`PlacesRepository`
+  // through it now, not through `db/database.ts`'s deleted free functions.
+  const mcpOrm = await createTestOrm(db);
+  const dbService = new DatabaseService(db, mcpOrm.em);
   const generalStorage = makeStorageFixture('').storage;
   const appSettings = (await createTestOrm(dbService.connection)).repo(AppSettings);
-  const mcpOrm = await createTestOrm(dbService.connection);
   const auditLogRepo = mcpOrm.repo(AuditLog);
   const usersRepo = mcpOrm.repo(Users);
   const inviteTokensRepo = mcpOrm.repo(InviteTokens);
@@ -206,6 +211,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage),
     generalStorage,
     await createTestUnitOfWork(dbService.connection),
+    mcpOrm.em,
   );
   const readModelService = new TripReadModelService(
     dbService, membersService, daysService, accommodationsService, budgetService,

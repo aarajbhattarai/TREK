@@ -2,9 +2,11 @@
  * DatabaseService — the shared better-sqlite3 provider (F3). Exercises every
  * helper against the real connection so the typed query surface is covered.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { db } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
+import { sharedTestOrm } from '../../helpers/test-uow';
+import type { EntityManager } from '@mikro-orm/core';
 
 describe('DatabaseService (typed query helpers)', () => {
   const svc = new DatabaseService(db);
@@ -34,7 +36,12 @@ describe('DatabaseService (typed query helpers)', () => {
 });
 
 describe('DatabaseService (trip-access helpers)', () => {
-  const svc = new DatabaseService(db);
+  let svc: DatabaseService;
+  let em: EntityManager;
+  beforeAll(async () => {
+    em = (await sharedTestOrm(db)).em;
+    svc = new DatabaseService(db, em);
+  });
 
   it('canAccessTrip / isOwner / getPlaceWithTags delegate to the shared helpers', async () => {
     svc.run(

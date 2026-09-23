@@ -49,13 +49,22 @@ import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.se
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 
 let budget: BudgetService;
 let svc: UserCleanupService;
 beforeAll(async () => {
+  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
+  // `beforeAll` can resolve a real `EntityManager` — the four
+  // repository-backed methods are spied directly on this instance instead,
+  // routed to a real `DatabaseService` built with one.
+  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
+  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
+  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
+  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection));
   svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection));
 });

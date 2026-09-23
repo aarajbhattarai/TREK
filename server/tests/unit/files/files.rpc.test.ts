@@ -46,7 +46,7 @@ function build(opts: { file?: Record<string, unknown> | undefined; foreign?: str
     softDeleteFile: vi.fn(),
   } as unknown as FilesService & Record<string, ReturnType<typeof vi.fn>>;
   const db = {
-    canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+    canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
     prepare: vi.fn(() => ({ get: () => ({ role: 'user', email: 'real@example.test' }) })),
   } as unknown as DatabaseService;
   const permissions = {
@@ -257,7 +257,7 @@ describe('FilesRpc writes', () => {
       const f = build();
       // The demo guard resolves the uploader's email; user 9 is the demo account.
       const db = {
-        canAccessTrip: vi.fn(() => ({ id: 1, user_id: 42 })),
+        canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
         prepare: vi.fn(() => ({ get: (id: number) => (id === 9 ? { role: 'user', email: 'demo@trek.app' } : { role: 'user', email: 'real@example.test' }) })),
       } as unknown as DatabaseService;
       const guards = new PluginGuards(

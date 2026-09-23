@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { canAccessTrip, pluginsEnabled } = vi.hoisted(() => ({
   // trips 1 and 2 are accessible to user 5; everything else is not.
-  canAccessTrip: vi.fn((tripId: number, userId: number) => (userId === 5 && (tripId === 1 || tripId === 2) ? { id: tripId } : undefined)),
+  canAccessTrip: vi.fn(async (tripId: number, userId: number) => (userId === 5 && (tripId === 1 || tripId === 2) ? { id: tripId } : undefined)),
   pluginsEnabled: vi.fn(() => true),
 }));
 vi.mock('../../../src/db/database', () => ({ db: { prepare: () => ({ get: () => undefined }) }, canAccessTrip }));

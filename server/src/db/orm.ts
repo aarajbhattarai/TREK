@@ -1,5 +1,6 @@
 import mikroOrmConfig from '../mikro-orm.config';
 import { registerReinitializeHook, runDemoSeed } from './database';
+import { withRequestContext } from '../nest/database/request-context';
 import type { AnyEntity, EntityClass, EntityManager, EntitySchema, IDatabaseDriver, MikroORM } from '@mikro-orm/core';
 import type { Migrator } from '@mikro-orm/migrations';
 import { MikroORM as SqliteMikroORM } from '@mikro-orm/sqlite';
@@ -41,7 +42,21 @@ export async function runSchemaBootstrap(orm: AnyOrm): Promise<void> {
 
   // Demo data depends on the seeded categories (hard-coded ids under an FK), so
   // it can only run once the seeders above have.
-  runDemoSeed();
+  //
+  // Plan 3c Task 0b (R9): `runDemoSeed` itself stays raw better-sqlite3 today
+  // (`demo-seed.ts`'s own docstring: "the domain phase that gives demo
+  // seeding a repository read must wrap it in withRequestContext then") — but
+  // wrapping the call HERE, the one place `runSchemaBootstrap` already has
+  // `orm` in scope, covers BOTH of its real call sites at once
+  // (`bootstrap.ts`'s initial boot and `attachOrm`'s restore hook below, both
+  // of which only ever reach `runDemoSeed` through this function) with no
+  // second wrapper to keep in sync. A synchronous `fn` stays synchronous
+  // through `withRequestContext`/`RequestContext.create`, so this changes
+  // nothing about what `runDemoSeed` does today — only that a repository read
+  // added to it later already has a valid context, so Plan 3i's demo
+  // conversion never meets a second C1 (task-6-review-parity.md's boot-sweep
+  // finding).
+  withRequestContext(orm, () => runDemoSeed());
 }
 
 /**

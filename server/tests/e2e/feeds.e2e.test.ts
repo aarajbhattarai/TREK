@@ -30,7 +30,7 @@ const { db } = vi.hoisted(() => {
     email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user',
     password_version INTEGER NOT NULL DEFAULT 0, feed_token TEXT);`);
   tmp.exec(`CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-    title TEXT, is_archived INTEGER NOT NULL DEFAULT 0, start_date TEXT, end_date TEXT, feed_token TEXT);`);
+    title TEXT, is_archived INTEGER NOT NULL DEFAULT 0, start_date TEXT, end_date TEXT, feed_token TEXT, currency TEXT);`);
   tmp.exec(`CREATE TABLE trip_members (trip_id INTEGER NOT NULL, user_id INTEGER NOT NULL);`);
   // StorageRegistryService (behind StorageModule, now in this module chain) reads
   // this at onModuleInit.

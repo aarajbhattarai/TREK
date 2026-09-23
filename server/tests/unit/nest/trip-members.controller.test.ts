@@ -28,7 +28,7 @@ const tc = (s: TripMembersService) => new TripMembersController(s, audit);
 
 function svc(o: Partial<TripMembersService> = {}): TripMembersService {
   return {
-    canAccessTrip: vi.fn().mockReturnValue({ user_id: 1 }),
+    canAccessTrip: vi.fn().mockResolvedValue({ user_id: 1 }),
     can: vi.fn().mockReturnValue(true),
     broadcast: vi.fn(),
     notifyInvite: vi.fn(),
@@ -51,7 +51,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('TripMembersController', () => {
 describe('members', () => {
   it('GET 404 without access, else owner+members+current_user_id', async () => {
-    expect(await thrown(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).members(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    expect(await thrown(() => tc(svc({ canAccessTrip: vi.fn().mockResolvedValue(undefined) })).members(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     const s = svc({ listMembers: vi.fn().mockReturnValue({ owner: { id: 1 }, members: [] }) } as Partial<TripMembersService>);
     expect(await tc(s).members(user, '9')).toEqual({ owner: { id: 1 }, members: [], current_user_id: 1 });
   });
@@ -66,7 +66,7 @@ describe('members', () => {
   });
 
   it('POST 404 without trip access', async () => {
-    const s = svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) });
+    const s = svc({ canAccessTrip: vi.fn().mockResolvedValue(undefined) });
     expect(await thrown(() => tc(s).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 404, body: { error: 'Trip not found' } });
   });
 
@@ -80,7 +80,7 @@ describe('members', () => {
   });
 
   it('DELETE 404 without trip access', async () => {
-    const s = svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) });
+    const s = svc({ canAccessTrip: vi.fn().mockResolvedValue(undefined) });
     expect(await thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
   });
 

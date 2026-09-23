@@ -75,6 +75,8 @@ import { DocSyncModule } from '../../src/nest/doc-sync/doc-sync.module';
 import { DocSyncMcp } from '../../src/nest/doc-sync/doc-sync.mcp';
 import type { McpContext } from '../../src/nest-mcp';
 import { DatabaseModule } from '../../src/nest/database/database.module';
+import { MikroORM } from '@mikro-orm/core';
+import { withRequestContext } from '../../src/nest/database/request-context';
 import { AddonsService } from '../../src/nest/addons/addons.service';
 import { DOCUMENT_PROVIDERS } from '../../src/nest/doc-sync/document-provider';
 import { PaperlessDocumentProvider } from '../../src/nest/doc-sync/providers/paperless.provider';
@@ -401,9 +403,14 @@ describe('Document sync e2e (real guards + real services + temp SQLite)', () => 
         .expect(200);
       expect(links.body[0]).toMatchObject({ providerId: 'paperless', providerName: 'Paperless-ngx' });
 
-      // The assistant reads the same bindings through its own tool.
+      // The assistant reads the same bindings through its own tool. Called
+      // directly on the injected controller (not through the real /mcp
+      // transport), which is what forks a request context for a genuine MCP
+      // call (nest-mcp/registry.ts) — wrapped here for the same reason
+      // (Plan 3c Task 0b: `verifyTripAccess` now reaches `TripsRepository`,
+      // which validates one).
       const ctx = { userId: memberId, scopes: null, isStaticToken: false } as McpContext;
-      const result = await app.get(DocSyncMcp).getTripDocumentSync({ tripId }, ctx);
+      const result = await withRequestContext(app.get(MikroORM), () => app.get(DocSyncMcp).getTripDocumentSync({ tripId }, ctx));
       const status = JSON.parse(result.content[0].text) as { links: Array<Record<string, unknown>> };
       expect(status.links[0]).toMatchObject({ providerId: 'paperless', providerName: 'Paperless-ngx' });
     } finally {

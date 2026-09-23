@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { canAccessTrip, pluginsEnabled, capabilitiesRow } = vi.hoisted(() => ({
-  canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
+  canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 5 ? { id: 1 } : undefined)),
   pluginsEnabled: vi.fn(() => true),
   capabilitiesRow: { value: JSON.stringify({ routeProfiles: [{ id: 'ev', label: 'EV' }] }) as string | undefined },
 }));
@@ -16,7 +16,6 @@ vi.mock('../../../src/db/database', () => ({
   db: { prepare: () => ({ get: () => (capabilitiesRow.value === undefined ? undefined : { capabilities: capabilitiesRow.value }) }) },
   canAccessTrip,
 }));
-import { db as dbConn } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
@@ -30,7 +29,7 @@ function controller(invoke: () => unknown, providers = ['ev-plug']) {
     providersOf: vi.fn(() => providers),
     route: vi.fn(async () => invoke()),
   } as unknown as PluginHooks;
-  return { c: new PluginRoutesController(runtime, new DatabaseService(dbConn)), runtime };
+  return { c: new PluginRoutesController(runtime, { canAccessTrip, connection: { prepare: () => ({ get: () => (capabilitiesRow.value === undefined ? undefined : { capabilities: capabilitiesRow.value }) }) } } as unknown as DatabaseService), runtime };
 }
 const wp = (n = 3) => Array.from({ length: n }, (_, i) => ({ lat: 48 + i * 0.1, lng: 2 + i * 0.1 }));
 const goodRoute = (n = 3, over: Record<string, unknown> = {}) => ({
@@ -45,7 +44,7 @@ const body = (over: Record<string, unknown> = {}) => ({ tripId: 1, dayId: 7, way
 describe('PluginRoutesController', () => {
   beforeEach(() => {
     pluginsEnabled.mockReturnValue(true);
-    canAccessTrip.mockReturnValue({ id: 1 } as never);
+    canAccessTrip.mockResolvedValue({ id: 1 } as never);
     capabilitiesRow.value = JSON.stringify({ routeProfiles: [{ id: 'ev', label: 'EV' }] });
   });
 
@@ -57,9 +56,9 @@ describe('PluginRoutesController', () => {
     pluginsEnabled.mockReturnValue(true);
 
     expect((await controller(() => goodRoute()).c.route('ev-plug', 'ev', body(), req(undefined))).route).toBeNull();
-    canAccessTrip.mockReturnValue(undefined as never);
+    canAccessTrip.mockResolvedValue(undefined as never);
     expect((await controller(() => goodRoute()).c.route('ev-plug', 'ev', body(), req(5))).route).toBeNull();
-    canAccessTrip.mockReturnValue({ id: 1 } as never);
+    canAccessTrip.mockResolvedValue({ id: 1 } as never);
     expect((await controller(() => goodRoute()).c.route('ev-plug', '../etc', body(), req(5))).route).toBeNull();
   });
 

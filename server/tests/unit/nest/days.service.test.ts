@@ -64,11 +64,12 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
 import type { Day } from '../../../src/types';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
 
 let svc: DaysService;
 beforeAll(async () => {
-  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb));
+  const dbs = await createTestDatabaseService(testDb);
+  svc = new DaysService(dbs, new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(dbs), await createTestUnitOfWork(testDb));
 });
 let accommodations: Awaited<ReturnType<typeof makeAccommodationsService>>;
 beforeAll(async () => {

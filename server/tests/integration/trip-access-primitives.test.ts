@@ -1,19 +1,31 @@
 /**
- * Parity guards for the Plan 3c Task 0a async sweep.
+ * Parity guards for the Plan 3c Task 0a async sweep, extended by Task 0b.
  *
- * `canAccessTrip`, `isOwner`, `rosterUserIds` and `getPlaceWithTags`
- * (`src/db/database.ts` + their `DatabaseService` delegations) went from
- * synchronous to `async` in that task, with every caller updated to `await`
- * them. These four tests each drive a REAL guarded route through the real
- * `buildApp()` DI graph — one per primitive — as owner / member / non-member
- * / anonymous, and pin the legacy status + body so a later task (0b: moving
- * the bodies onto `TripsRepository`) cannot silently change behaviour.
+ * `canAccessTrip`, `isOwner`, `rosterUserIds` and `getPlaceWithTags` went
+ * from synchronous to `async` in Task 0a (with every caller updated to
+ * `await` them), still delegating to `src/db/database.ts`'s free functions.
+ * Task 0b deleted those free functions and moved the bodies onto
+ * `TripsRepository.findAccessible`/`isOwner`, `TripMembersRepository
+ * .rosterUserIds` and `PlacesRepository.findWithTagsAndRatings` — these four
+ * tests still drive a REAL guarded route through the real `buildApp()` DI
+ * graph, one per primitive, as owner / member / non-member / anonymous, and
+ * still pin the legacy status + body, but now against the real repository
+ * path rather than a stand-in.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import type { Application } from 'express';
 import type { INestApplication } from '@nestjs/common';
 
+// task-0a-review F4: this mock no longer intercepts any of the four
+// primitives — `db/database.ts` holds none of their bodies any more, so
+// `buildDbMock`'s own `canAccessTrip`/`isOwner`/`getPlaceWithTags`
+// properties are dead code for this file's purposes. It stays only for what
+// every other integration/e2e/WS suite in this program uses it for: an
+// isolated snapshot db that `getRawConnection`/`db` swap the shared
+// better-sqlite3 handle to, which the REAL `MikroORM` binds to underneath
+// (`db/orm-driver.ts`) — so `TripsRepository`/`TripMembersRepository`
+// /`PlacesRepository` read the SAME rows this file seeds through `testDb`.
 vi.mock('../../src/db/database', async () => {
   const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
   return buildDbMock(createSnapshotTestDb());
@@ -148,6 +160,43 @@ describe('isOwner (async) — the delete_trip MCP tool', () => {
     expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(trip.id)).toBeUndefined();
   });
 
+  /**
+   * Plan 3c Task 0b (R9): `isOwner`'s only real caller anywhere is this MCP
+   * tool (inventory §0d), and `TripsService.isOwner` → `DatabaseService
+   * .isOwner` is now `TripsRepository.isOwner` underneath — a repository
+   * read reached through the MCP transport's request context (`nest-mcp
+   * /registry.ts:286-294`: `@mikro-orm/nestjs`'s `registerRequestContext`
+   * middleware forks a context for every `/mcp` route, same as any other
+   * Nest route). PRIM-ISOWN-001 above already proves the happy path (the
+   * trip is actually deleted, which requires the repository read to
+   * succeed); this is the explicit MCP-CTX-style structural assertion
+   * (`mcp.test.ts`'s MCP-CTX-001/002 pattern) that no missing-context error
+   * was swallowed along the way.
+   */
+  it('PRIM-ISOWN-005 — the repository read inside isOwner runs inside the /mcp request context (MCP-CTX style, no cannotUseGlobalContext)', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { user: owner } = createUser(testDb);
+      const trip = createTrip(testDb, owner.id);
+      const sessionId = await mcpSession(owner.id);
+
+      const res = await request(app)
+        .post('/mcp')
+        .set('Authorization', `Bearer ${generateToken(owner.id)}`)
+        .set('mcp-session-id', sessionId)
+        .set('Accept', 'application/json, text/event-stream')
+        .send(deleteTripBody(trip.id));
+      expect(res.status).toBe(200);
+
+      const suspicious = errSpy.mock.calls
+        .map((args) => args.map(String).join(' '))
+        .filter((line) => /cannotUseGlobalContext|global EntityManager/i.test(line));
+      expect(suspicious).toEqual([]);
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
   it('PRIM-ISOWN-002 — member (not owner): refused with the same "no access" message as a stranger, trip untouched', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
@@ -279,19 +328,34 @@ describe('getPlaceWithTags (async) — GET /api/trips/:tripId/places/:id', () =>
   it('PRIM-GPWT-001 — owner: 200 with the hydrated place (category/tags/ratings shape)', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
+    // createPlace defaults category_id to the first seeded category when no
+    // override is given (tests/helpers/factories.ts) — read back whatever it
+    // actually assigned rather than assuming none, so this pins the real
+    // production shape instead of a factory default that happens to be null.
     const place = createPlace(testDb, trip.id, { name: 'Eiffel Tower' });
+    const expectedCategory = place.category_id
+      ? testDb.prepare('SELECT id, name, color, icon FROM categories WHERE id = ?').get(place.category_id)
+      : null;
 
     const res = await request(app).get(`/api/trips/${trip.id}/places/${place.id}`).set('Cookie', authCookie(owner.id));
     expect(res.status).toBe(200);
-    // The mocked db/database module's getPlaceWithTags stand-in (tests/helpers/db-mock.ts)
-    // only carries category + tags, not the ratings aggregate — matched here, not the
-    // production shape (§4 of the test-db.ts header explains the mock/real split).
+    // Plan 3c Task 0b: `getPlaceWithTags` is `PlacesRepository
+    // .findWithTagsAndRatings` now, reached for real (this file's `vi.mock`
+    // of `src/db/database` only swaps the underlying connection to an
+    // isolated snapshot db — see the top-of-file note — it no longer stands
+    // in for the primitive itself, which db/database.ts doesn't hold any
+    // more). The full production shape, including the ratings aggregate the
+    // old mocked stand-in omitted, is asserted directly rather than only a
+    // subset.
     expect(res.body.place).toMatchObject({
       id: place.id,
       name: 'Eiffel Tower',
+      category: expectedCategory,
       tags: [],
+      ratings: [],
+      rating_avg: null,
+      rating_count: 0,
     });
-    expect(res.body.place).toHaveProperty('category');
   });
 
   it('PRIM-GPWT-002 — member: 200 with the same hydrated place', async () => {

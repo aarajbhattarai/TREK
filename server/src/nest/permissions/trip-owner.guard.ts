@@ -1,7 +1,9 @@
 import { CanActivate, ExecutionContext, HttpException, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { EntityManager } from '@mikro-orm/core';
 import type { Request } from 'express';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripAccess } from '../database/database.service';
 import { TRIP_REQUEST_KEY } from './trip-access.guard';
 import type { User } from '../../types';
 
@@ -43,11 +45,21 @@ type TripRequest = Request & { user?: User; [TRIP_REQUEST_KEY]?: TripAccess };
  * Absent access is a 404, never a 403, for the same reason TripAccessGuard does
  * it that way: a 403 would confirm the id exists to someone who has no business
  * knowing. A 403 only ever goes to somebody who can already see the trip.
+ *
+ * Injects `EntityManager`, not `DatabaseService` (Plan 3c Task 0b, the
+ * `task-0a-review-security.md` F-A1 correction): `trip-members.controller.ts`
+ * has no class-level `TripAccessGuard` (its own docstring explains why —
+ * guards run before pipes and the e2e suite pins the error ordering), so on
+ * its four owner-only routes `request[TRIP_REQUEST_KEY]` is never parked and
+ * THIS guard's own lookup at `:73` below is the sole access check standing
+ * between a stranger and those routes — the same `TripAccessGuard` precedent
+ * applies here for the same reason (`EntityManager` is `@Global()`, no
+ * module needs new wiring; `@InjectRepository(Trips)` would).
  */
 @Injectable()
 export class TripOwnerGuard implements CanActivate {
   constructor(
-    private readonly db: DatabaseService,
+    private readonly em: EntityManager,
     private readonly reflector: Reflector,
   ) {}
 
@@ -70,7 +82,7 @@ export class TripOwnerGuard implements CanActivate {
     let trip = request[TRIP_REQUEST_KEY];
     if (!trip) {
       const tripId = Number((request.params as Record<string, string>)?.[meta?.param ?? 'tripId']);
-      trip = Number.isFinite(tripId) ? (await this.db.canAccessTrip(tripId, user.id)) ?? undefined : undefined;
+      trip = Number.isFinite(tripId) ? (await this.em.getRepository(Trips).findAccessible(tripId, user.id)) ?? undefined : undefined;
       if (trip) request[TRIP_REQUEST_KEY] = trip;
     }
     if (!trip) throw new HttpException({ error: 'Trip not found' }, 404);

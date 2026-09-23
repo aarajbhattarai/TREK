@@ -61,7 +61,7 @@ export function build(opts: { allow?: (action: string) => boolean; updateThrows?
   } as unknown as TripMembersService & Record<string, ReturnType<typeof vi.fn>>;
   const membership = { joinTripAsMember: vi.fn(() => ({ joined: true })) } as unknown as TripMembershipService & Record<string, ReturnType<typeof vi.fn>>;
   const db = {
-    canAccessTrip: vi.fn((tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+    canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
     prepare: vi.fn((sql: string) => ({
       get: (arg: number) => {
         if (sql.includes('FROM users WHERE')) return arg === 404 ? undefined : { id: arg, role: 'user' };

@@ -48,8 +48,8 @@ import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
  */
 const uowStub = { transactional: <T>(fn: () => Promise<T>) => fn() } as unknown as UnitOfWork;
 
-function svc() {
-  return new BudgetService(new DatabaseService(dbConn), permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub);
+function svc(db: DatabaseService = new DatabaseService(dbConn)) {
+  return new BudgetService(db, permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub);
 }
 
 beforeEach(() => {
@@ -59,9 +59,16 @@ beforeEach(() => {
 
 describe('BudgetService', () => {
   it('verifyTripAccess resolves through DatabaseService.canAccessTrip', async () => {
-    canAccessTrip.mockReturnValue({ id: 5, user_id: 2 });
-    expect(await svc().verifyTripAccess('5', 2)).toEqual({ id: 5, user_id: 2 });
-    expect(canAccessTrip).toHaveBeenCalledWith('5', 2);
+    // Plan 3c Task 0b: `DatabaseService.canAccessTrip` is repository-backed
+    // now (not `db/database.ts`'s deleted free function, which is why this
+    // file's `db/database` mock's `canAccessTrip` above no longer reaches
+    // it) — a fake `DatabaseService` in place of the real, EntityManager-less
+    // one `svc()` defaults to, consistent with this suite's "no database
+    // behind it" design (everything else here is a `prepare` stub).
+    const findAccessible = vi.fn(async () => ({ id: 5, user_id: 2 }));
+    const fakeDb = { canAccessTrip: findAccessible } as unknown as DatabaseService;
+    expect(await svc(fakeDb).verifyTripAccess('5', 2)).toEqual({ id: 5, user_id: 2 });
+    expect(findAccessible).toHaveBeenCalledWith('5', 2);
   });
 
   it('canEdit forwards the ownership flag when the user owns the trip', async () => {
@@ -150,11 +157,21 @@ describe('BudgetService', () => {
     // Both wrappers refuse a party who is not on the trip before they freeze
     // anything, so the roster lookup has to answer for these to reach the write
     // at all. Users 1 and 2 are the two parties every case here settles between.
-    const rosterHas = (...userIds: number[]) => dbMock._stmt.all.mockReturnValue(userIds.map(user_id => ({ user_id })));
+    //
+    // Plan 3c Task 0b: `DatabaseService.rosterUserIds` is `TripMembersRepository
+    // .rosterUserIds` now (not `this.conn`/the `dbMock._stmt.all` prepare stub,
+    // which no longer intercepts it) — a real `DatabaseService` (so its other
+    // methods, still served by the `dbMock._stmt` prepare stub, keep working)
+    // with `rosterUserIds` spied directly, same fix as `verifyTripAccess`'s
+    // test above.
+    const rosterHas = (...userIds: number[]) => {
+      const db = new DatabaseService(dbConn);
+      vi.spyOn(db, 'rosterUserIds').mockResolvedValue(new Set(userIds));
+      return db;
+    };
 
     it('createSettlement freezes the FX rate (await) before the raw insert', async () => {
-      const s = svc();
-      rosterHas(1, 2);
+      const s = svc(rosterHas(1, 2));
       const freezeSpy = vi.spyOn(s, 'freezeForeignRate').mockResolvedValue();
       const insertSpy = vi.spyOn(s, 'insertSettlement').mockReturnValue({ id: 7 } as never);
       await s.createSettlement('5', { from_user_id: 1, to_user_id: 2, amount: 10 }, 3);
@@ -163,8 +180,7 @@ describe('BudgetService', () => {
     });
 
     it('updateSettlement threads the stored currency through the freeze', async () => {
-      const s = svc();
-      rosterHas(1, 2);
+      const s = svc(rosterHas(1, 2));
       const freezeSpy = vi.spyOn(s, 'freezeForeignRate').mockResolvedValue();
       // Quirk fix: the stored-currency lookup is a targeted getSettlement, not
       // a full listSettlements scan.
@@ -178,8 +194,7 @@ describe('BudgetService', () => {
     });
 
     it('refuses a party who is not on the trip, before freezing or writing', async () => {
-      const s = svc();
-      rosterHas(1); // user 2 is not on this trip
+      const s = svc(rosterHas(1)); // user 2 is not on this trip
       const freezeSpy = vi.spyOn(s, 'freezeForeignRate').mockResolvedValue();
       const insertSpy = vi.spyOn(s, 'insertSettlement').mockReturnValue({ id: 7 } as never);
 
