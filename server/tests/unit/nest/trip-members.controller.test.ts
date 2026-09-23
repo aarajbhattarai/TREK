@@ -63,6 +63,10 @@ describe('members', () => {
     const s = svc({ addMember, notifyInvite } as Partial<TripMembersService>);
     expect(await tc(s).addMember(user, '9', { identifier: 'bob@x.y' })).toEqual({ member: { id: 2, email: 'bob@x.y' } });
     expect(notifyInvite).toHaveBeenCalledWith('9', user, 2, 'T', 'bob@x.y');
+    // Task 6 review, L1: the pre-existing REST↔MCP asymmetry (§13b) — these five
+    // controller mutations broadcast NOTHING while the MCP twins all emit
+    // member:added/member:removed. Pinned here rather than "fixed".
+    expect(s.broadcast).not.toHaveBeenCalled();
   });
 
   it('POST 404 without trip access', async () => {
@@ -90,6 +94,8 @@ describe('members', () => {
     // self-removal (targetId === user.id) bypasses the permission check
     expect(await tc(s).removeMember(user, '9', '1')).toEqual({ success: true });
     expect(await thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 403, body: { error: 'No permission to remove members' } });
+    // Task 6 review, L1: see the addMember case above.
+    expect(s.broadcast).not.toHaveBeenCalled();
   });
 });
 
@@ -136,6 +142,8 @@ describe('guests (#1362)', () => {
     const s = svc({ createGuest } as Partial<TripMembersService>);
     expect(await tc(s).createGuest(user, '9', { name: 'Anna' })).toEqual({ member: { id: 7, username: 'Anna', is_guest: true } });
     expect(createGuest).toHaveBeenCalledWith('9', 'Anna', user.id);
+    // Task 6 review, L1: see the addMember case above.
+    expect(s.broadcast).not.toHaveBeenCalled();
   });
 
   it('rename: 404 when the guest is missing, else success', async () => {
@@ -143,6 +151,8 @@ describe('guests (#1362)', () => {
     expect(await thrown(() => tc(miss).renameGuest(user, '9', '7', { name: 'Bob' }))).toEqual({ status: 404, body: { error: 'Guest not found' } });
     const ok = svc({ renameGuest: vi.fn().mockReturnValue(true) } as Partial<TripMembersService>);
     expect(await tc(ok).renameGuest(user, '9', '7', { name: 'Bob' })).toEqual({ success: true });
+    // Task 6 review, L1: see the addMember case above.
+    expect(ok.broadcast).not.toHaveBeenCalled();
   });
 
   it('delete: 404 when the guest is missing, else success', async () => {
@@ -150,6 +160,8 @@ describe('guests (#1362)', () => {
     expect(await thrown(() => tc(miss).deleteGuest(user, '9', '7'))).toEqual({ status: 404, body: { error: 'Guest not found' } });
     const ok = svc({ deleteGuest: vi.fn().mockResolvedValue(true) } as Partial<TripMembersService>);
     expect(await tc(ok).deleteGuest(user, '9', '7')).toEqual({ success: true });
+    // Task 6 review, L1: see the addMember case above.
+    expect(ok.broadcast).not.toHaveBeenCalled();
   });
 
   it('maps a ValidationError from createGuest to 400', async () => {

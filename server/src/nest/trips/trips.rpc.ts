@@ -1,3 +1,4 @@
+import { EntityManager } from '@mikro-orm/core';
 import { tripCreateRequestSchema, tripUpdateRequestSchema } from '@trek/shared';
 import { PluginController, PluginMethod } from '../plugins/host/rpc-kit/decorators';
 import { PluginGuards } from '../plugins/host/plugin-guards.service';
@@ -5,12 +6,15 @@ import { BadParams, ForbiddenResource } from '../plugins/host/rpc-errors';
 import { num, schemaMessage } from '../plugins/host/rpc-params';
 import type { PluginRpcContext } from '../plugins/host/rpc-kit/types';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService } from '../database/database.service';
 import { ReservationsService } from '../reservations/reservations.service';
 import { DaysService } from '../days/days.service';
 import { AccommodationsService } from '../accommodations/accommodations.service';
 import { TripMembersService } from '../trip-members/trip-members.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
+import { Trips } from '../../db/entities/Trips.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { Users } from '../../db/entities/Users.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { TripsService, NotFoundError, ValidationError, withoutFeedToken } from './trips.service';
 
 const TRIP_EDIT_ACTION = 'trip_edit';
@@ -36,20 +40,30 @@ export class TripsRpc {
     private readonly reservations: ReservationsService,
     private readonly days: DaysService,
     private readonly membership: TripMembershipService,
-    private readonly db: DatabaseService,
+    // Plan 3c Task 7: `DatabaseService` DROPPED — RP1–RP6 were its only uses
+    // in this class, and every one now resolves through `em.getRepository(...)`
+    // below (same precedent as `TripReadModelService`, Task 6: "DatabaseService
+    // is dropped from its constructor entirely" once a service goes fully
+    // SQL-free). Every call site that hand-constructs `TripsRpc` positionally
+    // drops its `db` fake/instance argument in the same slot.
     private readonly realtime: RealtimeService,
     private readonly guards: PluginGuards,
     // Appended: the hand-wired plugin-host harnesses build this positionally.
     private readonly accommodations: AccommodationsService,
     private readonly roster: TripMembersService,
+    // Plan 3c Task 7: RP1–RP6's repository calls all resolve through this,
+    // the same `this.em.getRepository(...)` shape `TripsService.canAccessTrip`/
+    // `.isOwner` used since Task 0b — `EntityManager` is `@Global()`, so no
+    // module needs new wiring. Appended last, per this class's own convention.
+    private readonly em: EntityManager,
   ) {}
 
   @PluginMethod('trips.getById', { permission: 'db:read:trips' })
   async getById(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
-    return this.guards.tripRead(params, ctx, () =>
+    return this.guards.tripRead(params, ctx, async () =>
       // db:read:trips is a read grant on the trip, not on the credential that
-      // publishes it anonymously — see withoutFeedToken.
-      withoutFeedToken(this.db.prepare('SELECT * FROM trips WHERE id = ?').get(num(params.tripId, 'tripId'))),
+      // publishes it anonymously — see withoutFeedToken. RP1 — TripsRepository.findRaw.
+      withoutFeedToken(await this.em.getRepository(Trips).findRaw(num(params.tripId, 'tripId'))),
     );
   }
 
@@ -58,10 +72,9 @@ export class TripsRpc {
     // The trip's place POOL. Places carry no itinerary position of their own
     // (day_id/order_index live on day_assignments), so order by created_at like the
     // REST list does. trips.getDays is the day-ordered itinerary.
-    return this.guards.tripRead(params, ctx, () =>
-      this.db
-        .prepare('SELECT * FROM places WHERE trip_id = ? ORDER BY created_at DESC')
-        .all(num(params.tripId, 'tripId')),
+    // RP2 — PlacesRepository.listForTripOrdered (Task 4/5's repository, Task 7's own additive method).
+    return this.guards.tripRead(params, ctx, async () =>
+      await this.em.getRepository(Places).listForTripOrdered(num(params.tripId, 'tripId')),
     );
   }
 
@@ -106,10 +119,12 @@ export class TripsRpc {
 
   @PluginMethod('trips.members', { permission: 'db:read:trips' })
   async members(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
-    return this.guards.tripRead(params, ctx, () =>
-      this.db
-        .prepare('SELECT u.id, u.username, u.display_name, u.avatar FROM trip_members tm JOIN users u ON u.id = tm.user_id WHERE tm.trip_id = ?')
-        .all(num(params.tripId, 'tripId')) as unknown[],
+    // RP3 — TripMembersRepository.listRawUsernameAndDisplayName: raw `username`
+    // AND `display_name` as separate fields, deliberately NOT TM2's COALESCE
+    // (inventory §18.10 — a plugin's roster shape and the REST/MCP roster
+    // shape are two different wire shapes on purpose; do not harmonise).
+    return this.guards.tripRead(params, ctx, async () =>
+      await this.em.getRepository(TripMembers).listRawUsernameAndDisplayName(num(params.tripId, 'tripId')),
     );
   }
 
@@ -130,11 +145,11 @@ export class TripsRpc {
     if ('cover_image' in input && !(await this.guards.canEditAs('trip_cover_upload', tripId, actor))) {
       throw new ForbiddenResource(`no permission to change the cover of trip ${tripId}`);
     }
-    const user = this.db.prepare('SELECT role FROM users WHERE id = ?').get(actor) as { role?: string } | undefined;
+    const role = await this.em.getRepository(Users).getRole(actor); // RP4 — UsersRepository.getRole
     try {
       // The no-rebase core, parity with the legacy host path, which never
       // re-anchored the budget currency.
-      const result = await this.trips.updateTrip(tripId, actor, input as Parameters<TripsService['updateTrip']>[2], user?.role ?? 'user');
+      const result = await this.trips.updateTrip(tripId, actor, input as Parameters<TripsService['updateTrip']>[2], role ?? 'user');
       this.realtime.broadcast(tripId, 'trip:updated', { trip: result.updatedTrip });
       return result.updatedTrip;
     } catch (e) {
@@ -172,7 +187,8 @@ export class TripsRpc {
     const targetUserId = num(params.userId, 'userId');
     const actor = this.guards.requireActor(ctx, 'trip member');
     await this.guards.requireTripEdit(tripId, actor, MEMBER_MANAGE_ACTION);
-    const target = this.db.prepare('SELECT id FROM users WHERE id = ?').get(targetUserId) as { id: number } | undefined;
+    // RP5 — UsersRepository.findIdAndEmail (existence check only; the `email` field is unused here).
+    const target = await this.em.getRepository(Users).findIdAndEmail(targetUserId);
     if (!target) throw new ForbiddenResource(`no user ${targetUserId}`);
     // The acting user is recorded as the inviter.
     return this.membership.joinTripAsMember(tripId, targetUserId, actor);
@@ -186,8 +202,8 @@ export class TripsRpc {
     await this.guards.requireTripEdit(tripId, actor, MEMBER_MANAGE_ACTION);
     // Never remove the OWNER through this path: that would orphan the trip.
     // Ownership transfer is a separate, deliberate action.
-    const trip = this.db.prepare('SELECT user_id FROM trips WHERE id = ?').get(tripId) as { user_id: number } | undefined;
-    if (trip && trip.user_id === targetUserId) throw new ForbiddenResource('cannot remove the trip owner');
+    const ownerId = await this.em.getRepository(Trips).getOwnerId(tripId); // RP6 — TripsRepository.getOwnerId
+    if (ownerId !== null && ownerId === targetUserId) throw new ForbiddenResource('cannot remove the trip owner');
     await this.roster.removeMember(tripId, targetUserId);
     return { removed: true };
   }

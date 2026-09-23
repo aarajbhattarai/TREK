@@ -176,14 +176,18 @@ export class TripMembersRepository extends TrekRepository<TripMembers> {
    * `Number.isFinite` short-circuit guard — the same reason `remove()` below
    * has both: `renameGuest`/`deleteGuest`'s callers still do a bare
    * `Number.parseInt(userId)` on the route's `:userId`, unvalidated — a
-   * non-numeric id parses to `NaN`, and MikroORM/Kysely inline a non-finite
-   * `number` as the literal SQL token `NaN` even through a raw `?`
-   * placeholder (`no such column: NaN`, a 500 at PREPARE time — verified
-   * directly against a compiled boot, not assumed; a typed filter has the
-   * identical failure). The legacy statement bound it as a genuine
-   * better-sqlite3 parameter, matching zero rows (404 `'Guest not found'`,
-   * not a crash) — only skipping the query for a non-finite `user_id`
-   * reproduces that byte for byte.
+   * non-numeric id parses to `NaN`. **Mechanism (Task 6 review's I1,
+   * captured by wrapping `better-sqlite3.prepare`, not assumed): MikroORM
+   * formats every query with ALL parameters inlined as escaped literals —
+   * the params array that reaches better-sqlite3 is always empty — so a
+   * non-finite `NaN`/`Infinity` renders as a bare, unquoted SQL token and
+   * SQLite fails at PREPARE time (`no such column: NaN`, a 500), before any
+   * statement runs. A raw `?` placeholder does not avoid this (a typed
+   * filter has the identical failure) because the inlining happens during
+   * formatting, not at the bind step.** The legacy statement bound it as a
+   * genuine better-sqlite3 parameter, matching zero rows (404 `'Guest not
+   * found'`, not a crash) — only skipping the query for a non-finite
+   * `user_id` reproduces that byte for byte.
    */
   async isGuestOfTrip(trip_id: number | string, user_id: number): Promise<boolean> {
     if (!Number.isFinite(user_id)) return false;
@@ -239,10 +243,14 @@ export class TripMembersRepository extends TrekRepository<TripMembers> {
    * a literal, unquoted SQL token (`WHERE … AND user_id = NaN`), which
    * SQLite's parser reads as a column reference and rejects at PREPARE time
    * (`no such column: NaN`, a 500). Switching to a raw `m.user_id = ?`
-   * placeholder does NOT fix this — MikroORM/Kysely inline a non-finite
-   * `number` as that same literal token even through a `?` placeholder's
-   * bound-params array (reproduced directly: still `no such column: NaN` at
-   * prepare time, before any bind happens). The legacy statement bound
+   * placeholder does NOT fix this (Task 6 review's I1, captured by wrapping
+   * `better-sqlite3.prepare`): MikroORM formats every query with ALL
+   * parameters inlined as escaped literals — the params array that reaches
+   * better-sqlite3 is always empty — so `NaN` renders as that same bare
+   * token regardless of whether the predicate was written as a typed filter
+   * or a raw `?` placeholder (reproduced directly: still `no such column:
+   * NaN` at prepare time, before any bind happens — the inlining happens
+   * during formatting, not at the bind step). The legacy statement bound
    * `targetUserId` (`NaN`) straight into a real better-sqlite3 parameter,
    * which silently matches zero rows and returns 200 `{ success: true }` —
    * only skipping the query entirely for a non-finite `user_id` reproduces
@@ -256,5 +264,30 @@ export class TripMembersRepository extends TrekRepository<TripMembers> {
       .where('m.trip_id = ?', [trip_id])
       .andWhere('m.user_id = ?', [user_id])
       .execute('run');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 7 (`trips.rpc.ts::members`) — additive: no other repository
+  // is rooted at `trip_members` joined to `users`, and RP3's shape is
+  // deliberately NOT `listWithUserAndInviter`'s (TM2's COALESCE'd
+  // `username`), so it gets its own method here rather than a variant
+  // parameter on TM2's.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RP3 (`trips.rpc.ts::members`) — `SELECT u.id, u.username, u.display_name,
+   * u.avatar FROM trip_members tm JOIN users u ON u.id = tm.user_id WHERE
+   * tm.trip_id = ?`. Emits raw `username` AND `display_name` as SEPARATE
+   * fields — deliberately NOT `listWithUserAndInviter`'s (TM2) COALESCE'd
+   * single `username` (the ruling: "do not harmonise" — a plugin reading
+   * `trips.members` and the REST/MCP roster are two different wire shapes on
+   * purpose, inventory §18.10).
+   */
+  async listRawUsernameAndDisplayName(trip_id: number | string): Promise<{ id: number; username: string; display_name: string | null; avatar: string | null }[]> {
+    return await this.qb('m')
+      .join('m.user', 'u')
+      .select(['u.id', 'u.username', 'u.display_name', 'u.avatar'])
+      .where('m.trip_id = ?', [trip_id])
+      .execute<{ id: number; username: string; display_name: string | null; avatar: string | null }[]>('all', false);
   }
 }

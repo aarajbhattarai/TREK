@@ -166,7 +166,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     new DaysRpc(days, realtime, guards),
     new AccommodationsRpc(accommodations, realtime, guards),
     new ItineraryRpc(assignments, realtime, guards),
-    new TripsRpc(trips, reservations, days, membership, dbs, realtime, guards, accommodations, members),
+    new TripsRpc(trips, reservations, days, membership, realtime, guards, accommodations, members, (await sharedTestOrm(dbs.connection)).em),
     new CostsRpc(budget, dbs, realtime, guards, membership),
     new ReservationsRpc(reservations, realtime, guards),
     new CollabRpc(collab, realtime, guards),

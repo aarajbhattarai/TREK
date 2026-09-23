@@ -1,4 +1,7 @@
 import type { Days } from '../entities/Days.entity';
+import { DayAssignments } from '../entities/DayAssignments.entity';
+import { DayNotes } from '../entities/DayNotes.entity';
+import { DayAccommodations } from '../entities/DayAccommodations.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -198,5 +201,67 @@ export class DaysRepository extends TrekRepository<Days> {
       .where('d.id = ? AND d.trip_id = ?', [id, trip_id])
       .execute<{ id: number } | undefined>('get', false);
     return !!row;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 7 (`TripsService.generateDays`) — appended per the task's own
+  // file-ownership rule ("additive methods on Days/Places/Users repositories").
+  // ---------------------------------------------------------------------------
+
+  /** TP3 — `UPDATE days SET date = NULL WHERE id = ?` (nullifies rather than deletes: assignments/notes/accommodations survive). */
+  async clearDate(id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { date: null });
+  }
+
+  /**
+   * TP12 (`trips.service.ts::generateDays`'s `isEmptyDay`) — the legacy
+   * statement is `SELECT NOT EXISTS(...) AND NOT EXISTS(...) AND NOT
+   * EXISTS(...) AS empty` with no `FROM` clause and `@id` named params, the
+   * single most dialect-specific statement in the cluster (inventory §17b).
+   * Expressed here as three `count()`s (R6's own "three counts" alternative
+   * to a Kysely `selectNoFrom`), one per table the legacy statement's three
+   * `NOT EXISTS` correlate against — `day_assignments` and `day_notes` are
+   * this plan's own tables; `day_accommodations` is Plan 3d's, read (never
+   * written) here through the entity's already-generated `TrekRepository`
+   * (`this.getEntityManager().getRepository(DayAccommodations)`, the same
+   * cross-repository-read shape `TripMembersRepository.rosterUserIds`
+   * documents for `Trips`) — no domain method of `days`' own is added to
+   * that repository, so ownership of `day_accommodations`' write logic
+   * stays with Plan 3d.
+   */
+  async isEmptyDay(day_id: number): Promise<boolean> {
+    const em = this.getEntityManager();
+    const [assignments, notes, accommodations] = await Promise.all([
+      em.getRepository(DayAssignments).count({ day: day_id }),
+      em.getRepository(DayNotes).count({ day: day_id }),
+      em.getRepository(DayAccommodations).count({ $or: [{ startDay: day_id }, { endDay: day_id }] }),
+    ]);
+    return assignments === 0 && notes === 0 && accommodations === 0;
+  }
+
+  /**
+   * TP6 (`trips.service.ts::generateDays`'s trailing-empty trim) — the
+   * legacy statement orders candidate days `ORDER BY d.day_number DESC` and
+   * takes the first `limit` that pass all three `NOT EXISTS` checks (§17b).
+   * Reproduced here by reading every day of the trip in the same
+   * `day_number DESC` order and filtering with {@link isEmptyDay} per row,
+   * stopping once `limit` matches are collected — same result set as the
+   * single correlated statement (both examine days in day_number-descending
+   * order and take the first N that are empty), documented per R6 as the
+   * "three counts, comment which" alternative to a Kysely `selectNoFrom`.
+   */
+  async listTrailingEmptyIds(trip_id: number, limit: number): Promise<number[]> {
+    if (limit <= 0) return [];
+    const candidates = await this.qb('d')
+      .select(['d.id'])
+      .where({ trip: trip_id })
+      .orderBy({ day_number: 'desc' })
+      .execute<{ id: number }[]>('all', false);
+    const empty: number[] = [];
+    for (const c of candidates) {
+      if (empty.length >= limit) break;
+      if (await this.isEmptyDay(c.id)) empty.push(c.id);
+    }
+    return empty;
   }
 }

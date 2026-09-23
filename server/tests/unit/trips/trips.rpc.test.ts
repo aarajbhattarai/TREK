@@ -8,6 +8,7 @@
  * ACCESS, which is why it sits behind its own permission rather than any other write.
  */
 import { describe, it, expect, vi } from 'vitest';
+import type { EntityManager } from '@mikro-orm/core';
 import { expectRegisteredProvider } from '../../helpers/module-providers';
 import { PluginRpcHost } from '../../../src/nest/plugins/host/rpc-host';
 import { createTestPluginRegistry } from '../../../src/nest/plugins/host/rpc-kit/testing';
@@ -28,6 +29,10 @@ import type { PermissionsService } from '../../../src/nest/permissions/permissio
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { RpcRequest, RpcError } from '../../../src/nest/plugins/protocol/envelope';
 import { makeDeps } from '../../helpers/rpc-host-deps';
+import { Trips } from '../../../src/db/entities/Trips.entity';
+import { Places } from '../../../src/db/entities/Places.entity';
+import { Users } from '../../../src/db/entities/Users.entity';
+import { TripMembers } from '../../../src/db/entities/TripMembers.entity';
 
 const req = (method: string, params: Record<string, unknown> = {}): RpcRequest => ({ k: 'req', id: 'x', method, params });
 
@@ -60,21 +65,50 @@ export function build(opts: { allow?: (action: string) => boolean; updateThrows?
     removeMember: vi.fn(),
   } as unknown as TripMembersService & Record<string, ReturnType<typeof vi.fn>>;
   const membership = { joinTripAsMember: vi.fn(() => ({ joined: true })) } as unknown as TripMembershipService & Record<string, ReturnType<typeof vi.fn>>;
+  // `PluginGuards.canEditAs` (nest/plugins/host/, out of this task's scope)
+  // still calls `db.prepare('SELECT role FROM users WHERE id = ?')` for its
+  // own per-field permission role lookup — unrelated to RP4's now-converted
+  // `SELECT role FROM users WHERE id = ?` inside `TripsRpc.update` itself.
   const db = {
     canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-    prepare: vi.fn((sql: string) => ({
-      get: (arg: number) => {
-        if (sql.includes('FROM users WHERE')) return arg === 404 ? undefined : { id: arg, role: 'user' };
-        if (sql.includes('SELECT user_id FROM trips')) return { user_id: 42 };
-        return { id: 1, title: 'Japan' };
-      },
-      all: () => [{ id: 7, name: 'Place' }],
-    })),
+    prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
   } as unknown as DatabaseService;
+  // Plan 3c Task 7: RP1-RP6's SQL-text-keyed `db.prepare` stub is gone —
+  // every raw statement moved to a repository method, so this is a
+  // repository-level stub, keyed on the entity CLASS `em.getRepository(...)`
+  // was asked for, matching the shape the legacy `db.prepare(sql)` branch
+  // covered: `Trips.findRaw` (RP1/getById), `Places.listForTripOrdered`
+  // (RP2/getPlaces), `TripMembers.listRawUsernameAndDisplayName`
+  // (RP3/members), `Users.getRole` (RP4/update) and `.findIdAndEmail`
+  // (RP5/addMember — id 404 is the "unknown user" case every test below
+  // exercises), `Trips.getOwnerId` (RP6/removeMember — trip 1's owner is 42).
+  const em = {
+    getRepository: vi.fn((entity: unknown) => {
+      if (entity === Trips) {
+        return {
+          findRaw: vi.fn(async (id: number) => ({ id, title: 'Japan', feed_token: null })),
+          getOwnerId: vi.fn(async () => 42),
+        };
+      }
+      if (entity === Places) {
+        return { listForTripOrdered: vi.fn(async () => [{ id: 7, name: 'Place' }]) };
+      }
+      if (entity === Users) {
+        return {
+          getRole: vi.fn(async () => 'user'),
+          findIdAndEmail: vi.fn(async (id: number) => (id === 404 ? null : { id, email: `u${id}@example.test` })),
+        };
+      }
+      if (entity === TripMembers) {
+        return { listRawUsernameAndDisplayName: vi.fn(async () => [{ id: 7, username: 'bob', display_name: null, avatar: null }]) };
+      }
+      throw new Error(`build(): unexpected entity ${String(entity)}`);
+    }),
+  } as unknown as EntityManager;
   const permissions = { checkPermission: vi.fn((a: string) => (opts.allow ? opts.allow(a) : true)) } as unknown as PermissionsService;
   const realtime = { broadcast: vi.fn() } as unknown as RealtimeService & { broadcast: ReturnType<typeof vi.fn> };
   const guards = new PluginGuards(db, permissions, { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService);
-  const rpc = new TripsRpc(trips, reservations, days, membership, db, realtime, guards, accommodations, roster);
+  const rpc = new TripsRpc(trips, reservations, days, membership, realtime, guards, accommodations, roster, em);
   const host = (...grants: string[]) =>
     new PluginRpcHost('p', new Set(grants.length ? grants : ALL_TRIP_GRANTS), makeDeps(), createTestPluginRegistry([rpc]));
   return { trips, reservations, days, accommodations, roster, membership, realtime, permissions, host };

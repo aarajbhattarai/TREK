@@ -17,6 +17,7 @@ import type { RealtimeService } from '../../../src/nest/realtime/realtime.servic
 import { TripsRpc } from '../../../src/nest/trips/trips.rpc';
 import { DbRpc } from '../../../src/nest/plugins/host/rpc/db.rpc';
 import { PluginGuards } from '../../../src/nest/plugins/host/plugin-guards.service';
+import type { EntityManager } from '@mikro-orm/core';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 
@@ -39,8 +40,13 @@ const tripsRegistry = () => {
     prepare: () => ({ get: () => ({ id: 1, title: 'Japan' }), all: () => [] }),
   } as unknown as DatabaseService;
   const guards = new PluginGuards(db, {} as never, {} as never);
+  // Plan 3c Task 7: trips.getById (RP1) now reads through
+  // `EntityManager.getRepository(Trips).findRaw(...)`, not `db.prepare(...)`.
+  const em = {
+    getRepository: () => ({ findRaw: async () => ({ id: 1, title: 'Japan', feed_token: null }) }),
+  } as unknown as EntityManager;
   return createTestPluginRegistry([
-    new TripsRpc({} as never, {} as never, {} as never, {} as never, db, {} as never, guards, {} as never, {} as never),
+    new TripsRpc({} as never, {} as never, {} as never, {} as never, {} as never, guards, {} as never, {} as never, em),
   ]);
 };
 

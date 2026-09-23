@@ -1,4 +1,5 @@
 import type { Trips } from '../entities/Trips.entity';
+import { currentTimestamp } from '../dialect/sql-functions';
 import type { AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -34,6 +35,66 @@ export interface TripRawRow {
 }
 
 const _tripRawRowKeys: AssertRowKeys<TripRawRow, Trips> = true;
+
+/**
+ * `TRIP_SELECT`'s output row (inventory §11a) — every `TripRawRow` column
+ * plus the four computed/joined columns the projection adds. `feed_token`
+ * is always `null` here (SQL-side blanking via `NULL AS feed_token`/its
+ * Kysely equivalent, never a JS strip) — see `TripsRepository
+ * .tripSelectQuery`'s docstring.
+ */
+export interface TripSelectRow extends Omit<TripRawRow, 'feed_token'> {
+  feed_token: null;
+  day_count: number;
+  place_count: number;
+  is_owner: number;
+  owner_username: string;
+  shared_count: number;
+}
+
+/** The narrow `trips`/`users`/`days`/`places`/`trip_members` shape `tripSelectQuery` needs (`this.kysely()`'s typed `DB` argument). */
+interface TripSelectKyselyDB {
+  trips: {
+    // `number | string`, not a bare `number`: the raw-bind seam (D4's T5
+    // escape hatch) — `findForViewer`'s `WHERE t.id = ?` accepts the route's
+    // unconverted id with no coercion, the same seam every QB-based method
+    // in this file documents. Widening the TYPE (not spelling `sql\`...\``,
+    // which `no-restricted-syntax` bans in `src/db/repositories/**`) is what
+    // lets `.where('t.id', '=', trip_id)` accept a `string` here.
+    id: number | string;
+    user_id: number;
+    title: string;
+    description: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    currency: string | null;
+    cover_image: string | null;
+    is_archived: number | null;
+    reminder_days: number | null;
+    feed_token: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+  };
+  users: { id: number; username: string };
+  trip_members: { id: number; trip_id: number; user_id: number };
+  days: { id: number; trip_id: number };
+  places: { id: number; trip_id: number };
+}
+
+/** TP21's output row (inventory §11c) — `relevance` is the computed sort key, never sent to the client (the controller destructures `{id, title, start_date, end_date}` only). */
+export interface ActiveTripRow {
+  id: number;
+  title: string;
+  start_date: string | null;
+  end_date: string | null;
+  relevance: number;
+}
+
+/** The narrow `trips`/`trip_members` shape `activeTrip` needs. */
+interface ActiveTripKyselyDB {
+  trips: { id: number; title: string; start_date: string | null; end_date: string | null; user_id: number; is_archived: number | null };
+  trip_members: { id: number; trip_id: number; user_id: number };
+}
 
 export class TripsRepository extends TrekRepository<Trips> {
   /**
@@ -223,5 +284,216 @@ export class TripsRepository extends TrekRepository<Trips> {
       .where('t.id = ?', [trip_id])
       .execute<TripRawRow | undefined>('get', false);
     return row ?? null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 7 (`TripsService`) — `TRIP_SELECT` (inventory §11a) becomes
+  // ONE builder here (`tripSelectQuery`), expressed through `this.kysely()`
+  // (a typed one-table-plus-joins DB interface, the same escape hatch
+  // `DayAssignmentsRepository.reanchorToDay`/`DayAssignmentsRepository
+  // .listForTimeSort` use): three correlated scalar `COUNT(*)` subqueries a
+  // QueryBuilder select list cannot express, a `CASE WHEN` projected column,
+  // and `NULL AS feed_token` placed AFTER `t.*` (via `.selectAll('t')` then
+  // a later `.select()` of the literal) so the duplicate key wins in the row
+  // object exactly the way the legacy statement's column order does — not by
+  // hand-listing every `trips` column (§18.5: that loses the "blanked once,
+  // survives a schema change" guarantee the legacy comment describes).
+  // Verified directly with `.compile()` against a real in-memory DB before
+  // wiring in (task report, TRIP_SELECT SQL captures) — a fully seeded trip
+  // (owner, member, stranger; day/place counts; `feed_token` set in the DB)
+  // produces `feed_token: null`, `is_owner`, `owner_username`, all four
+  // counts, byte-identical in shape to a raw run of the legacy statement.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * `this.kysely()`'s typed `DB` argument for every `TRIP_SELECT`-shaped
+   * query below — narrowed to the columns those queries read or join
+   * through, per `WebauthnChallengesRepository.claimChallenge`'s docstring
+   * (entity-metadata inference is not what a hand-written statement wants).
+   */
+  private tripSelectQuery(user_id: number) {
+    return this.kysely<TripSelectKyselyDB>()
+      .selectFrom('trips as t')
+      .innerJoin('users as u', 'u.id', 't.user_id')
+      .selectAll('t')
+      .select((eb) => [
+        eb.val<string | null>(null).as('feed_token'),
+        eb.selectFrom('days as d').select((eb2) => eb2.fn.countAll<number>().as('c')).whereRef('d.trip_id', '=', 't.id').as('day_count'),
+        eb.selectFrom('places as p').select((eb2) => eb2.fn.countAll<number>().as('c')).whereRef('p.trip_id', '=', 't.id').as('place_count'),
+        eb.case().when('t.user_id', '=', user_id).then(1).else(0).end().as('is_owner'),
+        'u.username as owner_username',
+        eb.selectFrom('trip_members as tm').select((eb2) => eb2.fn.countAll<number>().as('c')).whereRef('tm.trip_id', '=', 't.id').as('shared_count'),
+      ]);
+  }
+
+  /**
+   * TP20 (`trips.service.ts::get`) — `TRIP_SELECT` scoped to one trip AND
+   * the access predicate (`t.user_id = :userId OR m.user_id IS NOT NULL`),
+   * i.e. "the trip if this viewer may see it, else nothing". Also serves
+   * TP19 (`create`'s post-insert re-select) and TP29 (`updateTrip`'s
+   * post-write re-select): both call sites are only ever reached after the
+   * acting user has already passed an access check for this exact trip
+   * (creator = owner; `updateTrip`'s callers all gate on `canAccessTrip`/
+   * `requireTripEdit` first), so the access predicate here is always
+   * trivially satisfied in those two contexts and the result is identical
+   * to the legacy's unscoped `WHERE t.id = :tripId` re-select. Also serves
+   * `TripMembersService.getTripForViewer` (TM1, Task 6 review's "for Task
+   * 7" note) — same reasoning: every caller already holds access.
+   *
+   * Raw-bind (`number | string`, D4's T5 escape hatch — `TripSelectKyselyDB`'s
+   * `trips.id` is typed `number | string` for exactly this): the legacy
+   * statement bound the route's unconverted `tripId` with no `Number()`/
+   * `toRowId` conversion, matching `findAccessible`'s documented seam.
+   */
+  async findForViewer(trip_id: number | string, user_id: number): Promise<TripSelectRow | undefined> {
+    const row = await this.tripSelectQuery(user_id)
+      .leftJoin('trip_members as m', (join) => join.onRef('m.trip_id', '=', 't.id').on('m.user_id', '=', user_id))
+      .where('t.id', '=', trip_id)
+      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('m.user_id', 'is not', null)]))
+      .executeTakeFirst();
+    return row as TripSelectRow | undefined;
+  }
+
+  /**
+   * TP16/TP17 (`trips.service.ts::list`) — `TRIP_SELECT` + the access join,
+   * optionally filtered by `is_archived`, `ORDER BY t.created_at DESC`.
+   * `archived === null` reproduces TP16 (no filter); any other value (0 or
+   * 1, the controller's own coercion) reproduces TP17.
+   */
+  async listForUser(user_id: number, archived: number | null): Promise<TripSelectRow[]> {
+    let query = this.tripSelectQuery(user_id)
+      .leftJoin('trip_members as m', (join) => join.onRef('m.trip_id', '=', 't.id').on('m.user_id', '=', user_id))
+      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('m.user_id', 'is not', null)]));
+    if (archived !== null) query = query.where('t.is_archived', '=', archived);
+    const rows = await query.orderBy('t.created_at', 'desc').execute();
+    return rows as unknown as TripSelectRow[];
+  }
+
+  /**
+   * TP21 (`trips.service.ts::activeTrip`) — the triple `CASE WHEN …
+   * relevance` projection and the double-`CASE WHEN` `ORDER BY` (one ASC,
+   * one DESC). The legacy statement's `ORDER BY` items reference the
+   * `relevance` SELECT-list alias (`CASE WHEN relevance < 2 …`, `CASE WHEN
+   * relevance = 2 …`); reproduced here by recomputing the equivalent
+   * boolean expression inline at each of the four sites (the `.select()`
+   * and three `.orderBy()` calls below) rather than referencing the alias,
+   * since Kysely's typed `ORDER BY` can't name a computed SELECT alias and
+   * `sql`-tagged templates are banned in `src/db/repositories/**` — and a
+   * shared private helper can't be typed across these four callbacks either
+   * (`leftJoin`'s alias widens each callback's own `ExpressionBuilder`
+   * table-set in a way a separate generic method signature can't match
+   * structurally). Semantically identical to the legacy statement — SQLite
+   * evaluates both forms to the same three-way ordering, verified directly
+   * against `.compile()`/real rows before wiring in (task report,
+   * TRIP_SELECT SQL captures): `running` = `relevance = 0`, `upcoming` =
+   * `relevance = 1`, `running OR upcoming` = `relevance < 2`.
+   */
+  async activeTrip(user_id: number, today: string): Promise<ActiveTripRow | undefined> {
+    const row = await this.kysely<ActiveTripKyselyDB>()
+      .selectFrom('trips as t')
+      .leftJoin('trip_members as m', (join) => join.onRef('m.trip_id', '=', 't.id').on('m.user_id', '=', user_id))
+      .select(['t.id', 't.title', 't.start_date', 't.end_date'])
+      .select((eb) => [
+        eb.case()
+          .when(eb.and([eb('t.start_date', 'is not', null), eb('t.end_date', 'is not', null), eb('t.start_date', '<=', today), eb('t.end_date', '>=', today)]))
+          .then(0)
+          .when(eb.and([eb('t.start_date', 'is not', null), eb('t.start_date', '>=', today)]))
+          .then(1)
+          .else(2)
+          .end()
+          .as('relevance'),
+      ])
+      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('m.user_id', 'is not', null)]))
+      .where('t.is_archived', '=', 0)
+      .orderBy((eb) =>
+        eb.case()
+          .when(eb.and([eb('t.start_date', 'is not', null), eb('t.end_date', 'is not', null), eb('t.start_date', '<=', today), eb('t.end_date', '>=', today)]))
+          .then(0)
+          .when(eb.and([eb('t.start_date', 'is not', null), eb('t.start_date', '>=', today)]))
+          .then(1)
+          .else(2)
+          .end(), 'asc')
+      .orderBy((eb) =>
+        eb.case()
+          .when(eb.or([
+            eb.and([eb('t.start_date', 'is not', null), eb('t.end_date', 'is not', null), eb('t.start_date', '<=', today), eb('t.end_date', '>=', today)]),
+            eb.and([eb('t.start_date', 'is not', null), eb('t.start_date', '>=', today)]),
+          ]))
+          .then(eb.ref('t.start_date'))
+          .end(), 'asc')
+      .orderBy((eb) =>
+        eb.case()
+          .when(eb.not(eb.or([
+            eb.and([eb('t.start_date', 'is not', null), eb('t.end_date', 'is not', null), eb('t.start_date', '<=', today), eb('t.end_date', '>=', today)]),
+            eb.and([eb('t.start_date', 'is not', null), eb('t.start_date', '>=', today)]),
+          ])))
+          .then(eb.ref('t.start_date'))
+          .end(), 'desc')
+      .limit(1)
+      .executeTakeFirst();
+    return row as ActiveTripRow | undefined;
+  }
+
+  /**
+   * TP18 (`trips.service.ts::create`'s INSERT) — the column set of the
+   * legacy statement, written verbatim (the `||`/clamp defaults are the
+   * service's own, decided before this call, per the program's D2 split).
+   * Returns `em.insert()`'s PK (R6's `lastInsertRowid` replacement).
+   */
+  async insertTrip(input: {
+    user_id: number;
+    title: string;
+    description: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    currency: string;
+    reminder_days: number;
+  }): Promise<number> {
+    return await this.insert({
+      user: input.user_id,
+      title: input.title,
+      description: input.description,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      currency: input.currency,
+      reminder_days: input.reminder_days,
+    });
+  }
+
+  /**
+   * TP25 (`trips.service.ts::updateTrip`) — `UPDATE trips SET title=?,
+   * description=?, start_date=?, end_date=?, currency=?, is_archived=?,
+   * cover_image=?, reminder_days=?, updated_at=CURRENT_TIMESTAMP WHERE
+   * id=?`. The `||`/`!== undefined` pre-image fallbacks are the SERVICE's
+   * own (R5/§18.6 — this write stays OUTSIDE the days-regeneration
+   * transaction, unchanged); this takes the final, already-decided values
+   * and writes them verbatim, `updated_at` stamped unconditionally like the
+   * legacy statement. Named `updateTripRow` (not `updateTrip`, the
+   * deliverable list's own name) to keep it unambiguous next to
+   * `TripsService.updateTrip`, which calls it.
+   */
+  async updateTripRow(id: number, data: {
+    title: string;
+    description: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    currency: string;
+    is_archived: number;
+    cover_image: string | null;
+    reminder_days: number;
+  }): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate({ id }, { ...data, updated_at: currentTimestamp(platform) });
+  }
+
+  /** TP35 (`trips.service.ts::updateCoverImage`) — `UPDATE trips SET cover_image=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`. */
+  async setCoverImage(id: number, cover_image: string): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate({ id }, { cover_image, updated_at: currentTimestamp(platform) });
+  }
+
+  /** TP34 (`trips.service.ts::remove`) — `DELETE FROM trips WHERE id = ?` (security-sensitive: cascades the whole trip). */
+  async deleteById(id: number): Promise<void> {
+    await this.nativeDelete({ id });
   }
 }

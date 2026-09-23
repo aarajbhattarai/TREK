@@ -340,3 +340,41 @@ describe('NaN user_id — rule 15 (a non-numeric route id parses to NaN, must no
     await expect(tripMembers.isGuestOfTrip(trip.id, NaN)).resolves.toBe(false);
   });
 });
+
+// ── Plan 3c Task 7 (trips.rpc.ts::members, RP3) — additive ──────────────────
+
+describe('TripMembersRepository.listRawUsernameAndDisplayName (RP3)', () => {
+  it('TMEMREPO-026: byte-identical to the legacy statement — raw username AND display_name, NOT TM2\'s COALESCE', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: named } = createUser(testDb, { username: 'bare-name' });
+    testDb.prepare('UPDATE users SET display_name = ?, avatar = ? WHERE id = ?').run('Displayed', 'a.png', named.id);
+    const { user: bare } = createUser(testDb, { username: 'no-display' });
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, named.id);
+    addTripMember(testDb, trip.id, bare.id);
+
+    const legacy = testDb.prepare(
+      'SELECT u.id, u.username, u.display_name, u.avatar FROM trip_members tm JOIN users u ON u.id = tm.user_id WHERE tm.trip_id = ?',
+    ).all(trip.id);
+    const rows = await tripMembers.listRawUsernameAndDisplayName(trip.id);
+    expect(rows).toEqual(legacy);
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    // Raw username, not COALESCEd with display_name — TM2's shape is different on purpose (§18.10).
+    expect(byId.get(named.id)).toEqual({ id: named.id, username: 'bare-name', display_name: 'Displayed', avatar: 'a.png' });
+    expect(byId.get(bare.id)).toEqual({ id: bare.id, username: 'no-display', display_name: null, avatar: null });
+  });
+
+  it('TMEMREPO-027: an owner-only trip (no trip_members rows) returns an empty array', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    expect(await tripMembers.listRawUsernameAndDisplayName(trip.id)).toEqual([]);
+  });
+
+  it('TMEMREPO-028: raw-bind — a string trip id binds unconverted, same as a real number', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+    expect((await tripMembers.listRawUsernameAndDisplayName(String(trip.id))).map((r) => r.id)).toEqual([member.id]);
+  });
+});

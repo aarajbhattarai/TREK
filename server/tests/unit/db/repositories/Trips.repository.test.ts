@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { CAN_ACCESS_TRIP_SQL, resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
-import { addTripMember, createTrip, createUser } from '../../../helpers/factories';
+import { addTripMember, createDay, createPlace, createTrip, createUser } from '../../../helpers/factories';
 import { Trips } from '../../../../src/db/entities/Trips.entity';
 import type { TripsRepository } from '../../../../src/db/repositories/Trips.repository';
 
@@ -233,5 +233,253 @@ describe('TripsRepository — TripMembersService / TripReadModelService (Plan 3c
       testDb.prepare('UPDATE trips SET title = ? WHERE id = ?').run('After', trip.id);
       expect((await trips.findRaw(trip.id))?.title).toBe('After');
     });
+  });
+});
+
+// ── Plan 3c Task 7 — TRIP_SELECT's ONE builder, generateDays helpers, CRUD ───
+//
+// `TRIP_SELECT` (trips.service.ts): the shared projection every one of
+// `findForViewer`/`listForUser`/`activeTrip` builds on (`tripSelectQuery`).
+// Byte-diffed here against the legacy statement run raw, on a FULLY seeded
+// trip (days, places, a second member, an owner) with every nullable column
+// both null and set (rule 19).
+const LEGACY_TRIP_SELECT = `
+  SELECT t.*,
+    NULL AS feed_token,
+    (SELECT COUNT(*) FROM days d WHERE d.trip_id = t.id) as day_count,
+    (SELECT COUNT(*) FROM places p WHERE p.trip_id = t.id) as place_count,
+    CASE WHEN t.user_id = :userId THEN 1 ELSE 0 END as is_owner,
+    u.username as owner_username,
+    (SELECT COUNT(*) FROM trip_members tm WHERE tm.trip_id = t.id) as shared_count
+  FROM trips t
+  JOIN users u ON u.id = t.user_id
+`;
+
+describe('TripsRepository.findForViewer / listForUser / activeTrip (Plan 3c Task 7, TRIP_SELECT)', () => {
+  describe('findForViewer (TP20, also serves TP19/TP29 and TripMembersService.getTripForViewer)', () => {
+    it('TRIPREPO-023: byte-identical to the legacy TRIP_SELECT statement on a FULLY seeded trip (days, places, a member, feed_token set in the DB)', async () => {
+      const { user: owner } = createUser(testDb, { username: 'owner-handle' });
+      const { user: member } = createUser(testDb);
+      const trip = createTrip(testDb, owner.id, {
+        title: 'Full Row', description: 'A real description', start_date: '2026-03-01', end_date: '2026-03-05',
+      });
+      testDb.prepare('UPDATE trips SET feed_token = ?, cover_image = ? WHERE id = ?').run('super-secret', 'cover.png', trip.id);
+      addTripMember(testDb, trip.id, member.id);
+      createDay(testDb, trip.id, { date: '2026-03-01' });
+      createDay(testDb, trip.id, { date: '2026-03-02' });
+      createPlace(testDb, trip.id);
+      createPlace(testDb, trip.id);
+      createPlace(testDb, trip.id);
+
+      const legacyOwner = testDb.prepare(`
+        ${LEGACY_TRIP_SELECT}
+        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
+        WHERE t.id = :tripId AND (t.user_id = :userId OR m.user_id IS NOT NULL)
+      `)
+        .get({ userId: owner.id, tripId: trip.id });
+      const row = await trips.findForViewer(trip.id, owner.id);
+      expect(row).toEqual(legacyOwner);
+      // createTrip's own start_date/end_date span already generates 5 days;
+      // the two explicit createDay calls above add 2 more, for 7 total.
+      expect(row).toMatchObject({
+        day_count: 7, place_count: 3, shared_count: 1, is_owner: 1, owner_username: 'owner-handle', feed_token: null,
+      });
+      // The real column is set in the DB — the wire value is blanked by the
+      // SQL-side `NULL AS feed_token` trick, not merely absent from a
+      // hand-picked column list (§18.5).
+      expect((testDb.prepare('SELECT feed_token FROM trips WHERE id = ?').get(trip.id) as { feed_token: string }).feed_token).toBe('super-secret');
+
+      const legacyMember = testDb.prepare(`
+        ${LEGACY_TRIP_SELECT}
+        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
+        WHERE t.id = :tripId AND (t.user_id = :userId OR m.user_id IS NOT NULL)
+      `)
+        .get({ userId: member.id, tripId: trip.id });
+      const memberRow = await trips.findForViewer(trip.id, member.id);
+      expect(memberRow).toEqual(legacyMember);
+      expect(memberRow).toMatchObject({ is_owner: 0, day_count: 7, place_count: 3, shared_count: 1 });
+    });
+
+    it('TRIPREPO-024: NULL-seeded nullable columns come back null on the wire; a stranger and a nonexistent trip both get undefined', async () => {
+      const { user: owner } = createUser(testDb);
+      const { user: stranger } = createUser(testDb);
+      const trip = createTrip(testDb, owner.id); // description/start_date/end_date/cover_image all NULL by default
+
+      const legacy = testDb.prepare(`
+        ${LEGACY_TRIP_SELECT}
+        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
+        WHERE t.id = :tripId AND (t.user_id = :userId OR m.user_id IS NOT NULL)
+      `)
+        .get({ userId: owner.id, tripId: trip.id });
+      const row = await trips.findForViewer(trip.id, owner.id);
+      expect(row).toEqual(legacy);
+      expect(row).toMatchObject({ description: null, start_date: null, end_date: null, cover_image: null, feed_token: null });
+
+      expect(await trips.findForViewer(trip.id, stranger.id)).toBeUndefined();
+      expect(await trips.findForViewer(999999, owner.id)).toBeUndefined();
+    });
+
+    it('TRIPREPO-025: binds a string trip id raw, the seam every other method here preserves', async () => {
+      const { user: owner } = createUser(testDb);
+      const trip = createTrip(testDb, owner.id, { title: 'Stringy' });
+      expect((await trips.findForViewer(String(trip.id), owner.id))?.title).toBe('Stringy');
+    });
+
+    // Rule 21: `findForViewer` is a Kysely read, which never consults the
+    // identity map — the "fresh after a raw UPDATE" shape applies instead of
+    // a D-shape identity-map test.
+    it('TRIPREPO-026 (fresh after a raw UPDATE): a title changed outside the ORM is visible on the next read', async () => {
+      const { user: owner } = createUser(testDb);
+      const trip = createTrip(testDb, owner.id, { title: 'Stale' });
+      expect((await trips.findForViewer(trip.id, owner.id))?.title).toBe('Stale');
+      testDb.prepare('UPDATE trips SET title = ? WHERE id = ?').run('Fresh', trip.id);
+      expect((await trips.findForViewer(trip.id, owner.id))?.title).toBe('Fresh');
+    });
+  });
+
+  describe('listForUser (TP16/TP17)', () => {
+    it('TRIPREPO-027: byte-identical to the legacy statement, archived === null (TP16, no filter)', async () => {
+      const { user: owner } = createUser(testDb);
+      const { user: member } = createUser(testDb);
+      const owned = createTrip(testDb, owner.id, { title: 'Owned' });
+      const shared = createTrip(testDb, member.id, { title: 'Shared' });
+      addTripMember(testDb, shared.id, owner.id);
+      const archived = createTrip(testDb, owner.id, { title: 'Archived' });
+      testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(archived.id);
+
+      const legacy = testDb.prepare(`
+        ${LEGACY_TRIP_SELECT}
+        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
+        WHERE (t.user_id = :userId OR m.user_id IS NOT NULL)
+        ORDER BY t.created_at DESC
+      `).all({ userId: owner.id });
+      const rows = await trips.listForUser(owner.id, null);
+      expect(rows).toEqual(legacy);
+      expect(rows.map((r) => r.id).sort()).toEqual([owned.id, shared.id, archived.id].sort());
+    });
+
+    it('TRIPREPO-028: byte-identical to the legacy statement, archived filtered (TP17)', async () => {
+      const { user: owner } = createUser(testDb);
+      const active = createTrip(testDb, owner.id, { title: 'Active' });
+      const archived = createTrip(testDb, owner.id, { title: 'Archived' });
+      testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(archived.id);
+
+      const legacyArchived = testDb.prepare(`
+        ${LEGACY_TRIP_SELECT}
+        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
+        WHERE (t.user_id = :userId OR m.user_id IS NOT NULL) AND t.is_archived = :archived
+        ORDER BY t.created_at DESC
+      `).all({ userId: owner.id, archived: 1 });
+      expect(await trips.listForUser(owner.id, 1)).toEqual(legacyArchived);
+      expect((await trips.listForUser(owner.id, 1)).map((r) => r.id)).toEqual([archived.id]);
+      expect((await trips.listForUser(owner.id, 0)).map((r) => r.id)).toEqual([active.id]);
+    });
+  });
+
+  describe('activeTrip (TP21) — the triple CASE WHEN relevance projection and the double-CASE WHEN ORDER BY', () => {
+    const LEGACY_ACTIVE_TRIP = `
+      SELECT t.id, t.title, t.start_date, t.end_date,
+        CASE
+          WHEN t.start_date IS NOT NULL AND t.end_date IS NOT NULL AND t.start_date <= :today AND t.end_date >= :today THEN 0
+          WHEN t.start_date IS NOT NULL AND t.start_date >= :today THEN 1
+          ELSE 2
+        END AS relevance
+      FROM trips t
+      LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
+      WHERE (t.user_id = :userId OR m.user_id IS NOT NULL) AND t.is_archived = 0
+      ORDER BY relevance ASC,
+        CASE WHEN relevance < 2 THEN t.start_date END ASC,
+        CASE WHEN relevance = 2 THEN t.start_date END DESC
+      LIMIT 1
+    `;
+
+    it('TRIPREPO-029: a running-today trip (relevance 0) wins over an upcoming or past one, matching the legacy statement result AND ordering', async () => {
+      const { user } = createUser(testDb);
+      const today = '2026-06-10';
+      createTrip(testDb, user.id, { title: 'Past', start_date: '2026-01-01', end_date: '2026-01-05' });
+      const running = createTrip(testDb, user.id, { title: 'Running', start_date: '2026-06-08', end_date: '2026-06-12' });
+      createTrip(testDb, user.id, { title: 'Future', start_date: '2026-07-01', end_date: '2026-07-05' });
+
+      const legacy = testDb.prepare(LEGACY_ACTIVE_TRIP).get({ userId: user.id, today });
+      const row = await trips.activeTrip(user.id, today);
+      expect(row).toEqual(legacy);
+      expect(row).toMatchObject({ id: running.id, title: 'Running', relevance: 0 });
+    });
+
+    it('TRIPREPO-030: no running trip — the next upcoming one wins, earliest first (relevance 1)', async () => {
+      const { user } = createUser(testDb);
+      const today = '2026-06-10';
+      const soonest = createTrip(testDb, user.id, { title: 'Soonest', start_date: '2026-07-01', end_date: '2026-07-05' });
+      createTrip(testDb, user.id, { title: 'Later', start_date: '2026-08-01', end_date: '2026-08-05' });
+
+      const legacy = testDb.prepare(LEGACY_ACTIVE_TRIP).get({ userId: user.id, today });
+      const row = await trips.activeTrip(user.id, today);
+      expect(row).toEqual(legacy);
+      expect(row).toMatchObject({ id: soonest.id, relevance: 1 });
+    });
+
+    it('TRIPREPO-031: nothing running or upcoming — the most recently started trip wins (relevance 2), archived trips excluded', async () => {
+      const { user } = createUser(testDb);
+      const today = '2026-06-10';
+      createTrip(testDb, user.id, { title: 'Long ago', start_date: '2026-01-01', end_date: '2026-01-05' });
+      const recent = createTrip(testDb, user.id, { title: 'Recent', start_date: '2026-05-01', end_date: '2026-05-05' });
+      const archived = createTrip(testDb, user.id, { title: 'Archived-but-recent', start_date: '2026-06-01', end_date: '2026-06-05' });
+      testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(archived.id);
+
+      const legacy = testDb.prepare(LEGACY_ACTIVE_TRIP).get({ userId: user.id, today });
+      const row = await trips.activeTrip(user.id, today);
+      expect(row).toEqual(legacy);
+      expect(row).toMatchObject({ id: recent.id, relevance: 2 });
+    });
+
+    it('TRIPREPO-032: nothing at all returns undefined', async () => {
+      const { user } = createUser(testDb);
+      expect(await trips.activeTrip(user.id, '2026-06-10')).toBeUndefined();
+    });
+  });
+});
+
+describe('TripsRepository.insertTrip / updateTripRow / setCoverImage / deleteById (Plan 3c Task 7)', () => {
+  it('TRIPREPO-033: insertTrip (TP18) writes the given column set verbatim and returns the generated id', async () => {
+    const { user } = createUser(testDb);
+    const id = await trips.insertTrip({
+      user_id: user.id, title: 'New Trip', description: null, start_date: null, end_date: null, currency: 'EUR', reminder_days: 3,
+    });
+    const row = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(id) as Record<string, unknown>;
+    expect(row).toMatchObject({ user_id: user.id, title: 'New Trip', currency: 'EUR', reminder_days: 3 });
+  });
+
+  it('TRIPREPO-034: updateTripRow (TP25) writes every column and stamps updated_at', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Before' });
+    await trips.updateTripRow(trip.id, {
+      title: 'After', description: 'd', start_date: '2026-01-01', end_date: '2026-01-05',
+      currency: 'USD', is_archived: 1, cover_image: 'c.png', reminder_days: 7,
+    });
+    const row = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(trip.id) as Record<string, unknown>;
+    expect(row).toMatchObject({
+      title: 'After', description: 'd', start_date: '2026-01-01', end_date: '2026-01-05',
+      currency: 'USD', is_archived: 1, cover_image: 'c.png', reminder_days: 7,
+    });
+    // CURRENT_TIMESTAMP has one-second resolution — a same-second before/after
+    // comparison is flaky, not a real assertion; the column being non-null and
+    // in the CURRENT_TIMESTAMP text shape is what `updateTripRow` promises.
+    expect(row.updated_at).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  });
+
+  it('TRIPREPO-035: setCoverImage (TP35) writes cover_image and stamps updated_at', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    await trips.setCoverImage(trip.id, '/uploads/covers/x.jpg');
+    expect((testDb.prepare('SELECT cover_image FROM trips WHERE id = ?').get(trip.id) as { cover_image: string }).cover_image).toBe('/uploads/covers/x.jpg');
+  });
+
+  it('TRIPREPO-036: deleteById (TP34, security-sensitive) removes exactly the given trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    await trips.deleteById(trip.id);
+    expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(trip.id)).toBeUndefined();
+    expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(other.id)).toBeDefined();
   });
 });

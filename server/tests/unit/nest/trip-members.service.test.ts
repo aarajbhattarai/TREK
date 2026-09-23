@@ -1,5 +1,7 @@
 /**
- * Unit tests for TripMembersService — MEMBERS-SVC-001 through MEMBERS-SVC-015.
+ * Unit tests for TripMembersService — MEMBERS-SVC-001 through MEMBERS-SVC-018
+ * (016-018 added by the Task 6 review's M1/L2 items: transferOwnership/
+ * createGuest transaction-rollback proofs and an addMember concurrency case).
  *
  * The roster cases that came over with the split still run in
  * tests/unit/nest/trips.service.test.ts (TRIP-SVC-020…023, 030…034, 049, 052,
@@ -69,6 +71,7 @@ import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, c
 import type { EntityManager } from '@mikro-orm/core';
 import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import type { TripMembersRepository } from '../../../src/db/repositories/TripMembers.repository';
 
 // Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the `beforeAll`
 // below, before any `dbs()` call — `canAccessTrip`/`isOwner`/`rosterUserIds`/
@@ -83,17 +86,24 @@ let budgetSvc: BudgetService;
 let roster: TripMembersService;
 let tripsRepo: TripsRepository;
 let usersRepo: UsersRepository;
+// Task 6 review, M1: hoisted (was constructed inline) so the mutation-rollback
+// tests below can `vi.spyOn` the SAME instance the service holds — the shared
+// EM caches repositories, so a fresh `createTestTripMembersRepo(testDb)` call
+// returns this identical object (Task 6 review's own confirmation for `tripsRepo`/
+// `usersRepo`'s existing spies applies here too).
+let tripMembersRepo: TripMembersRepository;
 beforeAll(async () => {
   dbsEm = (await sharedTestOrm(testDb)).em;
   tripsRepo = await createTestTripsRepo(testDb);
   usersRepo = await createTestUsersRepo(testDb);
+  tripMembersRepo = await createTestTripMembersRepo(testDb);
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
   roster = new TripMembersService(
     dbs(), budgetSvc,
     new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), usersRepo),
     new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
     new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection),
-    tripsRepo, await createTestTripMembersRepo(testDb), usersRepo,
+    tripsRepo, tripMembersRepo, usersRepo,
   );
 });
 
@@ -160,9 +170,9 @@ describe('TripMembersService delegation', () => {
     // The handover broadcast hands the raw :id route param straight in, so the
     // named-parameter query has to keep matching a string id against the INTEGER
     // column — and the payload the clients re-read must carry their own is_owner.
-    const asOwner = await roster.getTripForViewer(String(trip.id), owner.id) as Record<string, unknown>;
+    const asOwner = await roster.getTripForViewer(String(trip.id), owner.id) as unknown as Record<string, unknown>;
     expect(asOwner).toMatchObject({ id: trip.id, title: 'Handover', is_owner: 1, owner_username: owner.username, shared_count: 1 });
-    const asMember = await roster.getTripForViewer(trip.id, member.id) as Record<string, unknown>;
+    const asMember = await roster.getTripForViewer(trip.id, member.id) as unknown as Record<string, unknown>;
     expect(asMember.is_owner).toBe(0);
     expect(await roster.getTripForViewer(999999, owner.id)).toBeUndefined();
   });
@@ -373,5 +383,79 @@ describe('listMembers shaping', () => {
     // is_guest is a SQLite integer on the way out and a boolean on the wire.
     expect(byId.get(bare.id)!.is_guest).toBe(false);
     expect(ownerRow.is_guest).toBe(false);
+  });
+});
+
+// ── Task 6 review items (M1, L2) ─────────────────────────────────────────────
+//
+// task-6-review.md M1: neither `transferOwnership` nor `createGuest` had a
+// test proving their `uow.transactional` block actually rolls back when its
+// LAST statement fails — a mutation moving `addIgnoringConflict`/`addMember`
+// outside the transaction survived the whole suite. Shaped like TRIP-SVC-052
+// (`vi.spyOn` the repository the shared EM caches, not a hand-rolled fault
+// injection). L2: `addMember`'s TM5→TM6 check-then-act (§18.4) had no
+// concurrency test of its own — `joinTripAsMember`'s TRIP-JOIN-005 covers the
+// identical shape one method over; this copies it.
+
+describe('Task 6 review items — rollback and concurrency', () => {
+  it('MEMBERS-SVC-016 (mutation-proved): transferOwnership rolls back when the final INSERT rejects — the owner pointer and the new owner\'s membership both survive', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    await roster.addMember(trip.id, member.email, owner.id, owner.id);
+
+    const spy = vi.spyOn(tripMembersRepo, 'addIgnoringConflict').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(roster.transferOwnership(trip.id, member.id, owner.id)).rejects.toThrow('boom');
+    } finally {
+      spy.mockRestore();
+    }
+
+    // setOwner (TM13) ran, then remove (TM14) ran, then addIgnoringConflict (TM15)
+    // rejected — a fix that moved TM15 outside the transaction would leave TM13/TM14
+    // committed while this assertion still expects them rolled back.
+    const tripRow = testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number };
+    expect(tripRow.user_id).toBe(owner.id);
+    expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, member.id)).toBeDefined();
+  });
+
+  it('MEMBERS-SVC-017 (mutation-proved): createGuest rolls back when the membership INSERT rejects — no orphan guest user row', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number }).n;
+
+    const spy = vi.spyOn(tripMembersRepo, 'addMember').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(roster.createGuest(trip.id, 'Rollback Rae', owner.id)).rejects.toThrow('boom');
+    } finally {
+      spy.mockRestore();
+    }
+
+    // insertGuest (TM16) ran, then addMember (TM17) rejected — a fix that moved
+    // TM17 outside the transaction would leave the guest's `users` row behind.
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('MEMBERS-SVC-018 (concurrency, §18.4, copies TRIP-JOIN-005): two concurrent addMember calls for the same (trip, user) race the TM5→TM6 check-then-act window', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: invitee } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+
+    const results = await Promise.allSettled([
+      roster.addMember(trip.id, invitee.email, owner.id, owner.id),
+      roster.addMember(trip.id, invitee.email, owner.id, owner.id),
+    ]);
+    // Today's actual outcome, run under real concurrency, not assumed: the
+    // method performs no locking/serialization of its own (TM5 `exists` →
+    // TM6 `addMember`, unchanged by this conversion, §18.4). Whichever call
+    // loses the race either throws the app-level 'User already has access'
+    // (TM5 caught it) or rejects on the table's own UNIQUE(trip_id, user_id)
+    // constraint (TM6 raced past TM5) — both are acceptable, unchanged
+    // outcomes; what must hold is that at most one membership row exists.
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    const count = testDb.prepare('SELECT COUNT(*) as n FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id) as { n: number };
+    expect(count.n).toBe(1);
   });
 });

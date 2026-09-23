@@ -279,10 +279,17 @@ export function maxOf(platform: Platform, ref: string, aliasName: string): RawQu
  * for this one, unlike `countAll`/`minOf`/`maxOf`, because `.as()` already
  * covers it and a `value`-bearing fragment cannot reuse `alias()`'s bare
  * identifier validation the same way an aggregate's literal alias does).
- * `value`/`whenTrue`/`whenFalse` are all bound as parameters, never
- * interpolated — even though today's only caller (TM2's owner/member role
- * label) passes fixed literal strings, parity is by VALUE, not by whether
- * the string happens to be a source-code literal at the call site.
+ * `value`/`whenTrue`/`whenFalse` are all passed through `raw()`'s own
+ * parameter escaping, never spliced into the SQL text by this function —
+ * even though today's only caller (TM2's owner/member role label) passes
+ * fixed literal strings, parity is by VALUE, not by whether the string
+ * happens to be a source-code literal at the call site. (Task 6 review's
+ * I1: downstream, MikroORM still formats the FINAL query with every
+ * parameter inlined as an escaped literal in the SQL text it hands
+ * better-sqlite3 — not as a separate bound-params array — so a non-finite
+ * `value` renders as the bare token `NaN`/`Infinity` and fails at PREPARE
+ * time regardless of this function's own escaping; callers must guard a
+ * non-finite `value` before calling.)
  */
 export function caseWhenEquals(platform: Platform, ref: string, value: number, whenTrue: string, whenFalse: string): RawQueryFragment {
   if (platform instanceof SqlitePlatform) return raw(`CASE WHEN ${column(ref)} = ? THEN ? ELSE ? END`, [value, whenTrue, whenFalse]);

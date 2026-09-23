@@ -3,6 +3,8 @@ import path from 'path';
 import { EntityManager } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
 import { Trips } from '../../db/entities/Trips.entity';
+import { Days } from '../../db/entities/Days.entity';
+import { Users } from '../../db/entities/Users.entity';
 import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -172,8 +174,24 @@ export class TripsService {
     private readonly em: EntityManager,
   ) {}
 
+  // Plan 3c Task 7: the raw better-sqlite3 handle now backs only the three
+  // documented survivors — `remove`'s TP32/TP33 (journey_entries, Plan 3g)
+  // and `copy`/`getCopiedTrip` (Task 8's own file). Every other method below
+  // reads/writes through `tripsRepo`/`daysRepo` (or a sibling repository
+  // reached the same way `TripsService.canAccessTrip`/`.isOwner` already
+  // did since Task 0b: `this.em.getRepository(...)`, not a new constructor
+  // parameter — the shared per-request `EntityManager` caches repositories,
+  // so this is the same instance a hand-constructed test spies on).
   private get db() {
     return this.dbs.connection;
+  }
+
+  private get tripsRepo() {
+    return this.em.getRepository(Trips);
+  }
+
+  private get daysRepo() {
+    return this.em.getRepository(Days);
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
@@ -195,46 +213,49 @@ export class TripsService {
 
   // ── Day generation ────────────────────────────────────────────────────────
 
+  /**
+   * TP1–TP13 (inventory §11b), all through `DaysRepository` — statement order
+   * and the two-phase renumber (negative pass then positive pass, sequential
+   * `for…of`, never `Promise.all`: order is load-bearing against
+   * `UNIQUE(trip_id, day_number)`, the same discipline Task 2's own
+   * `DaysService` conversion kept) preserved byte-for-byte. Inherits the
+   * caller's transaction — `updateTrip`'s `:423` `uow.transactional` block —
+   * or runs with none at all when called from `create` (R5/§18.6, unchanged
+   * by this conversion; no transaction is opened HERE either way).
+   *
+   * TP1/TP4/TP8/TP13 (four legacy sites, one shared repository method):
+   * `listOrderedForReorder` orders `ASC` by `day_number` where TP1's own
+   * statement has no `ORDER BY` at all — harmless: TP1's result only ever
+   * feeds `.filter()`/re-`.sort()` calls below, never relies on read order.
+   */
   async generateDays(tripId: number | bigint | string, startDate: string | null, endDate: string | null, dayCount?: number) {
-    const existing = this.db.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; day_number: number; date: string | null }[];
-    const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
+    const trip_id = Number(tripId);
+    const existing = await this.daysRepo.listOrderedForReorder(trip_id); // TP1
 
-    // Helper: two-phase renumber to avoid UNIQUE(trip_id, day_number) collisions
-    function renumber(days: { id: number }[]) {
-      days.forEach((d, i) => setDayNumber.run(-(i + 1), d.id));
-      days.forEach((d, i) => setDayNumber.run(i + 1, d.id));
-    }
+    // Two-phase renumber to avoid UNIQUE(trip_id, day_number) collisions.
+    const renumber = async (days: { id: number }[]) => {
+      for (let i = 0; i < days.length; i++) await this.daysRepo.setDayNumber(days[i].id, -(i + 1)); // TP2
+      for (let i = 0; i < days.length; i++) await this.daysRepo.setDayNumber(days[i].id, i + 1); // TP2
+    };
 
     if (!startDate || !endDate) {
       // Nullify all dated days instead of deleting them — preserves assignments/notes/accommodations
       const withDates = existing.filter(d => d.date);
-      if (withDates.length > 0) {
-        const nullify = this.db.prepare('UPDATE days SET date = NULL WHERE id = ?');
-        for (const d of withDates) nullify.run(d.id);
-      }
+      for (const d of withDates) await this.daysRepo.clearDate(d.id); // TP3
+
       // Now all days are dateless — adjust count toward dayCount target
-      const allDays = this.db.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(tripId) as { id: number }[];
+      const allDays = await this.daysRepo.listOrderedForReorder(trip_id); // TP4
       const targetCount = Math.min(Math.max(dayCount ?? (allDays.length || 7), 1), MAX_TRIP_DAYS);
       const needed = targetCount - allDays.length;
       if (needed > 0) {
-        const insert = this.db.prepare('INSERT INTO days (trip_id, day_number, date) VALUES (?, ?, NULL)');
-        for (let i = 0; i < needed; i++) insert.run(tripId, allDays.length + i + 1);
+        for (let i = 0; i < needed; i++) await this.daysRepo.insertDay({ trip_id, day_number: allDays.length + i + 1, date: null }); // TP5
       } else if (needed < 0) {
         // Only trim trailing empty days to avoid destroying content
-        const candidates = this.db.prepare(
-          `SELECT d.id FROM days d
-           WHERE d.trip_id = ?
-             AND NOT EXISTS (SELECT 1 FROM day_assignments da WHERE da.day_id = d.id)
-             AND NOT EXISTS (SELECT 1 FROM day_notes dn WHERE dn.day_id = d.id)
-             AND NOT EXISTS (SELECT 1 FROM day_accommodations dac WHERE dac.start_day_id = d.id OR dac.end_day_id = d.id)
-           ORDER BY d.day_number DESC
-           LIMIT ?`
-        ).all(tripId, -needed) as { id: number }[];
-        const del = this.db.prepare('DELETE FROM days WHERE id = ?');
-        for (const d of candidates) del.run(d.id);
+        const candidates = await this.daysRepo.listTrailingEmptyIds(trip_id, -needed); // TP6
+        for (const id of candidates) await this.daysRepo.deleteById(id); // TP7
       }
-      const remaining = this.db.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(tripId) as { id: number }[];
-      renumber(remaining);
+      const remaining = await this.daysRepo.listOrderedForReorder(trip_id); // TP8
+      await renumber(remaining);
       return;
     }
 
@@ -257,10 +278,7 @@ export class TripsService {
 
     // Phase 1: stamp all existing days with negative day_numbers to free up slots
     const allExisting = [...dated, ...dateless];
-    allExisting.forEach((d, i) => setDayNumber.run(-(i + 1), d.id));
-
-    const assignDay = this.db.prepare('UPDATE days SET date = ?, day_number = ? WHERE id = ?');
-    const insert = this.db.prepare('INSERT INTO days (trip_id, day_number, date) VALUES (?, ?, ?)');
+    for (let i = 0; i < allExisting.length; i++) await this.daysRepo.setDayNumber(allExisting[i].id, -(i + 1)); // TP2
 
     let datelessIdx = 0;
 
@@ -268,21 +286,20 @@ export class TripsService {
       const date = targetDates[i];
       if (i < dated.length) {
         // Positional remap: existing dated day i gets new date — keeps all children
-        assignDay.run(date, i + 1, dated[i].id);
+        await this.daysRepo.setDayNumberAndDate(dated[i].id, i + 1, date); // TP9
       } else if (datelessIdx < dateless.length) {
         // Reuse a dateless day — keeps its assignments, notes, etc.
-        assignDay.run(date, i + 1, dateless[datelessIdx].id);
+        await this.daysRepo.setDayNumberAndDate(dateless[datelessIdx].id, i + 1, date); // TP9
         datelessIdx++;
       } else {
-        insert.run(tripId, i + 1, date);
+        await this.daysRepo.insertDay({ trip_id, day_number: i + 1, date }); // TP10
       }
     }
 
     // Overflow dated days (trip shrunk): delete them (issue #909).
     // Cascade removes their assignments, notes, and accommodations.
-    const del = this.db.prepare('DELETE FROM days WHERE id = ?');
     for (let i = targetDates.length; i < dated.length; i++) {
-      del.run(dated[i].id);
+      await this.daysRepo.deleteById(dated[i].id); // TP11
     }
 
     // Any remaining unused dateless days: drop the empty placeholders so day_count
@@ -290,45 +307,28 @@ export class TripsService {
     // notes, accommodations) — mirrors the dateless-path trimming above (#1083).
     // Base must be max(targetDates.length, dated.length) to avoid colliding with
     // positives already assigned by the main loop or the overflow loop above.
-    const isEmptyDay = this.db.prepare(
-      `SELECT NOT EXISTS (SELECT 1 FROM day_assignments da WHERE da.day_id = @id)
-            AND NOT EXISTS (SELECT 1 FROM day_notes dn WHERE dn.day_id = @id)
-            AND NOT EXISTS (SELECT 1 FROM day_accommodations dac WHERE dac.start_day_id = @id OR dac.end_day_id = @id) AS empty`
-    );
     const maxAssigned = Math.max(targetDates.length, dated.length);
     let keptDateless = 0;
     for (let i = datelessIdx; i < dateless.length; i++) {
-      const empty = (isEmptyDay.get({ id: dateless[i].id }) as { empty: number }).empty;
+      const empty = await this.daysRepo.isEmptyDay(dateless[i].id); // TP12
       if (empty) {
-        del.run(dateless[i].id);
+        await this.daysRepo.deleteById(dateless[i].id); // TP11
       } else {
-        setDayNumber.run(maxAssigned + keptDateless + 1, dateless[i].id);
+        await this.daysRepo.setDayNumber(dateless[i].id, maxAssigned + keptDateless + 1); // TP2
         keptDateless++;
       }
     }
 
     // Final renumber to compact and eliminate any gaps/negatives
-    const remaining = this.db.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(tripId) as { id: number }[];
-    renumber(remaining);
+    const remaining = await this.daysRepo.listOrderedForReorder(trip_id); // TP13
+    await renumber(remaining);
   }
 
   // ── Trip CRUD ─────────────────────────────────────────────────────────────
 
+  /** TP16/TP17 — `TripsRepository.listForUser` (`TRIP_SELECT` + the access join, ONE builder, inventory §11a/§11c). */
   async list(userId: number, archived: number | null) {
-    if (archived === null) {
-      return this.db.prepare(`
-        ${TRIP_SELECT}
-        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
-        WHERE (t.user_id = :userId OR m.user_id IS NOT NULL)
-        ORDER BY t.created_at DESC
-      `).all({ userId });
-    }
-    return this.db.prepare(`
-      ${TRIP_SELECT}
-      LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
-      WHERE (t.user_id = :userId OR m.user_id IS NOT NULL) AND t.is_archived = :archived
-      ORDER BY t.created_at DESC
-    `).all({ userId, archived });
+    return this.tripsRepo.listForUser(userId, archived);
   }
 
   async create(userId: number, data: CreateTripData) {
@@ -337,24 +337,25 @@ export class TripsService {
       ? (Number(data.reminder_days) >= 0 && Number(data.reminder_days) <= 30 ? Number(data.reminder_days) : 3)
       : 3;
 
-    const result = this.db.prepare(`
-      INSERT INTO trips (user_id, title, description, start_date, end_date, currency, reminder_days)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(userId, data.title, data.description || null, data.start_date || null, data.end_date || null, data.currency || 'EUR', rd);
+    const tripId = await this.tripsRepo.insertTrip({ // TP18
+      user_id: userId,
+      title: data.title,
+      description: data.description || null,
+      start_date: data.start_date || null,
+      end_date: data.end_date || null,
+      currency: data.currency || 'EUR',
+      reminder_days: rd,
+    });
 
-    const tripId = result.lastInsertRowid;
     await this.generateDays(tripId, data.start_date || null, data.end_date || null, data.day_count);
 
-    const trip = this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId });
-    return { trip, tripId: Number(tripId), reminderDays: rd };
+    const trip = await this.tripsRepo.findForViewer(tripId, userId); // TP19 — the creator always owns it, so the access predicate is trivially satisfied
+    return { trip, tripId, reminderDays: rd };
   }
 
+  /** TP20 — `TripsRepository.findForViewer`: `TRIP_SELECT` scoped to one trip AND the access predicate. */
   async get(tripId: string | number, userId: number) {
-    return this.db.prepare(`
-      ${TRIP_SELECT}
-      LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
-      WHERE t.id = :tripId AND (t.user_id = :userId OR m.user_id IS NOT NULL)
-    `).get({ userId, tripId }) as Trip | undefined;
+    return await this.tripsRepo.findForViewer(tripId, userId) as Trip | undefined;
   }
 
   /**
@@ -368,34 +369,25 @@ export class TripsService {
    * a startup redirect, so it reads four columns of one row instead of every
    * trip with its per-trip day/place counts.
    */
+  /** TP21 — `TripsRepository.activeTrip`: the triple `CASE WHEN … relevance` projection and the double-`CASE WHEN` `ORDER BY`. */
   async activeTrip(userId: number, today = new Date().toISOString().slice(0, 10)) {
-    return this.db.prepare(`
-      SELECT t.id, t.title, t.start_date, t.end_date,
-        CASE
-          WHEN t.start_date IS NOT NULL AND t.end_date IS NOT NULL AND t.start_date <= :today AND t.end_date >= :today THEN 0
-          WHEN t.start_date IS NOT NULL AND t.start_date >= :today THEN 1
-          ELSE 2
-        END AS relevance
-      FROM trips t
-      LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
-      WHERE (t.user_id = :userId OR m.user_id IS NOT NULL) AND t.is_archived = 0
-      ORDER BY relevance ASC,
-        CASE WHEN relevance < 2 THEN t.start_date END ASC,
-        CASE WHEN relevance = 2 THEN t.start_date END DESC
-      LIMIT 1
-    `).get({ userId, today }) as ActiveTrip & { relevance: number } | undefined;
+    return await this.tripsRepo.activeTrip(userId, today) as ActiveTrip & { relevance: number } | undefined;
   }
 
+  /** TP22 — `TripsRepository.findRaw` (shared with `TripReadModelService.getTripSummary`, TR-B, per the inventory's own note that they are the identical statement). */
   async getRaw(tripId: string | number): Promise<Trip | undefined> {
-    return this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Trip | undefined;
+    const row = await this.tripsRepo.findRaw(tripId);
+    return (row ?? undefined) as Trip | undefined;
   }
 
   async searchCoverImages(query: string, userId: number) {
     return this.unsplash.searchUnsplashPhotos(query, 9, await this.unsplash.getUnsplashKey(userId));
   }
 
+  /** TP23 — `TripsRepository.getOwnerId` (already existed, TB1), reshaped to the legacy `{user_id}` row shape (matches `TripReadModelService`'s own TR-A reshape). */
   async getOwner(tripId: string | number): Promise<{ user_id: number } | undefined> {
-    return this.db.prepare('SELECT user_id FROM trips WHERE id = ?').get(tripId) as { user_id: number } | undefined;
+    const ownerId = await this.tripsRepo.getOwnerId(tripId);
+    return ownerId === null ? undefined : { user_id: ownerId };
   }
 
   /**
@@ -403,8 +395,14 @@ export class TripsService {
    * through update() below; the plugin RPC host calls this directly (parity:
    * the legacy host path never rebased).
    */
+  /**
+   * TP24–TP29 (inventory §11c) — TP25's `UPDATE trips` write stays BEFORE
+   * the `:423` days-regeneration transaction (R5/§18.6, unchanged): if
+   * `generateDays` throws, the transaction rolls back the day rows but the
+   * trip keeps its new dates. Flagged, not fixed, per the ruling.
+   */
   async updateTrip(tripId: string | number, userId: number, data: UpdateTripData, userRole: string): Promise<UpdateTripResult> {
-    const trip = this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Trip & { reminder_days?: number } | undefined;
+    const trip = await this.tripsRepo.findRaw(tripId) as (Trip & { reminder_days?: number }) | null; // TP24
     if (!trip) throw new NotFoundError('Trip not found');
 
     const { title, description, currency, is_archived, cover_image, reminder_days } = data;
@@ -420,11 +418,17 @@ export class TripsService {
       ? (Number(reminder_days) >= 0 && Number(reminder_days) <= 30 ? Number(reminder_days) : oldReminder)
       : oldReminder;
 
-    this.db.prepare(`
-      UPDATE trips SET title=?, description=?, start_date=?, end_date=?,
-        currency=?, is_archived=?, cover_image=?, reminder_days=?, updated_at=CURRENT_TIMESTAMP
-      WHERE id=?
-    `).run(newTitle, newDesc, newStart || null, newEnd || null, newCurrency, newArchived, newCover, newReminder, tripId);
+    const tripIdNum = Number(tripId); // safe: `trip` above only resolved through the raw-bind seam on a real row (Task 6 review's own ruling on this exact conversion)
+    await this.tripsRepo.updateTripRow(tripIdNum, { // TP25
+      title: newTitle,
+      description: newDesc ?? null,
+      start_date: newStart || null,
+      end_date: newEnd || null,
+      currency: newCurrency,
+      is_archived: newArchived ?? 0,
+      cover_image: newCover ?? null,
+      reminder_days: newReminder,
+    });
 
     if (trip.start_date && trip.end_date && newStart && newStart !== trip.start_date)
       await this.vacay.shiftOwnerEntriesForTripWindow(trip.user_id, trip.start_date, trip.end_date, newStart);
@@ -433,18 +437,14 @@ export class TripsService {
       await this.uow.transactional(async () => {
         // Accommodations have no absolute date columns, so their pre-change dates must be
         // snapshotted before generateDays re-dates the day rows in place.
-        const prevDateByDayId = new Map(
-          (this.db.prepare('SELECT id, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; date: string | null }[])
-            .map(d => [d.id, d.date]),
-        );
+        const prevDays = await this.daysRepo.listOrderedForReorder(tripIdNum); // TP26
+        const prevDateByDayId = new Map(prevDays.map(d => [d.id, d.date]));
         await this.generateDays(tripId, newStart || null, newEnd || null, dayCount);
         if (data.date_shift_mode === 'shift_all') {
           // Explicit "shift everything": bookings stay glued to their (re-dated) day rows,
           // so re-stamp reservation_time to follow — same rules as reorderDays/insertDay.
-          const newDateByDayId = new Map(
-            (this.db.prepare('SELECT id, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; date: string | null }[])
-              .map(d => [d.id, d.date]),
-          );
+          const newDays = await this.daysRepo.listOrderedForReorder(tripIdNum); // TP27
+          const newDateByDayId = new Map(newDays.map(d => [d.id, d.date]));
           await this.days.restampReservationDates(tripId, prevDateByDayId, newDateByDayId);
         } else {
           // Default: generateDays re-dates day rows positionally; re-anchor dated bookings to
@@ -466,10 +466,14 @@ export class TripsService {
     const isAdminEdit = userRole === 'admin' && trip.user_id !== userId;
     let ownerEmail: string | undefined;
     if (Object.keys(changes).length > 0 && isAdminEdit) {
-      ownerEmail = (this.db.prepare('SELECT email FROM users WHERE id = ?').get(trip.user_id) as { email: string } | undefined)?.email;
+      ownerEmail = (await this.em.getRepository(Users).getEmail(trip.user_id)) ?? undefined; // TP28
     }
 
-    const updatedTrip = this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId });
+    // TP29 — every caller of updateTrip has already passed an access check for
+    // this exact trip (canAccessTrip / requireTripEdit), so the access
+    // predicate `findForViewer` applies is always trivially satisfied here —
+    // same reasoning as `create`'s TP19 re-select above.
+    const updatedTrip = await this.tripsRepo.findForViewer(tripId, userId);
 
     return { updatedTrip, changes, isAdminEdit, ownerEmail, newTitle, newReminder, oldReminder };
   }
@@ -508,14 +512,19 @@ export class TripsService {
 
   // ── Delete ─────────────────────────────────────────────────────────────────
 
+  /**
+   * TP30–TP34 (inventory §11c) — TP32/TP33 (`journey_entries`) stay raw
+   * inside the transaction (`// Plan 3g`, that table's owning plan); every
+   * other statement moved through `TripsRepository`.
+   */
   async remove(tripId: string | number, userId: number, userRole: string): Promise<DeleteTripInfo> {
-    const trip = this.db.prepare('SELECT title, user_id FROM trips WHERE id = ?').get(tripId) as { title: string; user_id: number } | undefined;
+    const trip = await this.tripsRepo.findIdTitleOwner(tripId); // TP30 (the `id` field this method also selects is unused here)
     if (!trip) throw new NotFoundError('Trip not found');
 
     const isAdminDelete = userRole === 'admin' && trip.user_id !== userId;
     let ownerEmail: string | undefined;
     if (isAdminDelete) {
-      ownerEmail = (this.db.prepare('SELECT email FROM users WHERE id = ?').get(trip.user_id) as { email: string } | undefined)?.email;
+      ownerEmail = (await this.em.getRepository(Users).getEmail(trip.user_id)) ?? undefined; // TP31
     }
 
     // Quirk fix on top of the 1:1 move: the three-statement delete runs in a
@@ -527,14 +536,14 @@ export class TripsService {
       this.db.prepare(`
         DELETE FROM journey_entries
         WHERE source_trip_id = ? AND type = 'skeleton'
-      `).run(tripId);
+      `).run(tripId); // TP32 — Plan 3g
       // Detach filled entries (keep user's written content, just remove trip link)
       this.db.prepare(`
         UPDATE journey_entries SET source_trip_id = NULL, source_place_id = NULL, source_assignment_id = NULL
         WHERE source_trip_id = ?
-      `).run(tripId);
+      `).run(tripId); // TP33 — Plan 3g
 
-      this.db.prepare('DELETE FROM trips WHERE id = ?').run(tripId);
+      await this.tripsRepo.deleteById(Number(tripId)); // TP34 — safe: `trip` above only resolved through the raw-bind seam on a real row
     });
 
     return { tripId: Number(tripId), title: trip.title, ownerId: trip.user_id, isAdminDelete, ownerEmail };
@@ -553,8 +562,9 @@ export class TripsService {
     });
   }
 
+  /** TP35 — `TripsRepository.setCoverImage`. */
   async updateCoverImage(tripId: string | number, coverUrl: string): Promise<void> {
-    this.db.prepare('UPDATE trips SET cover_image=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(coverUrl, tripId);
+    await this.tripsRepo.setCoverImage(Number(tripId), coverUrl); // safe: only called after `getRaw`/`getOwner` matched the same id through the raw-bind seam
   }
 
   // ── Copy / duplicate ─────────────────────────────────────────────────────

@@ -9,7 +9,6 @@ import { UnitOfWork } from '../database/unit-of-work';
 import { BudgetService } from '../budget/budget.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { RealtimeService } from '../realtime/realtime.service';
-import { TRIP_SELECT } from '../trips/trips.service';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { emitUserDeleted } from '../../plugin-user-lifecycle';
 import { NotFoundError, ValidationError } from '../common/domain-errors';
@@ -80,18 +79,6 @@ export class TripMembersService {
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
   ) {}
 
-  /**
-   * Task 7: `TripsService` still owns `TRIP_SELECT` and its own raw
-   * `this.dbs.connection` handle (`trips.service.ts:166-168`) — `getTripForViewer`
-   * below is this service's one documented raw-SQL survivor, importing the
-   * projection rather than copying it, unchanged until Task 7 converts
-   * `TripsService` itself and this call points at a repository method
-   * instead (`TripsRepository.findForViewer`, per the inventory's proposal).
-   */
-  private get db() {
-    return this.dbs.connection;
-  }
-
   async canAccessTrip(tripId: string | number, userId: number) {
     const access = await this.dbs.canAccessTrip(tripId, userId);
     return access as { user_id: number } | null | undefined;
@@ -107,9 +94,13 @@ export class TripMembersService {
 
   /** The trip in list shape, for the re-read a handover broadcasts. Same query the
    *  trip routes use, imported rather than copied so the two cannot drift.
-   *  // Task 7: converts once TripsService itself does — see the class docstring above. */
+   *  Plan 3c Task 7: repointed to `TripsRepository.findForViewer` — the
+   *  SQL-side `NULL AS feed_token` blanking survives the move (Task 6
+   *  review's "for Task 7" note): `findForViewer`'s row always carries
+   *  `feed_token: null`, which is load-bearing for the `trip:updated`
+   *  broadcast a transfer sends. */
   async getTripForViewer(tripId: string | number, userId: number) {
-    return this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId });
+    return this.tripsRepo.findForViewer(tripId, userId);
   }
 
   /** Fire-and-forget trip-invite notification (mirrors the route's dynamic import). */

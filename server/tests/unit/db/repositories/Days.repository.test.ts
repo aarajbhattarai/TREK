@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
-import { createDay, createTrip, createUser } from '../../../helpers/factories';
+import { createDay, createDayAccommodation, createDayAssignment, createDayNote, createPlace, createTrip, createUser } from '../../../helpers/factories';
 import { Days } from '../../../../src/db/entities/Days.entity';
 import type { DaysRepository } from '../../../../src/db/repositories/Days.repository';
 
@@ -224,6 +224,75 @@ describe('DaysRepository — Task 2 additions', () => {
       const day = createDay(testDb, trip.id);
       expect(await days.existsInTrip(String(day.id), String(trip.id))).toBe(true);
       expect(await days.existsInTrip('not-a-number', trip.id)).toBe(false);
+    });
+  });
+
+  // ── Plan 3c Task 7 (TripsService.generateDays: TP3, TP6, TP12) ─────────────
+
+  describe('clearDate (TP3)', () => {
+    it('DAYREPO-021: nullifies the date without deleting the row — assignments/notes/accommodations survive', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const day = createDay(testDb, trip.id, { date: '2026-01-01' });
+      const place = createPlace(testDb, trip.id);
+      createDayAssignment(testDb, day.id, place.id);
+      await days.clearDate(day.id);
+      const row = testDb.prepare('SELECT date FROM days WHERE id = ?').get(day.id) as { date: string | null };
+      expect(row.date).toBeNull();
+      expect(testDb.prepare('SELECT id FROM day_assignments WHERE day_id = ?').get(day.id)).toBeDefined();
+    });
+  });
+
+  describe('isEmptyDay (TP12) — three counts across day_assignments/day_notes/day_accommodations', () => {
+    it('DAYREPO-022: true for a day with nothing on it; false once it holds an assignment, a note, or an accommodation (start OR end)', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const empty = createDay(testDb, trip.id);
+      const withAssignment = createDay(testDb, trip.id);
+      const withNote = createDay(testDb, trip.id);
+      const withAccomStart = createDay(testDb, trip.id);
+      const withAccomEnd = createDay(testDb, trip.id);
+      const place = createPlace(testDb, trip.id);
+      createDayAssignment(testDb, withAssignment.id, place.id);
+      createDayNote(testDb, withNote.id, trip.id);
+      createDayAccommodation(testDb, trip.id, place.id, withAccomStart.id, withAccomStart.id);
+      createDayAccommodation(testDb, trip.id, place.id, withAccomEnd.id, withAccomEnd.id);
+
+      expect(await days.isEmptyDay(empty.id)).toBe(true);
+      expect(await days.isEmptyDay(withAssignment.id)).toBe(false);
+      expect(await days.isEmptyDay(withNote.id)).toBe(false);
+      expect(await days.isEmptyDay(withAccomStart.id)).toBe(false);
+      expect(await days.isEmptyDay(withAccomEnd.id)).toBe(false);
+    });
+  });
+
+  describe('listTrailingEmptyIds (TP6) — ORDER BY day_number DESC, first `limit` empty days', () => {
+    it('DAYREPO-023: a non-empty day in the middle is skipped, not a stopping point — matches the legacy WHERE-filter-then-LIMIT semantics', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const d1 = createDay(testDb, trip.id, { day_number: 1 }); // empty
+      const d2 = createDay(testDb, trip.id, { day_number: 2 }); // holds a note — excluded, not a stop
+      const d3 = createDay(testDb, trip.id, { day_number: 3 }); // empty
+      const d4 = createDay(testDb, trip.id, { day_number: 4 }); // empty
+      createDayNote(testDb, d2.id, trip.id);
+
+      // limit=2: stops as soon as 2 empty days are collected, in day_number
+      // DESC order — d2 is never even reached.
+      expect(await days.listTrailingEmptyIds(trip.id, 2)).toEqual([d4.id, d3.id]);
+
+      // limit=3: d4, d3 collected; d2 examined and SKIPPED (not empty, and
+      // not a stopping point either); d1 examined and collected — matching
+      // the legacy `WHERE NOT EXISTS(...) ×3 ORDER BY day_number DESC LIMIT
+      // 3` exactly (it filters every day up front, then takes the top 3 of
+      // what's left — d2 was never a candidate to begin with).
+      expect(await days.listTrailingEmptyIds(trip.id, 3)).toEqual([d4.id, d3.id, d1.id]);
+    });
+
+    it('DAYREPO-024: a limit of 0 returns nothing without querying', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      createDay(testDb, trip.id);
+      expect(await days.listTrailingEmptyIds(trip.id, 0)).toEqual([]);
     });
   });
 });

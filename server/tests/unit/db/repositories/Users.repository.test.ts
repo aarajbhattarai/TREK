@@ -836,6 +836,17 @@ describe('UsersRepository — TripMembersService (Plan 3c Task 6)', () => {
     it('USERSREPO-065: no match returns null, not a throw', async () => {
       expect(await users.findInvitableByEmailOrUsername('nobody@example.test')).toBeNull();
     });
+
+    // Task 6 review, L3: `findInvitableByEmailOrUsername` is `findOne`-based
+    // (unlike the qb-based projections above), so rule 21's D-shape test
+    // applies for real — this is the guest-exclusion guard (#1362), so
+    // staleness here would re-open the bug the guard exists to close.
+    it('USERSREPO-072 (D-shape): an is_guest flip written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+      const { user } = createUser(testDb, { email: 'flip@example.test', username: 'flip-handle' });
+      await t.repo(Users).find({}, { disableIdentityMap: false }); // populate the identity map with an unrelated read
+      testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
+      expect(await users.findInvitableByEmailOrUsername('flip@example.test')).toBeNull();
+    });
   });
 
   describe('findIdEmailGuest (TM10)', () => {

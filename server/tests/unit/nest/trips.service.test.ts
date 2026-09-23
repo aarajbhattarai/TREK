@@ -1224,41 +1224,18 @@ describe('folded quirk branches', () => {
 // ── Post-fold quirk fixes (transactions, owner display name) ─────────────────
 
 describe('quirk fixes', () => {
-  /** A TripsService whose connection throws when preparing SQL matching `match`. */
-  function failingConnection(match: string) {
-    const conn = new Proxy(testDb, {
-      get(target, prop) {
-        if (prop === 'prepare') {
-          return (sql: string) => {
-            if (sql.includes(match)) throw new Error('boom');
-            return target.prepare(sql);
-          };
-        }
-        const v = (target as any)[prop];
-        return typeof v === 'function' ? v.bind(target) : v;
-      },
-    });
-    return { connection: conn, canAccessTrip: dbMock.canAccessTrip, isOwner: dbMock.isOwner } as unknown as import('../../../src/nest/database/database.service').DatabaseService;
-  }
+  // Plan 3c Task 7 (R8): the SQL-text-keyed `failingConnection`/`failingTrips`
+  // Proxy this test used to build a one-off TripsService around is rewritten
+  // as a repository-level fault, the same shape TRIP-SVC-052 below already
+  // uses for `deleteGuest` — `remove`'s TP32-TP34 (journey_entries stay raw;
+  // `deleteById` is TP34, `TripsRepository`'s) are the statements this test
+  // pins, and TP34 is now a repository method to `vi.spyOn`, not SQL text to
+  // pattern-match. The Proxy could never trigger any more: no statement text
+  // matching `'DELETE FROM trips WHERE id = ?'` runs through `this.db`
+  // inside `remove`'s transaction any more (TP32/TP33 are the only survivors
+  // there, and their own text is untouched).
 
-  async function failingTrips(match: string) {
-    const fdbs = failingConnection(match);
-    return new TripsService(
-      fdbs,
-      new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
-      daysSvc,
-      new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
-      budgetSvc,
-      new VacayService(dbs(), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
-      new RealtimeService(),
-      undefined as never,
-      coversFx.storage,
-      await createTestUnitOfWork(dbs().connection),
-      (await sharedTestOrm(testDb)).em,
-    );
-  }
-
-  it('TRIP-SVC-051: remove is atomic — a failed trip DELETE keeps the journey entries intact', async () => {
+  it('TRIP-SVC-051 (mutation-proved): remove is atomic — a failed trip DELETE keeps the journey entries intact', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const journeyId = Number(testDb.prepare(
@@ -1268,8 +1245,13 @@ describe('quirk fixes', () => {
       "INSERT INTO journey_entries (journey_id, source_trip_id, author_id, type, title, entry_date, created_at, updated_at) VALUES (?, ?, ?, 'skeleton', 'S', '2025-06-01', 0, 0)",
     ).run(journeyId, trip.id, user.id);
 
-    const broken = await failingTrips('DELETE FROM trips WHERE id = ?');
-    await expect(broken.remove(trip.id, user.id, 'user')).rejects.toThrow('boom');
+    const tripsRepo = await createTestTripsRepo(dbs().connection);
+    const spy = vi.spyOn(tripsRepo, 'deleteById').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(svc.remove(trip.id, user.id, 'user')).rejects.toThrow('boom');
+    } finally {
+      spy.mockRestore();
+    }
 
     // The skeleton cleanup rolled back with the failed delete.
     expect(testDb.prepare("SELECT id FROM journey_entries WHERE type = 'skeleton'").get()).toBeDefined();

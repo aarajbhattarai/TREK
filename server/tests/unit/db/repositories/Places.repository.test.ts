@@ -466,12 +466,25 @@ describe('PlacesRepository.listForTrip (PL3) — filter fragments', () => {
     expect(rows.map((r) => r.id)).toEqual([newer.id, older.id]);
   });
 
-  it('PLACEREPO-028: searchPattern matches name/address/description (already-escaped, wrapped by the caller)', async () => {
+  it('PLACEREPO-028: searchPattern matches name/address/description (already-escaped, wrapped by the caller — NOT a test of the ESCAPE clause itself: `%Eiffel%` has no literal `%`/`_` to escape. `ESCAPE \'\\\'` is proven by `PLACE-SVC-068`/PLACEREPO-028b below, which do carry a literal wildcard character)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const hit = createPlace(testDb, trip.id, { name: 'Eiffel Tower' });
     const miss = createPlace(testDb, trip.id, { name: 'Louvre' });
     const rows = await places.listForTrip(String(trip.id), { searchPattern: '%Eiffel%' });
+    expect(rows.map((r) => r.id)).toEqual([hit.id]);
+    void miss;
+  });
+
+  it('PLACEREPO-028b (M2 — the ESCAPE clause this repository method actually relies on): a literal `%` in the already-escaped pattern matches literally, not as a wildcard', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    // escapeLikePattern (the service) would have produced this pattern for a
+    // literal search term "50%": the `%` the user typed is backslash-escaped,
+    // and the wrapping `%…%` are the real wildcards this method adds.
+    const hit = createPlace(testDb, trip.id, { name: '50% off tour' });
+    const miss = createPlace(testDb, trip.id, { name: '50X off tour' });
+    const rows = await places.listForTrip(String(trip.id), { searchPattern: '%50\\%%' });
     expect(rows.map((r) => r.id)).toEqual([hit.id]);
     void miss;
   });
@@ -530,6 +543,99 @@ describe('PlacesRepository.listForTrip (PL3) — filter fragments', () => {
       searchPattern: '%Central Park%', category: String(cat.id), tag: String(tag.id), assignment: 'assigned',
     });
     expect(rows.map((r) => r.id)).toEqual([winner.id]);
+  });
+});
+
+/**
+ * PL3 parity (Task 4 review M2/rule 19): the base `94c6efbbc` raw statement
+ * (`places.service.ts:180-217` at that commit — reproduced verbatim below,
+ * the same `let query += …` composition, the same param order), run over
+ * every `search × category × tag × assignment` combination
+ * (2 × 2 × 2 × 4 = 32, undefined/present for the first three, {undefined,
+ * 'all', 'assigned', 'unassigned'} for the fourth). Each cell asserts
+ * `toEqual` on the FULL row set from both statements, not just the id list —
+ * a dropped/renamed column would pass an id-only comparison silently.
+ */
+describe('PlacesRepository.listForTrip (PL3) — toEqual(legacy) over all 32 filter combinations', () => {
+  function legacyListForTrip(
+    tripId: string,
+    filters: { searchPattern?: string; category?: string; tag?: string; assignment?: 'all' | 'unassigned' | 'assigned' },
+  ): unknown[] {
+    let query = `
+      SELECT DISTINCT p.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+      FROM places p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.trip_id = ?
+    `;
+    const params: (string | number)[] = [tripId];
+
+    if (filters.searchPattern) {
+      query += " AND (p.name LIKE ? ESCAPE '\\' OR p.address LIKE ? ESCAPE '\\' OR p.description LIKE ? ESCAPE '\\')";
+      params.push(filters.searchPattern, filters.searchPattern, filters.searchPattern);
+    }
+    if (filters.category) {
+      query += ' AND p.category_id = ?';
+      params.push(filters.category);
+    }
+    if (filters.tag) {
+      query += ' AND p.id IN (SELECT place_id FROM place_tags WHERE tag_id = ?)';
+      params.push(filters.tag);
+    }
+    if (filters.assignment === 'unassigned') {
+      query += ' AND p.id NOT IN (SELECT da.place_id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE d.trip_id = ?)';
+      params.push(tripId);
+    } else if (filters.assignment === 'assigned') {
+      query += ' AND p.id IN (SELECT da.place_id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE d.trip_id = ?)';
+      params.push(tripId);
+    }
+    query += ' ORDER BY p.created_at DESC';
+    return testDb.prepare(query).all(...params);
+  }
+
+  it('PLACEREPO-032b (PL3, M2): every row, every column, on all 32 combinations, byte-identical to the legacy raw statement', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const otherTrip = createTrip(testDb, user.id);
+    const cat = createCategory(testDb, { name: 'Museums' });
+    const tag = createTag(testDb, user.id, { name: 'Must see' });
+    const day = createDay(testDb, trip.id);
+
+    // p1: category + tag + assigned + matches the search term.
+    const p1 = createPlace(testDb, trip.id, { name: 'Central Park', category_id: cat.id });
+    testDb.prepare('INSERT INTO place_tags (place_id, tag_id) VALUES (?, ?)').run(p1.id, tag.id);
+    createDayAssignment(testDb, day.id, p1.id);
+    // p2: category, no tag, unassigned, matches the search term (a near-miss on 3 of 4 axes).
+    createPlace(testDb, trip.id, { name: 'Central Station', category_id: cat.id });
+    // p3: no category, tag + assigned, does NOT match the search term.
+    const p3 = createPlace(testDb, trip.id, { name: 'Louvre' });
+    testDb.prepare('INSERT INTO place_tags (place_id, tag_id) VALUES (?, ?)').run(p3.id, tag.id);
+    createDayAssignment(testDb, day.id, p3.id);
+    // p4: no category, no tag, unassigned, does NOT match the search term.
+    createPlace(testDb, trip.id, { name: 'Eiffel Tower' });
+    // Another trip's place, named to collide with the search term — must
+    // never appear in either statement's output (both scope by trip_id).
+    createPlace(testDb, otherTrip.id, { name: 'Central Perk' });
+
+    const searchOptions: (string | undefined)[] = [undefined, '%Central%'];
+    const categoryOptions: (string | undefined)[] = [undefined, String(cat.id)];
+    const tagOptions: (string | undefined)[] = [undefined, String(tag.id)];
+    const assignmentOptions: (('all' | 'unassigned' | 'assigned') | undefined)[] = [undefined, 'all', 'assigned', 'unassigned'];
+
+    let combinations = 0;
+    for (const searchPattern of searchOptions) {
+      for (const category of categoryOptions) {
+        for (const tag_ of tagOptions) {
+          for (const assignment of assignmentOptions) {
+            combinations++;
+            const filters = { searchPattern, category, tag: tag_, assignment };
+            const actual = await places.listForTrip(String(trip.id), filters);
+            const legacy = legacyListForTrip(String(trip.id), filters);
+            expect(actual).toEqual(legacy);
+          }
+        }
+      }
+    }
+    expect(combinations).toBe(32);
   });
 });
 
@@ -791,5 +897,31 @@ describe('PlacesRepository.fillIfEmpty (PL43/PL44/PL46) — three call shapes ov
     await places.fillIfEmpty(place.id, otherTrip.id, { address: 'Should not land' });
 
     expect((testDb.prepare('SELECT address FROM places WHERE id = ?').get(place.id) as { address: string | null }).address).toBeNull();
+  });
+});
+
+// ── Plan 3c Task 7 (trips.rpc.ts::getPlaces, RP2) — additive ────────────────
+
+describe('PlacesRepository.listForTripOrdered (RP2)', () => {
+  it('PLACEREPO-046: every place of the trip, ORDER BY created_at DESC, scoped to the trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const otherTrip = createTrip(testDb, user.id);
+    const p1 = createPlace(testDb, trip.id, { name: 'First' });
+    testDb.prepare('UPDATE places SET created_at = ? WHERE id = ?').run('2026-01-01 00:00:00', p1.id);
+    const p2 = createPlace(testDb, trip.id, { name: 'Second' });
+    testDb.prepare('UPDATE places SET created_at = ? WHERE id = ?').run('2026-02-01 00:00:00', p2.id);
+    createPlace(testDb, otherTrip.id, { name: 'Elsewhere' });
+
+    const legacy = testDb.prepare('SELECT * FROM places WHERE trip_id = ? ORDER BY created_at DESC').all(trip.id);
+    const rows = await places.listForTripOrdered(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([p2.id, p1.id]);
+  });
+
+  it('PLACEREPO-047: an empty trip returns an empty array, not a throw', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await places.listForTripOrdered(trip.id)).toEqual([]);
   });
 });

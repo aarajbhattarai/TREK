@@ -23,6 +23,7 @@ import { ReservationsRpc } from '../../../src/nest/reservations/reservations.rpc
 import { DaysRpc } from '../../../src/nest/days/days.rpc';
 import { VacayRpc } from '../../../src/nest/vacay/vacay.rpc';
 import { NotFoundError, ValidationError } from '../../../src/nest/trips/trips.service';
+import type { EntityManager } from '@mikro-orm/core';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
@@ -43,8 +44,23 @@ function guardsFor() {
     canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
     prepare: vi.fn(() => ({ get: () => ({ role: 'user' }), all: () => [] })),
   } as unknown as DatabaseService;
+  // Plan 3c Task 7: TripsRpc's RP1-RP6 resolve `EntityManager.getRepository(...)`
+  // now, not `db.prepare(...)` — a generic fake repository (same shape regardless
+  // of which entity class was requested) covers every RP method these fallback
+  // cases exercise, none of which assert on the repository's specific return value.
+  const em = {
+    getRepository: () => ({
+      getRole: vi.fn(async () => 'user'),
+      findIdAndEmail: vi.fn(async () => ({ id: 2, email: 'x@example.test' })),
+      getOwnerId: vi.fn(async () => 1),
+      findRaw: vi.fn(async () => ({ id: 1, title: 'Japan', feed_token: null })),
+      listForTripOrdered: vi.fn(async () => []),
+      listRawUsernameAndDisplayName: vi.fn(async () => []),
+    }),
+  } as unknown as EntityManager;
   return {
     db,
+    em,
     guards: new PluginGuards(
       db,
       { checkPermission: vi.fn(() => true) } as unknown as PermissionsService,
@@ -141,14 +157,14 @@ describe('a service that says no becomes a refusal, not a crash', () => {
 
 describe('service errors are translated into the RPC taxonomy', () => {
   function tripsHost(updateThrows?: Error, createThrows?: Error) {
-    const { guards, db } = guardsFor();
+    const { guards, em } = guardsFor();
     const trips = {
       list: vi.fn(() => []),
       updateTrip: vi.fn(() => { if (updateThrows) throw updateThrows; return { updatedTrip: { id: 1 } }; }),
       create: vi.fn(() => { if (createThrows) throw createThrows; return { trip: { id: 99 } }; }),
       removeMember: vi.fn(),
     } as never;
-    const rpc = new TripsRpc(trips, {} as never, {} as never, {} as never, db, realtime(), guards, {} as never, {} as never);
+    const rpc = new TripsRpc(trips, {} as never, {} as never, {} as never, realtime(), guards, {} as never, {} as never, em);
     return new PluginRpcHost('p', ALL, makeDeps(), createTestPluginRegistry([rpc]));
   }
 
@@ -245,13 +261,13 @@ const SCHEMA_REJECTS: Array<[string, Record<string, unknown>]> = [
 
 describe('every schema-validated method rejects a payload its schema refuses', () => {
   function everything() {
-    const { guards, db } = guardsFor();
+    const { guards, em } = guardsFor();
     const anything = new Proxy({}, { get: () => vi.fn(() => ({ id: 1, trip: { id: 1 }, updatedTrip: { id: 1 }, reservation: { id: 1 } })) }) as never;
     const registry = createTestPluginRegistry([
       new PlacesRpc(anything, anything, realtime(), guards),
       new DaysRpc(anything, realtime(), guards),
       new PackingRpc(anything, realtime(), guards),
-      new TripsRpc(anything, anything, anything, anything, db, realtime(), guards, anything, anything),
+      new TripsRpc(anything, anything, anything, anything, realtime(), guards, anything, anything, em),
       new AccommodationsRpc(anything, realtime(), guards),
       new ReservationsRpc(anything, realtime(), guards),
     ]);
