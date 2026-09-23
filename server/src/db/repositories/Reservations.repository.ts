@@ -1439,6 +1439,30 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
       .execute();
     return rows as PublicApiUnplannedPlaceRow[];
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3e Task 1 (`FilesService.findForeignLinkTarget`, R12) — additive,
+  // append-only per that task's own file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * FL1 (`FilesService.findForeignLinkTarget`'s reservation branch) —
+   * `SELECT 1 FROM reservations WHERE id = ? AND trip_id = ?`, re-expressed
+   * as "what trip does this row belong to" (R12: one method per target
+   * table, no dynamic identifier dispatch — the RS21/RS23/RS25 D4 precedent)
+   * so the caller compares the returned `trip_id` against its own, already
+   * `toRowId`-parsed value instead of binding two ids into the query itself.
+   * `trip_id` is a `persist(false)` mirror of the `trip` relation —
+   * `columnRef`, not a bare select (the program-wide trap).
+   */
+  async findTripId(id: number): Promise<number | undefined> {
+    const platform = this.getEntityManager().getPlatform();
+    const row = await this.qb('r')
+      .select([columnRef(platform, 'r.trip_id').as('trip_id')])
+      .where({ id })
+      .execute<{ trip_id: number } | undefined>('get', false);
+    return row?.trip_id;
+  }
 }
 
 /** `SELECT *` — every scalar column of `Reservations`, RS35's shape. */

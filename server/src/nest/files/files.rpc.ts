@@ -1,13 +1,15 @@
 import pathMod from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { PluginController, PluginMethod } from '../plugins/host/rpc-kit/decorators';
 import { PluginGuards } from '../plugins/host/plugin-guards.service';
 import { BadParams, ForbiddenResource } from '../plugins/host/rpc-errors';
 import { asPayload, num } from '../plugins/host/rpc-params';
 import type { PluginRpcContext } from '../plugins/host/rpc-kit/types';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService } from '../database/database.service';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { readEnv } from '../../app-config';
 import { isDemoEmail } from '../common/demo';
 import { BLOCKED_EXTENSIONS } from './files.constants';
@@ -48,7 +50,7 @@ export class FilesRpc {
   constructor(
     private readonly files: FilesService,
     private readonly realtime: RealtimeService,
-    private readonly db: DatabaseService,
+    @InjectRepository(Users) private readonly users: UsersRepository,
     private readonly guards: PluginGuards,
     private readonly storage: StorageService,
   ) {}
@@ -110,8 +112,9 @@ export class FilesRpc {
     // demo instance, not even through a plugin's db:write:files. The email is only
     // resolved when demo mode is actually on, so self-hosted installs pay nothing.
     if (readEnv().demo.enabled) {
-      const uploader = this.db.prepare('SELECT email FROM users WHERE id = ?').get(actingUserId) as { email?: string } | undefined;
-      if (isDemoEmail(uploader?.email)) throw new ForbiddenResource('Uploads are disabled in demo mode.');
+      // FL28 — `SELECT email FROM users WHERE id = ?`, now `UsersRepository.getEmail`.
+      const email = await this.users.getEmail(actingUserId);
+      if (isDemoEmail(email)) throw new ForbiddenResource('Uploads are disabled in demo mode.');
     }
     const original = pathMod.basename(input.name);
     const ext = pathMod.extname(original).toLowerCase();

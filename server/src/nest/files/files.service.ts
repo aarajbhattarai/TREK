@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import path from 'path';
 import type { Readable } from 'node:stream';
 import type { Request } from 'express';
@@ -10,23 +11,29 @@ import { EphemeralTokenService } from '../auth/ephemeral-token.service';
 import { verifyJwtAndLoadUser } from '../auth/jwt-verify';
 import { EntityManager } from '@mikro-orm/core';
 import { Users } from '../../db/entities/Users.entity';
-import type { User, TripFile } from '../../types';
+import type { User } from '../../types';
 import { DatabaseService, type TripAccess } from '../database/database.service';
-import { DEFAULT_ALLOWED_EXTENSIONS } from './files.constants';
+import { UnitOfWork } from '../database/unit-of-work';
+import { toRowId } from '../common/row-id';
 import { StorageService } from '../storage/storage.service';
 import { StorageNotFoundError, StorageInvalidKeyError, type ObjectStat } from '../storage/storage.types';
+import { TripFiles } from '../../db/entities/TripFiles.entity';
+import type { TripFilesRepository, TripFileRow, TripFileJoinRow } from '../../db/repositories/TripFiles.repository';
+import { FileLinks } from '../../db/entities/FileLinks.entity';
+import type { FileLinksRepository, FileLinkTargetRow } from '../../db/repositories/FileLinks.repository';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
 
 type Trip = TripAccess;
 type FilePermission = 'file_upload' | 'file_edit' | 'file_delete';
 
-const FILE_SELECT = `
-  SELECT f.*, r.title as reservation_title, u.username as uploaded_by_name, u.avatar as uploaded_by_avatar
-  FROM trip_files f
-  LEFT JOIN reservations r ON f.reservation_id = r.id
-  LEFT JOIN users u ON f.uploaded_by = u.id
-`;
-
-function formatFile(file: TripFile & { uploaded_by_avatar?: string | null }) {
+function formatFile(file: TripFileJoinRow) {
   const tripId = file.trip_id;
   return {
     ...file,
@@ -58,20 +65,51 @@ export class FileContentError extends Error {
 }
 
 /**
+ * A truthy, non-canonical link-target id is narrowed to `null` (rule 15's
+ * accepted deviation, applied everywhere a foreign-key id from the wire
+ * reaches a typed repository write): the legacy statements bound the raw
+ * value straight into `WHERE id = ? AND trip_id = ?`/an INSERT column and
+ * let SQLite's loose affinity or a constraint failure decide, matching
+ * `|| null` on falsy. A falsy value (`0`/`''`/`null`/`undefined`) always
+ * meant "no link" and still does; a truthy value that isn't a canonical
+ * decimal id now also resolves to "no link" instead of whatever SQLite's
+ * affinity would have matched or thrown on.
+ */
+function coerceLinkId(value: string | number | null | undefined): number | null {
+  if (!value) return null;
+  return toRowId(value);
+}
+
+/**
  * File domain service — owns the file SQL (moved 1:1 from the legacy
  * services/fileService.ts: identical statements, the `||` falsy-coercion
  * defaults, the post-write FILE_SELECT re-selects, the dynamic IN batches and
- * the unlink-first delete semantics). Trip access goes through the injected
- * DatabaseService's canAccessTrip (the legacy verifyTripAccess re-export was a
- * plain wrapper over the same helper); the file_* permissions, path-resolution
- * guard, download-token auth and WebSocket broadcasts are unchanged. The
- * load-time constants live in files.constants.ts; the admin allowed-types
- * live-read is AllowedFileTypesService (the single query owner since the
- * storage slice-2 consolidation).
+ * the unlink-first delete semantics; Plan 3e Task 1 moved the SQL itself onto
+ * `TripFilesRepository`/`FileLinksRepository`). Trip access goes through the
+ * injected DatabaseService's canAccessTrip (the legacy verifyTripAccess
+ * re-export was a plain wrapper over the same helper); the file_*
+ * permissions, path-resolution guard, download-token auth and WebSocket
+ * broadcasts are unchanged. The load-time constants live in files.constants.ts;
+ * the admin allowed-types live-read is AllowedFileTypesService (the single
+ * query owner since the storage slice-2 consolidation).
  *
- * Two deliberate post-migration fixes over the legacy behavior: createFileLink
- * no longer swallows insert errors, and updateFile coerces an empty-string
- * description to NULL exactly like createFile does.
+ * Two deliberate post-migration fixes over the legacy behavior, carried
+ * unchanged from the pre-repository version: createFileLink no longer
+ * swallows insert errors, and updateFile coerces an empty-string description
+ * to NULL exactly like createFile does.
+ *
+ * **R2 (Plan 3e, flagged behaviour change — failure atomicity):** `files`
+ * was the one domain in this cluster with ZERO `uow.transactional` calls
+ * despite three genuinely multi-statement writes (`createFile`+its
+ * conditional `file_links` insert, `updateFile`+its conditional
+ * `file_links` insert/delete, `emptyTrash`'s DB-only bulk delete). Every
+ * sibling domain already carries this fix from its own 2026-08 fold; files
+ * never got it. `createFile`, `updateFile` and `emptyTrash`'s bulk delete
+ * now run inside `uow.transactional` — a failed second statement no longer
+ * leaves an orphaned `trip_files` row with no matching `file_links` row (or
+ * vice versa). The storage I/O in `permanentDeleteFile`/`emptyTrash` stays
+ * OUTSIDE every transactional body (program rule 24); `emptyTrash`'s read
+ * (the trashed-file list) also stays outside, matching the DB-only-body rule.
  */
 @Injectable()
 export class FilesService {
@@ -86,6 +124,13 @@ export class FilesService {
     // kept uniform with the guards rather than adding a one-off
     // MikroOrmModule.forFeature([Users]) to FilesModule for this single call.
     private readonly em: EntityManager,
+    private readonly uow: UnitOfWork,
+    @InjectRepository(TripFiles) private readonly tripFilesRepo: TripFilesRepository,
+    @InjectRepository(FileLinks) private readonly fileLinksRepo: FileLinksRepository,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
+    @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -142,22 +187,39 @@ export class FilesService {
    * (or a file_link) at trip B's reservation id and read the title back. Returns
    * the first field that escapes `tripId`, or null when every supplied id belongs
    * to the trip. Absent / null / zero ids are ignored (they clear the link).
+   *
+   * FL1-4 (`findForeignLinkTarget`'s four-table dispatch) are each now one
+   * `findTripId(id)` method on the target's OWN repository (R12 — no
+   * interpolated/dynamic table-name dispatch): the id is parsed once via
+   * `toRowId` here and compared against the row's own `trip_id` — a
+   * non-canonical id or a row in a different trip both read as "foreign"
+   * (rule 15's accepted narrowing: a non-canonical id can never have been
+   * produced by our own client).
    */
   async findForeignLinkTarget(
     tripId: string | number,
     opts: { reservation_id?: string | number | null; assignment_id?: string | number | null; place_id?: string | number | null; budget_item_id?: string | number | null }
   ): Promise<'reservation_id' | 'assignment_id' | 'place_id' | 'budget_item_id' | null> {
-    if (opts.reservation_id && !this.db.get('SELECT 1 FROM reservations WHERE id = ? AND trip_id = ?', opts.reservation_id, tripId)) {
-      return 'reservation_id';
+    const tripIdNum = toRowId(tripId);
+    if (opts.reservation_id) {
+      const idNum = toRowId(opts.reservation_id);
+      const rowTripId = idNum === null ? undefined : await this.reservationsRepo.findTripId(idNum);
+      if (rowTripId === undefined || rowTripId !== tripIdNum) return 'reservation_id';
     }
-    if (opts.place_id && !this.db.get('SELECT 1 FROM places WHERE id = ? AND trip_id = ?', opts.place_id, tripId)) {
-      return 'place_id';
+    if (opts.place_id) {
+      const idNum = toRowId(opts.place_id);
+      const rowTripId = idNum === null ? undefined : await this.placesRepo.findTripId(idNum);
+      if (rowTripId === undefined || rowTripId !== tripIdNum) return 'place_id';
     }
-    if (opts.assignment_id && !this.db.get('SELECT 1 FROM day_assignments a JOIN days d ON a.day_id = d.id WHERE a.id = ? AND d.trip_id = ?', opts.assignment_id, tripId)) {
-      return 'assignment_id';
+    if (opts.assignment_id) {
+      const idNum = toRowId(opts.assignment_id);
+      const rowTripId = idNum === null ? undefined : await this.dayAssignmentsRepo.findTripId(idNum);
+      if (rowTripId === undefined || rowTripId !== tripIdNum) return 'assignment_id';
     }
-    if (opts.budget_item_id && !this.db.get('SELECT 1 FROM budget_items WHERE id = ? AND trip_id = ?', opts.budget_item_id, tripId)) {
-      return 'budget_item_id';
+    if (opts.budget_item_id) {
+      const idNum = toRowId(opts.budget_item_id);
+      const rowTripId = idNum === null ? undefined : await this.budgetItemsRepo.findTripId(idNum);
+      if (rowTripId === undefined || rowTripId !== tripIdNum) return 'budget_item_id';
     }
     return null;
   }
@@ -166,12 +228,18 @@ export class FilesService {
   // CRUD
   // ---------------------------------------------------------------------------
 
-  async getFileById(id: string | number, tripId: string | number): Promise<TripFile | undefined> {
-    return this.db.get<TripFile>('SELECT * FROM trip_files WHERE id = ? AND trip_id = ?', id, tripId);
+  async getFileById(id: string | number, tripId: string | number): Promise<TripFileRow | undefined> {
+    const idNum = toRowId(id);
+    const tripIdNum = toRowId(tripId);
+    if (idNum === null || tripIdNum === null) return undefined;
+    return await this.tripFilesRepo.findInTrip(idNum, tripIdNum);
   }
 
-  async getDeletedFile(id: string | number, tripId: string | number): Promise<TripFile | undefined> {
-    return this.db.get<TripFile>('SELECT * FROM trip_files WHERE id = ? AND trip_id = ? AND deleted_at IS NOT NULL', id, tripId);
+  async getDeletedFile(id: string | number, tripId: string | number): Promise<TripFileRow | undefined> {
+    const idNum = toRowId(id);
+    const tripIdNum = toRowId(tripId);
+    if (idNum === null || tripIdNum === null) return undefined;
+    return await this.tripFilesRepo.findDeletedInTrip(idNum, tripIdNum);
   }
 
   /**
@@ -233,20 +301,15 @@ export class FilesService {
   }
 
   async listFiles(tripId: string | number, showTrash: boolean) {
-    const where = showTrash
-      ? 'f.trip_id = ? AND f.deleted_at IS NOT NULL AND f.message_id IS NULL'
-      : 'f.trip_id = ? AND f.deleted_at IS NULL AND f.message_id IS NULL';
-    const files = this.db.all<TripFile>(`${FILE_SELECT} WHERE ${where} ORDER BY f.starred DESC, f.created_at DESC`, tripId);
+    const tripIdNum = toRowId(tripId) ?? -1;
+    const files = await this.tripFilesRepo.listForTrip(tripIdNum, showTrash);
 
     const fileIds = files.map(f => f.id);
-    const linksMap: Record<number, FileLink[]> = {};
-    if (fileIds.length > 0) {
-      const placeholders = fileIds.map(() => '?').join(',');
-      const links = this.db.all<FileLink>(`SELECT file_id, reservation_id, place_id, budget_item_id FROM file_links WHERE file_id IN (${placeholders})`, ...fileIds);
-      for (const link of links) {
-        if (!linksMap[link.file_id]) linksMap[link.file_id] = [];
-        linksMap[link.file_id].push(link);
-      }
+    const links = await this.fileLinksRepo.listForFiles(fileIds);
+    const linksMap: Record<number, FileLinkTargetRow[]> = {};
+    for (const link of links) {
+      if (!linksMap[link.file_id]) linksMap[link.file_id] = [];
+      linksMap[link.file_id].push(link);
     }
 
     return files.map(f => {
@@ -260,84 +323,87 @@ export class FilesService {
     });
   }
 
+  /** R2: `createFile`'s `trip_files` insert and its conditional `file_links` insert (FL9+FL10) run inside one transaction. */
   async createFile(
     tripId: string | number,
     file: { filename: string; originalname: string; size: number; mimetype: string },
     uploadedBy: number,
     opts: { place_id?: string | number | null; reservation_id?: string | number | null; budget_item_id?: string | number | null; description?: string | null }
   ) {
-    const result = this.db.run(`
-      INSERT INTO trip_files (trip_id, place_id, reservation_id, filename, original_name, file_size, mime_type, description, uploaded_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-      tripId,
-      opts.place_id || null,
-      opts.reservation_id || null,
-      file.filename,
-      file.originalname,
-      file.size,
-      file.mimetype,
-      opts.description || null,
-      uploadedBy
-    );
+    const newId = await this.uow.transactional(async () => {
+      const id = await this.tripFilesRepo.insertFile({
+        trip_id: tripId,
+        place_id: coerceLinkId(opts.place_id),
+        reservation_id: coerceLinkId(opts.reservation_id),
+        filename: file.filename,
+        original_name: file.originalname,
+        file_size: file.size,
+        mime_type: file.mimetype,
+        description: opts.description || null,
+        uploaded_by: uploadedBy,
+      });
 
-    if (opts.budget_item_id) {
-      this.db.run('INSERT OR IGNORE INTO file_links (file_id, budget_item_id) VALUES (?, ?)', result.lastInsertRowid, opts.budget_item_id);
-    }
+      const budgetItemId = coerceLinkId(opts.budget_item_id);
+      if (budgetItemId) {
+        await this.fileLinksRepo.insertIgnore({ file_id: id, budget_item_id: budgetItemId });
+      }
+      return id;
+    });
 
-    const created = this.db.get<TripFile>(`${FILE_SELECT} WHERE f.id = ?`, result.lastInsertRowid)!;
-    return formatFile(created);
+    const created = await this.tripFilesRepo.findByIdWithJoins(newId);
+    return formatFile(created!);
   }
 
+  /** R2: `updateFile`'s field update and its conditional `file_links` insert/delete (FL12+FL13+FL14) run inside one transaction. */
   async updateFile(
     id: string | number,
-    current: TripFile,
+    current: TripFileRow,
     updates: { description?: string; place_id?: string | number | null; reservation_id?: string | number | null; budget_item_id?: string | number | null }
   ) {
-    this.db.run(`
-      UPDATE trip_files SET
-        description = ?,
-        place_id = ?,
-        reservation_id = ?
-      WHERE id = ?
-    `,
-      updates.description !== undefined ? (updates.description || null) : current.description,
-      updates.place_id !== undefined ? (updates.place_id || null) : current.place_id,
-      updates.reservation_id !== undefined ? (updates.reservation_id || null) : current.reservation_id,
-      id
-    );
+    const idNum = toRowId(id) ?? -1;
 
-    if (updates.budget_item_id !== undefined) {
-      if (updates.budget_item_id) {
-        this.db.run('INSERT OR IGNORE INTO file_links (file_id, budget_item_id) VALUES (?, ?)', id, updates.budget_item_id);
-      } else {
-        this.db.run('DELETE FROM file_links WHERE file_id = ? AND budget_item_id IS NOT NULL', id);
+    await this.uow.transactional(async () => {
+      await this.tripFilesRepo.updateFile(idNum, {
+        description: updates.description !== undefined ? (updates.description || null) : (current.description ?? null),
+        place_id: updates.place_id !== undefined ? coerceLinkId(updates.place_id) : (current.place_id ?? null),
+        reservation_id: updates.reservation_id !== undefined ? coerceLinkId(updates.reservation_id) : (current.reservation_id ?? null),
+      });
+
+      if (updates.budget_item_id !== undefined) {
+        const budgetItemId = coerceLinkId(updates.budget_item_id);
+        if (budgetItemId) {
+          await this.fileLinksRepo.insertIgnore({ file_id: idNum, budget_item_id: budgetItemId });
+        } else {
+          await this.fileLinksRepo.clearBudgetLink(idNum);
+        }
       }
-    }
+    });
 
-    const updated = this.db.get<TripFile>(`${FILE_SELECT} WHERE f.id = ?`, id)!;
-    return formatFile(updated);
+    const updated = await this.tripFilesRepo.findByIdWithJoins(idNum);
+    return formatFile(updated!);
   }
 
   async toggleStarred(id: string | number, currentStarred: number | undefined) {
+    const idNum = toRowId(id) ?? -1;
     const newStarred = currentStarred ? 0 : 1;
-    this.db.run('UPDATE trip_files SET starred = ? WHERE id = ?', newStarred, id);
+    await this.tripFilesRepo.setStarred(idNum, newStarred);
 
-    const updated = this.db.get<TripFile>(`${FILE_SELECT} WHERE f.id = ?`, id)!;
-    return formatFile(updated);
+    const updated = await this.tripFilesRepo.findByIdWithJoins(idNum);
+    return formatFile(updated!);
   }
 
   async softDeleteFile(id: string | number) {
-    this.db.run('UPDATE trip_files SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', id);
+    await this.tripFilesRepo.softDelete(toRowId(id) ?? -1);
   }
 
   async restoreFile(id: string | number) {
-    this.db.run('UPDATE trip_files SET deleted_at = NULL WHERE id = ?', id);
-    const restored = this.db.get<TripFile>(`${FILE_SELECT} WHERE f.id = ?`, id)!;
-    return formatFile(restored);
+    const idNum = toRowId(id) ?? -1;
+    await this.tripFilesRepo.restore(idNum);
+    const restored = await this.tripFilesRepo.findByIdWithJoins(idNum);
+    return formatFile(restored!);
   }
 
-  async permanentDeleteFile(file: TripFile): Promise<void> {
+  async permanentDeleteFile(file: TripFileRow): Promise<void> {
     // storage.delete is idempotent on a missing object (the old rm force:true
     // contract). Only drop the DB row when the delete either succeeded or the
     // object was already gone — otherwise a permission / ENOSPC failure
@@ -348,11 +414,13 @@ export class FilesService {
       console.error(`[files] unlink failed for ${file.filename}, keeping DB row:`, e);
       throw e;
     }
-    this.db.run('DELETE FROM trip_files WHERE id = ?', file.id);
+    await this.tripFilesRepo.deleteById(file.id);
   }
 
+  /** R2: the storage-delete loop stays outside any transaction (rule 24); only the final bulk `trip_files` delete (FL23) runs inside one. */
   async emptyTrash(tripId: string | number): Promise<number> {
-    const trashed = this.db.all<TripFile>('SELECT * FROM trip_files WHERE trip_id = ? AND deleted_at IS NOT NULL', tripId);
+    const tripIdNum = toRowId(tripId) ?? -1;
+    const trashed = await this.tripFilesRepo.listTrashed(tripIdNum);
     // Collect successful IDs separately so we only DELETE rows whose disk
     // content was actually removed — failing unlinks keep their DB row
     // and a retry via the single-file delete path can try again.
@@ -360,14 +428,15 @@ export class FilesService {
     await Promise.all(trashed.map(async (file) => {
       try {
         await this.storage.delete('files', path.basename(file.filename));
-        successfullyUnlinked.push(Number(file.id));
+        successfullyUnlinked.push(file.id);
       } catch (e) {
         console.error(`[files] unlink failed for ${file.filename}, keeping DB row:`, e);
       }
     }));
     if (successfullyUnlinked.length > 0) {
-      const placeholders = successfullyUnlinked.map(() => '?').join(',');
-      this.db.run(`DELETE FROM trip_files WHERE id IN (${placeholders})`, ...successfullyUnlinked);
+      await this.uow.transactional(async () => {
+        await this.tripFilesRepo.deleteMany(successfullyUnlinked);
+      });
     }
     return successfullyUnlinked.length;
   }
@@ -383,22 +452,22 @@ export class FilesService {
     fileId: string | number,
     opts: { reservation_id?: string | number | null; assignment_id?: string | number | null; place_id?: string | number | null; budget_item_id?: string | number | null }
   ) {
-    this.db.run('INSERT OR IGNORE INTO file_links (file_id, reservation_id, assignment_id, place_id, budget_item_id) VALUES (?, ?, ?, ?, ?)',
-      fileId, opts.reservation_id || null, opts.assignment_id || null, opts.place_id || null, opts.budget_item_id || null
-    );
-    return this.db.all('SELECT * FROM file_links WHERE file_id = ?', fileId);
+    const idNum = toRowId(fileId) ?? -1;
+    await this.fileLinksRepo.insertIgnore({
+      file_id: idNum,
+      reservation_id: coerceLinkId(opts.reservation_id),
+      assignment_id: coerceLinkId(opts.assignment_id),
+      place_id: coerceLinkId(opts.place_id),
+      budget_item_id: coerceLinkId(opts.budget_item_id),
+    });
+    return await this.fileLinksRepo.listForFile(idNum);
   }
 
   async deleteFileLink(linkId: string | number, fileId: string | number) {
-    this.db.run('DELETE FROM file_links WHERE id = ? AND file_id = ?', linkId, fileId);
+    await this.fileLinksRepo.deleteById(toRowId(linkId) ?? -1, toRowId(fileId) ?? -1);
   }
 
   async getFileLinks(fileId: string | number) {
-    return this.db.all(`
-      SELECT fl.*, r.title as reservation_title
-      FROM file_links fl
-      LEFT JOIN reservations r ON fl.reservation_id = r.id
-      WHERE fl.file_id = ?
-    `, fileId);
+    return await this.fileLinksRepo.listForFileWithReservationTitle(toRowId(fileId) ?? -1);
   }
 }

@@ -57,9 +57,12 @@ import type { Request } from 'express';
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
-import { createUser, createTrip, addTripMember, createPlace, createReservation, createDay, createDayAssignment, setAppSetting } from '../../helpers/factories';
+import { createUser, createTrip, addTripMember, createPlace, createReservation, createDay, createDayAssignment, setAppSetting, createCollabNote } from '../../helpers/factories';
 import { DatabaseService, type TripAccess } from '../../../src/nest/database/database.service';
-import { sharedTestOrm } from '../../helpers/test-uow';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestReservationsRepo, createTestPlacesRepo, createTestDayAssignmentsRepo } from '../../helpers/test-uow';
+import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import type { TripFilesRepository } from '../../../src/db/repositories/TripFiles.repository';
+import type { FileLinksRepository } from '../../../src/db/repositories/FileLinks.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { FilesService } from '../../../src/nest/files/files.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
@@ -72,7 +75,7 @@ import {
   isVideoMime,
   isVideoExtension,
 } from '../../../src/nest/files/files.constants';
-import type { TripFile, User } from '../../../src/types';
+import type { User } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import type { EntityManager } from '@mikro-orm/core';
@@ -90,19 +93,48 @@ const storageStub = { delete: storageDelete } as unknown as import('../../../src
 // `Users` specifically.
 const getRepository = vi.fn(() => ({}));
 const emStub = { getRepository } as unknown as EntityManager;
-const svc = new FilesService(new DatabaseService(testDb), permissionsStub, new RealtimeService(), new EphemeralTokenService(), storageStub, emStub);
+
+// Constructed in `beforeAll` (async — the repositories below resolve through
+// `sharedTestOrm`), not at module load: Plan 3e Task 1 adds the `UnitOfWork`
+// and the five repositories `FilesService` now needs. `tripFilesRepo`/
+// `fileLinksRepo` are kept as named bindings (not only inside `svc`) so the
+// R2 rollback tests below can spy on them directly, the same shape
+// `reservations.service.test.ts`'s `RESV-FIX-001/002` already use.
+let svc: FilesService;
+let tripFilesRepo: TripFilesRepository;
+let fileLinksRepo: FileLinksRepository;
 
 beforeAll(() => {
   createTables(testDb);
   runMigrations(testDb);
 });
 
+beforeAll(async () => {
+  tripFilesRepo = await createTestTripFilesRepo(testDb);
+  fileLinksRepo = await createTestFileLinksRepo(testDb);
+  svc = new FilesService(
+    new DatabaseService(testDb),
+    permissionsStub,
+    new RealtimeService(),
+    new EphemeralTokenService(),
+    storageStub,
+    emStub,
+    await createTestUnitOfWork(testDb),
+    tripFilesRepo,
+    fileLinksRepo,
+    await createTestReservationsRepo(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestBudgetItemsRepo(testDb),
+  );
+});
+
 beforeEach(async () => {
   resetTestDb(testDb);
   vi.clearAllMocks();
-  // Plan 3c Task 0b: `svc`'s `DatabaseService` is constructed at module load,
-  // before any `beforeAll`/`beforeEach` can resolve a real `EntityManager` —
-  // spied directly on that instance, routed to a real `DatabaseService` built
+  // Plan 3c Task 0b: `svc`'s `DatabaseService` is constructed in `beforeAll`,
+  // before any `beforeEach` can resolve a real `EntityManager` — spied
+  // directly on that instance, routed to a real `DatabaseService` built
   // with one. Re-applied every test (not `beforeAll`) because `afterEach`
   // below `vi.restoreAllMocks()`s it away after each one.
   const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
@@ -191,20 +223,20 @@ describe('files.constants', () => {
 describe('AllowedFileTypesService.get', () => {
   it('FILE-SVC-006: returns the app_settings value when set', async () => {
     setAppSetting(testDb, 'allowed_file_types', 'pdf,txt');
-    expect(await new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe('pdf,txt');
+    expect(await new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)).get()).toBe('pdf,txt');
   });
 
   it('FILE-SVC-007: returns the default when the row is absent', async () => {
-    expect(await new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
+    expect(await new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
   });
 
   it('FILE-SVC-008: returns the default for an empty value (|| coercion, not ??)', async () => {
     setAppSetting(testDb, 'allowed_file_types', '');
-    expect(await new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
+    expect(await new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
   });
 
   it('FILE-SVC-009: returns the default when the query throws (no app_settings table)', async () => {
-    expect(await new AllowedFileTypesService(new DatabaseService(bareDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
+    expect(await new AllowedFileTypesService(await createTestAppSettingsRepo(bareDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
   });
 });
 
@@ -359,6 +391,15 @@ describe('createFile', () => {
     expect(file.file_size).toBe(99);
     expect(file.uploaded_by).toBe(user.id);
   });
+
+  it('FILE-SVC-060 (R2): a failing file_links insert rolls back the trip_files row too', async () => {
+    const { user, trip } = seedTrip();
+    const item = Number(testDb.prepare('INSERT INTO budget_items (trip_id, name) VALUES (?, ?)').run(trip.id, 'Dinner').lastInsertRowid);
+    const spy = vi.spyOn(fileLinksRepo, 'insertIgnore').mockRejectedValueOnce(new Error('boom'));
+    await expect(makeFile(trip.id, user.id, {}, { budget_item_id: item })).rejects.toThrow('boom');
+    expect(testDb.prepare('SELECT COUNT(*) c FROM trip_files WHERE trip_id = ?').get(trip.id)).toEqual({ c: 0 });
+    spy.mockRestore();
+  });
 });
 
 describe('updateFile', () => {
@@ -382,6 +423,20 @@ describe('updateFile', () => {
     expect(updated.description).toBeNull(); // '' → NULL on update too (post-migration fix: symmetric with createFile)
     expect(updated.place_id).toBeNull();
     expect(updated.reservation_id).toBeNull();
+  });
+
+  it('FILE-SVC-061 (R2): a failing file_links swap rolls back the description/place/reservation update too', async () => {
+    const { user, trip } = seedTrip();
+    const item = Number(testDb.prepare('INSERT INTO budget_items (trip_id, name) VALUES (?, ?)').run(trip.id, 'Dinner').lastInsertRowid);
+    const place = createPlace(testDb, trip.id);
+    const file = await makeFile(trip.id, user.id, {}, { description: 'old' });
+    const current = (await svc.getFileById(file.id, trip.id))!;
+    const spy = vi.spyOn(fileLinksRepo, 'insertIgnore').mockRejectedValueOnce(new Error('boom'));
+    await expect(svc.updateFile(file.id, current, { description: 'new', place_id: String(place.id), budget_item_id: item })).rejects.toThrow('boom');
+    const row = testDb.prepare('SELECT description, place_id FROM trip_files WHERE id = ?').get(file.id) as Record<string, unknown>;
+    expect(row.description).toBe('old');
+    expect(row.place_id).toBeNull();
+    spy.mockRestore();
   });
 });
 
@@ -420,7 +475,7 @@ describe('permanentDeleteFile', () => {
     const { user, trip } = seedTrip();
     const file = await makeFile(trip.id, user.id, { filename: 'on-disk.pdf' });
     storageDelete.mockResolvedValue(undefined);
-    await svc.permanentDeleteFile(await svc.getFileById(file.id, trip.id) as TripFile);
+    await svc.permanentDeleteFile((await svc.getFileById(file.id, trip.id))!);
     expect(storageDelete).toHaveBeenCalledWith('files', 'on-disk.pdf');
     expect(await svc.getFileById(file.id, trip.id)).toBeUndefined();
   });
@@ -431,7 +486,7 @@ describe('permanentDeleteFile', () => {
     const boom = new Error('EACCES');
     storageDelete.mockRejectedValue(boom);
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(svc.permanentDeleteFile(await svc.getFileById(file.id, trip.id) as TripFile)).rejects.toThrow('EACCES');
+    await expect(svc.permanentDeleteFile((await svc.getFileById(file.id, trip.id))!)).rejects.toThrow('EACCES');
     expect(err).toHaveBeenCalledWith('[files] unlink failed for stuck.pdf, keeping DB row:', boom);
     expect(await svc.getFileById(file.id, trip.id)).toBeDefined();
   });
@@ -474,6 +529,17 @@ describe('emptyTrash', () => {
     const { trip } = seedTrip();
     await expect(svc.emptyTrash(trip.id)).resolves.toBe(0);
     expect(storageDelete).not.toHaveBeenCalled();
+  });
+
+  it('FILE-SVC-062 (R2): a failing bulk delete leaves every trashed row in place', async () => {
+    const { user, trip } = seedTrip();
+    const a = await makeFile(trip.id, user.id, { filename: 'a.pdf' });
+    await svc.softDeleteFile(a.id);
+    storageDelete.mockResolvedValue(undefined);
+    const spy = vi.spyOn(tripFilesRepo, 'deleteMany').mockRejectedValueOnce(new Error('boom'));
+    await expect(svc.emptyTrash(trip.id)).rejects.toThrow('boom');
+    expect(testDb.prepare('SELECT COUNT(*) c FROM trip_files WHERE id = ?').get(a.id)).toEqual({ c: 1 });
+    spy.mockRestore();
   });
 });
 
@@ -552,9 +618,22 @@ describe('createFileLink / deleteFileLink / getFileLinks', () => {
   });
 
   it('FILE-SVC-030: an insert error propagates (post-migration fix: no silent swallow)', async () => {
+    // Plan 3e Task 1 deviation: the legacy raw statement bound whatever JS
+    // value the caller passed straight into the driver, so a non-primitive
+    // (an object) reached better-sqlite3's bind and threw there. The write
+    // is now typed `number | null` end to end (`FileLinksRepository
+    // .insertIgnore`), so a value that shape can never reach the repository
+    // at all — the `toRowId`-backed `coerceLinkId` narrows it to `null`
+    // (no link) instead, the same accepted narrowing every other
+    // non-canonical id gets. What the "no silent swallow" fix still means is
+    // tested directly against the repository call: a genuine insert failure
+    // (any error, not a type mismatch this layer now prevents) propagates
+    // rather than being caught and turned into a success-shaped links list.
     const { user, trip } = seedTrip();
     const file = await makeFile(trip.id, user.id);
-    await expect(svc.createFileLink(file.id, { reservation_id: { bad: true } as never })).rejects.toThrow();
+    const spy = vi.spyOn(fileLinksRepo, 'insertIgnore').mockRejectedValueOnce(new Error('boom'));
+    await expect(svc.createFileLink(file.id, { reservation_id: 1 })).rejects.toThrow('boom');
+    spy.mockRestore();
   });
 
   it('FILE-SVC-031: deleteFileLink is scoped to (id AND file_id)', async () => {
@@ -568,6 +647,86 @@ describe('createFileLink / deleteFileLink / getFileLinks', () => {
     expect(await svc.getFileLinks(file.id)).toHaveLength(1);
     await svc.deleteFileLink(link.id, file.id);
     expect(await svc.getFileLinks(file.id)).toHaveLength(0);
+  });
+});
+
+// ── Plan 3e Task 1 — full-key parity on the fully-seeded read models ──────────
+// Rule 19: one `toEqual(<legacy statement run raw on the same seeded rows>)`
+// per converted read model, on rows with every optional column populated
+// (incl. all six `trip_files` `persist(false)` mirrors) and both trashed and
+// live rows.
+
+describe('read-model parity: raw SQL vs. the repository-backed reads', () => {
+  it('FILE-SVC-070: getFileById (FL5) is byte-identical to `SELECT * FROM trip_files WHERE id = ? AND trip_id = ?`, all six persist(false) mirrors set', async () => {
+    const { user, trip } = seedTrip();
+    const reservation = createReservation(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const note = createCollabNote(testDb, trip.id, user.id);
+    const messageId = Number(
+      testDb.prepare('INSERT INTO collab_messages (trip_id, user_id, text) VALUES (?, ?, ?)').run(trip.id, user.id, 'hi').lastInsertRowid,
+    );
+    // Raw insert, not svc.createFile: note_id/message_id are set by OTHER
+    // domains (collab), never by FilesService itself — this seeds every
+    // persist(false) mirror at once to prove the Kysely `selectAll()` read
+    // carries all six, the trap the class docstring names.
+    const inserted = testDb.prepare(`
+      INSERT INTO trip_files (trip_id, place_id, reservation_id, filename, original_name, file_size, mime_type, description, note_id, uploaded_by, starred, message_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(trip.id, place.id, reservation.id, 'a.pdf', 'A.pdf', 10, 'application/pdf', 'a note', note.id, user.id, 1, messageId);
+    const id = Number(inserted.lastInsertRowid);
+
+    const legacy = testDb.prepare('SELECT * FROM trip_files WHERE id = ? AND trip_id = ?').get(id, trip.id);
+    expect(await svc.getFileById(id, trip.id)).toEqual(legacy);
+  });
+
+  it('FILE-SVC-071: listFiles (FL7, FILE_SELECT) is byte-identical to the legacy joined SELECT, live and trashed alike, with reservation+place+budget_item links all present', async () => {
+    const { user, trip } = seedTrip();
+    const reservation = createReservation(testDb, trip.id, { title: 'Night train' });
+    const place = createPlace(testDb, trip.id);
+    const item = Number(testDb.prepare('INSERT INTO budget_items (trip_id, name) VALUES (?, ?)').run(trip.id, 'Dinner').lastInsertRowid);
+    // `linked_*_ids` come from `file_links` rows (FL8), a SEPARATE mechanism
+    // from `trip_files.reservation_id`/`place_id` (FILE_SELECT's own join) —
+    // one `createFileLink` call can attach several targets to the same file
+    // at once (the legacy statement writes all four columns in one INSERT).
+    const live = await makeFile(trip.id, user.id);
+    await svc.createFileLink(live.id, { reservation_id: String(reservation.id), place_id: String(place.id), budget_item_id: item });
+    const trashed = await makeFile(trip.id, user.id, { filename: 'gone.pdf' });
+    await svc.softDeleteFile(trashed.id);
+
+    const FILE_SELECT = `
+      SELECT f.*, r.title as reservation_title, u.username as uploaded_by_name, u.avatar as uploaded_by_avatar
+      FROM trip_files f
+      LEFT JOIN reservations r ON f.reservation_id = r.id
+      LEFT JOIN users u ON f.uploaded_by = u.id
+    `;
+    const legacyLive = testDb.prepare(`${FILE_SELECT} WHERE f.id = ?`).get(live.id) as Record<string, unknown>;
+    const legacyTrashed = testDb.prepare(`${FILE_SELECT} WHERE f.id = ?`).get(trashed.id) as Record<string, unknown>;
+
+    const activeRow = (await svc.listFiles(trip.id, false) as Record<string, unknown>[]).find((f) => f.id === live.id)!;
+    const pickedActive = Object.fromEntries(Object.keys(legacyLive).map((k) => [k, activeRow[k]]));
+    expect(pickedActive).toEqual(legacyLive);
+    expect(activeRow.linked_reservation_ids).toEqual([reservation.id]);
+    expect(activeRow.linked_place_ids).toEqual([place.id]);
+    expect(activeRow.linked_budget_item_ids).toEqual([item]);
+
+    const trashedRow = (await svc.listFiles(trip.id, true) as Record<string, unknown>[]).find((f) => f.id === trashed.id)!;
+    const pickedTrashed = Object.fromEntries(Object.keys(legacyTrashed).map((k) => [k, trashedRow[k]]));
+    expect(pickedTrashed).toEqual(legacyTrashed);
+  });
+
+  it('FILE-SVC-072: getFileLinks (FL27) is byte-identical to the legacy joined SELECT', async () => {
+    const { user, trip } = seedTrip();
+    const reservation = createReservation(testDb, trip.id, { title: 'Ferry' });
+    const file = await makeFile(trip.id, user.id);
+    await svc.createFileLink(file.id, { reservation_id: String(reservation.id) });
+
+    const legacy = testDb.prepare(`
+      SELECT fl.*, r.title as reservation_title
+      FROM file_links fl
+      LEFT JOIN reservations r ON fl.reservation_id = r.id
+      WHERE fl.file_id = ?
+    `).all(file.id);
+    expect(await svc.getFileLinks(file.id)).toEqual(legacy);
   });
 });
 
@@ -648,7 +807,7 @@ describe('verifyTripAccess / can / files.bridge', () => {
     // list moved to a leaf service the multer factories inject, and the property
     // that matters is unchanged: an admin editing the list in settings applies
     // to the next upload, with no invalidation wiring.
-    const allowed = new AllowedFileTypesService(new DatabaseService(testDb));
+    const allowed = new AllowedFileTypesService(await createTestAppSettingsRepo(testDb));
     setAppSetting(testDb, 'allowed_file_types', 'md,markdown');
     expect(await allowed.get()).toBe('md,markdown');
   });

@@ -892,4 +892,24 @@ export class PlacesRepository extends TrekRepository<Places> {
       .where({ id })
       .execute<{ name: string } | undefined>('get', false);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3e Task 1 (`FilesService.findForeignLinkTarget`, R12) — additive,
+  // append-only per that task's own file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * FL2 (`FilesService.findForeignLinkTarget`'s place branch) — `SELECT 1
+   * FROM places WHERE id = ? AND trip_id = ?`, re-expressed as "what trip
+   * does this row belong to" (R12, the same shape as
+   * `ReservationsRepository.findTripId`'s docstring).
+   */
+  async findTripId(id: number): Promise<number | undefined> {
+    const platform = this.getEntityManager().getPlatform();
+    const row = await this.qb('p')
+      .select([columnRef(platform, 'p.trip_id').as('trip_id')])
+      .where({ id })
+      .execute<{ trip_id: number } | undefined>('get', false);
+    return row?.trip_id;
+  }
 }

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { FilesController } from './files.controller';
 import { FilesDownloadController } from './files-download.controller';
 import { FilesService } from './files.service';
@@ -19,6 +20,13 @@ import { StorageService } from '../storage/storage.service';
 import { buildStorageUploadOptions } from '../storage/storage-upload.factory';
 import { filesUploadFileFilter } from './files.controller';
 import { MAX_VIDEO_SIZE } from './files.constants';
+import { TripFiles } from '../../db/entities/TripFiles.entity';
+import { FileLinks } from '../../db/entities/FileLinks.entity';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import { Users } from '../../db/entities/Users.entity';
 
 @Module({
   imports: [
@@ -36,6 +44,13 @@ import { MAX_VIDEO_SIZE } from './files.constants';
         }),
     }),
     StorageModule,
+    // TripFiles/FileLinks are this domain's own tables (Plan 3e Task 1).
+    // Reservations/Places/DayAssignments/BudgetItems/Users are owned
+    // elsewhere — registered here only for `findForeignLinkTarget`'s
+    // `findTripId` reads and FL28's `UsersRepository.getEmail` (the entity
+    // classes only, never the owning module — the `AccommodationsDomainModule`
+    // precedent).
+    MikroOrmModule.forFeature([TripFiles, FileLinks, Reservations, Places, DayAssignments, BudgetItems, Users]),
     // AuthModule + McpSharedModule feed FilesMcp's demo and RBAC guards. Neither is
     // @Global, and AuthModule reaches this domain only through the leaf
     // AllowedFileTypesModule, so importing it here stays cycle-free.

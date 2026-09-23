@@ -933,4 +933,30 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
   async clearStay(id: number): Promise<void> {
     await this.nativeUpdate({ id }, { accommodation_id: null });
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3e Task 1 (`FilesService.findForeignLinkTarget`, R12) — additive,
+  // append-only per that task's own file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * FL3 (`FilesService.findForeignLinkTarget`'s assignment branch) — `SELECT
+   * 1 FROM day_assignments a JOIN days d ON a.day_id = d.id WHERE a.id = ?
+   * AND d.trip_id = ?`, re-expressed as "what trip does this row belong to"
+   * via its `day` relation (R12 — "DayAssignmentsRepository.findTripId via
+   * its days join"; `day_assignments` has no `trip_id` column of its own).
+   * The same join shape `ReservationsRepository.getAssignmentTripId`
+   * (RS22) already used from a DIFFERENT repository before this file was
+   * this task's own to append to — this copy lives here instead, per R12's
+   * "one method per target table, on that table's own repository" ruling.
+   */
+  async findTripId(id: number): Promise<number | undefined> {
+    const platform = this.getEntityManager().getPlatform();
+    const row = await this.qb('da')
+      .join('da.day', 'd')
+      .select([columnRef(platform, 'd.trip_id').as('trip_id')])
+      .where({ id })
+      .execute<{ trip_id: number } | undefined>('get', false);
+    return row?.trip_id;
+  }
 }

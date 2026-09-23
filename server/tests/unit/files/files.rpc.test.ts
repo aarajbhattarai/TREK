@@ -20,6 +20,7 @@ import { FilesModule } from '../../../src/nest/files/files.module';
 import { FilesService } from '../../../src/nest/files/files.service';
 import type { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { StorageService } from '../../../src/nest/storage/storage.service';
@@ -47,8 +48,11 @@ function build(opts: { file?: Record<string, unknown> | undefined; foreign?: str
   } as unknown as FilesService & Record<string, ReturnType<typeof vi.fn>>;
   const db = {
     canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-    prepare: vi.fn(() => ({ get: () => ({ role: 'user', email: 'real@example.test' }) })),
+    // Still needed by PluginGuards' own role lookup (requireTripEdit) — unrelated to FL28.
+    prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
   } as unknown as DatabaseService;
+  // FL28 — `SELECT email FROM users WHERE id = ?`, now `UsersRepository.getEmail`.
+  const usersRepo = { getEmail: vi.fn(async () => 'real@example.test') } as unknown as UsersRepository;
   const permissions = {
     checkPermission: vi.fn((action: string) => (opts.allow ? opts.allow(action) : true)),
   } as unknown as PermissionsService;
@@ -66,7 +70,7 @@ function build(opts: { file?: Record<string, unknown> | undefined; foreign?: str
   // keep exercising that code rather than a stub of it.
   (files as unknown as { readContent: FilesService['readContent'] }).readContent =
     FilesService.prototype.readContent.bind({ getFileById: files.getFileById, storage } as unknown as FilesService);
-  const rpc = new FilesRpc(files, realtime, db, guards, storage);
+  const rpc = new FilesRpc(files, realtime, usersRepo, guards, storage);
   const host = (...grants: string[]) => new PluginRpcHost('p', new Set(grants), makeDeps(), createTestPluginRegistry([rpc]));
   return { files, realtime, permissions, storage, host };
 }
@@ -255,10 +259,10 @@ describe('FilesRpc writes', () => {
     process.env.DEMO_MODE = 'true';
     try {
       const f = build();
-      // The demo guard resolves the uploader's email; user 9 is the demo account.
       const db = {
         canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
-        prepare: vi.fn(() => ({ get: (id: number) => (id === 9 ? { role: 'user', email: 'demo@trek.app' } : { role: 'user', email: 'real@example.test' }) })),
+        // Still needed by PluginGuards' own role lookup — unrelated to FL28.
+        prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
       } as unknown as DatabaseService;
       const guards = new PluginGuards(
         db,
@@ -270,7 +274,11 @@ describe('FilesRpc writes', () => {
         createFile: vi.fn(() => ({ id: 130 })),
       } as unknown as FilesService;
       const storage = { getStream: vi.fn(), put: vi.fn(async () => undefined) } as unknown as StorageService;
-      const rpc = new FilesRpc(files, { broadcast: vi.fn() } as unknown as RealtimeService, db, guards, storage);
+      // The demo guard resolves the uploader's email; user 9 is the demo account.
+      const usersRepo = {
+        getEmail: vi.fn(async (id: number) => (id === 9 ? 'demo@trek.app' : 'real@example.test')),
+      } as unknown as UsersRepository;
+      const rpc = new FilesRpc(files, { broadcast: vi.fn() } as unknown as RealtimeService, usersRepo, guards, storage);
       const host = new PluginRpcHost('p', new Set(['db:write:files']), makeDeps(), createTestPluginRegistry([rpc]));
       const input = { name: 'a.pdf', content_base64: b64('x') };
       const denied = (await host.dispatch(req('files.create', { tripId: 1, input }), 9)) as RpcError;
