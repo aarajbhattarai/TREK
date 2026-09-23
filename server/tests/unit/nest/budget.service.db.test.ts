@@ -73,6 +73,9 @@ import { VacayService } from '../../../src/nest/vacay/vacay.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm, createTestTripsRepo, createTestTripMembersRepo } from '../../helpers/test-uow';
+import { budgetRepoArgs } from '../../helpers/budget-repos';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import { BudgetItemMembers } from '../../../src/db/entities/BudgetItemMembers.entity';
 
 
 
@@ -102,11 +105,12 @@ beforeAll(async () => {
   new ExchangeRatesService(),
   new RealtimeService(),
   await createTestUnitOfWork(testDb),
+  ...(await budgetRepoArgs(testDb)),
 );
   membersSvc = new TripMembersService(
   dbs(),
   budget,
-  new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb)),
+  new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestBudgetItemsRepo(testDb)),
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
   notificationsStub(),
@@ -245,6 +249,34 @@ describe('toggleMemberPaid trip-scoping', () => {
 
     expect(member).toBeNull();
     expect(paidFlag(itemB.id, user.id)).toBe(0); // unchanged
+  });
+
+  it('BUDGET-SVC-DB-044: a forced mid-transaction failure after the write leaves no partial update (R2-class fix, §17 surprise 4)', async () => {
+    // Plan 3e Task 2: `toggleMemberPaid` used to run its trip-scoping guard
+    // (BG68) and its write (BG69) as two un-transacted statements. Wrapped
+    // in `uow.transactional` now — a failure anywhere in the block (here,
+    // the re-select AFTER the write) rolls the whole thing back, including
+    // the `setPaid` write that already ran.
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip A' });
+    const item = await budget.createBudgetItem(trip.id, { name: 'Hotel', total_price: 100 });
+    await budget.updateMembers(item.id, trip.id, [user.id]);
+    expect(paidFlag(item.id, user.id)).toBe(0);
+
+    const membersRepo = (await sharedTestOrm(testDb)).repo(BudgetItemMembers);
+    const findSpy = vi.spyOn(membersRepo, 'findMemberWithUser').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(budget.toggleMemberPaid(item.id, trip.id, user.id, true)).rejects.toThrow('boom');
+      // The UPDATE ran before the forced failure — rolled back with it, so the flag is still 0.
+      expect(paidFlag(item.id, user.id)).toBe(0);
+    } finally {
+      findSpy.mockRestore();
+    }
+
+    // The fix works: without the forced failure, the same write commits normally.
+    const member = await budget.toggleMemberPaid(item.id, trip.id, user.id, true);
+    expect(member).not.toBeNull();
+    expect(paidFlag(item.id, user.id)).toBe(1);
   });
 });
 

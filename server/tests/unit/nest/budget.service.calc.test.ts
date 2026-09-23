@@ -68,12 +68,56 @@ const stmt = (impl: Partial<Database.Statement>) => impl as Database.Statement;
 
 const permissionsStub = { checkPermission: vi.fn(() => true) } as unknown as PermissionsService;
 
+/**
+ * Plan 3e Task 2 (budget): `calculateSettlement`/`freezeForeignRate`/
+ * `listSettlements`/`applySettlementUpdate` now read/write through
+ * repositories instead of `this.db.get/all/run`, so these proxy the SAME
+ * `mockDb.db.prepare(sql)`-dispatched stmt (`setupDb`'s SQL-text
+ * `mockImplementation`, below) rather than a real repository — every test
+ * that only configures `setupDb`/`prepare` continues to drive the same
+ * fixture data unchanged. `applySettlementUpdate`'s own describe block
+ * additionally reaches straight into the mocked `stmt` (no SQL-text
+ * dispatch to proxy — see its own comment there).
+ */
+const budgetItemsRepoStub = {
+  listAllForTrip: async () => mockDb.db.prepare('SELECT * FROM budget_items').all(),
+  getCurrency: async (id: number) => (mockDb.db.prepare('SELECT currency FROM budget_items WHERE id = ?').get(id) as { currency?: string } | undefined)?.currency,
+} as unknown as import('../../../src/db/repositories/BudgetItems.repository').BudgetItemsRepository;
+
+const budgetItemMembersRepoStub = {
+  listForTripWithUsers: async () => mockDb.db.prepare('SELECT * FROM budget_item_members').all(),
+} as unknown as import('../../../src/db/repositories/BudgetItemMembers.repository').BudgetItemMembersRepository;
+
+const budgetItemPayersRepoStub = {
+  listForTripWithUsers: async () => mockDb.db.prepare('SELECT * FROM budget_item_payers').all(),
+} as unknown as import('../../../src/db/repositories/BudgetItemPayers.repository').BudgetItemPayersRepository;
+
+const budgetSettlementsRepoStub = {
+  listForTrip: async () => mockDb.db.prepare('SELECT * FROM budget_settlements').all(),
+  findWithUsers: async (id: number) => mockDb.db.prepare('SELECT * FROM budget_settlements').get(id),
+  findGuard: async (id: number) => mockDb.db.prepare('SELECT id FROM budget_settlements').get(id),
+  update: async (id: number, write: { from_user_id: number; to_user_id: number; amount: number }) =>
+    mockDb.db.prepare('UPDATE budget_settlements').run(write.from_user_id, write.to_user_id, write.amount, 0, null, null, 1, 0, null, id),
+} as unknown as import('../../../src/db/repositories/BudgetSettlements.repository').BudgetSettlementsRepository;
+
+const tripsRepoStub = {
+  getCurrency: async (id: number) => (mockDb.db.prepare('SELECT currency FROM trips WHERE id = ?').get(id) as { currency?: string } | undefined)?.currency,
+} as unknown as import('../../../src/db/repositories/Trips.repository').TripsRepository;
+
 const budget = new BudgetService(
   new DatabaseService(mockDb.db as unknown as Database.Database),
   permissionsStub,
   mockRates as unknown as ExchangeRatesService,
   new RealtimeService(),
   uowStub,
+  budgetItemsRepoStub,
+  budgetItemMembersRepoStub,
+  budgetItemPayersRepoStub,
+  budgetSettlementsRepoStub,
+  {} as unknown as import('../../../src/db/repositories/BudgetCategoryOrder.repository').BudgetCategoryOrderRepository,
+  {} as unknown as import('../../../src/db/repositories/Reservations.repository').ReservationsRepository,
+  {} as unknown as import('../../../src/db/repositories/Places.repository').PlacesRepository,
+  tripsRepoStub,
 );
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

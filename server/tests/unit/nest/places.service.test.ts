@@ -80,6 +80,7 @@ import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import { isUpdateConflict, type UpdateConflict } from '../../../src/nest/common/conflictResult';
@@ -143,6 +144,7 @@ async function makePlacesService(
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestCategoriesRepo(dbs.connection),
   await createTestTripsRepo(dbs.connection),
+  await createTestBudgetItemsRepo(dbs.connection),
   );
 }
 

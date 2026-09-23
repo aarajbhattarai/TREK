@@ -73,6 +73,8 @@ import {
   createTestTripsRepo,
   createTestTripMembersRepo,
 } from '../../helpers/test-uow';
+import { budgetRepoArgs } from '../../helpers/budget-repos';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -91,7 +93,7 @@ let svc: AdminService;
 beforeAll(async () => {
   webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(dbs.connection));
   permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
-  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection)), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
   auth = new AuthService(
     permissions, new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(await createTestAppSettingsRepo(dbs.connection)), await createTestUnitOfWork(dbs.connection),
     await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),

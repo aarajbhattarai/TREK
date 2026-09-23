@@ -40,6 +40,14 @@ const exchangeRatesStub = { getRates } as unknown as ExchangeRatesService;
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
+import type { BudgetItemsRepository } from '../../../src/db/repositories/BudgetItems.repository';
+import type { BudgetItemMembersRepository } from '../../../src/db/repositories/BudgetItemMembers.repository';
+import type { BudgetItemPayersRepository } from '../../../src/db/repositories/BudgetItemPayers.repository';
+import type { BudgetSettlementsRepository } from '../../../src/db/repositories/BudgetSettlements.repository';
+import type { BudgetCategoryOrderRepository } from '../../../src/db/repositories/BudgetCategoryOrder.repository';
+import type { ReservationsRepository } from '../../../src/db/repositories/Reservations.repository';
+import type { PlacesRepository } from '../../../src/db/repositories/Places.repository';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 
 /**
  * There is no database behind this suite — every statement is served by the
@@ -48,8 +56,35 @@ import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
  */
 const uowStub = { transactional: <T>(fn: () => Promise<T>) => fn() } as unknown as UnitOfWork;
 
+/**
+ * Plan 3e Task 2 (budget): every SQL-touching method this suite exercises is
+ * either spied-and-replaced entirely (list, getPerPersonSummary, the create
+ * and update and delete wrappers, setItemPayers, insertSettlement,
+ * getSettlement, applySettlementUpdate — the composite-wrapper tests only
+ * assert the freeze-then-write ORDER, never the SQL itself) or, for
+ * `syncReservationPrice`, still needs the `dbMock`/`prepare` stub above to
+ * answer — so this repo proxies to it instead of a real
+ * `ReservationsRepository`, keeping that describe block's assertions
+ * (incl. "prepare throws" leading to a swallowed error) unchanged.
+ */
+const reservationsRepoStub = {
+  getIdAndMetadata: async (id: number, tripId: unknown) => dbMock.prepare().get(id, tripId),
+  setMetadata: async (id: number, metadata: string) => { dbMock.prepare().run(metadata, id); },
+  getFull: async (id: number) => dbMock.prepare().get(id),
+} as unknown as ReservationsRepository;
+
 function svc(db: DatabaseService = new DatabaseService(dbConn)) {
-  return new BudgetService(db, permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub);
+  return new BudgetService(
+    db, permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub,
+    {} as unknown as BudgetItemsRepository,
+    {} as unknown as BudgetItemMembersRepository,
+    {} as unknown as BudgetItemPayersRepository,
+    {} as unknown as BudgetSettlementsRepository,
+    {} as unknown as BudgetCategoryOrderRepository,
+    reservationsRepoStub,
+    {} as unknown as PlacesRepository,
+    {} as unknown as TripsRepository,
+  );
 }
 
 beforeEach(() => {

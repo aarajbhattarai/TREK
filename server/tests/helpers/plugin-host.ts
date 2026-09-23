@@ -90,6 +90,11 @@ import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
 import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from './files-repos';
+import { budgetRepoArgs } from './budget-repos';
+import {
+  createTestCollabMessageReactionsRepo, createTestCollabNotesRepo, createTestCollabPollsRepo,
+  createTestCollabPollVotesRepo, createTestCollabLinksRepo, createTestCollabMessagesRepo,
+} from './collab-repos';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -108,7 +113,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
-  const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection));
+  const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
   const addons = await createTestAddonsService(dbs.connection, dbs);
   const queryHelpers = new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection));
   const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
@@ -125,7 +130,12 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestBudgetItemsRepo(dbs.connection),
   );
-  const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
+  const collab = new CollabService(
+    dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection),
+    await createTestCollabMessageReactionsRepo(dbs.connection), await createTestCollabNotesRepo(dbs.connection), await createTestCollabPollsRepo(dbs.connection),
+    await createTestCollabPollVotesRepo(dbs.connection), await createTestCollabLinksRepo(dbs.connection), await createTestCollabMessagesRepo(dbs.connection),
+    await createTestTripsRepo(dbs.connection),
+  );
   const vacay = new VacayService(dbs, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const days = new DaysService(
     dbs,
@@ -168,6 +178,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestDaysRepo(dbs.connection),
     await createTestRoadtripViasRepo(dbs.connection),
     await createTestReservationsRepo(dbs.connection),
+    await createTestBudgetItemsRepo(dbs.connection),
   );
   // After it: deleting a place cancels the nights booked at it through this one.
   const places = new PlacesService(
@@ -179,11 +190,12 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestCategoriesRepo(dbs.connection),
   await createTestTripsRepo(dbs.connection),
+  await createTestBudgetItemsRepo(dbs.connection),
   );
   // After accommodations: a hotel booking writes the stay's day stop through it.
-  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection)), accommodations, await createTestUnitOfWork(dbs.connection), await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection), await createTestReservationDayPositionsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection), await createTestDaysRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestDayAssignmentsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripsRepo(dbs.connection));
+  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection)), accommodations, await createTestUnitOfWork(dbs.connection), await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection), await createTestReservationDayPositionsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection), await createTestDaysRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestDayAssignmentsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection), (await sharedTestOrm(dbs.connection)).em);
-  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
+  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo, await createTestBudgetItemsRepo(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
   const guards = new PluginGuards(dbs, permissions, addons);
 
   const registry = createTestPluginRegistry([

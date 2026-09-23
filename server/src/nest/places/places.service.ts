@@ -47,6 +47,8 @@ import type { TripMembersRepository } from '../../db/repositories/TripMembers.re
 import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
 import type { CategoriesRepository } from '../../db/repositories/Categories.repository';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
 
 /** Rows a place delete took down with the nights booked there, for the caller to announce. */
 export interface CancelledStays {
@@ -163,6 +165,8 @@ export class PlacesService {
     // implementers stopped colliding on this file. `Trips` is already on
     // `PlacesModule`'s `forFeature` list, so this needs no module change.
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    // Plan 3e Task 2 (budget) — additive, PL15/PL18/PL22 only.
+    @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
   ) {}
 
   /**
@@ -532,12 +536,8 @@ export class PlacesService {
     // it cannot rely on a sibling method's gate having already run.
     const tid = toRowId(tripId);
     if (tid === null) return [];
-    // PL15 — `budget_items` is Plan 3e's table; stays raw.
-    const rows = this.dbs.all<{ id: number }>(
-      `SELECT id FROM budget_items WHERE trip_id = ? AND place_id IN (${placeIds.map(() => '?').join(',')})`,
-      tid, ...placeIds,
-    );
-    return rows.map(r => r.id);
+    // PL15 — Plan 3e Task 2, converted: `BudgetItemsRepository.listIdsForPlaces`.
+    return await this.budgetItemsRepo.listIdsForPlaces(tid, placeIds);
   }
 
 
@@ -597,8 +597,8 @@ export class PlacesService {
     // half-detached from its money.
     await this.uow.transactional(async () => {
       await this.cancelStaysAt(tid, id, cancelled);
-      // PL18 — `budget_items` is Plan 3e's table; stays raw.
-      this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tid, id);
+      // PL18 — Plan 3e Task 2, converted: `BudgetItemsRepository.deleteForPlace`.
+      await this.budgetItemsRepo.deleteForPlace(tid, id);
       // PL19 — `DELETE FROM places WHERE id = ?`.
       await this.placesRepo.deleteById(id);
     });
@@ -635,8 +635,8 @@ export class PlacesService {
         const row = await this.placesRepo.reclaimInputs(id, tid);
         if (!row) continue;
         await this.cancelStaysAt(tid, id, cancelled);
-        // PL22 — `budget_items` is Plan 3e's table; stays raw.
-        this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tid, id);
+        // PL22 — Plan 3e Task 2, converted: `BudgetItemsRepository.deleteForPlace`.
+        await this.budgetItemsRepo.deleteForPlace(tid, id);
         // PL21 — `DELETE FROM places WHERE id = ?`.
         await this.placesRepo.deleteById(id);
         deleted.push(id);

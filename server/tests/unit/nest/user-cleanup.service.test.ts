@@ -48,8 +48,11 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
+import type { BudgetItemsRepository } from '../../../src/db/repositories/BudgetItems.repository';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { budgetRepoArgs } from '../../helpers/budget-repos';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 
 const dbs = new DatabaseService(testDb);
 
@@ -65,8 +68,8 @@ beforeAll(async () => {
   vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
   vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
-  budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection));
-  svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection));
+  budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
+  svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
 });
 
 const installPlugin = (id: string, permissions: string[] | null) => {
@@ -161,7 +164,8 @@ describe('erasePluginUserData', () => {
     const slim = new (require('better-sqlite3'))(':memory:');
     slim.exec('CREATE TABLE users (id INTEGER PRIMARY KEY)');
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
-    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim));
+    // `erasePluginUserData` (this test's only call) never reaches `budgetItemsRepo` (UC5's own method) — a stub is enough.
+    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim), {} as unknown as BudgetItemsRepository);
 
     await expect(slimSvc.erasePluginUserData(1)).resolves.toBeUndefined();
 
@@ -230,7 +234,7 @@ describe('deleteUserCompletely', () => {
     const usersRepo = await createTestUsersRepo(testDb);
     const deleteByIdSpy = vi.spyOn(usersRepo, 'deleteById').mockRejectedValue(new Error('boom'));
     try {
-      await expect(new UserCleanupService(dbs, budget, await createTestUnitOfWork(testDb), usersRepo).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
+      await expect(new UserCleanupService(dbs, budget, await createTestUnitOfWork(testDb), usersRepo, await createTestBudgetItemsRepo(testDb)).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
 
       expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeDefined();
       expect((testDb.prepare('SELECT invited_by FROM trip_members WHERE user_id = ?').get(owner.id) as { invited_by: number | null }).invited_by).toBe(victim.id);

@@ -10,6 +10,8 @@ import { pluginsDataRoot } from '../plugins/paths';
 import { UnitOfWork } from '../database/unit-of-work';
 import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
 
 /**
  * Account erasure — everything that has to happen around `DELETE FROM users`
@@ -30,6 +32,8 @@ export class UserCleanupService {
     private readonly budget: BudgetService,
     private readonly uow: UnitOfWork,
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
+    // Plan 3e Task 2 (budget) — additive, UC5 only.
+    @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
   ) {}
 
   /**
@@ -90,7 +94,7 @@ export class UserCleanupService {
    */
   private async cleanupUserReferences(userId: number): Promise<void> {
     this.db.run('UPDATE trip_members SET invited_by = NULL WHERE invited_by = ?', userId); // UC4 — Plan 3c
-    this.db.run('UPDATE budget_items SET paid_by_user_id = NULL WHERE paid_by_user_id = ?', userId); // UC5 — Plan 3e
+    await this.budgetItemsRepo.clearPaidByUser(userId); // UC5 — Plan 3e Task 2, converted.
     await this.budget.removeUserFromBudgetItems(userId);
     this.db.run('DELETE FROM share_tokens WHERE created_by = ?', userId); // UC6 — Plan 3g
     this.db.run('DELETE FROM journey_share_tokens WHERE created_by = ?', userId); // UC7 — Plan 3g

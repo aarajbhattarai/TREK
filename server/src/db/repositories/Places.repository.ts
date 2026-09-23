@@ -912,4 +912,24 @@ export class PlacesRepository extends TrekRepository<Places> {
       .execute<{ trip_id: number } | undefined>('get', false);
     return row?.trip_id;
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3e Task 2 (budget) — additive, append-only per that task's own
+  // file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * BG20 (`BudgetService.rebaseTripCurrency`'s `pinPlaces`) — `UPDATE places
+   * SET currency = ?, updated_at = CURRENT_TIMESTAMP WHERE trip_id = ? AND
+   * price IS NOT NULL AND (currency IS NULL OR currency = '')`. Only priced
+   * places are denominated; `updated_at` doubles as the optimistic-
+   * concurrency token (#1135).
+   */
+  async pinCurrencyForTrip(trip_id: number | string, prev_currency: string): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate(
+      { trip: trip_id as number, price: { $ne: null }, $or: [{ currency: null }, { currency: '' }] },
+      { currency: prev_currency, updated_at: currentTimestamp(platform) },
+    );
+  }
 }

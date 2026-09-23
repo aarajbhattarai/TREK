@@ -17,6 +17,11 @@ import { ExchangeRatesService } from './exchange-rates.service';
 import { addonGate } from '../addons/addon-gate';
 import { AddonsService } from '../addons/addons.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 /** Legacy registrar gate: the whole budget surface rides the budget addon. */
 const budgetAddonOn = addonGate(ADDON_IDS.BUDGET);
@@ -86,6 +91,8 @@ export class BudgetMcp {
     readonly addons: AddonsService,
     private readonly guards: McpToolGuardsService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Places) private readonly places: PlacesRepository,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
@@ -170,9 +177,9 @@ export class BudgetMcp {
     return null;
   }
 
-  /** The sibling tools' foreign-id rule: a linked id must live on the same trip. */
+  /** The sibling tools' foreign-id rule: a linked id must live on the same trip. BGM1 — now `PlacesRepository.findTripId` (R12), compared against the caller's own trip id. */
   private async placeOnTrip(tripId: number, placeId: number): Promise<boolean> {
-    return !!this.db.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+    return (await this.places.findTripId(placeId)) === tripId;
   }
 
   // --- BUDGET ---
@@ -403,8 +410,8 @@ export class BudgetMcp {
   })
   async getSettlementSummary({ tripId, base }: { tripId: number; base?: string }, ctx: McpContext) {
     if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
-    const trip = this.db.get<{ currency?: string }>('SELECT currency FROM trips WHERE id = ?', tripId);
-    const tripCurrency = trip?.currency || 'EUR';
+    const currency = await this.trips.getCurrency(tripId);
+    const tripCurrency = currency || 'EUR';
     const effectiveBase = (base || tripCurrency).toUpperCase();
     const rates = await this.exchangeRates.getRates(effectiveBase);
     const summary = await this.budget.calculateSettlement(tripId, { base: effectiveBase, rates, tripCurrency });
@@ -590,8 +597,8 @@ export class BudgetMcp {
     // Resolve the trip currency + live rates like get_settlement_summary — the
     // legacy resource called calculateSettlement(id) bare, silently netting a
     // non-EUR trip in EUR with no FX conversion.
-    const trip = this.db.get<{ currency?: string }>('SELECT currency FROM trips WHERE id = ?', id);
-    const tripCurrency = trip?.currency || 'EUR';
+    const currency = await this.trips.getCurrency(id);
+    const tripCurrency = currency || 'EUR';
     const effectiveBase = tripCurrency.toUpperCase();
     const rates = await this.exchangeRates.getRates(effectiveBase);
     const settlement = await this.budget.calculateSettlement(id, { base: effectiveBase, rates, tripCurrency });

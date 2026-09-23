@@ -68,6 +68,8 @@ import { NotFoundError, ValidationError } from '../../../src/nest/common/domain-
 import type { User } from '../../../src/types';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTripsRepo, createTestTripMembersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { budgetRepoArgs } from '../../helpers/budget-repos';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import type { EntityManager } from '@mikro-orm/core';
 import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -97,10 +99,10 @@ beforeAll(async () => {
   tripsRepo = await createTestTripsRepo(testDb);
   usersRepo = await createTestUsersRepo(testDb);
   tripMembersRepo = await createTestTripMembersRepo(testDb);
-  budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
   roster = new TripMembersService(
     dbs(), budgetSvc,
-    new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), usersRepo),
+    new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), usersRepo, await createTestBudgetItemsRepo(dbs().connection)),
     new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
     new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection),
     tripsRepo, tripMembersRepo, usersRepo,

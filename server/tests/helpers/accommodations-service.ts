@@ -15,6 +15,7 @@ import {
   createTestTripMembersRepo, createTestRoadtripViasRepo, createTestDayAccommodationsRepo, createTestReservationsRepo,
   sharedTestOrm,
 } from './test-uow';
+import { createTestBudgetItemsRepo } from './files-repos';
 
 /**
  * AccommodationsService over a test connection.
@@ -64,5 +65,6 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
     await createTestDaysRepo(dbs.connection),
     await createTestRoadtripViasRepo(dbs.connection),
     await createTestReservationsRepo(dbs.connection),
+    await createTestBudgetItemsRepo(dbs.connection),
   );
 }

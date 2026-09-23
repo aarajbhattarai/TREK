@@ -71,6 +71,7 @@ import {
   createTestTripsRepo,
   sharedTestOrm,
 } from '../../helpers/test-uow';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -119,6 +120,7 @@ beforeAll(async () => {
   await createTestDayAssignmentsRepo(dbs.connection),
   await createTestCategoriesRepo(dbs.connection),
   await createTestTripsRepo(dbs.connection),
+  await createTestBudgetItemsRepo(dbs.connection),
 );
 });
 

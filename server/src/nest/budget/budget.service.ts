@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService, type TripAccess } from '../database/database.service';
 import type { BudgetParticipantFinal, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -7,11 +8,27 @@ import { avatarUrl } from '../common/avatarUrl';
 import type { User, BudgetItem, BudgetItemMember, BudgetItemPayer, BudgetItemReceipt } from '../../types';
 import { ExchangeRatesService } from './exchange-rates.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import type { BudgetItemsRepository, BudgetItemRow } from '../../db/repositories/BudgetItems.repository';
+import { BudgetItemMembers } from '../../db/entities/BudgetItemMembers.entity';
+import type { BudgetItemMembersRepository } from '../../db/repositories/BudgetItemMembers.repository';
+import { BudgetItemPayers } from '../../db/entities/BudgetItemPayers.entity';
+import type { BudgetItemPayersRepository } from '../../db/repositories/BudgetItemPayers.repository';
+import { BudgetSettlements } from '../../db/entities/BudgetSettlements.entity';
+import type { BudgetSettlementsRepository } from '../../db/repositories/BudgetSettlements.repository';
+import { BudgetCategoryOrder } from '../../db/entities/BudgetCategoryOrder.entity';
+import type { BudgetCategoryOrderRepository } from '../../db/repositories/BudgetCategoryOrder.repository';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 type Trip = TripAccess;
 
 type SettlementRow = {
-  id: number; trip_id: string; from_user_id: number; to_user_id: number;
+  id: number; trip_id: number; from_user_id: number; to_user_id: number;
   amount: number; currency: string | null; exchange_rate: number | null;
   created_at: string; settled_at: string | null; created_by_user_id: number | null;
   from_username: string; from_avatar: string | null;
@@ -114,6 +131,14 @@ export class BudgetService {
     private readonly exchangeRates: ExchangeRatesService,
     private readonly realtime: RealtimeService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
+    @InjectRepository(BudgetItemMembers) private readonly budgetItemMembersRepo: BudgetItemMembersRepository,
+    @InjectRepository(BudgetItemPayers) private readonly budgetItemPayersRepo: BudgetItemPayersRepository,
+    @InjectRepository(BudgetSettlements) private readonly budgetSettlementsRepo: BudgetSettlementsRepository,
+    @InjectRepository(BudgetCategoryOrder) private readonly budgetCategoryOrderRepo: BudgetCategoryOrderRepository,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -128,45 +153,36 @@ export class BudgetService {
     this.realtime.broadcast(tripId, event, payload, socketId);
   }
 
+  /**
+   * `BudgetItemRow` (the repository's DB-accurate row — `sort_order`/
+   * `created_at` genuinely nullable, per the entity) to `BudgetItem` (the
+   * domain type the API and every caller of this service expects —
+   * `sort_order: number`, `created_at?: string`). A freshly-read row always
+   * has both populated (`sort_order` defaults to 0, `created_at` to
+   * `CURRENT_TIMESTAMP`), so this is a type-shape bridge, not a behavior
+   * change — matching what the legacy `db.get<BudgetItem>(...)` generic
+   * silently assumed.
+   */
+  private toBudgetItem(row: BudgetItemRow): BudgetItem {
+    return { ...row, sort_order: row.sort_order ?? 0, created_at: row.created_at ?? undefined };
+  }
+
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
   private async loadItemMembers(itemId: number | string) {
-    const rows = this.db.all<BudgetItemMember>(`
-    SELECT bm.user_id, bm.paid, bm.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM budget_item_members bm
-    JOIN users u ON bm.user_id = u.id
-    WHERE bm.budget_item_id = ?
-  `, itemId);
+    const rows = await this.budgetItemMembersRepo.listForItem(itemId as number);
     return rows.map(m => ({ ...m, avatar_url: avatarUrl(m) }));
   }
 
   private async loadItemPayers(itemId: number | string) {
-    const rows = this.db.all<BudgetItemPayer>(`
-    SELECT bp.user_id, bp.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM budget_item_payers bp
-    JOIN users u ON bp.user_id = u.id
-    WHERE bp.budget_item_id = ?
-  `, itemId);
+    const rows = await this.budgetItemPayersRepo.listForItem(itemId as number);
     return rows.map(p => ({ ...p, avatar_url: avatarUrl(p) }));
   }
 
   private async loadItemReceipts(itemId: number | string): Promise<BudgetItemReceipt[]> {
-    const rows = this.db.all<{
-      id: number;
-      filename: string;
-      original_name: string;
-      file_size: number | null;
-      mime_type: string | null;
-      trip_id: number;
-    }>(`
-      SELECT f.id, f.filename, f.original_name, f.file_size, f.mime_type, f.trip_id
-      FROM trip_files f
-      JOIN file_links fl ON fl.file_id = f.id
-      WHERE f.deleted_at IS NULL AND fl.budget_item_id = ?
-      ORDER BY f.created_at ASC
-    `, itemId);
+    const rows = await this.budgetItemsRepo.listReceipts(itemId);
 
     return rows.map(f => ({
       id: f.id,
@@ -198,17 +214,16 @@ export class BudgetService {
    * is stored as such; only a zero (or NaN) amount says nothing and is dropped.
    */
   private async writeItemPayers(itemId: number | string, tripId: string | number, payers: { user_id: number; amount: number }[]) {
-    this.db.run('DELETE FROM budget_item_payers WHERE budget_item_id = ?', itemId);
-    const insert = this.db.prepare('INSERT OR IGNORE INTO budget_item_payers (budget_item_id, user_id, amount) VALUES (?, ?, ?)');
+    await this.budgetItemPayersRepo.deleteForItem(itemId as number);
     const known = await this.rosterMemberIds(tripId, payers.map(p => p.user_id));
     const accepted: number[] = [];
     for (const p of payers) {
       if (!p.amount || !known.has(p.user_id)) continue;
-      insert.run(itemId, p.user_id, p.amount);
+      await this.budgetItemPayersRepo.insertIgnore({ budget_item_id: itemId as number, user_id: p.user_id, amount: p.amount });
       accepted.push(p.amount);
     }
     const total = sumMoney(accepted);
-    this.db.run('UPDATE budget_items SET total_price = ? WHERE id = ?', total, itemId);
+    await this.budgetItemsRepo.setTotalPrice(itemId, total);
     return total;
   }
 
@@ -228,19 +243,13 @@ export class BudgetService {
    * is left in place, so restoring that file brings it back attached.
    */
   private async unlinkReceipts(budgetItemId: number | string, keep: ReadonlySet<number> = new Set()) {
-    const rows = this.db.all<{ id: number; file_id: number; reservation_id: number | null; assignment_id: number | null; place_id: number | null }>(
-      `SELECT fl.id, fl.file_id, fl.reservation_id, fl.assignment_id, fl.place_id
-       FROM file_links fl
-       JOIN trip_files f ON f.id = fl.file_id
-       WHERE fl.budget_item_id = ? AND f.deleted_at IS NULL`,
-      budgetItemId,
-    );
+    const rows = await this.budgetItemsRepo.listReceiptLinks(budgetItemId);
     for (const row of rows) {
       if (keep.has(row.file_id)) continue;
       if (row.reservation_id || row.assignment_id || row.place_id) {
-        this.db.run('UPDATE file_links SET budget_item_id = NULL WHERE id = ?', row.id);
+        await this.budgetItemsRepo.clearLinkBudgetRef(row.id);
       } else {
-        this.db.run('DELETE FROM file_links WHERE id = ?', row.id);
+        await this.budgetItemsRepo.deleteLink(row.id);
       }
     }
   }
@@ -250,23 +259,13 @@ export class BudgetService {
   // -------------------------------------------------------------------------
 
   async listBudgetItems(tripId: string | number) {
-    const items = this.db.all<BudgetItem>(`
-    SELECT bi.* FROM budget_items bi
-    LEFT JOIN budget_category_order bco ON bco.trip_id = bi.trip_id AND bco.category = bi.category
-    WHERE bi.trip_id = ?
-    ORDER BY COALESCE(bco.sort_order, 999999) ASC, bi.sort_order ASC
-  `, tripId);
+    const items = (await this.budgetItemsRepo.listWithCategoryOrder(tripId)).map(r => this.toBudgetItem(r));
 
     const itemIds = items.map(i => i.id);
     const membersByItem: Record<number, (BudgetItemMember & { avatar_url: string | null })[]> = {};
 
     if (itemIds.length > 0) {
-      const allMembers = this.db.all<BudgetItemMember & { budget_item_id: number }>(`
-      SELECT bm.budget_item_id, bm.user_id, bm.paid, bm.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
-      FROM budget_item_members bm
-      JOIN users u ON bm.user_id = u.id
-      WHERE bm.budget_item_id IN (${itemIds.map(() => '?').join(',')})
-    `, ...itemIds);
+      const allMembers = await this.budgetItemMembersRepo.listForItems(itemIds);
 
       for (const m of allMembers) {
         if (!membersByItem[m.budget_item_id]) membersByItem[m.budget_item_id] = [];
@@ -278,12 +277,7 @@ export class BudgetService {
 
     const payersByItem: Record<number, (BudgetItemPayer & { avatar_url: string | null })[]> = {};
     if (itemIds.length > 0) {
-      const allPayers = this.db.all<BudgetItemPayer & { budget_item_id: number }>(`
-      SELECT bp.budget_item_id, bp.user_id, bp.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
-      FROM budget_item_payers bp
-      JOIN users u ON bp.user_id = u.id
-      WHERE bp.budget_item_id IN (${itemIds.map(() => '?').join(',')})
-    `, ...itemIds);
+      const allPayers = await this.budgetItemPayersRepo.listForItems(itemIds);
 
       for (const p of allPayers) {
         if (!payersByItem[p.budget_item_id]) payersByItem[p.budget_item_id] = [];
@@ -295,22 +289,7 @@ export class BudgetService {
 
     const receiptsByItem: Record<number, BudgetItemReceipt[]> = {};
     if (itemIds.length > 0) {
-      const placeholders = itemIds.map(() => '?').join(',');
-      const allReceipts = this.db.all<{
-        id: number;
-        filename: string;
-        original_name: string;
-        file_size: number | null;
-        mime_type: string | null;
-        trip_id: number;
-        budget_item_id: number;
-      }>(`
-        SELECT f.id, f.filename, f.original_name, f.file_size, f.mime_type, f.trip_id, fl.budget_item_id
-        FROM trip_files f
-        JOIN file_links fl ON fl.file_id = f.id
-        WHERE f.deleted_at IS NULL AND fl.budget_item_id IN (${placeholders})
-        ORDER BY f.created_at ASC
-      `, ...itemIds);
+      const allReceipts = await this.budgetItemsRepo.listReceiptsForItems(itemIds);
 
       for (const r of allReceipts) {
         if (!receiptsByItem[r.budget_item_id]) receiptsByItem[r.budget_item_id] = [];
@@ -361,12 +340,12 @@ export class BudgetService {
     if (existingCurrency !== undefined) {
       prior = (existingCurrency || '').toUpperCase();
     } else if (existingItemId != null) {
-      const existing = this.db.get<{ currency?: string }>('SELECT currency FROM budget_items WHERE id = ?', existingItemId);
-      if (existing) prior = (existing.currency || '').toUpperCase();
+      const existing = await this.budgetItemsRepo.getCurrency(existingItemId);
+      if (existing !== undefined) prior = (existing || '').toUpperCase();
     }
     if (prior !== undefined && prior === cur) return; // currency unchanged
-    const trip = this.db.get<{ currency?: string }>('SELECT currency FROM trips WHERE id = ?', tripId);
-    const tripCur = (trip?.currency || 'EUR').toUpperCase();
+    const tripCurrency = await this.tripsRepo.getCurrency(tripId);
+    const tripCur = (tripCurrency || 'EUR').toUpperCase();
     if (cur === tripCur) return; // same as the trip currency → no conversion to freeze
     const rates = await this.exchangeRates.getRates(tripCur);
     const r = rates?.[cur];
@@ -402,9 +381,9 @@ export class BudgetService {
   ): Promise<void> {
     const next = (newCurrency || '').toUpperCase();
     if (!next) return;
-    const trip = this.db.get<{ currency?: string }>('SELECT currency FROM trips WHERE id = ?', tripId);
-    if (!trip) return;
-    const prev = (trip.currency || 'EUR').toUpperCase();
+    const tripCurrency = await this.tripsRepo.getCurrency(tripId);
+    if (tripCurrency === undefined) return;
+    const prev = (tripCurrency || 'EUR').toUpperCase();
     if (prev === next) return;
 
     const rates = await this.exchangeRates.getRates(next);
@@ -418,28 +397,32 @@ export class BudgetService {
       return r && r > 0 ? r : 1;
     };
 
-    const rebase = (table: 'budget_items' | 'budget_settlements') => {
-      this.db.run(`UPDATE ${table} SET currency = ? WHERE trip_id = ? AND (currency IS NULL OR currency = '')`, prev, tripId);
-      const rows = this.db.all<{ cur: string }>(
-        `SELECT DISTINCT currency AS cur FROM ${table} WHERE trip_id = ? AND currency IS NOT NULL`,
-        tripId,
-      );
-      for (const { cur } of rows) {
-        this.db.run(`UPDATE ${table} SET exchange_rate = ? WHERE trip_id = ? AND currency = ?`, rateFor(cur.toUpperCase()), tripId, cur);
+    // D4 (rule 23) — one repository method per table, not a dynamic identifier:
+    // `budgetItemsRepo`'s and `budgetSettlementsRepo`'s own `pinCurrency`/
+    // `listDistinctCurrencies`/`setExchangeRateForCurrency` trios.
+    const rebaseBudgetItems = async () => {
+      await this.budgetItemsRepo.pinCurrency(tripId, prev);
+      const currencies = await this.budgetItemsRepo.listDistinctCurrencies(tripId);
+      for (const cur of currencies) {
+        await this.budgetItemsRepo.setExchangeRateForCurrency(tripId, cur, rateFor(cur.toUpperCase()));
+      }
+    };
+    const rebaseBudgetSettlements = async () => {
+      await this.budgetSettlementsRepo.pinCurrency(tripId, prev);
+      const currencies = await this.budgetSettlementsRepo.listDistinctCurrencies(tripId);
+      for (const cur of currencies) {
+        await this.budgetSettlementsRepo.setExchangeRateForCurrency(tripId, cur, rateFor(cur.toUpperCase()));
       }
     };
 
     // Only priced places have anything to denominate; a currency on a free place would
     // just be noise. `updated_at` doubles as the optimistic-concurrency token (#1135),
     // so bumping it stops a client holding the pre-switch row from writing the pin away.
-    const pinPlaces = () => {
-      this.db.run(`
-      UPDATE places SET currency = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE trip_id = ? AND price IS NOT NULL AND (currency IS NULL OR currency = '')
-    `, prev, tripId);
+    const pinPlaces = async () => {
+      await this.placesRepo.pinCurrencyForTrip(tripId, prev);
     };
 
-    await this.uow.transactional(async () => { rebase('budget_items'); rebase('budget_settlements'); pinPlaces(); });
+    await this.uow.transactional(async () => { await rebaseBudgetItems(); await rebaseBudgetSettlements(); await pinPlaces(); });
   }
 
   async createBudgetItem(
@@ -457,17 +440,17 @@ export class BudgetService {
     },
   ) {
     return await this.uow.transactional(async () => {
-      const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM budget_items WHERE trip_id = ?', tripId)!;
-      const sortOrder = (maxOrder.max !== null ? maxOrder.max : -1) + 1;
+      const maxOrder = await this.budgetItemsRepo.maxSortOrder(tripId);
+      const sortOrder = (maxOrder !== null ? maxOrder : -1) + 1;
 
       const cat = data.category || 'other';
 
       // Ensure category has a sort_order entry
-      const catExists = this.db.get('SELECT 1 FROM budget_category_order WHERE trip_id = ? AND category = ?', tripId, cat);
+      const catExists = await this.budgetCategoryOrderRepo.exists(tripId, cat);
       if (!catExists) {
-        const maxCatOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM budget_category_order WHERE trip_id = ?', tripId);
-        const catOrder = (maxCatOrder?.max !== null && maxCatOrder?.max !== undefined ? maxCatOrder.max : -1) + 1;
-        this.db.run('INSERT OR IGNORE INTO budget_category_order (trip_id, category, sort_order) VALUES (?, ?, ?)', tripId, cat, catOrder);
+        const maxCatOrder = await this.budgetCategoryOrderRepo.maxSortOrder(tripId);
+        const catOrder = (maxCatOrder !== null && maxCatOrder !== undefined ? maxCatOrder : -1) + 1;
+        await this.budgetCategoryOrderRepo.insertIgnore(tripId, cat, catOrder);
       }
 
       // total_price is derived from explicit payers when given; otherwise the caller
@@ -483,46 +466,45 @@ export class BudgetService {
 
       const { note, ticket } = splitLegacyTicketNote(data.note, data.ticket_json);
 
-      const result = this.db.run(
-        'INSERT INTO budget_items (trip_id, category, name, total_price, currency, exchange_rate, persons, days, note, ticket_json, sort_order, expense_date, reservation_id, place_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        tripId,
-        cat,
-        data.name,
-        total,
-        data.currency || null,
-        data.exchange_rate != null ? data.exchange_rate : 1,
-        memberIds ? memberIds.length : (data.persons != null ? data.persons : null),
-        data.days !== undefined && data.days !== null ? data.days : null,
-        note || null,
-        ticket || null,
-        sortOrder,
-        data.expense_date || null,
-        data.reservation_id != null ? data.reservation_id : null,
-        data.place_id != null ? data.place_id : null,
-      );
+      const itemId = await this.budgetItemsRepo.insertItem({
+        trip_id: tripId,
+        category: cat,
+        name: data.name,
+        total_price: total,
+        currency: data.currency || null,
+        exchange_rate: data.exchange_rate != null ? data.exchange_rate : 1,
+        persons: memberIds ? memberIds.length : (data.persons != null ? data.persons : null),
+        days: data.days !== undefined && data.days !== null ? data.days : null,
+        note: note || null,
+        ticket_json: ticket || null,
+        sort_order: sortOrder,
+        expense_date: data.expense_date || null,
+        reservation_id: data.reservation_id != null ? data.reservation_id : null,
+        place_id: data.place_id != null ? data.place_id : null,
+      });
 
-      const itemId = result.lastInsertRowid as number;
       if (data.payers && data.payers.length > 0) await this.writeItemPayers(itemId, tripId, data.payers);
       if (members && members.length > 0) {
-        const insert = this.db.prepare('INSERT OR IGNORE INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, 0, ?)');
-        for (const m of members) insert.run(itemId, m.user_id, m.amount !== undefined && m.amount !== null ? m.amount : null);
+        for (const m of members) {
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: itemId, user_id: m.user_id, paid: 0, amount: m.amount !== undefined && m.amount !== null ? m.amount : null });
+        }
       } else if (memberIds && memberIds.length > 0) {
-        const insert = this.db.prepare('INSERT OR IGNORE INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, 0, NULL)');
-        for (const uid of memberIds) insert.run(itemId, uid);
+        for (const uid of memberIds) {
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: itemId, user_id: uid, paid: 0, amount: null });
+        }
       }
 
       if (data.receipt_file_ids && data.receipt_file_ids.length > 0) {
-        const insertLink = this.db.prepare('INSERT OR IGNORE INTO file_links (file_id, budget_item_id) VALUES (?, ?)');
         for (const fid of data.receipt_file_ids) {
           // Verify file belongs to this trip
-          const belongs = this.db.get('SELECT id FROM trip_files WHERE id = ? AND trip_id = ? AND deleted_at IS NULL', fid, tripId);
+          const belongs = await this.budgetItemsRepo.findTripFile(fid, tripId);
           if (belongs) {
-            insertLink.run(fid, itemId);
+            await this.budgetItemsRepo.insertReceiptLink(fid, itemId);
           }
         }
       }
 
-      const item = this.db.get<BudgetItem>('SELECT * FROM budget_items WHERE id = ?', itemId)!;
+      const item = this.toBudgetItem((await this.budgetItemsRepo.findById(itemId))!);
       item.members = await this.loadItemMembers(itemId);
       item.payers = await this.loadItemPayers(itemId);
       item.receipts = await this.loadItemReceipts(itemId);
@@ -532,8 +514,9 @@ export class BudgetService {
 
   /** Fetch a single budget item hydrated with its members, payers, and receipts, scoped to the trip. */
   async getBudgetItem(id: string | number, tripId: string | number): Promise<BudgetItem | null> {
-    const item = this.db.get<BudgetItem>('SELECT * FROM budget_items WHERE id = ? AND trip_id = ?', id, tripId);
-    if (!item) return null;
+    const row = await this.budgetItemsRepo.findInTrip(id, tripId);
+    if (!row) return null;
+    const item = this.toBudgetItem(row);
     item.members = await this.loadItemMembers(id);
     item.payers = await this.loadItemPayers(id);
     item.receipts = await this.loadItemReceipts(id);
@@ -564,7 +547,7 @@ export class BudgetService {
     },
   ) {
     return await this.uow.transactional(async () => {
-      const item = this.db.get('SELECT * FROM budget_items WHERE id = ? AND trip_id = ?', id, tripId);
+      const item = await this.budgetItemsRepo.findInTrip(id, tripId);
       if (!item) return null;
 
       // An old client sending a receipt in `note` still lands in ticket_json, and
@@ -573,34 +556,23 @@ export class BudgetService {
       const noteTouched = data.note !== undefined && note !== undefined;
       const ticketTouched = data.ticket_json !== undefined || ticket !== undefined;
 
-      this.db.run(`
-    UPDATE budget_items SET
-      category = COALESCE(?, category),
-      name = COALESCE(?, name),
-      total_price = CASE WHEN ? IS NOT NULL THEN ? ELSE total_price END,
-      currency = CASE WHEN ? THEN ? ELSE currency END,
-      exchange_rate = CASE WHEN ? IS NOT NULL THEN ? ELSE exchange_rate END,
-      persons = CASE WHEN ? IS NOT NULL THEN ? ELSE persons END,
-      days = CASE WHEN ? THEN ? ELSE days END,
-      note = CASE WHEN ? THEN ? ELSE note END,
-      ticket_json = CASE WHEN ? THEN ? ELSE ticket_json END,
-      sort_order = CASE WHEN ? IS NOT NULL THEN ? ELSE sort_order END,
-      expense_date = CASE WHEN ? THEN ? ELSE expense_date END
-    WHERE id = ?
-  `,
-        data.category || null,
-        data.name || null,
-        data.total_price !== undefined ? 1 : null, data.total_price !== undefined ? data.total_price : 0,
-        data.currency !== undefined ? 1 : 0, data.currency !== undefined ? (data.currency || null) : null,
-        data.exchange_rate !== undefined ? 1 : null, data.exchange_rate !== undefined ? data.exchange_rate : 1,
-        data.persons !== undefined ? 1 : null, data.persons !== undefined ? data.persons : null,
-        data.days !== undefined ? 1 : 0, data.days !== undefined ? data.days : null,
-        noteTouched ? 1 : 0, noteTouched ? note : null,
-        ticketTouched ? 1 : 0, ticketTouched ? ticket : null,
-        data.sort_order !== undefined ? 1 : null, data.sort_order !== undefined ? data.sort_order : 0,
-        data.expense_date !== undefined ? 1 : 0, data.expense_date !== undefined ? (data.expense_date || null) : null,
-        id,
-      );
+      // R11's presence-sentinel helper (`BudgetItemsRepository.update`,
+      // `presenceSet`) — `category`/`name` pass `present = !!value`
+      // (the legacy `COALESCE(?, col)` truthy-wins shape), everything else
+      // passes `present = <field> !== undefined` (a true presence sentinel).
+      await this.budgetItemsRepo.update(id, {
+        category: [!!data.category, data.category || ''],
+        name: [!!data.name, data.name || ''],
+        total_price: [data.total_price !== undefined, data.total_price !== undefined ? data.total_price : 0],
+        currency: [data.currency !== undefined, data.currency !== undefined ? (data.currency || null) : null],
+        exchange_rate: [data.exchange_rate !== undefined, data.exchange_rate !== undefined ? data.exchange_rate : 1],
+        persons: [data.persons !== undefined, data.persons !== undefined ? data.persons : null],
+        days: [data.days !== undefined, data.days !== undefined ? data.days : null],
+        note: [noteTouched, noteTouched ? (note as string | null) : null],
+        ticket_json: [ticketTouched, ticketTouched ? (ticket as string | null) : null],
+        sort_order: [data.sort_order !== undefined, data.sort_order !== undefined ? data.sort_order : 0],
+        expense_date: [data.expense_date !== undefined, data.expense_date !== undefined ? (data.expense_date || null) : null],
+      });
 
       // Optional inline payer/member replacement (the edit modal saves all at once).
       if (data.payers !== undefined) {
@@ -609,32 +581,34 @@ export class BudgetService {
         // A "recorded total, nobody assigned" expense clears payers but still carries
         // an explicit total_price — re-apply it so it isn't clobbered to 0.
         if (data.payers.length === 0 && data.total_price !== undefined) {
-          this.db.run('UPDATE budget_items SET total_price = ? WHERE id = ?', data.total_price, id);
+          await this.budgetItemsRepo.setTotalPrice(id, data.total_price);
         }
       }
       if (data.members !== undefined) {
         const known = await this.rosterMemberIds(tripId, data.members.map(m => m.user_id));
         const members = data.members.filter(m => known.has(m.user_id));
-        this.db.run('DELETE FROM budget_item_members WHERE budget_item_id = ?', id);
-        const insert = this.db.prepare('INSERT OR IGNORE INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, 0, ?)');
-        for (const m of members) insert.run(id, m.user_id, m.amount !== undefined && m.amount !== null ? m.amount : null);
-        this.db.run('UPDATE budget_items SET persons = ? WHERE id = ?', members.length || null, id);
+        await this.budgetItemMembersRepo.deleteForItem(id as number);
+        for (const m of members) {
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id as number, user_id: m.user_id, paid: 0, amount: m.amount !== undefined && m.amount !== null ? m.amount : null });
+        }
+        await this.budgetItemsRepo.setPersons(id, members.length || null);
       } else if (data.member_ids !== undefined) {
         const known = await this.rosterMemberIds(tripId, data.member_ids);
         const memberIds = data.member_ids.filter(uid => known.has(uid));
-        this.db.run('DELETE FROM budget_item_members WHERE budget_item_id = ?', id);
-        const insert = this.db.prepare('INSERT OR IGNORE INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, 0, NULL)');
-        for (const uid of memberIds) insert.run(id, uid);
-        this.db.run('UPDATE budget_items SET persons = ? WHERE id = ?', memberIds.length || null, id);
+        await this.budgetItemMembersRepo.deleteForItem(id as number);
+        for (const uid of memberIds) {
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id as number, user_id: uid, paid: 0, amount: null });
+        }
+        await this.budgetItemsRepo.setPersons(id, memberIds.length || null);
       }
 
       // If category changed, update category order table
       if (data.category) {
-        const catExists = this.db.get('SELECT 1 FROM budget_category_order WHERE trip_id = ? AND category = ?', tripId, data.category);
+        const catExists = await this.budgetCategoryOrderRepo.exists(tripId, data.category);
         if (!catExists) {
-          const maxCatOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM budget_category_order WHERE trip_id = ?', tripId);
-          const catOrder = (maxCatOrder?.max !== null && maxCatOrder?.max !== undefined ? maxCatOrder.max : -1) + 1;
-          this.db.run('INSERT OR IGNORE INTO budget_category_order (trip_id, category, sort_order) VALUES (?, ?, ?)', tripId, data.category, catOrder);
+          const maxCatOrder = await this.budgetCategoryOrderRepo.maxSortOrder(tripId);
+          const catOrder = (maxCatOrder !== null && maxCatOrder !== undefined ? maxCatOrder : -1) + 1;
+          await this.budgetCategoryOrderRepo.insertIgnore(tripId, data.category, catOrder);
         }
       }
 
@@ -647,10 +621,8 @@ export class BudgetService {
         const keep = new Set(wanted);
         await this.unlinkReceipts(id, keep);
         if (wanted.length > 0) {
-          const insertLink = this.db.prepare('INSERT OR IGNORE INTO file_links (file_id, budget_item_id) VALUES (?, ?)');
-          const adopt = this.db.prepare('UPDATE file_links SET budget_item_id = ? WHERE id = ?');
           for (const fid of wanted) {
-            const belongs = this.db.get('SELECT id FROM trip_files WHERE id = ? AND trip_id = ? AND deleted_at IS NULL', fid, tripId);
+            const belongs = await this.budgetItemsRepo.findTripFile(fid, tripId);
             if (!belongs) continue;
             // Already this item's receipt: nothing to do. A file can carry several
             // link rows (one per place, one per booking), so on a second save of
@@ -658,21 +630,19 @@ export class BudgetService {
             // unlinkReceipts and the next spare would be adopted into a duplicate
             // (file, item) pair, which the unique index refuses. That threw inside
             // the transaction and rolled the whole expense edit back, every time.
-            const already = this.db.get('SELECT 1 FROM file_links WHERE file_id = ? AND budget_item_id = ?', fid, id);
+            const already = await this.budgetItemsRepo.linkAlreadyExists(fid, id);
             if (already) continue;
             // A file already tied to a place or a booking gets the receipt link
             // written onto that row, because the unique index is per file and
             // item and a second row for the same pair would be refused anyway.
-            const spare = this.db.get<{ id: number }>(
-              'SELECT id FROM file_links WHERE file_id = ? AND budget_item_id IS NULL LIMIT 1', fid,
-            );
-            if (spare) adopt.run(id, spare.id);
-            else insertLink.run(fid, id);
+            const spare = await this.budgetItemsRepo.findSpareLink(fid);
+            if (spare) await this.budgetItemsRepo.adoptSpareLink(spare.id, id);
+            else await this.budgetItemsRepo.insertReceiptLink(fid, id);
           }
         }
       }
 
-      const updated = this.db.get<BudgetItem>('SELECT * FROM budget_items WHERE id = ?', id)!;
+      const updated = this.toBudgetItem((await this.budgetItemsRepo.findById(id))!);
       updated.members = await this.loadItemMembers(id);
       updated.payers = await this.loadItemPayers(id);
       updated.receipts = await this.loadItemReceipts(id);
@@ -686,10 +656,10 @@ export class BudgetService {
 
   async setItemPayers(id: string | number, tripId: string | number, payers: { user_id: number; amount: number }[]) {
     return await this.uow.transactional(async () => {
-      const item = this.db.get('SELECT id FROM budget_items WHERE id = ? AND trip_id = ?', id, tripId);
+      const item = await this.budgetItemsRepo.existsInTrip(id, tripId);
       if (!item) return null;
       await this.writeItemPayers(id, tripId, payers);
-      const updated = this.db.get<BudgetItem>('SELECT * FROM budget_items WHERE id = ?', id)!;
+      const updated = this.toBudgetItem((await this.budgetItemsRepo.findById(id))!);
       updated.members = await this.loadItemMembers(id);
       updated.payers = await this.loadItemPayers(id);
       return updated;
@@ -697,9 +667,7 @@ export class BudgetService {
   }
 
   async deleteBudgetItem(id: string | number, tripId: string | number): Promise<boolean> {
-    const item = this.db.get<{ id: number; reservation_id: number | null }>(
-      'SELECT id, reservation_id FROM budget_items WHERE id = ? AND trip_id = ?', id, tripId,
-    );
+    const item = await this.budgetItemsRepo.findForDelete(id, tripId);
     if (!item) return false;
     return await this.uow.transactional(async () => {
       // Find all receipts attached to this item before deleting it
@@ -709,7 +677,7 @@ export class BudgetService {
       // the SET NULL on the foreign key, so restoring the file does not bring
       // back a pointer to an expense that no longer exists.
       await this.unlinkReceipts(id);
-      this.db.run('DELETE FROM budget_items WHERE id = ?', id);
+      await this.budgetItemsRepo.deleteById(id);
 
       // The booking keeps a copy of this expense's total in its metadata, and
       // the reservation update path preserves that copy across edits. With the
@@ -726,17 +694,14 @@ export class BudgetService {
    */
   private async clearReservationPrice(tripId: string | number, reservationId: number): Promise<void> {
     try {
-      const reservation = this.db.get<{ id: number; metadata: string | null }>(
-        'SELECT id, metadata FROM reservations WHERE id = ? AND trip_id = ?',
-        reservationId, tripId,
-      );
+      const reservation = await this.reservationsRepo.getIdAndMetadata(reservationId, tripId);
       if (!reservation?.metadata) return;
       const meta = JSON.parse(reservation.metadata);
       if (!meta || typeof meta !== 'object' || meta.price === undefined) return;
       delete meta.price;
       delete meta.priceCurrency;
-      this.db.run('UPDATE reservations SET metadata = ? WHERE id = ?', JSON.stringify(meta), reservation.id);
-      const updatedRes = this.db.get('SELECT * FROM reservations WHERE id = ?', reservation.id);
+      await this.reservationsRepo.setMetadata(reservation.id, JSON.stringify(meta));
+      const updatedRes = await this.reservationsRepo.getFull(reservation.id);
       this.realtime.broadcast(String(tripId), 'reservation:updated', { reservation: updatedRes }, undefined);
     } catch (err) {
       console.error('[budget] Failed to clear the mirrored price from the reservation:', err);
@@ -749,67 +714,69 @@ export class BudgetService {
 
   async updateMembers(id: string | number, tripId: string | number, userIds: number[]) {
     return await this.uow.transactional(async () => {
-      const item = this.db.get('SELECT * FROM budget_items WHERE id = ? AND trip_id = ?', id, tripId);
+      const item = await this.budgetItemsRepo.findInTrip(id, tripId);
       if (!item) return null;
 
       const existingPaid: Record<number, number> = {};
-      const existing = this.db.all<{ user_id: number; paid: number }>('SELECT user_id, paid FROM budget_item_members WHERE budget_item_id = ?', id);
+      const existing = await this.budgetItemMembersRepo.listUserPaid(id as number);
       for (const e of existing) existingPaid[e.user_id] = e.paid;
 
-      this.db.run('DELETE FROM budget_item_members WHERE budget_item_id = ?', id);
+      await this.budgetItemMembersRepo.deleteForItem(id as number);
 
       const known = await this.rosterMemberIds(tripId, userIds);
       const memberIds = userIds.filter(uid => known.has(uid));
       if (memberIds.length > 0) {
-        const insert = this.db.prepare('INSERT OR IGNORE INTO budget_item_members (budget_item_id, user_id, paid) VALUES (?, ?, ?)');
-        for (const userId of memberIds) insert.run(id, userId, existingPaid[userId] || 0);
-        this.db.run('UPDATE budget_items SET persons = ? WHERE id = ?', memberIds.length, id);
+        for (const userId of memberIds) {
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id as number, user_id: userId, paid: existingPaid[userId] || 0 });
+        }
+        await this.budgetItemsRepo.setPersons(id, memberIds.length);
       } else {
-        this.db.run('UPDATE budget_items SET persons = NULL WHERE id = ?', id);
+        await this.budgetItemsRepo.setPersons(id, null);
       }
 
       // loadItemMembers already applies avatar_url — the legacy second .map was redundant.
       const members = await this.loadItemMembers(id);
-      const updated = this.db.get<BudgetItem>('SELECT * FROM budget_items WHERE id = ?', id)!;
+      const updated = this.toBudgetItem((await this.budgetItemsRepo.findById(id))!);
       return { members, item: updated };
     });
   }
 
   async removeUserFromBudgetItems(userId: number): Promise<void> {
     await this.uow.transactional(async () => {
-      const itemIds = this.db.all<{ budget_item_id: number }>(
-        'SELECT DISTINCT budget_item_id FROM budget_item_members WHERE user_id = ?',
-        userId,
-      ).map(r => r.budget_item_id);
+      const itemIds = await this.budgetItemMembersRepo.listItemIdsForUser(userId);
       if (itemIds.length === 0) {
         return;
       }
 
-      this.db.run('DELETE FROM budget_item_members WHERE user_id = ?', userId);
+      await this.budgetItemMembersRepo.deleteForUser(userId);
 
-      const remaining = this.db.prepare('SELECT COUNT(*) AS count FROM budget_item_members WHERE budget_item_id = ?');
-      const setPersons = this.db.prepare('UPDATE budget_items SET persons = ? WHERE id = ?');
       for (const itemId of itemIds) {
-        const { count } = remaining.get(itemId) as { count: number };
-        setPersons.run(count || null, itemId);
+        const count = await this.budgetItemMembersRepo.countForItem(itemId);
+        await this.budgetItemsRepo.setPersons(itemId, count || null);
       }
     });
   }
 
+  /**
+   * R2-class fix (same as `FilesService`'s — flagged, mutation-tested): the
+   * legacy trip-scoping guard (BG68) and the write (BG69) were two separate
+   * statements with no `uow.transactional`, the one write in this file that
+   * didn't follow its own "transactions are not optional" convention (§17
+   * surprise 4). Wrapped here so a forced mid-transaction failure leaves no
+   * partial update.
+   */
   async toggleMemberPaid(id: string | number, tripId: string | number, userId: string | number, paid: boolean) {
-    // Resolve the item within the caller's trip before updating.
-    const item = this.db.get('SELECT id FROM budget_items WHERE id = ? AND trip_id = ?', id, tripId);
-    if (!item) return null;
+    return await this.uow.transactional(async () => {
+      // Resolve the item within the caller's trip before updating.
+      const item = await this.budgetItemsRepo.existsInTrip(id, tripId);
+      if (!item) return null;
 
-    this.db.run('UPDATE budget_item_members SET paid = ? WHERE budget_item_id = ? AND user_id = ?', paid ? 1 : 0, id, userId);
+      await this.budgetItemMembersRepo.setPaid(id as number, userId as number, paid ? 1 : 0);
 
-    const member = this.db.get<BudgetItemMember>(`
-    SELECT bm.user_id, bm.paid, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM budget_item_members bm JOIN users u ON bm.user_id = u.id
-    WHERE bm.budget_item_id = ? AND bm.user_id = ?
-  `, id, userId);
+      const member = await this.budgetItemMembersRepo.findMemberWithUser(id as number, userId as number);
 
-    return member ? { ...member, avatar_url: avatarUrl(member) } : null;
+      return member ? { ...member, avatar_url: avatarUrl(member) } : null;
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -817,18 +784,7 @@ export class BudgetService {
   // -------------------------------------------------------------------------
 
   async getPerPersonSummary(tripId: string | number) {
-    const summary = this.db.all<{ user_id: number; username: string; avatar: string | null; total_assigned: number; total_paid: number; items_count: number }>(`
-    SELECT bm.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar,
-      SUM(COALESCE(bm.amount, bi.total_price * 1.0 / (SELECT COUNT(*) FROM budget_item_members WHERE budget_item_id = bi.id))) as total_assigned,
-      SUM(CASE WHEN bm.paid = 1 THEN COALESCE(bm.amount, bi.total_price * 1.0 / (SELECT COUNT(*) FROM budget_item_members WHERE budget_item_id = bi.id)) ELSE 0 END) as total_paid,
-      COUNT(bi.id) as items_count
-    FROM budget_item_members bm
-    JOIN budget_items bi ON bm.budget_item_id = bi.id
-    JOIN users u ON bm.user_id = u.id
-    WHERE bi.trip_id = ?
-    GROUP BY bm.user_id
-  `, tripId);
-
+    const summary = await this.budgetItemsRepo.getPerPersonSummary(tripId);
     return summary.map(s => ({ ...s, avatar_url: avatarUrl(s) }));
   }
 
@@ -939,19 +895,9 @@ export class BudgetService {
       return base === tripCurrency ? amount : (rates && rates[tripCurrency] > 0 ? amount * rates[tripCurrency] : amount);
     };
 
-    const items = this.db.all<BudgetItem>('SELECT * FROM budget_items WHERE trip_id = ?', tripId);
-    const allMembers = this.db.all<BudgetItemMember & { budget_item_id: number }>(`
-    SELECT bm.budget_item_id, bm.user_id, bm.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM budget_item_members bm
-    JOIN users u ON bm.user_id = u.id
-    WHERE bm.budget_item_id IN (SELECT id FROM budget_items WHERE trip_id = ?)
-  `, tripId);
-    const allPayers = this.db.all<BudgetItemPayer & { budget_item_id: number }>(`
-    SELECT bp.budget_item_id, bp.user_id, bp.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM budget_item_payers bp
-    JOIN users u ON bp.user_id = u.id
-    WHERE bp.budget_item_id IN (SELECT id FROM budget_items WHERE trip_id = ?)
-  `, tripId);
+    const items = (await this.budgetItemsRepo.listAllForTrip(tripId)).map(r => this.toBudgetItem(r));
+    const allMembers = await this.budgetItemMembersRepo.listForTripWithUsers(tripId);
+    const allPayers = await this.budgetItemPayersRepo.listForTripWithUsers(tripId);
 
     // Net balance per user, in whole cents of the TRIP currency: positive = is owed
     // money, negative = owes money. Every amount is converted out of its own currency
@@ -1143,15 +1089,8 @@ export class BudgetService {
   // -------------------------------------------------------------------------
 
   // Settlement usernames use COALESCE(display_name, username) like every item
-  // query (the legacy raw fu.username was the odd one out).
-  private static readonly SETTLEMENT_SELECT = `
-    SELECT s.id, s.trip_id, s.from_user_id, s.to_user_id, s.amount, s.currency, s.exchange_rate, s.created_at, s.settled_at, s.created_by_user_id,
-           COALESCE(fu.display_name, fu.username) AS from_username, fu.avatar AS from_avatar,
-           COALESCE(tu.display_name, tu.username) AS to_username,   tu.avatar AS to_avatar
-    FROM budget_settlements s
-    JOIN users fu ON s.from_user_id = fu.id
-    JOIN users tu ON s.to_user_id = tu.id
-  `;
+  // query (the legacy raw fu.username was the odd one out) — now the
+  // repository's own `joinedQuery()`/`SETTLEMENT_SELECT` shape.
 
   private mapSettlementRow(r: SettlementRow) {
     return {
@@ -1165,20 +1104,13 @@ export class BudgetService {
   }
 
   async listSettlements(tripId: string | number) {
-    const rows = this.db.all<SettlementRow>(
-      `${BudgetService.SETTLEMENT_SELECT}
-    WHERE s.trip_id = ?
-    ORDER BY s.created_at DESC, s.id DESC
-  `, tripId);
+    const rows = await this.budgetSettlementsRepo.listForTrip(tripId);
     return rows.map(r => this.mapSettlementRow(r));
   }
 
   /** Targeted single-row read (the legacy re-select was a full listSettlements scan). */
   async getSettlement(id: string | number, tripId: string | number) {
-    const row = this.db.get<SettlementRow>(
-      `${BudgetService.SETTLEMENT_SELECT}
-    WHERE s.trip_id = ? AND s.id = ?
-  `, tripId, id);
+    const row = await this.budgetSettlementsRepo.findWithUsers(id, tripId);
     return row ? this.mapSettlementRow(row) : null;
   }
 
@@ -1188,15 +1120,15 @@ export class BudgetService {
     data: { from_user_id: number; to_user_id: number; amount: number; currency?: string | null; exchange_rate?: number; settled_at?: string | null },
     createdByUserId?: number,
   ) {
-    const result = this.db.run(
-      'INSERT INTO budget_settlements (trip_id, from_user_id, to_user_id, amount, currency, exchange_rate, settled_at, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      tripId, data.from_user_id, data.to_user_id, Math.round(data.amount * 100) / 100,
-      data.currency ? data.currency.toUpperCase() : null,
-      data.exchange_rate != null ? data.exchange_rate : 1,
-      data.settled_at || null,
-      createdByUserId ?? null,
-    );
-    return await this.getSettlement(Number(result.lastInsertRowid), tripId);
+    const newId = await this.budgetSettlementsRepo.insertSettlement({
+      trip_id: tripId, from_user_id: data.from_user_id, to_user_id: data.to_user_id,
+      amount: Math.round(data.amount * 100) / 100,
+      currency: data.currency ? data.currency.toUpperCase() : null,
+      exchange_rate: data.exchange_rate != null ? data.exchange_rate : 1,
+      settled_at: data.settled_at || null,
+      created_by_user_id: createdByUserId ?? null,
+    });
+    return await this.getSettlement(newId, tripId);
   }
 
   /** Raw settlement update (no FX freeze) — the REST path wraps it in updateSettlement. */
@@ -1205,29 +1137,21 @@ export class BudgetService {
     tripId: string | number,
     data: { from_user_id: number; to_user_id: number; amount: number; currency?: string | null; exchange_rate?: number; settled_at?: string | null },
   ) {
-    const row = this.db.get('SELECT id FROM budget_settlements WHERE id = ? AND trip_id = ?', id, tripId);
+    const row = await this.budgetSettlementsRepo.findGuard(id, tripId);
     if (!row) return null;
-    this.db.run(`
-    UPDATE budget_settlements SET
-      from_user_id = ?, to_user_id = ?, amount = ?,
-      currency = CASE WHEN ? THEN ? ELSE currency END,
-      exchange_rate = CASE WHEN ? IS NOT NULL THEN ? ELSE exchange_rate END,
-      settled_at = CASE WHEN ? THEN ? ELSE settled_at END
-    WHERE id = ?
-  `,
-      data.from_user_id, data.to_user_id, Math.round(data.amount * 100) / 100,
-      data.currency !== undefined ? 1 : 0, data.currency ? data.currency.toUpperCase() : null,
-      data.exchange_rate !== undefined ? 1 : null, data.exchange_rate !== undefined ? data.exchange_rate : 1,
-      data.settled_at !== undefined ? 1 : 0, data.settled_at || null,
-      id,
-    );
+    await this.budgetSettlementsRepo.update(id, {
+      from_user_id: data.from_user_id, to_user_id: data.to_user_id, amount: Math.round(data.amount * 100) / 100,
+      currency: [data.currency !== undefined, data.currency ? data.currency.toUpperCase() : null],
+      exchange_rate: [data.exchange_rate !== undefined, data.exchange_rate !== undefined ? data.exchange_rate : 1],
+      settled_at: [data.settled_at !== undefined, data.settled_at || null],
+    });
     return await this.getSettlement(id, tripId);
   }
 
   async deleteSettlement(id: string | number, tripId: string | number): Promise<boolean> {
-    const row = this.db.get('SELECT id FROM budget_settlements WHERE id = ? AND trip_id = ?', id, tripId);
+    const row = await this.budgetSettlementsRepo.findGuard(id, tripId);
     if (!row) return false;
-    this.db.run('DELETE FROM budget_settlements WHERE id = ?', id);
+    await this.budgetSettlementsRepo.deleteById(id);
     return true;
   }
 
@@ -1299,18 +1223,18 @@ export class BudgetService {
   }
 
   async reorderItems(tripId: string, orderedIds: number[]): Promise<void> {
-    const update = this.db.prepare('UPDATE budget_items SET sort_order = ? WHERE id = ? AND trip_id = ?');
     await this.uow.transactional(async () => {
-      orderedIds.forEach((id, index) => update.run(index, id, tripId));
+      for (let index = 0; index < orderedIds.length; index++) {
+        await this.budgetItemsRepo.setSortOrder(orderedIds[index], tripId, index);
+      }
     });
   }
 
   async reorderCategories(tripId: string, orderedCategories: string[]): Promise<void> {
-    const upsert = this.db.prepare(
-      'INSERT INTO budget_category_order (trip_id, category, sort_order) VALUES (?, ?, ?) ON CONFLICT(trip_id, category) DO UPDATE SET sort_order = excluded.sort_order'
-    );
     await this.uow.transactional(async () => {
-      orderedCategories.forEach((cat, index) => upsert.run(tripId, cat, index));
+      for (let index = 0; index < orderedCategories.length; index++) {
+        await this.budgetCategoryOrderRepo.upsertSortOrder(tripId, orderedCategories[index], index);
+      }
     });
   }
 
@@ -1321,18 +1245,15 @@ export class BudgetService {
    */
   async syncReservationPrice(tripId: string, reservationId: number, totalPrice: number, socketId: string | undefined): Promise<void> {
     try {
-      const reservation = this.db.get<{ id: number; metadata: string | null }>(
-        'SELECT id, metadata FROM reservations WHERE id = ? AND trip_id = ?',
-        reservationId, tripId,
-      );
+      const reservation = await this.reservationsRepo.getIdAndMetadata(reservationId, tripId);
       if (!reservation) return;
       const meta = reservation.metadata ? JSON.parse(reservation.metadata) : {};
       // Cent-clean, so a booking never inherits float noise from the expense
       // it is linked to — and so a row stamped before #1964 heals on the next
       // edit. The panels print this string as it stands.
       meta.price = String(Math.round(totalPrice * 100) / 100);
-      this.db.run('UPDATE reservations SET metadata = ? WHERE id = ?', JSON.stringify(meta), reservation.id);
-      const updatedRes = this.db.get('SELECT * FROM reservations WHERE id = ?', reservation.id);
+      await this.reservationsRepo.setMetadata(reservation.id, JSON.stringify(meta));
+      const updatedRes = await this.reservationsRepo.getFull(reservation.id);
       this.realtime.broadcast(tripId, 'reservation:updated', { reservation: updatedRes }, socketId);
     } catch (err) {
       console.error('[budget] Failed to sync price to reservation:', err);

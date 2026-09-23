@@ -16,6 +16,10 @@ import { RoadtripPreferences } from '../../db/entities/RoadtripPreferences.entit
 import { RoadtripDayBoundaries } from '../../db/entities/RoadtripDayBoundaries.entity';
 import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
 import { Reservations } from '../../db/entities/Reservations.entity';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import { BudgetItemMembers } from '../../db/entities/BudgetItemMembers.entity';
+import { BudgetItemPayers } from '../../db/entities/BudgetItemPayers.entity';
+import { BudgetCategoryOrder } from '../../db/entities/BudgetCategoryOrder.entity';
 import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -246,6 +250,25 @@ export class TripsService {
   // other getter above.
   private get reservationsRepo() {
     return this.em.getRepository(Reservations);
+  }
+
+  // Plan 3e Task 2 (budget) — TP60-65/74-75 only (the budget-family rows of
+  // `copy`'s 14 survivors; TP66-69/packing and TP72-73/todo are Tasks 3/4's).
+  // Same `this.em.getRepository(...)` pattern as every getter above.
+  private get budgetItemsRepo() {
+    return this.em.getRepository(BudgetItems);
+  }
+
+  private get budgetItemMembersRepo() {
+    return this.em.getRepository(BudgetItemMembers);
+  }
+
+  private get budgetItemPayersRepo() {
+    return this.em.getRepository(BudgetItemPayers);
+  }
+
+  private get budgetCategoryOrderRepo() {
+    return this.em.getRepository(BudgetCategoryOrder);
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
@@ -826,36 +849,35 @@ export class TripsService {
         reservationMap.set(r.id, newReservationId);
       }
 
-      const oldBudget = this.db.prepare('SELECT * FROM budget_items WHERE trip_id = ?').all(sourceTripId) as any[]; // TP60 — Plan 3e
-      const budgetMap = new Map<number, number | bigint>();
-      const insertBudget = this.db.prepare(`
-        INSERT INTO budget_items (trip_id, category, name, total_price, persons, days, note, sort_order,
-          reservation_id, currency, exchange_rate, expense_date, ticket_json, paid_by_user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      // TP60 — Plan 3e Task 2, converted.
+      const oldBudget = await this.budgetItemsRepo.listAllForTrip(sourceTripId);
+      const budgetMap = new Map<number, number>();
       for (const b of oldBudget) {
-        const br = insertBudget.run(newTripId, b.category, b.name, b.total_price, b.persons, b.days, b.note, b.sort_order,
-          b.reservation_id ? (reservationMap.get(b.reservation_id) ?? null) : null,
-          b.currency, b.exchange_rate ?? 1, b.expense_date, b.ticket_json, b.paid_by_user_id); // TP61 — Plan 3e
-        budgetMap.set(b.id, br.lastInsertRowid);
+        // TP61 — Plan 3e Task 2, converted (`insertCopy`, carries `paid_by_user_id` verbatim).
+        const newItemId = await this.budgetItemsRepo.insertCopy({
+          trip_id: newTripId, category: b.category, name: b.name, total_price: b.total_price, persons: b.persons, days: b.days,
+          note: b.note, sort_order: b.sort_order,
+          reservation_id: b.reservation_id ? (reservationMap.get(b.reservation_id) ?? null) : null,
+          currency: b.currency, exchange_rate: b.exchange_rate ?? 1, expense_date: b.expense_date,
+          ticket_json: b.ticket_json, paid_by_user_id: b.paid_by_user_id,
+        });
+        budgetMap.set(b.id, newItemId);
       }
 
-      const oldBudgetMembers = this.db.prepare(`
-        SELECT bm.* FROM budget_item_members bm JOIN budget_items b ON b.id = bm.budget_item_id WHERE b.trip_id = ?
-      `).all(sourceTripId) as any[]; // TP62 — Plan 3e
-      const insertBudgetMember = this.db.prepare('INSERT OR IGNORE INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, ?, ?)');
+      // TP62 — Plan 3e Task 2, converted.
+      const oldBudgetMembers = await this.budgetItemMembersRepo.listRawForTrip(sourceTripId);
       for (const bm of oldBudgetMembers) {
         const newItemId = budgetMap.get(bm.budget_item_id);
-        if (newItemId) insertBudgetMember.run(newItemId, bm.user_id, bm.paid ?? 0, bm.amount); // TP63 — Plan 3e
+        // TP63 — Plan 3e Task 2, converted.
+        if (newItemId) await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: newItemId, user_id: bm.user_id, paid: bm.paid ?? 0, amount: bm.amount });
       }
 
-      const oldBudgetPayers = this.db.prepare(`
-        SELECT bp.* FROM budget_item_payers bp JOIN budget_items b ON b.id = bp.budget_item_id WHERE b.trip_id = ?
-      `).all(sourceTripId) as any[]; // TP64 — Plan 3e
-      const insertBudgetPayer = this.db.prepare('INSERT OR IGNORE INTO budget_item_payers (budget_item_id, user_id, amount) VALUES (?, ?, ?)');
+      // TP64 — Plan 3e Task 2, converted.
+      const oldBudgetPayers = await this.budgetItemPayersRepo.listRawForTrip(sourceTripId);
       for (const bp of oldBudgetPayers) {
         const newItemId = budgetMap.get(bp.budget_item_id);
-        if (newItemId) insertBudgetPayer.run(newItemId, bp.user_id, bp.amount ?? 0); // TP65 — Plan 3e
+        // TP65 — Plan 3e Task 2, converted.
+        if (newItemId) await this.budgetItemPayersRepo.insertIgnore({ budget_item_id: newItemId, user_id: bp.user_id, amount: bp.amount ?? 0 });
       }
 
       const oldBags = this.db.prepare('SELECT * FROM packing_bags WHERE trip_id = ?').all(sourceTripId) as any[]; // TP66 — Plan 3e
@@ -908,13 +930,11 @@ export class TripsService {
         insertTodo.run(newTripId, t.name, t.category, t.sort_order, t.due_date, t.description, t.priority); // TP73 — Plan 3e
       }
 
-      const oldCategoryOrder = this.db.prepare('SELECT category, sort_order FROM budget_category_order WHERE trip_id = ?').all(sourceTripId) as any[]; // TP74 — Plan 3e
-      const insertCategoryOrder = this.db.prepare(`
-        INSERT INTO budget_category_order (trip_id, category, sort_order)
-        VALUES (?, ?, ?)
-      `);
+      // TP74 — Plan 3e Task 2, converted.
+      const oldCategoryOrder = await this.budgetCategoryOrderRepo.listForTrip(sourceTripId);
       for (const o of oldCategoryOrder) {
-        insertCategoryOrder.run(newTripId, o.category, o.sort_order); // TP75 — Plan 3e
+        // TP75 — Plan 3e Task 2, converted (plain insert, not `OR IGNORE` — matching legacy).
+        await this.budgetCategoryOrderRepo.insertCopy(newTripId, o.category, o.sort_order);
       }
 
       return newTripId;

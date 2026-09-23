@@ -720,6 +720,21 @@ export class TripsRepository extends TrekRepository<Trips> {
     const rows = await owner.unionAll(member).orderBy('is_owner', 'desc').execute();
     return rows as TravellerUsernameRow[];
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3e Task 2 (budget) — additive, append-only per that task's own
+  // file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /** BG15/BG16/BGM2/BGM3 — `SELECT currency FROM trips WHERE id = ?`, four legacy call sites, one statement. */
+  async getCurrency(id: number | string): Promise<string | null | undefined> {
+    const row = await this.kysely<{ trips: { id: number; currency: string | null } }>()
+      .selectFrom('trips')
+      .select('currency')
+      .where('id', '=', id as number)
+      .executeTakeFirst();
+    return row?.currency;
+  }
 }
 
 /** `PublicApiService.listTrips`/`getTrip`'s 8-column trip projection. */

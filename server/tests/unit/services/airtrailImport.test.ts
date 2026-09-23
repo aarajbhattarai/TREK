@@ -24,6 +24,8 @@ import type { AirtrailService } from '../../../src/nest/integrations/airtrail.se
 import { notificationsStub } from '../../helpers/notifications';
 import { accommodationsOver } from '../../helpers/accommodations-service';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestReservationsRepo, createTestReservationEndpointsRepo, createTestReservationTravelersRepo, createTestReservationDayPositionsRepo, createTestDayAccommodationsRepo, createTestDaysRepo, createTestPlacesRepo, createTestDayAssignmentsRepo, createTestTripMembersRepo, createTestUsersRepo, createTestTripsRepo } from '../../helpers/test-uow';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import { budgetRepoArgs } from '../../helpers/budget-repos';
 
 // The client and the per-user credentials are the only stubs; the reservation
 // writes go through the real service against the real test DB, as before. They
@@ -41,7 +43,7 @@ async function makeImportService(): Promise<AirtrailImportService> {
     new ReservationsService(
       dbs(),
       permissions,
-      new BudgetService(dbs(), permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs().connection)),
+      new BudgetService(dbs(), permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection))),
       realtime,
       notificationsStub(),
       new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)),
@@ -50,6 +52,7 @@ async function makeImportService(): Promise<AirtrailImportService> {
       await createTestReservationDayPositionsRepo(dbs().connection), await createTestDayAccommodationsRepo(dbs().connection),
       await createTestDaysRepo(dbs().connection), await createTestPlacesRepo(dbs().connection), await createTestDayAssignmentsRepo(dbs().connection),
       await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+      await createTestBudgetItemsRepo(dbs().connection),
     ),
     { listFlights } as unknown as AirtrailClient,
     {

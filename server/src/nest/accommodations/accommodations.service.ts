@@ -19,6 +19,8 @@ import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
 import type { RoadtripViasRepository } from '../../db/repositories/RoadtripVias.repository';
 import { Reservations } from '../../db/entities/Reservations.entity';
 import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
 import type { User } from '../../types';
 
 type Trip = TripAccess;
@@ -118,6 +120,8 @@ export class AccommodationsService {
     @InjectRepository(Days) private readonly daysRepo: DaysRepository,
     @InjectRepository(RoadtripVias) private readonly roadtripViasRepo: RoadtripViasRepository,
     @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    // Plan 3e Task 2 (budget) — additive, AC41/42 only.
+    @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
   ) {}
 
   private get db() {
@@ -822,10 +826,10 @@ export class AccommodationsService {
       const linkedRes = await this.reservationsRepo.listIdsByStay(idNum);
       const deletedBudgetItemIds: number[] = [];
       for (const res of linkedRes) {
-        // AC41/AC42 — `budget_items` is Plan 3e's table; stays raw.
-        const linkedBudget = this.db.get<{ id: number }>('SELECT id FROM budget_items WHERE reservation_id = ?', res.id);
+        // AC41/AC42 — Plan 3e Task 2, converted: `BudgetItemsRepository.findIdByReservation`/`deleteById`.
+        const linkedBudget = await this.budgetItemsRepo.findIdByReservation(res.id);
         if (linkedBudget) {
-          this.db.run('DELETE FROM budget_items WHERE id = ?', linkedBudget.id);
+          await this.budgetItemsRepo.deleteById(linkedBudget.id);
           deletedBudgetItemIds.push(linkedBudget.id);
         }
         // AC43

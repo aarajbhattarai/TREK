@@ -57,6 +57,7 @@ import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 
 const dbs = new DatabaseService(testDb);
 const photoCacheStub = { removeIfUnreferenced: vi.fn() } as unknown as PlacePhotoCacheService;
@@ -101,6 +102,7 @@ async function svc(searchNominatim: MapsService['searchNominatim']): Promise<Pla
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestCategoriesRepo(dbs.connection),
   await createTestTripsRepo(dbs.connection),
+  await createTestBudgetItemsRepo(dbs.connection),
   );
 }
 

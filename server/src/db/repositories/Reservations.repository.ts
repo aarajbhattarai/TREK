@@ -1463,6 +1463,42 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
       .execute<{ trip_id: number } | undefined>('get', false);
     return row?.trip_id;
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3e Task 2 (budget) — additive, append-only per that task's own
+  // file-ownership rule: BG54/85, BG55/86, BG56/87 — the mirrored-price
+  // read/write/re-select `BudgetService.clearReservationPrice`/
+  // `syncReservationPrice` run against a reservation. Kysely, matching
+  // `findTripId` above's reasoning: `trip_id` is a `persist(false)` mirror.
+  // ---------------------------------------------------------------------------
+
+  /** BG54/BG85 — `SELECT id, metadata FROM reservations WHERE id = ? AND trip_id = ?`. */
+  async getIdAndMetadata(id: number | string, trip_id: number | string): Promise<{ id: number; metadata: string | null } | undefined> {
+    return await this.kysely<{ reservations: { id: number; trip_id: number; metadata: string | null } }>()
+      .selectFrom('reservations')
+      .select(['id', 'metadata'])
+      .where('id', '=', id as number)
+      .where('trip_id', '=', trip_id as number)
+      .executeTakeFirst();
+  }
+
+  /** BG55/BG86 — `UPDATE reservations SET metadata = ? WHERE id = ?`. */
+  async setMetadata(id: number | string, metadata: string): Promise<void> {
+    await this.kysely<{ reservations: { id: number; metadata: string } }>()
+      .updateTable('reservations')
+      .set({ metadata })
+      .where('id', '=', id as number)
+      .execute();
+  }
+
+  /** BG56/BG87 — `SELECT * FROM reservations WHERE id = ?`, the mirrored-price re-select for the `reservation:updated` broadcast. */
+  async getFull(id: number | string): Promise<ReservationAllColumnsRow | undefined> {
+    return await this.kysely<{ reservations: ReservationAllColumnsRow }>()
+      .selectFrom('reservations')
+      .selectAll()
+      .where('id', '=', id as number)
+      .executeTakeFirst();
+  }
 }
 
 /** `SELECT *` — every scalar column of `Reservations`, RS35's shape. */

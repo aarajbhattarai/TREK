@@ -34,6 +34,8 @@ import type { TripMembersRepository } from '../../db/repositories/TripMembers.re
 import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { Trips } from '../../db/entities/Trips.entity';
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 type Trip = TripAccess;
@@ -183,6 +185,8 @@ export class ReservationsService {
     @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    // Plan 3e Task 2 (budget) — additive, RS48/49/51-54 only.
+    @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -1092,10 +1096,11 @@ export class ReservationsService {
         }
       }
 
-      // RS48/RS49 — stay raw, Plan 3e's `budget_items` table.
-      const linkedBudget = this.db.get<{ id: number }>('SELECT id FROM budget_items WHERE trip_id = ? AND reservation_id = ?', tripId, id);
+      // RS48/RS49 — Plan 3e Task 2, converted: `BudgetItemsRepository.findIdByReservationInTrip`/`deleteById`.
+      // Same `toRowId`-parsed ids the gate above (`findHeaderInTrip`) used (rule 21).
+      const linkedBudget = await this.budgetItemsRepo.findIdByReservationInTrip(tripIdNum, idNum);
       if (linkedBudget) {
-        this.db.run('DELETE FROM budget_items WHERE id = ?', linkedBudget.id);
+        await this.budgetItemsRepo.deleteById(linkedBudget.id);
       }
 
       // RS50
@@ -1128,7 +1133,8 @@ export class ReservationsService {
     // but only if it still carries the auto-derived category (so a manual pick in
     // the Costs editor is preserved). Runs regardless of create_budget_entry.
     if (type && currentType && type !== currentType) {
-      const linked = this.db.get<{ id: number; category: string }>('SELECT id, category FROM budget_items WHERE trip_id = ? AND reservation_id = ?', tripId, id);
+      // RS51 — Plan 3e Task 2, converted.
+      const linked = await this.budgetItemsRepo.findIdAndCategoryByReservation(tripId, id);
       if (linked) {
         const oldCat = typeToCostCategory(currentType);
         const newCat = typeToCostCategory(type);
@@ -1145,8 +1151,8 @@ export class ReservationsService {
     if (!entry) return;
 
     if (!(Number(entry.total_price) > 0)) {
-      // Explicit clear (total_price 0/empty) — drop the linked item.
-      const linked = this.db.get<{ id: number }>('SELECT id FROM budget_items WHERE trip_id = ? AND reservation_id = ?', tripId, id);
+      // Explicit clear (total_price 0/empty) — drop the linked item. RS52 — Plan 3e Task 2, converted.
+      const linked = await this.budgetItemsRepo.findIdByReservationInTrip(tripId, id);
       if (linked) {
         await this.budget.deleteBudgetItem(linked.id, tripId);
         this.realtime.broadcast(tripId, 'budget:deleted', { itemId: linked.id }, socketId);
@@ -1157,13 +1163,15 @@ export class ReservationsService {
     try {
       const itemName = title || currentTitle;
       const category = entry.category || type || currentType || 'Other';
-      const existing = this.db.get<{ id: number }>('SELECT id FROM budget_items WHERE trip_id = ? AND reservation_id = ?', tripId, id);
+      // RS53 — Plan 3e Task 2, converted.
+      const existing = await this.budgetItemsRepo.findIdByReservationInTrip(tripId, id);
       if (existing) {
         const updated = await this.budget.updateBudgetItem(existing.id, tripId, { name: itemName, category, total_price: entry.total_price });
         this.realtime.broadcast(tripId, 'budget:updated', { item: updated }, socketId);
       } else {
         const item = await this.budget.createBudgetItem(tripId, { name: itemName, category, total_price: entry.total_price });
-        this.db.run('UPDATE budget_items SET reservation_id = ? WHERE id = ?', id, item.id);
+        // RS54 — Plan 3e Task 2, converted.
+        await this.budgetItemsRepo.setReservationId(item.id, id);
         item.reservation_id = Number(id);
         this.realtime.broadcast(tripId, 'budget:created', { item }, socketId);
       }
