@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Platform } from '@mikro-orm/core';
-import { expressionBuilder } from 'kysely';
+import { expressionBuilder, type ExpressionBuilder } from 'kysely';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -37,7 +37,9 @@ import {
   substring,
   substringKysely,
   trim,
+  unixEpochToIsoKysely,
 } from '../../../../src/db/dialect/sql-functions';
+import { createJourney, createJourneyEntry } from '../../../helpers/factories';
 
 /** The `users` columns the Kysely-expression tests below read/write, narrowed the same way every other Kysely-typed repository method in this program declares its own `TDB`. */
 interface UsersKyselyDB {
@@ -984,5 +986,203 @@ describe('sql-functions (sqlite)', () => {
     class FakePlatform extends Platform {}
     const foreign = new FakePlatform();
     expect(() => lowerTrimParam(foreign, 'x')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3g Task 0 (R1) — unixEpochToIsoKysely, the third fallback tier of
+  // `GALLERY_CHRONOLOGICAL_ORDER` (journey-gallery-order.ts). No consumer
+  // yet: Task 1 (getJourneyFull) and Task 3 (getPublicJourney) each fold this
+  // into their own rebuild of the constant. The full composed ORDER BY proof
+  // (coalesce + nullif + correlated subquery + this helper, on a seeded
+  // gallery) is the describe block below this one.
+
+  it("SQLF-068: unixEpochToIsoKysely renders strftime('%Y-%m-%dT%H:%M:%SZ', <ref> / 1000, 'unixepoch'), matching a raw statement on the SAME fixed value, string-for-string", () => {
+    createUser(testDb); // one row so the anchor SELECT FROM users has something to select
+    const platform = t.em.getPlatform();
+    const createdAt = 1_700_000_000_000; // fixed epoch-millis value — the exact shape gp.created_at stores
+
+    const compiled = t.em.getKysely<UsersKyselyDB>()
+      .selectFrom('users')
+      .select((eb) => [unixEpochToIsoKysely(platform, eb, eb.val(createdAt)).as('iso')])
+      .compile();
+    expect(compiled.sql).toBe('select strftime(?, ? / ?, ?) as "iso" from "users"');
+    expect(compiled.parameters).toEqual(['%Y-%m-%dT%H:%M:%SZ', createdAt, 1000, 'unixepoch']);
+
+    const got = testDb.prepare(compiled.sql).get(...compiled.parameters) as { iso: string };
+    const expected = testDb
+      .prepare("SELECT strftime('%Y-%m-%dT%H:%M:%SZ', ? / 1000, 'unixepoch') as iso")
+      .get(createdAt) as { iso: string };
+    expect(got.iso).toBe(expected.iso);
+    expect(got.iso).toBe('2023-11-14T22:13:20Z'); // human-checkable: date -u -d @1700000000
+  });
+
+  it('SQLF-069: an unknown platform fails closed for unixEpochToIsoKysely', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    expect(() => unixEpochToIsoKysely(foreign, eb, 'created_at')).toThrow(/no implementation for platform FakePlatform/);
+  });
+});
+
+/**
+ * Plan 3g Task 0 (R1) — the full Kysely rebuild of
+ * `journey-gallery-order.ts`'s `GALLERY_CHRONOLOGICAL_ORDER`, as a worked
+ * example: `COALESCE(NULLIF(tp.taken_at, ''), <correlated MIN+concat
+ * subquery over journey_entry_photos/journey_entries>, <unixEpochToIsoKysely
+ * of gp.created_at>) ASC, gp.sort_order ASC, gp.id ASC`. NOT exported from
+ * `sql-functions.ts` (only `unixEpochToIsoKysely`, this file's one named
+ * deliverable, lives there) — Task 1/Task 3 each own the actual repository
+ * method this becomes (`JourneyPhotosRepository`/callers, not yet built);
+ * this function is the verbatim builder chain Task 0's report hands them,
+ * proven row-order-identical to the legacy SQL text against a seeded
+ * gallery here so neither task re-derives it from scratch.
+ */
+interface GalleryOrderTestDB {
+  journey_photos: {
+    id: number;
+    journey_id: number;
+    photo_id: number;
+    sort_order: number | null;
+    created_at: number;
+  };
+  trek_photos: {
+    id: number;
+    taken_at: string | null;
+  };
+  journey_entry_photos: {
+    entry_id: number;
+    journey_photo_id: number;
+  };
+  journey_entries: {
+    id: number;
+    entry_date: string;
+    entry_time: string | null;
+  };
+}
+
+function galleryChronologicalOrderExpr(
+  platform: Platform,
+  // Fixed to exactly the shape `.selectFrom('journey_photos as gp')
+  // .innerJoin('trek_photos as tp', ...)` itself produces against a
+  // `Kysely<GalleryOrderTestDB>` (`GalleryOrderTestDB` plus the derived
+  // `gp`/`tp` alias members, read off the SAME interface's own
+  // `journey_photos`/`trek_photos` entries) — the `publicStayExists`
+  // precedent (`_shared/reservation-visibility.ts`): a table's alias is a
+  // property of the QUERY, never of the `DB` interface itself, so a
+  // correlated-subquery helper with a fixed alias contract is typed this
+  // way rather than generic over an arbitrary caller `DB`/`TB`.
+  eb: ExpressionBuilder<GalleryOrderTestDB & { gp: GalleryOrderTestDB['journey_photos']; tp: GalleryOrderTestDB['trek_photos'] }, 'gp' | 'tp'>,
+) {
+  return eb.fn.coalesce(
+    eb.fn<string | null>('nullif', [eb.ref('tp.taken_at'), eb.val('')]),
+    eb
+      .selectFrom('journey_entry_photos as jep')
+      .innerJoin('journey_entries as je', 'je.id', 'jep.entry_id')
+      .select((eb2) =>
+        eb2.fn
+          .min<string | null>(
+            concatKysely(
+              platform,
+              eb2,
+              { column: 'je.entry_date' },
+              { value: 'T' },
+              { expression: eb2.fn.coalesce(eb2.fn<string | null>('nullif', [eb2.ref('je.entry_time'), eb2.val('')]), eb2.val('00:00')) },
+            ),
+          )
+          .as('min_dt'),
+      )
+      .whereRef('jep.journey_photo_id', '=', 'gp.id'),
+    unixEpochToIsoKysely(platform, eb, 'gp.created_at'),
+  );
+}
+
+describe('GALLERY_CHRONOLOGICAL_ORDER Kysely rebuild (Plan 3g Task 0, R1 worked example)', () => {
+  it('SQLF-070: row order matches the legacy GALLERY_CHRONOLOGICAL_ORDER text exactly on a seeded gallery covering all three fallback tiers, ties, NULL/empty taken_at, and entries with/without linked photos', async () => {
+    const platform = t.em.getPlatform();
+    const { user } = createUser(testDb, { username: 'gallery-owner' });
+    const journey = createJourney(testDb, user.id);
+    const entryEarly = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-01-05' });
+    testDb.prepare('UPDATE journey_entries SET entry_time = ? WHERE id = ?').run('14:30', entryEarly.id);
+    const entryNoTime = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-01-05' });
+    // entry_time left NULL — the entry-linked tier's own COALESCE(NULIF(entry_time,''),'00:00') fallback
+
+    const trekPhoto = (takenAt: string | null) => {
+      const r = testDb.prepare('INSERT INTO trek_photos (provider, asset_id, owner_id, taken_at) VALUES (?, ?, ?, ?)')
+        .run('immich', `asset-${Math.random()}`, user.id, takenAt);
+      return r.lastInsertRowid as number;
+    };
+    const galleryPhoto = (photoId: number, createdAt: number, sortOrder: number) => {
+      const r = testDb
+        .prepare('INSERT INTO journey_photos (journey_id, photo_id, sort_order, created_at) VALUES (?, ?, ?, ?)')
+        .run(journey.id, photoId, sortOrder, createdAt);
+      return r.lastInsertRowid as number;
+    };
+    const linkEntry = (entryId: number, journeyPhotoId: number) => {
+      testDb
+        .prepare('INSERT INTO journey_entry_photos (entry_id, journey_photo_id, created_at) VALUES (?, ?, ?)')
+        .run(entryId, journeyPhotoId, Date.now());
+    };
+
+    // Tier 1: has a capture time — wins outright regardless of everything else.
+    const pCapture = galleryPhoto(trekPhoto('2026-02-01T09:00:00Z'), 1_700_000_000_000, 0);
+    // Tier 1 skipped via empty-string NULLIF, not SQL NULL — proves both forms fall through.
+    const pEmptyTaken = galleryPhoto(trekPhoto(''), 1_600_000_000_000, 0);
+    linkEntry(entryEarly.id, pEmptyTaken); // tier 2: '2026-01-05T14:30'
+    // Tier 2 via SQL NULL taken_at, linked to the no-entry-time entry.
+    const pNullTaken = galleryPhoto(trekPhoto(null), 1_600_000_000_000, 0);
+    linkEntry(entryNoTime.id, pNullTaken); // tier 2: '2026-01-05T00:00'
+    // Tier 2, linked to TWO entries — proves the correlated subquery's MIN, not just any match.
+    const pMultiEntry = galleryPhoto(trekPhoto(null), 1_600_000_000_000, 0);
+    linkEntry(entryEarly.id, pMultiEntry); // '2026-01-05T14:30'
+    const entryLater = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-06-01' });
+    linkEntry(entryLater.id, pMultiEntry); // '2026-06-01T00:00' — MIN must still pick the earlier one
+    // Tier 3: no taken_at, no entry link at all — falls all the way to created_at.
+    const pFallbackA = galleryPhoto(trekPhoto(null), 1_650_000_000_000, 5);
+    // Tier 3 tie: identical created_at to pFallbackA, broken by sort_order (lower first).
+    const pFallbackTieLow = galleryPhoto(trekPhoto(null), 1_650_000_000_000, 1);
+    const pFallbackTieHigh = galleryPhoto(trekPhoto(null), 1_650_000_000_000, 1);
+    // (pFallbackTieLow/pFallbackTieHigh share BOTH created_at and sort_order —
+    // the final id ASC tiebreak must separate them, insertion order = id order.)
+
+    const rows = await t.em
+      .getKysely<GalleryOrderTestDB>()
+      .selectFrom('journey_photos as gp')
+      .innerJoin('trek_photos as tp', 'tp.id', 'gp.photo_id')
+      .select('gp.id')
+      .where('gp.journey_id', '=', journey.id)
+      .orderBy((eb) => galleryChronologicalOrderExpr(platform, eb), 'asc')
+      .orderBy('gp.sort_order', 'asc')
+      .orderBy('gp.id', 'asc')
+      .execute();
+
+    const legacy = testDb
+      .prepare(`
+        SELECT gp.id
+        FROM journey_photos gp JOIN trek_photos tp ON tp.id = gp.photo_id
+        WHERE gp.journey_id = ?
+        ORDER BY COALESCE(
+                   NULLIF(tp.taken_at, ''),
+                   (SELECT MIN(je.entry_date || 'T' || COALESCE(NULLIF(je.entry_time, ''), '00:00'))
+                      FROM journey_entry_photos jep
+                      JOIN journey_entries je ON je.id = jep.entry_id
+                     WHERE jep.journey_photo_id = gp.id),
+                   strftime('%Y-%m-%dT%H:%M:%SZ', gp.created_at / 1000, 'unixepoch')
+                 ) ASC,
+                 gp.sort_order ASC,
+                 gp.id ASC
+      `)
+      .all(journey.id) as { id: number }[];
+
+    expect(rows.map((r) => r.id)).toEqual(legacy.map((r) => r.id));
+    // Pinned expected order, so a future change to the fixture that happens to
+    // keep both queries agreeing (but wrong) still gets caught:
+    expect(rows.map((r) => r.id)).toEqual([
+      pFallbackTieLow, // tier 3, strftime('2022-04-15T05:20:00Z'), sort_order=1, lower id first
+      pFallbackTieHigh, // tier 3, same created_at+sort_order, id tiebreak
+      pFallbackA, // tier 3, same created_at, sort_order=5 — sorts after the tier-3 pair above
+      pNullTaken, // tier 2, '2026-01-05T00:00' — earliest tier-2 text (entry_time NULL -> '00:00')
+      pEmptyTaken, // tier 2, '2026-01-05T14:30'
+      pMultiEntry, // tier 2, MIN of two links = '2026-01-05T14:30' (ties pEmptyTaken, id breaks it)
+      pCapture, // tier 1, '2026-02-01T09:00:00Z' — a real taken_at always wins tier 1
+    ]);
   });
 });

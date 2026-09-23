@@ -709,3 +709,49 @@ export function lowerTrimParam(platform: Platform, value: string): RawQueryFragm
   return unsupported(platform);
 }
 
+// ---------------------------------------------------------------------------
+// Plan 3g Task 0 (R1) — no consumer yet: Task 1 (`getJourneyFull`'s gallery
+// read) and Task 3 (`getPublicJourney`'s gallery read) each fold this into
+// their own rebuild of `journey-gallery-order.ts`'s `GALLERY_CHRONOLOGICAL_ORDER`
+// text (a `COALESCE(NULLIF(tp.taken_at, ''), <correlated MIN+concat subquery>,
+// <this>)` ORDER BY, worked out in full in Task 0's report for both to paste
+// in verbatim, neither re-deriving it). Added here, Kysely-only (no MikroORM
+// `raw()` sibling): the shape it exists for is genuinely Kysely-only (a
+// correlated scalar subquery cannot be expressed through the MikroORM
+// QueryBuilder — the same "T6 ruling" `castIntegerKysely`'s own docstring
+// cites for RS20/RV2), and nothing else in this plan's inventory needs a
+// MikroORM-form epoch-to-ISO conversion (§6: "no other strftime/julianday
+// sites found elsewhere in this cluster"). A raw twin can be added later,
+// same as every other helper here, the moment a real consumer needs one.
+// ---------------------------------------------------------------------------
+
+/**
+ * `strftime('%Y-%m-%dT%H:%M:%SZ', <ref> / 1000, 'unixepoch')` — the last of
+ * `GALLERY_CHRONOLOGICAL_ORDER`'s three fallback tiers (R1): when a gallery
+ * photo has neither a capture time (`tp.taken_at`) nor a linked entry to
+ * borrow a date from, the moment it was added is what is left to order by.
+ * `<ref>` is an epoch-MILLISECONDS column (`journey_photos.created_at`, like
+ * every other `*_at` epoch column in this codebase) — SQLite's `unixepoch`
+ * modifier expects whole SECONDS, so the division is load-bearing, not
+ * decorative, and matches the legacy text's own `gp.created_at / 1000`
+ * exactly. SQLite's `/` on two integers truncates instead of rounding; that
+ * sub-second loss is the legacy statement's own behaviour, preserved here
+ * rather than "fixed" into a float divide that would render a different ISO
+ * string for any timestamp not an exact multiple of 1000ms.
+ *
+ * Named for what it computes, not the SQL function it spells — matching
+ * every other `*Kysely` twin in this file (`castIntegerKysely`, not
+ * `castKysely`; `startsWithIsoDateKysely`, not `globKysely`).
+ */
+export function unixEpochToIsoKysely<DB, TB extends keyof DB>(
+  platform: Platform,
+  eb: ExpressionBuilder<DB, TB>,
+  ref: ReferenceExpression<DB, TB>,
+): ExpressionWrapper<DB, TB, string> {
+  if (platform instanceof SqlitePlatform) {
+    const seconds = eb(ref, '/', eb.val(1000));
+    return eb.fn<string>('strftime', [eb.val('%Y-%m-%dT%H:%M:%SZ'), seconds, eb.val('unixepoch')]);
+  }
+  return unsupported(platform);
+}
+
