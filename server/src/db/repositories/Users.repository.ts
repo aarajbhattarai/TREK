@@ -1228,6 +1228,22 @@ export class UsersRepository extends TrekRepository<Users> {
     const row = await this.findOne({ id }, { fields: ['username', 'email'] });
     return row ? { username: row.username, email: row.email } : undefined;
   }
+
+  // ---------------------------------------------------------------------
+  // Plan 3f Task 4 (MS2 — mailer.service.ts#getUserEmail) — additive.
+  // ---------------------------------------------------------------------
+
+  /**
+   * MS2 — `SELECT email FROM users WHERE id = ? AND COALESCE(is_guest, 0) = 0`
+   * — defense-in-depth (#1362 class): a guest's synthetic email must never be
+   * emailed. `is_guest: 0` is exact parity for the `COALESCE(is_guest, 0) = 0`
+   * guard (`countNonGuest`'s docstring above: the column is `NOT NULL DEFAULT
+   * 0`, so no row can store `NULL` there).
+   */
+  async getEmailNonGuest(id: number): Promise<string | null> {
+    const row = await this.findOne({ id, is_guest: 0 }, { fields: ['email'] });
+    return row?.email ?? null;
+  }
 }
 
 /**

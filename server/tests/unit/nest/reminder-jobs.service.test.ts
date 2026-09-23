@@ -33,17 +33,25 @@ vi.mock('../../../src/config', () => ({
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { createUser, createTrip, createTodoItem, setAppSetting, setNotificationChannels } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { ReminderJobsService } from '../../../src/nest/notifications/reminder-jobs.service';
 import { notificationsStub } from '../../helpers/notifications';
 import type { NotificationsService } from '../../../src/nest/notifications/notifications.service';
 import type { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
+import { createTestAppSettingsRepo, createTestTripsRepo } from '../../helpers/test-uow';
+import { createTestTodoItemsRepo } from '../../helpers/todo-repos';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import type { TodoItemsRepository } from '../../../src/db/repositories/TodoItems.repository';
 
 interface Registered {
   name: string;
   expr: string;
   onTick: () => Promise<void> | void;
 }
+
+let appSettingsRepo: AppSettingsRepository;
+let tripsRepo: TripsRepository;
+let todoItemsRepo: TodoItemsRepository;
 
 function makeJobs(overrides: { notifications?: NotificationsService } = {}) {
   const registered: Registered[] = [];
@@ -62,7 +70,9 @@ function makeJobs(overrides: { notifications?: NotificationsService } = {}) {
   };
   const send = vi.fn().mockResolvedValue(undefined);
   const svc = new ReminderJobsService(
-    new DatabaseService(testDb),
+    appSettingsRepo,
+    tripsRepo,
+    todoItemsRepo,
     overrides.notifications ?? notificationsStub(send),
     registrar as unknown as CronRegistrarService,
   );
@@ -76,9 +86,12 @@ function tripWithReminder(userId: number, days: number, title = 'Lisbon'): numbe
   return trip.id;
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  appSettingsRepo = await createTestAppSettingsRepo(testDb);
+  tripsRepo = await createTestTripsRepo(testDb);
+  todoItemsRepo = await createTestTodoItemsRepo(testDb);
 });
 
 beforeEach(() => {
@@ -172,8 +185,11 @@ describe('trip reminder tick', () => {
 
   it('RJOB-007 — a failing tick is contained to the check-failed log line', async () => {
     const broken = { send: vi.fn() } as unknown as NotificationsService;
+    const throwGone = () => { throw new Error('db gone'); };
     const svc = new ReminderJobsService(
-      { get: () => { throw new Error('db gone'); }, all: () => { throw new Error('db gone'); }, run: () => { throw new Error('db gone'); } } as unknown as DatabaseService,
+      { getValue: throwGone } as unknown as AppSettingsRepository,
+      { listReminderCandidates: throwGone, countActiveWithReminders: throwGone } as unknown as TripsRepository,
+      { listDueForReminder: throwGone, markReminded: throwGone } as unknown as TodoItemsRepository,
       broken,
       { isEnabled: () => true, register: () => true, unregister: () => {} } as unknown as CronRegistrarService,
     );

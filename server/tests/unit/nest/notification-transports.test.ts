@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, afterEach, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, afterAll, beforeAll, beforeEach } from 'vitest';
+import Database from 'better-sqlite3';
 
 vi.mock('../../../src/db/database', () => ({
   db: { prepare: () => ({ get: vi.fn(() => undefined), all: vi.fn(() => []) }) },
@@ -45,20 +46,38 @@ vi.mock('../../../src/utils/ssrfGuard', () => {
   };
 });
 
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { getEventText, buildEmailHtml } from '../../../src/nest/notifications/mailer/email-html';
 import { WebhookService, buildWebhookBody } from '../../../src/nest/notifications/transports/webhook.service';
 import { NtfyService, resolveNtfyUrl, resolveAdminNtfyUrl, resolveNtfyToken, type NtfyConfig } from '../../../src/nest/notifications/transports/ntfy.service';
-
-// The transports are providers now; the db stub below is the same one the
-// module-level `db` mock used to supply, handed in instead of imported.
-const stubDb = { prepare: () => ({ get: () => undefined, all: () => [], run: () => undefined }) } as unknown as ConstructorParameters<typeof DatabaseService>[0];
-const webhookSvc = new WebhookService(new DatabaseService(stubDb));
-const ntfySvc = new NtfyService(new DatabaseService(stubDb));
-const sendWebhook = webhookSvc.sendWebhook.bind(webhookSvc);
-const sendNtfy = ntfySvc.sendNtfy.bind(ntfySvc);
 import { checkSsrf } from '../../../src/utils/ssrfGuard';
 import { logError } from '../../../src/nest/audit/audit-log.logger';
+import { createTables } from '../../../src/db/schema';
+import { runMigrations } from '../../../src/db/migrations';
+import { createTestSettingsRepo, createTestAppSettingsRepo } from '../../helpers/test-uow';
+
+// The transports are providers now, taking SettingsRepository/
+// AppSettingsRepository instead of DatabaseService — a real, throwaway
+// in-memory DB (never read by any case in this file: every case here drives
+// sendWebhook/sendNtfy directly, never the config getters, except the
+// GHSA-7pqc-fj3c-9346 case below, which resolves real configs through the
+// same repositories) replaces the STUB-DB fixture the fake `DatabaseService`
+// connection used to supply.
+let webhookSvc: WebhookService;
+let ntfySvc: NtfyService;
+let sendWebhook: WebhookService['sendWebhook'];
+let sendNtfy: NtfyService['sendNtfy'];
+
+beforeAll(async () => {
+  const transportsDb = new Database(':memory:');
+  createTables(transportsDb);
+  runMigrations(transportsDb);
+  const settingsRepo = await createTestSettingsRepo(transportsDb);
+  const appSettingsRepo = await createTestAppSettingsRepo(transportsDb);
+  webhookSvc = new WebhookService(settingsRepo, appSettingsRepo);
+  ntfySvc = new NtfyService(settingsRepo, appSettingsRepo);
+  sendWebhook = webhookSvc.sendWebhook.bind(webhookSvc);
+  sendNtfy = ntfySvc.sendNtfy.bind(ntfySvc);
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -394,6 +413,40 @@ describe('resolveNtfyToken', () => {
     const user: NtfyConfig = { server: null, topic: 't', token: null };
     expect(resolveNtfyToken(adminCfg, user, 'https://listener.attacker.example')).toBeNull();
     expect(resolveNtfyToken(adminCfg, user, 'https://ntfy.operator.example')).toBe('operator-token');
+  });
+});
+
+// R2 (Task 0's report, verbatim spec): drives the REAL end-to-end path —
+// resolve the URL and token exactly the way production does, then call the
+// real sendNtfy — rather than unit-testing resolveNtfyToken in isolation
+// (the block above). Mutation-proved: temporarily swap isOperatorNtfyServer's
+// target-based URL comparison for a role-based check (`return true` /
+// `ctx.user.role === 'admin'`-shaped) and this test's second assertion goes
+// red (the admin token would be attached to the non-operator send too).
+describe('GHSA-7pqc-fj3c-9346: ntfy token is only attached when the target is the operator\'s own server', () => {
+  const adminCfg: NtfyConfig = { server: 'https://ntfy.operator.example', topic: 'ops', token: 'operator-secret-token' };
+  // The "user token" is deliberately null in both fixtures, to isolate the
+  // admin-token-leak path specifically — if the user had their own token,
+  // resolveNtfyToken would return it first and the admin-scope branch would
+  // never be reached, per its own precedence.
+  const operatorTargetUser: NtfyConfig = { server: null, topic: 'user-topic', token: null }; // rides the operator's own server
+  const nonOperatorTargetUser: NtfyConfig = { server: 'https://ntfy.attacker.example', topic: 'user-topic', token: null }; // a different, user-chosen server
+  const payload = { event: 'trip_reminder', title: 'Trip reminder', body: 'Your trip starts soon' };
+
+  beforeEach(() => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear();
+    vi.mocked(checkSsrf).mockResolvedValue({ allowed: true, isPrivate: false, resolvedIp: '1.2.3.4' });
+  });
+
+  it('attaches the admin token on an operator-server send, and withholds it on a non-operator-server send', async () => {
+    const mockFetch = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    mockFetch.mockResolvedValue({ ok: true, text: async () => '' } as never);
+
+    await sendNtfy(resolveNtfyUrl(adminCfg, operatorTargetUser)!, resolveNtfyToken(adminCfg, operatorTargetUser), payload);
+    expect(mockFetch.mock.calls[0][1].headers['Authorization']).toBe('Bearer operator-secret-token');
+
+    await sendNtfy(resolveNtfyUrl(adminCfg, nonOperatorTargetUser)!, resolveNtfyToken(adminCfg, nonOperatorTargetUser), payload);
+    expect(mockFetch.mock.calls[1][1].headers['Authorization']).toBeUndefined();
   });
 });
 

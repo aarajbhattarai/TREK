@@ -36,19 +36,18 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, setAppSetting, setNotificationChannels, disableNotificationPref } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
 import { NotificationPreferencesService } from '../../../src/nest/notifications/notification-preferences.service';
 import { registerBuiltinChannels } from '../../../src/nest/notifications/channels/builtins';
 import { NtfyService } from '../../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../../src/nest/notifications/transports/webhook.service';
 import { __resetChannelsForTest } from '../../../src/nest/notifications/channel-registry';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 import { createTestNotificationChannelPreferencesRepo } from '../../helpers/notifications-repos';
 
-const dbs = new DatabaseService(testDb);
-const mailer = new MailerService(dbs);
-registerBuiltinChannels({ mailer, webhook: new WebhookService(dbs), ntfy: new NtfyService(dbs) });
+// Built in beforeAll: MailerService/WebhookService/NtfyService now take
+// repositories, resolved async through test-uow.ts's memoised factories.
+let mailer: MailerService;
 // Constructed in beforeAll: the service now takes a UnitOfWork, which is async to build.
 let svc: NotificationPreferencesService;
 
@@ -70,6 +69,11 @@ const isWebhookConfigured = (...a: Parameters<Svc['isWebhookConfigured']>) => sv
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  const usersRepo = await createTestUsersRepo(testDb);
+  const settingsRepo = await createTestSettingsRepo(testDb);
+  const appSettingsRepoForChannels = await createTestAppSettingsRepo(testDb);
+  mailer = new MailerService(usersRepo, settingsRepo, appSettingsRepoForChannels);
+  registerBuiltinChannels({ mailer, webhook: new WebhookService(settingsRepo, appSettingsRepoForChannels), ntfy: new NtfyService(settingsRepo, appSettingsRepoForChannels) });
   svc = new NotificationPreferencesService(
     mailer,
     await createTestUnitOfWork(testDb),

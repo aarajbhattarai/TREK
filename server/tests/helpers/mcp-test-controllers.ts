@@ -152,6 +152,7 @@ import {
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
+import { Settings } from '../../src/db/entities/Settings.entity';
 import { InviteTokens } from '../../src/db/entities/InviteTokens.entity';
 import { McpTokens } from '../../src/db/entities/McpTokens.entity';
 import { OauthTokens } from '../../src/db/entities/OauthTokens.entity';
@@ -177,6 +178,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const appSettings = (await createTestOrm(dbService.connection)).repo(AppSettings);
   const auditLogRepo = mcpOrm.repo(AuditLog);
   const usersRepo = mcpOrm.repo(Users);
+  const settingsRepo = mcpOrm.repo(Settings);
   const inviteTokensRepo = mcpOrm.repo(InviteTokens);
   const mcpTokensRepoForAuth = mcpOrm.repo(McpTokens);
   const oauthTokensRepo = mcpOrm.repo(OauthTokens);
@@ -197,7 +199,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)),
     new WebauthnConfigService(appSettings),
     new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo, await createTestBudgetItemsRepo(dbService.connection)),
-    new MailerService(dbService),
+    new MailerService(usersRepo, settingsRepo, appSettings),
     new EphemeralTokenService(),
     new AllowedFileTypesService(appSettings), await createTestUnitOfWork(dbService.connection),
     appSettings, usersRepo, inviteTokensRepo, mcpTokensRepoForAuth, oauthTokensRepo, webauthnCredentialsRepoForAuth, passwordResetTokensRepo,

@@ -48,8 +48,11 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { logError, logInfo, logWarn } from '../../../src/nest/audit/audit-log.logger';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { Users } from '../../../src/db/entities/Users.entity';
+import { Settings } from '../../../src/db/entities/Settings.entity';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
 
 function setAppSetting(key: string, value: string): void {
   testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run(key, value);
@@ -62,8 +65,10 @@ function configureSmtp(): void {
   setAppSetting('smtp_from', 'trek@example.com');
 }
 
+let testOrm: TestOrm;
+
 function newMailer(): MailerService {
-  return new MailerService(new DatabaseService(testDb));
+  return new MailerService(testOrm.repo(Users), testOrm.repo(Settings), testOrm.repo(AppSettings));
 }
 
 /** The options object of the most recent nodemailer.createTransport() call. */
@@ -72,9 +77,10 @@ function lastTransportOptions(): Record<string, unknown> {
   return calls[calls.length - 1][0] as Record<string, unknown>;
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  testOrm = await createTestOrm(testDb);
 });
 
 beforeEach(() => {

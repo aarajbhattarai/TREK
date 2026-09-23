@@ -68,7 +68,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
 import { NotificationPreferencesService } from '../../../src/nest/notifications/notification-preferences.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 import { createTestNotificationChannelPreferencesRepo } from '../../helpers/notifications-repos';
 
 import {
@@ -80,7 +80,6 @@ import {
 // The registry consumes ExternalChannel but does not re-export it; it is declared here.
 import type { ExternalChannel } from '../../../src/nest/notifications/notification-events';
 
-const prefsDbs = new DatabaseService(testDb);
 let prefsSvc: NotificationPreferencesService;
 // An arrow forwarder rather than `.bind(prefsSvc)`: under `strictBindCallApply: false`
 // a bound alias is typed `any`, which hides a missing `await` from tsc and the lint
@@ -93,7 +92,7 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   prefsSvc = new NotificationPreferencesService(
-    new MailerService(prefsDbs),
+    new MailerService(await createTestUsersRepo(testDb), await createTestSettingsRepo(testDb), await createTestAppSettingsRepo(testDb)),
     await createTestUnitOfWork(testDb),
     await createTestAppSettingsRepo(testDb),
     await createTestNotificationChannelPreferencesRepo(testDb),

@@ -1,6 +1,12 @@
 import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { logInfo, logError } from '../audit/audit-log.logger';
-import { DatabaseService } from '../database/database.service';
+import { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { TripsRepository } from '../../db/repositories/Trips.repository';
+import { TodoItemsRepository } from '../../db/repositories/TodoItems.repository';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { TodoItems } from '../../db/entities/TodoItems.entity';
 import { NotificationsService } from './notifications.service';
 import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 
@@ -11,6 +17,14 @@ import { CronRegistrarService } from '../scheduling/cron-registrar.service';
  * app-tz and read their enable gate from app_settings per tick, so toggling
  * notify_trip_reminder / notify_todo_due takes effect at the next run without
  * a restart.
+ *
+ * Plan 3f Task 4: converted off raw SQL onto `AppSettingsRepository` (the
+ * shared `getValue(key)` — RJ1, one of six identical `app_settings` reads
+ * across this plan, per R4/the inventory's own duplication note — never a
+ * bespoke local wrapper), `TripsRepository` (RJ2/RJ3) and `TodoItemsRepository`
+ * (RJ4/RJ5). RJ3/RJ4's column-concatenated `date()` modifiers restructure to
+ * plain JS date arithmetic per Task 0's verified R9 shape (`Date.UTC`-based,
+ * matching SQLite's own UTC `date('now')`).
  */
 
 // Each todo is reminded at most once per ~24 h (tracked via
@@ -21,14 +35,12 @@ const TODO_REMINDER_LEAD_DAYS = 3;
 @Injectable()
 export class ReminderJobsService implements OnApplicationBootstrap {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
+    @InjectRepository(TodoItems) private readonly todoItems: TodoItemsRepository,
     private readonly notifications: NotificationsService,
     private readonly registrar: CronRegistrarService,
   ) {}
-
-  private async getSetting(key: string): Promise<string | undefined> {
-    return this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value;
-  }
 
   async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
@@ -39,17 +51,17 @@ export class ReminderJobsService implements OnApplicationBootstrap {
     // safe if this dependency graph goes repository-backed later).
     await this.registrar.runOnBoot('reminder-jobs-boot', async () => {
       try {
-        const reminderEnabled = (await this.getSetting('notify_trip_reminder')) !== 'false';
-        const channelsRaw = (await this.getSetting('notification_channels')) || (await this.getSetting('notification_channel')) || 'none';
+        const reminderEnabled = (await this.appSettings.getValue('notify_trip_reminder')) !== 'false';
+        const channelsRaw = (await this.appSettings.getValue('notification_channels')) || (await this.appSettings.getValue('notification_channel')) || 'none';
         const activeChannels = channelsRaw === 'none' ? [] : channelsRaw.split(',').map(c => c.trim());
         if (!reminderEnabled) {
           logInfo('Trip reminders: disabled in settings');
         } else {
-          const tripCount = this.db.get<{ c: number }>('SELECT COUNT(*) as c FROM trips WHERE reminder_days > 0 AND start_date IS NOT NULL')?.c ?? 0;
+          const tripCount = await this.trips.countActiveWithReminders();
           logInfo(`Trip reminders: enabled via [${activeChannels.join(',')}]${tripCount > 0 ? `, ${tripCount} trip(s) with active reminders` : ''}`);
         }
 
-        if ((await this.getSetting('notify_todo_due')) !== 'false') {
+        if ((await this.appSettings.getValue('notify_todo_due')) !== 'false') {
           logInfo(`Todo due reminders: enabled (lead ${TODO_REMINDER_LEAD_DAYS}d)`);
         } else {
           logInfo('Todo due reminders: disabled in settings');
@@ -66,14 +78,22 @@ export class ReminderJobsService implements OnApplicationBootstrap {
   /** Daily check for trips starting exactly reminder_days from now. */
   async tripTick(): Promise<void> {
     try {
-      if ((await this.getSetting('notify_trip_reminder')) === 'false') return;
+      if ((await this.appSettings.getValue('notify_trip_reminder')) === 'false') return;
 
-      const trips = this.db.all<{ id: number; title: string; user_id: number; reminder_days: number }>(`
-        SELECT t.id, t.title, t.user_id, t.reminder_days FROM trips t
-        WHERE t.reminder_days > 0
-          AND t.start_date IS NOT NULL
-          AND t.start_date = date('now', '+' || t.reminder_days || ' days')
-      `);
+      // RJ3 (Task 0's R9 ruling): the legacy statement concatenated a
+      // per-row column (`t.reminder_days`) into a `date('now', '+' ||
+      // t.reminder_days || ' days')` modifier — no bound-parameter or
+      // JS-constant-spelled helper can express that. Read the narrower
+      // candidate set (reminder_days set, start_date set) and do the
+      // per-row date-equality check in JS instead. `Date.UTC(...)` matches
+      // SQLite's own `date('now')`, which is UTC, not server-local time.
+      const candidates = await this.trips.listReminderCandidates();
+      const todayUtc = new Date();
+      const trips = candidates.filter((t) => {
+        const target = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), todayUtc.getUTCDate()));
+        target.setUTCDate(target.getUTCDate() + t.reminder_days);
+        return t.start_date === target.toISOString().slice(0, 10);
+      });
 
       for (const trip of trips) {
         await this.notifications.send({ event: 'trip_reminder', actorId: null, scope: 'trip', targetId: trip.id, params: { trip: trip.title, tripId: String(trip.id) } }).catch(() => {});
@@ -90,26 +110,22 @@ export class ReminderJobsService implements OnApplicationBootstrap {
   /** Daily check for unchecked todos due inside the lead window. */
   async todoTick(): Promise<void> {
     try {
-      if ((await this.getSetting('notify_todo_due')) === 'false') return;
+      if ((await this.appSettings.getValue('notify_todo_due')) === 'false') return;
 
-      // Select unchecked todos with a due date inside the lead window
-      // that haven't been reminded in the last 24 hours. `due_date` is
-      // stored as a YYYY-MM-DD text; SQLite date() handles it directly.
-      const todos = this.db.all<{
-        id: number; trip_id: number; name: string; due_date: string;
-        assigned_user_id: number | null; trip_title: string; trip_owner_id: number;
-      }>(`
-        SELECT ti.id, ti.trip_id, ti.name, ti.due_date, ti.assigned_user_id,
-               t.title AS trip_title, t.user_id AS trip_owner_id
-        FROM todo_items ti
-        JOIN trips t ON t.id = ti.trip_id
-        WHERE ti.checked = 0
-          AND ti.due_date IS NOT NULL
-          AND ti.due_date <> ''
-          AND date(ti.due_date) <= date('now', '+' || ? || ' days')
-          AND date(ti.due_date) >= date('now')
-          AND (ti.reminded_at IS NULL OR ti.reminded_at <= datetime('now', '-20 hours'))
-      `, TODO_REMINDER_LEAD_DAYS);
+      // RJ4 (Task 0's R9 ruling): `date('now', '+' || ? || ' days')`
+      // concatenates a bound parameter into the modifier — resolved in JS
+      // the same way RJ3 is (`Date.UTC`-based, matching SQLite's UTC
+      // `date('now')`). `due_date` is documented as always canonical
+      // `YYYY-MM-DD` text, so a direct text-range bind reproduces
+      // `date(ti.due_date) <= / >= ...` for well-formed rows.
+      const todayUtc = new Date();
+      const today = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), todayUtc.getUTCDate()));
+      const todayDate = today.toISOString().slice(0, 10);
+      const cutoff = new Date(today);
+      cutoff.setUTCDate(cutoff.getUTCDate() + TODO_REMINDER_LEAD_DAYS);
+      const cutoffDate = cutoff.toISOString().slice(0, 10);
+
+      const todos = await this.todoItems.listDueForReminder(todayDate, cutoffDate);
 
       for (const todo of todos) {
         const targetScope: 'user' | 'trip' = todo.assigned_user_id ? 'user' : 'trip';
@@ -126,7 +142,8 @@ export class ReminderJobsService implements OnApplicationBootstrap {
             due: todo.due_date,
           },
         }).catch(() => {});
-        this.db.run('UPDATE todo_items SET reminded_at = CURRENT_TIMESTAMP WHERE id = ?', todo.id);
+        // RJ5 stays AFTER the send, unchanged (plan3f-inputs.md correction #8).
+        await this.todoItems.markReminded(todo.id);
       }
 
       if (todos.length > 0) {

@@ -735,6 +735,47 @@ export class TripsRepository extends TrekRepository<Trips> {
       .executeTakeFirst();
     return row?.currency;
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3f Task 4 (`ReminderJobsService`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RJ2 (`reminder-jobs.service.ts`'s boot banner, inside `runOnBoot`) —
+   * `SELECT COUNT(*) as c FROM trips WHERE reminder_days > 0 AND start_date
+   * IS NOT NULL`.
+   */
+  async countActiveWithReminders(): Promise<number> {
+    return this.count({ reminder_days: { $gt: 0 }, start_date: { $ne: null } });
+  }
+
+  /**
+   * RJ3 (`reminder-jobs.service.ts#tripTick`) — restructured per Task 0's R9
+   * ruling: the legacy statement concatenated a per-row COLUMN
+   * (`t.reminder_days`) into a `date('now', '+' || t.reminder_days || '
+   * days')` modifier, which no bound-parameter or JS-constant-spelled helper
+   * can express. This narrows the SQL read to the same WHERE minus the date
+   * comparison (`SELECT t.id, t.title, t.user_id, t.reminder_days,
+   * t.start_date FROM trips t WHERE t.reminder_days > 0 AND t.start_date IS
+   * NOT NULL`); the caller (`ReminderJobsService.tripTick`) does the
+   * per-row date-equality check in JS against `start_date`, per R9's exact
+   * verified shape.
+   */
+  async listReminderCandidates(): Promise<TripReminderCandidateRow[]> {
+    return await this.qb('t')
+      .select(['t.id', 't.title', 't.user', 't.reminder_days', 't.start_date'])
+      .andWhere({ reminder_days: { $gt: 0 }, start_date: { $ne: null } })
+      .execute<TripReminderCandidateRow[]>('all', false);
+  }
+}
+
+/** {@link TripsRepository.listReminderCandidates}'s row — `t.user` selected bare (not joined here), so it aliases to the physical `user_id` column per `findAccessible`'s documented precedent. */
+export interface TripReminderCandidateRow {
+  id: number;
+  title: string;
+  user_id: number;
+  reminder_days: number;
+  start_date: string;
 }
 
 /** `PublicApiService.listTrips`/`getTrip`'s 8-column trip projection. */

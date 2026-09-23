@@ -2,6 +2,7 @@ import type { TodoItems } from '../entities/TodoItems.entity';
 import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 import { presenceSet } from './_shared/presence-set';
+import { columnRef, currentTimestamp, nowMinusHours } from '../dialect/sql-functions';
 
 /** A bare `todo_items` row — every scalar column, incl. the two `persist(false)` relation mirrors (`trip_id`, `assigned_user_id`). */
 export interface TodoItemRow {
@@ -159,4 +160,99 @@ export class TodoItemsRepository extends TrekRepository<TodoItems> {
       .executeTakeFirstOrThrow();
     return Number(result.insertId);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3f Task 4 (`ReminderJobsService#todoTick`) — additive. `this.qb()`,
+  // not Kysely: RJ5's dedup window needs `nowMinusHours` (a raw MikroORM
+  // `RawQueryFragment` from `sql-functions.ts`, which composes with a
+  // QueryBuilder/native filter but not with Kysely — the Kysely `sql` tag is
+  // banned under `src/db/repositories/**`), and the join needs `columnRef`
+  // to read `trip_id`/`assigned_user_id` (both `persist(false)` mirrors of
+  // the real `trip`/`assignedUser` relations — a bare select silently drops
+  // them, per `RoadtripDayBoundariesRepository`'s documented trap). `ti.trip`
+  // is ALSO the join target here, so it is never itself selected (that
+  // aliases off the JOINED row's own PK instead of the FK scalar —
+  // `PlaceRatingsRepository.listForPlaces`'s documented trap); `t.user` is
+  // safe to select bare (its target, `users`, is not separately joined in
+  // this query), aliasing to the physical `user_id` column per
+  // `TripsRepository.findAccessible`'s precedent.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RJ4 (`reminder-jobs.service.ts#todoTick`) — restructured per Task 0's R9
+   * ruling. Legacy: `SELECT ti.id, ti.trip_id, ti.name, ti.due_date,
+   * ti.assigned_user_id, t.title AS trip_title, t.user_id AS trip_owner_id
+   * FROM todo_items ti JOIN trips t ON t.id = ti.trip_id WHERE ti.checked = 0
+   * AND ti.due_date IS NOT NULL AND ti.due_date <> '' AND date(ti.due_date)
+   * <= date('now', '+' || ? || ' days') AND date(ti.due_date) >= date('now')
+   * AND (ti.reminded_at IS NULL OR ti.reminded_at <= datetime('now', '-20
+   * hours'))`.
+   *
+   * The `date('now', '+' || ? || ' days')`/`date('now')` bounds are
+   * JS-computed by the caller (`todayDate`/`cutoffDate`, both `Date.UTC`-
+   * based `YYYY-MM-DD` text — matching SQLite's own UTC `date('now')`, per
+   * the same reasoning RJ3's restructuring documents) and bound directly
+   * against `ti.due_date` (documented elsewhere as always canonical
+   * `YYYY-MM-DD` text, so `date(ti.due_date)`'s normalization is a no-op for
+   * well-formed rows and the wrapping is dropped). The `datetime('now',
+   * '-20 hours')` dedup bound stays genuinely in SQL, via `nowMinusHours`
+   * (Task 0's R9 helper) — RJ5's brief explicitly calls for it, not a JS
+   * equivalent.
+   */
+  async listDueForReminder(todayDate: string, cutoffDate: string): Promise<TodoReminderRow[]> {
+    const platform = this.getEntityManager().getPlatform();
+    const rows = await this.qb('ti')
+      .join('ti.trip', 't')
+      .select(['ti.id', columnRef(platform, 'ti.trip_id'), 'ti.name', 'ti.due_date', columnRef(platform, 'ti.assigned_user_id'), 't.title', 't.user'])
+      .andWhere({ checked: 0 })
+      .andWhere({ due_date: { $ne: null } })
+      .andWhere({ due_date: { $ne: '' } })
+      .andWhere({ due_date: { $gte: todayDate } })
+      .andWhere({ due_date: { $lte: cutoffDate } })
+      .andWhere({ $or: [{ reminded_at: null }, { reminded_at: { $lte: nowMinusHours(platform, 20) } }] })
+      .execute<TodoReminderQueryRow[]>('all', false);
+    return rows.map((row) => ({
+      id: row.id,
+      trip_id: row.trip_id,
+      name: row.name,
+      due_date: row.due_date,
+      assigned_user_id: row.assigned_user_id,
+      trip_title: row.title,
+      trip_owner_id: row.user_id,
+    }));
+  }
+
+  /**
+   * RJ5 (`reminder-jobs.service.ts#todoTick`, looped) — `UPDATE todo_items
+   * SET reminded_at = CURRENT_TIMESTAMP WHERE id = ?`. Stays AFTER the
+   * notification send in call order (plan3f-inputs.md correction #8 — a
+   * documented, not-fixed-by-this-plan at-least-once ordering, unlike
+   * `notifications.service.ts#respond`'s deliberately claim-then-act shape).
+   */
+  async markReminded(id: number): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate({ id }, { reminded_at: currentTimestamp(platform) });
+  }
+}
+
+/** {@link TodoItemsRepository.listDueForReminder}'s raw QB row — before the `trip_title`/`trip_owner_id` rename. */
+interface TodoReminderQueryRow {
+  id: number;
+  trip_id: number;
+  name: string;
+  due_date: string;
+  assigned_user_id: number | null;
+  title: string;
+  user_id: number;
+}
+
+/** {@link TodoItemsRepository.listDueForReminder}'s output row. */
+export interface TodoReminderRow {
+  id: number;
+  trip_id: number;
+  name: string;
+  due_date: string;
+  assigned_user_id: number | null;
+  trip_title: string;
+  trip_owner_id: number;
 }

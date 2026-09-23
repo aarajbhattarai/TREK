@@ -5,7 +5,7 @@ import { NotificationPreferencesService } from '../../src/nest/notifications/not
 import { NotificationsService } from '../../src/nest/notifications/notifications.service';
 import { NtfyService } from '../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../src/nest/notifications/transports/webhook.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestUsersRepo } from './test-uow';
 import { createTestNotificationsRepo, createTestNotificationChannelPreferencesRepo } from './notifications-repos';
 
 /**
@@ -23,18 +23,27 @@ import { createTestNotificationsRepo, createTestNotificationChannelPreferencesRe
  * `realtime`) is unchanged, so every caller that only goes through this
  * function (`mcp-test-controllers.ts`, `plugin-host.ts`, both test-only) needs
  * no edit of its own.
+ *
+ * Plan 3f Task 4: `MailerService`/`WebhookService`/`NtfyService` no longer
+ * take a `DatabaseService` either — `MailerService` takes
+ * `UsersRepository`/`SettingsRepository`/`AppSettingsRepository`,
+ * `WebhookService`/`NtfyService` take `SettingsRepository`/
+ * `AppSettingsRepository`, all resolved through the same memoised
+ * `test-uow.ts` factories bound to `dbs.connection`.
  */
 export async function makeNotificationsService(dbs: DatabaseService, realtime = new RealtimeService()): Promise<NotificationsService> {
-  const mailer = new MailerService(dbs);
-  const uow = await createTestUnitOfWork(dbs.connection);
+  const usersRepo = await createTestUsersRepo(dbs.connection);
+  const settingsRepo = await createTestSettingsRepo(dbs.connection);
   const appSettings = await createTestAppSettingsRepo(dbs.connection);
+  const mailer = new MailerService(usersRepo, settingsRepo, appSettings);
+  const uow = await createTestUnitOfWork(dbs.connection);
   const channelPrefsRepo = await createTestNotificationChannelPreferencesRepo(dbs.connection);
   const notificationsRepo = await createTestNotificationsRepo(dbs.connection);
   return new NotificationsService(
     realtime,
     mailer,
-    new WebhookService(dbs),
-    new NtfyService(dbs),
+    new WebhookService(settingsRepo, appSettings),
+    new NtfyService(settingsRepo, appSettings),
     new NotificationPreferencesService(mailer, uow, appSettings, channelPrefsRepo),
     uow,
     notificationsRepo,
@@ -43,9 +52,11 @@ export async function makeNotificationsService(dbs: DatabaseService, realtime = 
 
 /** The preferences half on its own, over the same connection. */
 export async function makeNotificationPreferencesService(dbs: DatabaseService): Promise<NotificationPreferencesService> {
+  const usersRepo = await createTestUsersRepo(dbs.connection);
+  const settingsRepo = await createTestSettingsRepo(dbs.connection);
   const appSettings = await createTestAppSettingsRepo(dbs.connection);
   const channelPrefsRepo = await createTestNotificationChannelPreferencesRepo(dbs.connection);
-  return new NotificationPreferencesService(new MailerService(dbs), await createTestUnitOfWork(dbs.connection), appSettings, channelPrefsRepo);
+  return new NotificationPreferencesService(new MailerService(usersRepo, settingsRepo, appSettings), await createTestUnitOfWork(dbs.connection), appSettings, channelPrefsRepo);
 }
 
 /**
