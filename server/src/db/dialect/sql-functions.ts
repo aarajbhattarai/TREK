@@ -755,3 +755,119 @@ export function unixEpochToIsoKysely<DB, TB extends keyof DB>(
   return unsupported(platform);
 }
 
+// ---------------------------------------------------------------------------
+// Plan 3h Task 0 — no consumer yet: Task 3 (`dawarich-sync.service.ts`'s
+// `listTripsToSync`, DSY2 — `date('now','-400 days')` / `date('now','+1
+// day')`) and Task 4 (`route-usage.service.ts`'s `purgeExpired`, RU4 —
+// `date('now', ?)` bound with the modifier `-${RETENTION_DAYS} days`, and
+// RETENTION_DAYS (`route-usage.service.ts:13`) is a compile-time module
+// constant (`400`), not a runtime value — so RU4's "bound parameter" and
+// DSY2's "literal" are the SAME shape at the call site once the modifier is
+// known, confirmed directly against both files' actual source rather than
+// assumed from the legacy SQL's own binding style) wire `nowDateOffset` in
+// when each converts its own statement.
+//
+// Plan 3f's own four `date('now')` sites (atlas.service.ts AT39/AT42/AT44/
+// AT45 — 3g's inventory's own open question, inherited from 3f and never
+// resolved until now) do NOT go through a dialect helper at all: `todayUtc()`
+// (a `@trek/shared` JS function) resolves the calendar date once in the
+// CALLING SERVICE (`atlas.service.ts:912`, `const trip = await
+// this.trips.lastStartedTrip(userId, todayUtc())`) and the repository binds
+// it as a plain parameter (`Trips.repository.ts#lastStartedTrip`:
+// `.where((eb) => eb(eb.fn.coalesce('t.start_date', 't.end_date'), '<=',
+// today))`) — confirmed by reading the actual converted code at HEAD, not
+// the plan document's description of it. That pattern covers a BARE
+// `date('now')` (no offset) cleanly, and needs no new helper here. It does
+// not extend to an OFFSET the way DSY2/RU4 need without every call site
+// re-deriving day arithmetic in JS by hand, so this file instead grows the
+// sibling `nowMinusDays`/`nowMinusHours` already establish for exactly this
+// family (Plan 3c Task 0b/Plan 3f Task 0 R9): a signed day-count offset from
+// "now", spelled into the fragment after integer validation, the same
+// reasoning those two helpers give (MikroORM's raw fragments do not accept a
+// placeholder inside a SQLite date/time function's modifier argument).
+// `PlaceShadowPicksRepository.expireStale` (Plan 3c Task 1) is this shape's
+// own closest working precedent — a retention-window purge built on
+// `nowMinusDays` exactly the way `RouteUsageDailyRepository`'s own purge
+// (RU4) will be built on `nowDateOffset` below.
+// ---------------------------------------------------------------------------
+
+/**
+ * `date('now', '<sign>N days')` — the SQLite clock's CALENDAR DATE (`date()`,
+ * not `datetime()` — `nowMinusDays` above is the wrong shape for this: it
+ * targets `datetime()`, and only ever subtracts), shifted by a signed whole
+ * day count. Unlike `nowMinusDays`, `days` may be POSITIVE (forward),
+ * NEGATIVE (backward) or zero — `dawarich-sync.service.ts`'s
+ * `listTripsToSync` (DSY2) needs both directions in the SAME statement
+ * (`date('now','-400 days')` for the trailing edge, `date('now','+1 day')`
+ * for the leading one). `days` is spelled directly into the fragment (not
+ * bound), the same reasoning `nowMinusDays`'s own docstring gives.
+ *
+ * Verified directly (not assumed) that SQLite's modifier keyword tolerates
+ * the singular/plural mismatch between the two legacy texts (`'+1 day'`
+ * singular, `'-400 days'` plural): `date('now','+1 day')` and
+ * `date('now','+1 days')` render the identical result against a live
+ * `better-sqlite3` connection, so this helper's always-plural spelling is
+ * behaviourally identical to both legacy statements, not just the plural one.
+ */
+export function nowDateOffset(platform: Platform, days: number): RawQueryFragment {
+  if (!Number.isInteger(days)) {
+    throw new Error(`sql-functions: nowDateOffset needs an integer day count, got ${days}`);
+  }
+  if (platform instanceof SqlitePlatform) {
+    const sign = days < 0 ? '-' : '+';
+    return raw(`date('now', '${sign}${Math.abs(days)} days')`);
+  }
+  return unsupported(platform);
+}
+
+/**
+ * `datetime('now', '+N seconds')` — the seconds-granularity, ADDING sibling
+ * of `nowMinusDays`/`nowMinusHours` above: the shape `doc-sync.service.ts`'s
+ * `upsertItem` (DS23, inside an `ON CONFLICT DO UPDATE`'s `CASE WHEN`; DS26,
+ * inside the sibling `INSERT ... VALUES`) and `recordLinkFailure` (a third,
+ * structurally identical call site found re-reading the file at HEAD —
+ * `next_attempt_at = datetime('now', '+' || ? || ' seconds')`,
+ * `doc-sync.service.ts:967`, not individually numbered in the plan's own
+ * inventory) all need: a caller-computed backoff window (`backoffSeconds(
+ * ...)`, a genuine RUNTIME value, never a source-code constant the way
+ * `nowMinusDays`'s callers' day counts are) added to the database clock.
+ * `seconds` is validated non-negative-integer and spelled directly into the
+ * fragment — the same reasoning (and the same MikroORM raw-fragment
+ * placeholder limitation) `nowMinusDays`'s own docstring gives; every known
+ * call site's `seconds` argument is already a JS-computed `number`, never
+ * user input, the same trust boundary this file relies on elsewhere
+ * (`dateAdd`'s day count, `substring`'s start/length).
+ */
+export function nowPlusSeconds(platform: Platform, seconds: number): RawQueryFragment {
+  if (!Number.isInteger(seconds) || seconds < 0) {
+    throw new Error(`sql-functions: nowPlusSeconds needs a non-negative integer second count, got ${seconds}`);
+  }
+  if (platform instanceof SqlitePlatform) return raw(`datetime('now', '+${seconds} seconds')`);
+  return unsupported(platform);
+}
+
+/**
+ * The Kysely-expression twin of {@link nowPlusSeconds}: DS23/DS24's
+ * `ON CONFLICT ... DO UPDATE` / `INSERT ... VALUES` (R3) is a hand-typed
+ * Kysely statement — MikroORM's `em.upsert` cannot express a
+ * partial-unique-index conflict target (R3's own ruling) — so the
+ * `next_attempt_at` computation inside its `CASE WHEN` needs a Kysely
+ * `Expression`, not a MikroORM `RawQueryFragment` (SQLF-048: a
+ * `RawQueryFragment` throws when handed into a Kysely statement). Same
+ * validation, same always-non-negative-integer trust boundary as the
+ * MikroORM form above.
+ */
+export function nowPlusSecondsKysely<DB, TB extends keyof DB>(
+  platform: Platform,
+  eb: ExpressionBuilder<DB, TB>,
+  seconds: number,
+): ExpressionWrapper<DB, TB, string> {
+  if (!Number.isInteger(seconds) || seconds < 0) {
+    throw new Error(`sql-functions: nowPlusSecondsKysely needs a non-negative integer second count, got ${seconds}`);
+  }
+  if (platform instanceof SqlitePlatform) {
+    return eb.fn<string>('datetime', [eb.val('now'), eb.val(`+${seconds} seconds`)]);
+  }
+  return unsupported(platform);
+}
+

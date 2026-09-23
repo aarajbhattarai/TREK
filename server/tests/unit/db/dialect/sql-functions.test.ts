@@ -30,8 +30,11 @@ import {
   lowerTrimParam,
   maxOf,
   minOf,
+  nowDateOffset,
   nowMinusDays,
   nowMinusHours,
+  nowPlusSeconds,
+  nowPlusSecondsKysely,
   startsWithIsoDate,
   startsWithIsoDateKysely,
   substring,
@@ -1020,6 +1023,106 @@ describe('sql-functions (sqlite)', () => {
     const foreign = new FakePlatform();
     const eb = expressionBuilder<UsersKyselyDB, 'users'>();
     expect(() => unixEpochToIsoKysely(foreign, eb, 'created_at')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3h Task 0 — no consumer yet: Task 3 (DSY2), Task 4 (RU4), Task 5
+  // (DS23/DS26/recordLinkFailure) wire these in as each converts its own
+  // statement. Pinned here so each task imports a tested helper instead of
+  // writing one inline.
+
+  it("SQLF-071: nowDateOffset renders date('now', '-N days'), matching a JS-computed date within a few seconds' tolerance", async () => {
+    const row = testDb.prepare(`SELECT ${nowDateOffset(t.em.getPlatform(), -400).sql} as d`).get() as { d: string };
+    const got = new Date(`${row.d}T00:00:00Z`).getTime();
+    const expected = Date.now() - 400 * 24 * 60 * 60 * 1000;
+    // Compare calendar dates (UTC), not exact millis — date() truncates to a day.
+    expect(Math.abs(got - expected)).toBeLessThan(2 * 24 * 60 * 60 * 1000);
+    const expectedDate = new Date(expected).toISOString().slice(0, 10);
+    expect(row.d).toBe(expectedDate);
+  });
+
+  it("SQLF-072: nowDateOffset renders date('now', '+N days') for a positive count, matching DSY2's '+1 day' legacy text (singular) byte-for-byte, not just the helper's own plural spelling", async () => {
+    const helperRow = testDb.prepare(`SELECT ${nowDateOffset(t.em.getPlatform(), 1).sql} as d`).get() as { d: string };
+    const legacyRow = testDb.prepare(`SELECT date('now', '+1 day') as d`).get() as { d: string };
+    expect(helperRow.d).toBe(legacyRow.d);
+    const expectedDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    expect(helperRow.d).toBe(expectedDate);
+  });
+
+  it('SQLF-073: nowDateOffset(0) is today, not one day off in either direction', () => {
+    const row = testDb.prepare(`SELECT ${nowDateOffset(t.em.getPlatform(), 0).sql} as d`).get() as { d: string };
+    expect(row.d).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it('SQLF-074: nowDateOffset rejects a non-integer day count', () => {
+    expect(() => nowDateOffset(t.em.getPlatform(), 1.5)).toThrow(/integer day count/);
+    expect(() => nowDateOffset(t.em.getPlatform(), Number.NaN)).toThrow(/integer day count/);
+  });
+
+  it('SQLF-075: an unknown platform fails closed for nowDateOffset', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => nowDateOffset(foreign, 1)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it("SQLF-076: nowPlusSeconds renders datetime('now', '+N seconds'), matching a JS-computed time within a few seconds' tolerance", async () => {
+    const row = testDb.prepare(`SELECT ${nowPlusSeconds(t.em.getPlatform(), 30).sql} as d`).get() as { d: string };
+    const got = new Date(`${row.d.replace(' ', 'T')}Z`).getTime();
+    const expected = Date.now() + 30 * 1000;
+    expect(Math.abs(got - expected)).toBeLessThan(10_000);
+  });
+
+  it('SQLF-077: nowPlusSeconds(0) is "now", not thirty seconds off', () => {
+    const row = testDb.prepare(`SELECT ${nowPlusSeconds(t.em.getPlatform(), 0).sql} as d`).get() as { d: string };
+    const got = new Date(`${row.d.replace(' ', 'T')}Z`).getTime();
+    expect(Math.abs(got - Date.now())).toBeLessThan(10_000);
+  });
+
+  it('SQLF-078: nowPlusSeconds rejects a non-integer or negative second count', () => {
+    expect(() => nowPlusSeconds(t.em.getPlatform(), 1.5)).toThrow(/non-negative integer second count/);
+    expect(() => nowPlusSeconds(t.em.getPlatform(), -1)).toThrow(/non-negative integer second count/);
+    expect(() => nowPlusSeconds(t.em.getPlatform(), Number.NaN)).toThrow(/non-negative integer second count/);
+  });
+
+  it('SQLF-079: an unknown platform fails closed for nowPlusSeconds', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => nowPlusSeconds(foreign, 1)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it("SQLF-080: nowPlusSecondsKysely compiles to datetime(?, ?), matching nowPlusSeconds's own datetime('now', '+N seconds') text shape and runtime value (the DS23/DS26/recordLinkFailure shape, inside a Kysely ON CONFLICT DO UPDATE's CASE WHEN — R3)", async () => {
+    createUser(testDb); // one row so the anchor SELECT FROM users has something to select
+    const platform = t.em.getPlatform();
+
+    const compiled = t.em.getKysely<UsersKyselyDB>()
+      .selectFrom('users')
+      .select((eb) => [nowPlusSecondsKysely(platform, eb, 45).as('d')])
+      .compile();
+    expect(compiled.sql).toBe('select datetime(?, ?) as "d" from "users"');
+    expect(compiled.parameters).toEqual(['now', '+45 seconds']);
+
+    const got = testDb.prepare(compiled.sql).get(...compiled.parameters) as { d: string };
+    const raw = testDb.prepare(`SELECT ${nowPlusSeconds(platform, 45).sql} as d`).get() as { d: string };
+    // Both texts render the same shape; a wide tolerance sidesteps a same-second
+    // flake between the two separate statement executions (SQLF-016/063's own
+    // convention for every other 'now'-based helper in this file).
+    const gotMs = new Date(`${got.d.replace(' ', 'T')}Z`).getTime();
+    const rawMs = new Date(`${raw.d.replace(' ', 'T')}Z`).getTime();
+    expect(Math.abs(gotMs - rawMs)).toBeLessThan(10_000);
+    expect(Math.abs(gotMs - (Date.now() + 45 * 1000))).toBeLessThan(10_000);
+  });
+
+  it('SQLF-081: nowPlusSecondsKysely rejects a non-integer or negative second count', () => {
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    const platform = t.em.getPlatform();
+    expect(() => nowPlusSecondsKysely(platform, eb, 1.5)).toThrow(/non-negative integer second count/);
+    expect(() => nowPlusSecondsKysely(platform, eb, -1)).toThrow(/non-negative integer second count/);
+  });
+
+  it('SQLF-082: an unknown platform fails closed for nowPlusSecondsKysely', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    expect(() => nowPlusSecondsKysely(foreign, eb, 1)).toThrow(/no implementation for platform FakePlatform/);
   });
 });
 
