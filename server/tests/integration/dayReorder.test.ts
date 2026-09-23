@@ -25,11 +25,24 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 import { DaysService, DayReorderError } from '../../src/nest/days/days.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../helpers/test-uow';
+import {
+  createTestUnitOfWork, createTestAppSettingsRepo,
+  createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+} from '../helpers/test-uow';
 
 let svc: DaysService;
 beforeAll(async () => {
-  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb));
+  svc = new DaysService(
+    new DatabaseService(testDb),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
+    new RealtimeService(),
+    new QueryHelpersService(new DatabaseService(testDb)),
+    await createTestUnitOfWork(testDb),
+    await createTestDaysRepo(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestDayNotesRepo(testDb),
+    await createTestTripsRepo(testDb),
+  );
 });
 const reorderDays = async (tripId: number, orderedIds: number[]) => await svc.reorder(tripId, orderedIds);
 const insertDay = async (tripId: number, position?: number) => await svc.insert(tripId, position);

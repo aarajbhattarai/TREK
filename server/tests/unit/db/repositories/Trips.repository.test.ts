@@ -80,3 +80,18 @@ describe('TripsRepository.findAccessible — parity with canAccessTrip', () => {
     expect(wrap(entity).toObject()).toStrictEqual(raw);
   });
 });
+
+// Plan 3c Task 2 (DY35): `days.service.ts::insert`'s dated path extends the
+// trip by one day. Owned exclusively by Task 2 per the plan's file
+// ownership (`Trips.repository.ts` ONLY for `setEndDate`) — appended here
+// rather than interleaved with Task 1's blocks above.
+describe('TripsRepository.setEndDate (Plan 3c Task 2, DY35)', () => {
+  it('TRIPREPO-013: writes end_date verbatim, including clearing it to null', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    await trips.setEndDate(trip.id, '2026-09-30');
+    expect((testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(trip.id) as { end_date: string | null }).end_date).toBe('2026-09-30');
+    await trips.setEndDate(trip.id, null);
+    expect((testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(trip.id) as { end_date: string | null }).end_date).toBeNull();
+  });
+});

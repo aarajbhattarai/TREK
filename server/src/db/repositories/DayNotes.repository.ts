@@ -62,4 +62,16 @@ export class DayNotesRepository extends TrekRepository<DayNotes> {
     }
     return toRow(inserted) as DayNoteRow;
   }
+
+  /**
+   * DY4 (`days.service.ts::list`) — `` SELECT * FROM day_notes WHERE day_id
+   * IN (${dayPlaceholders}) ORDER BY sort_order ASC, created_at ASC ``.
+   * Empty-array short-circuit before any query, as the legacy dynamic-`IN`
+   * builder did.
+   */
+  async listByDayIds(day_ids: number[]): Promise<DayNoteRow[]> {
+    if (day_ids.length === 0) return [];
+    const notes = await this.find({ day: { $in: day_ids } }, { orderBy: { sort_order: 'asc', created_at: 'asc' } });
+    return notes.map((n) => toRow(n) as DayNoteRow);
+  }
 }

@@ -78,7 +78,10 @@ import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.serv
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import {
+  createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm,
+  createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+} from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
 // actual SQL of every domain it fans out to, so a shape change downstream shows
@@ -100,7 +103,17 @@ let placesSvc: PlacesService;
 let membersSvc: TripMembersService;
 beforeAll(async () => {
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
-  daysSvc = new DaysService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()), await createTestUnitOfWork(dbs().connection));
+  daysSvc = new DaysService(
+    dbs(),
+    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+    new RealtimeService(),
+    new QueryHelpersService(dbs()),
+    await createTestUnitOfWork(dbs().connection),
+    await createTestDaysRepo(dbs().connection),
+    await createTestDayAssignmentsRepo(dbs().connection),
+    await createTestDayNotesRepo(dbs().connection),
+    await createTestTripsRepo(dbs().connection),
+  );
   placesSvc = new PlacesService(
   dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
   new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)), new QueryHelpersService(dbs()),

@@ -1,12 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { formatAssignmentWithPlace } from '../common/rowShape';
-import type { AssignmentRow, Day, DayNote, User } from '../../types';
+import type { AssignmentRow, User } from '../../types';
 import { UnitOfWork } from '../database/unit-of-work';
+import { toRowId } from '../common/row-id';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository, DayOrderRow } from '../../db/repositories/Days.repository';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
+import { DayNotes } from '../../db/entities/DayNotes.entity';
+import type { DayNotesRepository } from '../../db/repositories/DayNotes.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 type Trip = TripAccess;
 
@@ -44,21 +54,30 @@ function withDatePart(timestamp: string, date: string): string {
 export class DayReorderError extends Error {}
 
 /**
- * Day domain service — owns the day + accommodation SQL (moved 1:1 from the
- * legacy services/dayService.ts: identical statements, the `||` falsy-coercion
- * defaults, the post-write re-selects, the two-phase negative-day_number
- * renumber and the reservation re-stamping). The legacy hand-rolled
- * BEGIN/COMMIT blocks in reorder/insert became uow.transactional() (same
- * rollback-on-throw semantics, savepoint-safe when nested). Verified defects
- * were fixed after the port (2026-07): update() now presence-sentinels BOTH
- * columns (the legacy always-write wiped notes when only a title was sent),
- * createAccommodation/deleteAccommodation run their multi-statement writes in
- * a transaction, and getAssignmentsForDay batch-loads tags instead of one
- * query per assignment. Trip access
- * rides DatabaseService.canAccessTrip; mutations use the
- * 'day_edit' permission; the WebSocket broadcast keeps its legacy call path.
- * There are no non-Nest consumers left. days.bridge.ts served them and was
- * deleted once the last one folded into the container.
+ * Day domain service — the day + day-assignment-projection SQL now lives in
+ * `DaysRepository`/`DayAssignmentsRepository`/`DayNotesRepository` (Plan 3c
+ * Task 2); `restampReservationDates`/`assertNoInvertedAccommodation` and the
+ * `day_accommodations`/`reservations`/`reservation_endpoints` halves of
+ * `resyncAccommodationDays` stay on the raw `DatabaseService` connection —
+ * those tables belong to Plan 3d (`// DYn — Plan 3d` marks each site). Trip
+ * access still rides `DatabaseService.canAccessTrip` (Task 0b's 110
+ * unconverted callers, this among them); mutations use the 'day_edit'
+ * permission; the WebSocket broadcast keeps its legacy call path.
+ *
+ * Day ids arriving from a route (`:id`) are an **affinity seam**: the legacy
+ * statement bound the route string straight into `WHERE id = ?` with no
+ * `Number()`/validation of its own, relying on SQLite's own text/integer
+ * affinity. `getDay` is the one gate that converts and answers the legacy
+ * not-found (`toRowId` → `undefined`, program rule 15); every mutation below
+ * is only ever reached downstream of a successful `getDay` call in the same
+ * request (REST/MCP/RPC all check-then-act), so `toRowId(id)!` there is not
+ * a live 404 path, just the same non-null-assert style this file already
+ * used before conversion (`this.db.get<Day>(...)!`). `tripId` is the DY0
+ * seam: `TripAccessGuard` already validated it with the SAME raw-bind
+ * escape hatch `TripsRepository.findAccessible` uses, so every id-shape a
+ * plain `Number(tripId)` would mis-parse relative to SQLite's affinity was
+ * already refused before this service's handler ever runs — safe to convert
+ * with a bare `Number()` downstream of that guard.
  */
 @Injectable()
 export class DaysService {
@@ -68,6 +87,10 @@ export class DaysService {
     private readonly realtime: RealtimeService,
     private readonly queryHelpers: QueryHelpersService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
+    @InjectRepository(DayNotes) private readonly dayNotesRepo: DayNotesRepository,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -86,21 +109,9 @@ export class DaysService {
   // Day assignment helpers
   // -------------------------------------------------------------------------
 
+  /** DY1 — `DayAssignmentsRepository.listForDay`, the single-day ordered projection. */
   async getAssignmentsForDay(dayId: number | string) {
-    const assignments = this.db.all<AssignmentRow>(`
-    SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
-      p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
-      COALESCE(da.assignment_time, p.place_time) as place_time,
-      COALESCE(da.assignment_end_time, p.end_time) as end_time,
-      p.duration_minutes, p.notes as place_notes,
-      p.image_url, p.transport_mode, p.google_place_id, p.google_ftid, p.osm_id, p.amap_poi_id, p.website, p.phone, p.stop_type, p.fill_percent,
-      c.name as category_name, c.color as category_color, c.icon as category_icon
-    FROM day_assignments da
-    JOIN places p ON da.place_id = p.id
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE da.day_id = ?
-    ORDER BY da.order_index ASC, da.created_at ASC
-  `, dayId);
+    const assignments = await this.dayAssignmentsRepo.listForDay(Number(dayId));
 
     // One batched tag load instead of the legacy per-assignment query; the
     // non-compact loader returns the same full tag rows (t.* minus the join
@@ -163,29 +174,15 @@ export class DaysService {
   // -------------------------------------------------------------------------
 
   async list(tripId: string | number) {
-    const days = this.db.all<Day>('SELECT * FROM days WHERE trip_id = ? ORDER BY day_number ASC', tripId);
+    const days = await this.daysRepo.listByTrip(Number(tripId));
 
     if (days.length === 0) {
       return { days: [] };
     }
 
     const dayIds = days.map(d => d.id);
-    const dayPlaceholders = dayIds.map(() => '?').join(',');
 
-    const allAssignments = this.db.all<AssignmentRow>(`
-    SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
-      p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
-      COALESCE(da.assignment_time, p.place_time) as place_time,
-      COALESCE(da.assignment_end_time, p.end_time) as end_time,
-      p.duration_minutes, p.notes as place_notes,
-      p.image_url, p.transport_mode, p.google_place_id, p.google_ftid, p.osm_id, p.amap_poi_id, p.website, p.phone, p.stop_type, p.fill_percent,
-      c.name as category_name, c.color as category_color, c.icon as category_icon
-    FROM day_assignments da
-    JOIN places p ON da.place_id = p.id
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE da.day_id IN (${dayPlaceholders})
-    ORDER BY da.order_index ASC, da.created_at ASC
-  `, ...dayIds);
+    const allAssignments = await this.dayAssignmentsRepo.listWithPlaceAndCategory(dayIds);
 
     const placeIds = [...new Set(allAssignments.map(a => a.place_id))];
     const tagsByPlaceId = await this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
@@ -196,14 +193,15 @@ export class DaysService {
     const assignmentsByDayId: Record<number, ReturnType<typeof formatAssignmentWithPlace>[]> = {};
     for (const a of allAssignments) {
       if (!assignmentsByDayId[a.day_id]) assignmentsByDayId[a.day_id] = [];
-      assignmentsByDayId[a.day_id].push(formatAssignmentWithPlace(a, tagsByPlaceId[a.place_id] || [], participantsByAssignment[a.id] || []));
+      // The repository row is honestly nullable per column (rule 16); `AssignmentRow`
+      // (types.ts) narrows some of those to non-null the same way the legacy
+      // `this.db.all<AssignmentRow>(...)` cast already trusted unchecked — same trust
+      // boundary, moved from the raw-SQL generic to this call site.
+      assignmentsByDayId[a.day_id].push(formatAssignmentWithPlace(a as unknown as AssignmentRow, tagsByPlaceId[a.place_id] || [], participantsByAssignment[a.id] || []));
     }
 
-    const allNotes = this.db.all<DayNote>(
-      `SELECT * FROM day_notes WHERE day_id IN (${dayPlaceholders}) ORDER BY sort_order ASC, created_at ASC`,
-      ...dayIds
-    );
-    const notesByDayId: Record<number, DayNote[]> = {};
+    const allNotes = await this.dayNotesRepo.listByDayIds(dayIds);
+    const notesByDayId: Record<number, typeof allNotes[number][]> = {};
     for (const note of allNotes) {
       if (!notesByDayId[note.day_id]) notesByDayId[note.day_id] = [];
       notesByDayId[note.day_id].push(note);
@@ -219,34 +217,42 @@ export class DaysService {
   }
 
   async create(tripId: string | number, date?: string, notes?: string) {
-    const maxDay = this.db.get<{ max: number | null }>('SELECT MAX(day_number) as max FROM days WHERE trip_id = ?', tripId)!;
-    const dayNumber = (maxDay.max || 0) + 1;
+    const tripIdNum = Number(tripId);
+    // DY5: `DaysRepository.maxDayNumber` already folds the no-rows case to 0
+    // (`?? 0`); the `|| 0` here is the legacy expression kept verbatim so a
+    // stored 0 still becomes 1 — the same outcome either fold produces, but
+    // the ruling is to keep the literal formula in the service.
+    const maxDayNumber = await this.daysRepo.maxDayNumber(tripIdNum);
+    const dayNumber = (maxDayNumber || 0) + 1;
 
-    const result = this.db.run(
-      'INSERT INTO days (trip_id, day_number, date, notes) VALUES (?, ?, ?, ?)',
-      tripId, dayNumber, date || null, notes || null
-    );
-
-    const day = this.db.get<Day>('SELECT * FROM days WHERE id = ?', result.lastInsertRowid)!;
+    const day = await this.daysRepo.createDay({
+      trip_id: tripIdNum,
+      day_number: dayNumber,
+      date: date || null,
+      notes: notes || null,
+    });
     return { ...day, assignments: [] };
   }
 
   async getDay(id: string | number, tripId: string | number) {
-    return this.db.get<Day>('SELECT * FROM days WHERE id = ? AND trip_id = ?', id, tripId);
+    const dayId = toRowId(id);
+    if (dayId === null) return undefined;
+    return await this.daysRepo.findInTrip(dayId, Number(tripId));
   }
 
-  async update(id: string | number, current: Day, fields: { notes?: string; title?: string | null }) {
+  async update(id: string | number, current: { notes?: string | null; title?: string | null }, fields: { notes?: string; title?: string | null }) {
+    const dayId = toRowId(id)!;
     // Both columns use the presence sentinel: an absent key preserves the
     // current value (the legacy version always wrote notes, so setting a title
     // silently wiped the day's notes — the client sends the two fields in
-    // separate requests).
-    this.db.run('UPDATE days SET notes = ?, title = ? WHERE id = ?',
-      'notes' in fields ? (fields.notes || null) : (current.notes ?? null),
-      'title' in fields ? (fields.title ?? null) : (current.title ?? null),
-      id
-    );
-    const updatedDay = this.db.get<Day>('SELECT * FROM days WHERE id = ?', id)!;
-    return { ...updatedDay, assignments: await this.getAssignmentsForDay(id) };
+    // separate requests). Note the asymmetry: `notes` falls back through `||`
+    // (an empty string clears too), `title` through `??` (only null/undefined
+    // clear) — both byte-identical to the legacy statement's own coercions.
+    const notes = 'notes' in fields ? (fields.notes || null) : (current.notes ?? null);
+    const title = 'title' in fields ? (fields.title ?? null) : (current.title ?? null);
+    await this.daysRepo.updateNotesAndTitle(dayId, notes, title);
+    const updatedDay = (await this.daysRepo.findById(dayId))!;
+    return { ...updatedDay, assignments: await this.getAssignmentsForDay(dayId) };
   }
 
   /**
@@ -255,13 +261,16 @@ export class DaysService {
    * per-leg assignment transport setter. Per-segment leg modes still override it.
    */
   async setDefaultTransportMode(id: string | number, mode: string | null) {
-    this.db.run('UPDATE days SET default_transport_mode = ? WHERE id = ?', mode ?? null, id);
-    const updatedDay = this.db.get<Day>('SELECT * FROM days WHERE id = ?', id)!;
-    return { ...updatedDay, assignments: await this.getAssignmentsForDay(id) };
+    const dayId = toRowId(id)!;
+    await this.daysRepo.setDefaultTransportMode(dayId, mode ?? null);
+    const updatedDay = (await this.daysRepo.findById(dayId))!;
+    return { ...updatedDay, assignments: await this.getAssignmentsForDay(dayId) };
   }
 
+  /** DY13 — unscoped by trip: the caller (every route) already proved trip access via `getDay`. */
   async remove(id: string | number): Promise<void> {
-    this.db.run('DELETE FROM days WHERE id = ?', id);
+    const dayId = toRowId(id)!;
+    await this.daysRepo.deleteById(dayId);
   }
 
   // -------------------------------------------------------------------------
@@ -282,12 +291,17 @@ export class DaysService {
    * moved day so reservation_time/reservation_end_time follow their day's new
    * date (time-of-day preserved). Transport endpoints (flight legs) shift by the
    * same per-booking day delta so multi-leg timing stays internally consistent.
+   *
+   * DY14–DY18 — Plan 3d (`reservations`/`reservation_endpoints`): stays raw on
+   * `DatabaseService` inside the caller's `uow.transactional` block, per the
+   * Plan 3b `UserCleanupService` precedent for cross-domain writes.
    */
   async restampReservationDates(
     tripId: string | number,
     oldDateById: Map<number, string | null>,
     newDateById: Map<number, string | null>,
   ): Promise<void> {
+    // DY14 — Plan 3d
     const reservations = this.db.all<{
       id: number; day_id: number | null; end_day_id: number | null;
       reservation_time: string | null; reservation_end_time: string | null;
@@ -296,9 +310,13 @@ export class DaysService {
       tripId
     );
 
+    // DY15 — Plan 3d
     const setTime = this.db.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?');
+    // DY16 — Plan 3d
     const setEndTime = this.db.prepare('UPDATE reservations SET reservation_end_time = ? WHERE id = ?');
+    // DY17 — Plan 3d
     const endpoints = this.db.prepare('SELECT id, local_date FROM reservation_endpoints WHERE reservation_id = ?');
+    // DY18 — Plan 3d
     const setEndpointDate = this.db.prepare('UPDATE reservation_endpoints SET local_date = ? WHERE id = ?');
 
     for (const r of reservations) {
@@ -326,7 +344,14 @@ export class DaysService {
     }
   }
 
-  /** A stay must not end before it begins after a reorder/insert. */
+  /**
+   * A stay must not end before it begins after a reorder/insert.
+   *
+   * DY19 — Plan 3d: the statement's root table is `day_accommodations`
+   * (joined to `days` only to read `day_number`), so it stays raw on
+   * `DatabaseService` per the inventory's ruling, even though `days` itself
+   * is owned here.
+   */
   private async assertNoInvertedAccommodation(tripId: string | number): Promise<void> {
     const spans = this.db.all<{ id: number; start_no: number; end_no: number }>(`
     SELECT a.id, s.day_number AS start_no, e.day_number AS end_no
@@ -351,54 +376,61 @@ export class DaysService {
    * its day rows, mirroring resyncReservationDays' out-of-range semantics, so moving a
    * whole trip still shifts everything together. The linked hotel reservation follows
    * its accommodation's start day in both branches.
+   *
+   * DY20/DY22/DY23 — Plan 3d (`day_accommodations`/`reservations`) stay raw;
+   * DY21 (`DaysRepository.findByTripAndDate`) and DY25
+   * (`DaysRepository.findById`) convert — both root on `days`, which this
+   * plan owns. DY24 (the `day_assignments` stop that follows its booking)
+   * converts via `DayAssignmentsRepository.reanchorToDay`, a Kysely
+   * statement proven to join this method's ambient transaction by rollback
+   * (see the task report).
    */
   async resyncAccommodationDays(
     tripId: string | number,
     prevDateByDayId: Map<number, string | null>,
   ): Promise<void> {
+    const tripIdNum = Number(tripId);
+    // DY20 — Plan 3d
     const stays = this.db.all<{ id: number; start_day_id: number; end_day_id: number }>(
       'SELECT id, start_day_id, end_day_id FROM day_accommodations WHERE trip_id = ?',
       tripId
     );
     if (stays.length === 0) return;
 
-    const dayByDate = this.db.prepare('SELECT id, day_number FROM days WHERE trip_id = ? AND date = ? LIMIT 1');
+    // DY22 — Plan 3d
     const updateStay = this.db.prepare('UPDATE day_accommodations SET start_day_id = ?, end_day_id = ? WHERE id = ?');
+    // DY23 — Plan 3d
     const restampLinkedRes = this.db.prepare(`
     UPDATE reservations SET day_id = :dayId,
       reservation_time = CASE WHEN reservation_time IS NULL THEN :date
         ELSE :date || SUBSTR(reservation_time, 11) END
     WHERE accommodation_id = :accId AND type = 'hotel'
   `);
-    // The day stop a booking wrote moves with it, the way its linked booking does.
-    // Left behind it would sit on a day the traveller no longer sleeps there, with
-    // nothing on screen to say why. Re-indexed to the end of the target day, because
-    // its old position belonged to a day it is leaving.
-    const moveStayStop = this.db.prepare(`
-    UPDATE day_assignments
-    SET day_id = :dayId,
-        order_index = COALESCE((SELECT MAX(order_index) FROM day_assignments WHERE day_id = :dayId), -1) + 1
-    WHERE accommodation_id = :accId
-  `);
 
     for (const stay of stays) {
       const oldStartDate = prevDateByDayId.get(stay.start_day_id);
       const oldEndDate = prevDateByDayId.get(stay.end_day_id);
       if (oldStartDate && oldEndDate) {
-        const newStart = dayByDate.get(tripId, oldStartDate) as { id: number; day_number: number } | undefined;
-        const newEnd = dayByDate.get(tripId, oldEndDate) as { id: number; day_number: number } | undefined;
+        // DY21
+        const newStart = await this.daysRepo.findByTripAndDate(tripIdNum, oldStartDate);
+        const newEnd = await this.daysRepo.findByTripAndDate(tripIdNum, oldEndDate);
         if (newStart && newEnd && newStart.day_number <= newEnd.day_number
           && (newStart.id !== stay.start_day_id || newEnd.id !== stay.end_day_id)) {
           updateStay.run(newStart.id, newEnd.id, stay.id);
-          moveStayStop.run({ dayId: newStart.id, accId: stay.id });
+          // The day stop a booking wrote moves with it, the way its linked booking does.
+          // Left behind it would sit on a day the traveller no longer sleeps there, with
+          // nothing on screen to say why. Re-indexed to the end of the target day, because
+          // its old position belonged to a day it is leaving. DY24, via Kysely.
+          await this.dayAssignmentsRepo.reanchorToDay(stay.id, newStart.id);
           stay.start_day_id = newStart.id;
         }
       }
       // Keep the linked reservation on the stay's (possibly re-dated) start day — its
       // reservation_time is a snapshot of that day's date, stale after any range change.
-      const startDayDate = this.db.get<{ date: string | null }>('SELECT date FROM days WHERE id = ?', stay.start_day_id)?.date;
-      if (startDayDate) {
-        restampLinkedRes.run({ dayId: stay.start_day_id, date: startDayDate, accId: stay.id });
+      // DY25
+      const startDay = await this.daysRepo.findById(stay.start_day_id);
+      if (startDay?.date) {
+        restampLinkedRes.run({ dayId: stay.start_day_id, date: startDay.date, accId: stay.id });
       }
     }
   }
@@ -408,10 +440,8 @@ export class DaysService {
    * day ids (a permutation of the current ids).
    */
   async reorder(tripId: string | number, orderedIds: number[]) {
-    const rows = this.db.all<{ id: number; day_number: number; date: string | null }>(
-      'SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number',
-      tripId
-    );
+    const tripIdNum = Number(tripId);
+    const rows: DayOrderRow[] = await this.daysRepo.listOrderedForReorder(tripIdNum);
 
     const existingIds = new Set(rows.map(r => r.id));
     if (orderedIds.length !== rows.length || !orderedIds.every(id => existingIds.has(id))) {
@@ -423,18 +453,19 @@ export class DaysService {
     const sortedDates = rows.map(r => r.date).filter((d): d is string => !!d).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     const isDated = sortedDates.length > 0;
 
-    const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
-    const setDayNumberAndDate = this.db.prepare('UPDATE days SET day_number = ?, date = ? WHERE id = ?');
-
     await this.uow.transactional(async () => {
-      // Two-phase renumber to dodge UNIQUE(trip_id, day_number) collisions.
-      orderedIds.forEach((id, i) => setDayNumber.run(-(i + 1), id));
+      // Two-phase renumber to dodge UNIQUE(trip_id, day_number) collisions —
+      // one `nativeUpdate` per row, in the legacy order, both phases inside
+      // this same transaction.
+      for (const [i, id] of orderedIds.entries()) {
+        await this.daysRepo.setDayNumber(id, -(i + 1));
+      }
       const newDateById = new Map<number, string | null>();
-      orderedIds.forEach((id, i) => {
+      for (const [i, id] of orderedIds.entries()) {
         const date = isDated ? (sortedDates[i] ?? null) : null;
-        setDayNumberAndDate.run(i + 1, date, id);
+        await this.daysRepo.setDayNumberAndDate(id, i + 1, date);
         newDateById.set(id, date);
-      });
+      }
 
       if (isDated) await this.restampReservationDates(tripId, oldDateById, newDateById);
       await this.assertNoInvertedAccommodation(tripId);
@@ -450,26 +481,22 @@ export class DaysService {
    * shifted days have their dates re-stamped (same rules as reorder).
    */
   async insert(tripId: string | number, position?: number) {
-    const rows = this.db.all<{ id: number; day_number: number; date: string | null }>(
-      'SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number',
-      tripId
-    );
+    const tripIdNum = Number(tripId);
+    const rows: DayOrderRow[] = await this.daysRepo.listOrderedForReorder(tripIdNum);
     const n = rows.length;
     const pos = Math.min(Math.max(position ?? n + 1, 1), n + 1);
     const datedRows = rows.filter(r => r.date) as { id: number; day_number: number; date: string }[];
     const isDated = datedRows.length > 0;
 
-    const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
-
     if (!isDated) {
-      const newRowid = await this.uow.transactional(async () => {
+      const newId = await this.uow.transactional(async () => {
         const toShift = rows.filter(r => r.day_number >= pos);
-        toShift.forEach(r => setDayNumber.run(-r.day_number, r.id));
-        const result = this.db.run('INSERT INTO days (trip_id, day_number, date) VALUES (?, ?, NULL)', tripId, pos);
-        toShift.forEach(r => setDayNumber.run(r.day_number + 1, r.id));
-        return result.lastInsertRowid;
+        for (const r of toShift) await this.daysRepo.setDayNumber(r.id, -r.day_number);
+        const insertedId = await this.daysRepo.insertDay({ trip_id: tripIdNum, day_number: pos, date: null });
+        for (const r of toShift) await this.daysRepo.setDayNumber(r.id, r.day_number + 1);
+        return insertedId;
       });
-      const day = this.db.get<Day>('SELECT * FROM days WHERE id = ?', newRowid)!;
+      const day = (await this.daysRepo.findById(newId))!;
       return { ...day, assignments: [], notes_items: [] };
     }
 
@@ -477,28 +504,27 @@ export class DaysService {
     const start = datedRows.map(r => r.date).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))[0];
     const dates = Array.from({ length: n + 1 }, (_, i) => addDays(start, i));
     const oldDateById = new Map(rows.map(r => [r.id, r.date]));
-    const setDayNumberAndDate = this.db.prepare('UPDATE days SET day_number = ?, date = ? WHERE id = ?');
 
     const newId = await this.uow.transactional(async () => {
-      rows.forEach((r, i) => setDayNumber.run(-(i + 1), r.id));
-      const result = this.db.run('INSERT INTO days (trip_id, day_number, date) VALUES (?, ?, ?)', tripId, pos, dates[pos - 1]);
-      const insertedId = Number(result.lastInsertRowid);
+      for (const [i, r] of rows.entries()) await this.daysRepo.setDayNumber(r.id, -(i + 1));
+      const insertedId = await this.daysRepo.insertDay({ trip_id: tripIdNum, day_number: pos, date: dates[pos - 1] });
 
       const orderedIds = rows.map(r => r.id);
       orderedIds.splice(pos - 1, 0, insertedId);
       const newDateById = new Map<number, string | null>();
-      orderedIds.forEach((id, i) => {
-        setDayNumberAndDate.run(i + 1, dates[i], id);
+      for (const [i, id] of orderedIds.entries()) {
+        await this.daysRepo.setDayNumberAndDate(id, i + 1, dates[i]);
         newDateById.set(id, dates[i]);
-      });
+      }
 
       await this.restampReservationDates(tripId, oldDateById, newDateById);
       await this.assertNoInvertedAccommodation(tripId);
-      this.db.run('UPDATE trips SET end_date = ? WHERE id = ?', dates[dates.length - 1], tripId);
+      // DY35 — `TripsRepository.setEndDate`, added this task for Task 7 to reuse.
+      await this.tripsRepo.setEndDate(tripIdNum, dates[dates.length - 1]);
 
       return insertedId;
     });
-    const day = this.db.get<Day>('SELECT * FROM days WHERE id = ?', newId)!;
+    const day = (await this.daysRepo.findById(newId))!;
     return { ...day, assignments: [], notes_items: [] };
   }
 

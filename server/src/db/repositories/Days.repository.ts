@@ -15,6 +15,19 @@ export interface DayRow {
 
 const _dayRowKeys: AssertRowKeys<DayRow, Days> = true;
 
+/** The DY26/DY29 reorder/insert projection: `SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number`. */
+export interface DayOrderRow {
+  id: number;
+  day_number: number;
+  date: string | null;
+}
+
+/** The DY21 re-anchor lookup: `SELECT id, day_number FROM days WHERE trip_id = ? AND date = ? LIMIT 1`. */
+export interface DayIdAndNumberRow {
+  id: number;
+  day_number: number;
+}
+
 export class DaysRepository extends TrekRepository<Days> {
   /** `SELECT * FROM days WHERE trip_id = ? ORDER BY day_number ASC` */
   async listByTrip(trip_id: number): Promise<DayRow[]> {
@@ -83,5 +96,86 @@ export class DaysRepository extends TrekRepository<Days> {
       throw new Error('createDay: read-back after insert found no row');
     }
     return toRow(inserted) as DayRow;
+  }
+
+  /**
+   * `SELECT * FROM days WHERE id = ?` — DY7/DY10/DY12/DY32/DY36's shared
+   * re-select, one method for all five sites (DY32/DY36 read after their
+   * transaction resolves, so this is a fresh statement against committed
+   * rows, no `refresh` needed).
+   */
+  async findById(id: number): Promise<DayRow | undefined> {
+    const day = await this.findOne({ id });
+    return day ? (toRow(day) as DayRow) : undefined;
+  }
+
+  /**
+   * DY9 — `UPDATE days SET notes = ?, title = ? WHERE id = ?`. The presence
+   * sentinel that decides `notes`/`title` (the legacy's asymmetric `||`
+   * vs. `??` coercion) stays in `DaysService.update`; this takes the final,
+   * already-decided values and writes them verbatim.
+   */
+  async updateNotesAndTitle(id: number, notes: string | null, title: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { notes, title });
+  }
+
+  /** DY11 — `UPDATE days SET default_transport_mode = ? WHERE id = ?` (#1281). */
+  async setDefaultTransportMode(id: number, mode: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { default_transport_mode: mode });
+  }
+
+  /** DY13 — `DELETE FROM days WHERE id = ?`, unscoped: the caller proved trip access. */
+  async deleteById(id: number): Promise<void> {
+    await this.nativeDelete({ id });
+  }
+
+  /**
+   * DY26/DY29 — `SELECT id, day_number, date FROM days WHERE trip_id = ?
+   * ORDER BY day_number`, the read `reorder`/`insert` both take before
+   * opening their `uow.transactional` block (same text, two legacy methods,
+   * one repository method here).
+   */
+  async listOrderedForReorder(trip_id: number): Promise<DayOrderRow[]> {
+    return await this.qb('d')
+      .select(['d.id', 'd.day_number', 'd.date'])
+      .where({ trip: trip_id })
+      .orderBy({ day_number: 'asc' })
+      .execute<DayOrderRow[]>('all', false);
+  }
+
+  /** DY27/DY30 — `UPDATE days SET day_number = ? WHERE id = ?` (the two-phase renumber's per-row write). */
+  async setDayNumber(id: number, day_number: number): Promise<void> {
+    await this.nativeUpdate({ id }, { day_number });
+  }
+
+  /** DY28/DY33 — `UPDATE days SET day_number = ?, date = ? WHERE id = ?`. */
+  async setDayNumberAndDate(id: number, day_number: number, date: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { day_number, date });
+  }
+
+  /**
+   * DY31/DY34 — `INSERT INTO days (trip_id, day_number, date) VALUES (?, ?,
+   * ?)` (no `notes` column named, unlike `createDay`'s DY6 — the row's
+   * `notes` is left to the column's own NULL default). Returns the inserted
+   * id (`em.insert()`'s returned PK, R6's `lastInsertRowid` replacement);
+   * the caller re-selects separately (DY32/DY36), after its transaction
+   * resolves, so no read-back happens here.
+   */
+  async insertDay(input: { trip_id: number; day_number: number; date: string | null }): Promise<number> {
+    return await this.insert({
+      trip: input.trip_id,
+      day_number: input.day_number,
+      date: input.date,
+    });
+  }
+
+  /** DY21 — `SELECT id, day_number FROM days WHERE trip_id = ? AND date = ? LIMIT 1`. */
+  async findByTripAndDate(trip_id: number, date: string): Promise<DayIdAndNumberRow | undefined> {
+    const row = await this.qb('d')
+      .select(['d.id', 'd.day_number'])
+      .where({ trip: trip_id, date })
+      .limit(1)
+      .execute<DayIdAndNumberRow | undefined>('get', false);
+    return row ?? undefined;
   }
 }

@@ -31,6 +31,12 @@ import type { TripMembersRepository } from '../../src/db/repositories/TripMember
 import { Places } from '../../src/db/entities/Places.entity';
 import type { PlacesRepository } from '../../src/db/repositories/Places.repository';
 import { DatabaseService } from '../../src/nest/database/database.service';
+import { Days } from '../../src/db/entities/Days.entity';
+import type { DaysRepository } from '../../src/db/repositories/Days.repository';
+import { DayAssignments } from '../../src/db/entities/DayAssignments.entity';
+import type { DayAssignmentsRepository } from '../../src/db/repositories/DayAssignments.repository';
+import { DayNotes } from '../../src/db/entities/DayNotes.entity';
+import type { DayNotesRepository } from '../../src/db/repositories/DayNotes.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -341,4 +347,42 @@ export function createTestPlacesRepo(db: Database.Database): Promise<PlacesRepos
 export async function createTestDatabaseService(db: Database.Database): Promise<DatabaseService> {
   const t = await sharedTestOrm(db);
   return new DatabaseService(db, t.em);
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 2 (`DaysService` + day notes onto `DaysRepository`/
+// `DayAssignmentsRepository`/`DayNotesRepository`/`TripsRepository.setEndDate`)
+// — appended at the end per the task's own file-ownership rule (append only).
+// Same memoisation-per-handle pattern as every helper above.
+// ---------------------------------------------------------------------------
+
+const daysRepoPerHandle = new WeakMap<Database.Database, Promise<DaysRepository>>();
+const dayAssignmentsRepoPerHandle = new WeakMap<Database.Database, Promise<DayAssignmentsRepository>>();
+const dayNotesRepoPerHandle = new WeakMap<Database.Database, Promise<DayNotesRepository>>();
+
+/** The `DaysRepository` a hand-constructed `DaysService` needs. */
+export function createTestDaysRepo(db: Database.Database): Promise<DaysRepository> {
+  const existing = daysRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Days));
+  daysRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `DayAssignmentsRepository` a hand-constructed `DaysService` needs. */
+export function createTestDayAssignmentsRepo(db: Database.Database): Promise<DayAssignmentsRepository> {
+  const existing = dayAssignmentsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(DayAssignments));
+  dayAssignmentsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `DayNotesRepository` a hand-constructed `DaysService` needs (DY4). */
+export function createTestDayNotesRepo(db: Database.Database): Promise<DayNotesRepository> {
+  const existing = dayNotesRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(DayNotes));
+  dayNotesRepoPerHandle.set(db, pending);
+  return pending;
 }

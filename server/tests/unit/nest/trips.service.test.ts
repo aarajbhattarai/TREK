@@ -88,7 +88,10 @@ import fs from 'fs';
 import path from 'path';
 import { notificationsStub } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import {
+  createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm,
+  createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+} from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -133,7 +136,17 @@ let readModelSvc: TripReadModelService;
 beforeAll(async () => {
   dbsEm = (await sharedTestOrm(testDb)).em;
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
-  daysSvc = new DaysService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()), await createTestUnitOfWork(dbs().connection));
+  daysSvc = new DaysService(
+    dbs(),
+    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+    new RealtimeService(),
+    new QueryHelpersService(dbs()),
+    await createTestUnitOfWork(dbs().connection),
+    await createTestDaysRepo(dbs().connection),
+    await createTestDayAssignmentsRepo(dbs().connection),
+    await createTestDayNotesRepo(dbs().connection),
+    await createTestTripsRepo(dbs().connection),
+  );
   placesSvc = new PlacesService(
   dbs(),
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),

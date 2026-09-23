@@ -64,12 +64,25 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
 import type { Day } from '../../../src/types';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
+import {
+  createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService,
+  createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+} from '../../helpers/test-uow';
 
 let svc: DaysService;
 beforeAll(async () => {
   const dbs = await createTestDatabaseService(testDb);
-  svc = new DaysService(dbs, new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(dbs), await createTestUnitOfWork(testDb));
+  svc = new DaysService(
+    dbs,
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
+    new RealtimeService(),
+    new QueryHelpersService(dbs),
+    await createTestUnitOfWork(testDb),
+    await createTestDaysRepo(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestDayNotesRepo(testDb),
+    await createTestTripsRepo(testDb),
+  );
 });
 let accommodations: Awaited<ReturnType<typeof makeAccommodationsService>>;
 beforeAll(async () => {
@@ -799,7 +812,17 @@ describe('DaysService.canEdit', () => {
   it('DAY-SVC-090 asks for day_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
-    const withStub = new DaysService(new DatabaseService(testDb), permissions, new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb));
+    const withStub = new DaysService(
+      new DatabaseService(testDb),
+      permissions,
+      new RealtimeService(),
+      new QueryHelpersService(new DatabaseService(testDb)),
+      await createTestUnitOfWork(testDb),
+      await createTestDaysRepo(testDb),
+      await createTestDayAssignmentsRepo(testDb),
+      await createTestDayNotesRepo(testDb),
+      await createTestTripsRepo(testDb),
+    );
     const trip = { id: 1, user_id: 1 } as never;
 
     expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);

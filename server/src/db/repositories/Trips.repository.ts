@@ -50,6 +50,16 @@ export class TripsRepository extends TrekRepository<Trips> {
     return { id: row.id, user_id: row.user_id, currency: row.currency ?? null };
   }
 
+  /**
+   * DY35 (`days.service.ts::insert`'s dated path) — `UPDATE trips SET
+   * end_date = ? WHERE id = ?`: a dated insert extends the trip by one day.
+   * Plan 3c Task 7 (`TripsService`) reuses this for its own `end_date`
+   * writes rather than duplicating the statement.
+   */
+  async setEndDate(id: number, end_date: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { end_date });
+  }
+
   /** `SELECT id FROM trips WHERE id = ? AND user_id = ?` */
   async isOwner(trip_id: number | string, user_id: number): Promise<boolean> {
     const row = await this.qb('t')

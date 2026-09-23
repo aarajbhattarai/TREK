@@ -86,3 +86,106 @@ describe('DaysRepository', () => {
     spy.mockRestore();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 2 — the DaysService conversion's remaining methods (DY7/DY9/
+// DY11/DY13/DY21/DY26–DY36).
+// ---------------------------------------------------------------------------
+
+describe('DaysRepository — Task 2 additions', () => {
+  it('DAYREPO-010: findById is the SELECT * row, undefined for a missing id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id, { title: 'Arrival' });
+    expect(await days.findById(day.id)).toStrictEqual(rawDay(day.id));
+    expect(await days.findById(999999)).toBeUndefined();
+  });
+
+  it('DAYREPO-011: updateNotesAndTitle writes both columns verbatim (the presence-sentinel decision itself lives in the service)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    await days.updateNotesAndTitle(day.id, 'Walking day', 'Arrival');
+    expect(await days.findById(day.id)).toMatchObject({ notes: 'Walking day', title: 'Arrival' });
+    await days.updateNotesAndTitle(day.id, null, null);
+    expect(await days.findById(day.id)).toMatchObject({ notes: null, title: null });
+  });
+
+  it('DAYREPO-012: setDefaultTransportMode sets and clears the column', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    await days.setDefaultTransportMode(day.id, 'walk');
+    expect(await days.findById(day.id)).toMatchObject({ default_transport_mode: 'walk' });
+    await days.setDefaultTransportMode(day.id, null);
+    expect(await days.findById(day.id)).toMatchObject({ default_transport_mode: null });
+  });
+
+  it('DAYREPO-013: deleteById is unscoped by trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    await days.deleteById(day.id);
+    expect(await days.findById(day.id)).toBeUndefined();
+  });
+
+  it('DAYREPO-014: listOrderedForReorder returns {id, day_number, date}, ordered by day_number', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const d2 = createDay(testDb, trip.id, { day_number: 2, date: '2026-01-02' });
+    const d1 = createDay(testDb, trip.id, { day_number: 1, date: '2026-01-01' });
+    const rows = await days.listOrderedForReorder(trip.id);
+    expect(rows).toEqual([
+      { id: d1.id, day_number: 1, date: '2026-01-01' },
+      { id: d2.id, day_number: 2, date: '2026-01-02' },
+    ]);
+  });
+
+  it('DAYREPO-015: setDayNumber and setDayNumberAndDate write their columns; the two-phase (negative then positive) sequence a caller drives here never collides', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const a = createDay(testDb, trip.id, { day_number: 1 });
+    const b = createDay(testDb, trip.id, { day_number: 2 });
+    // Phase 1: negative, to dodge UNIQUE(trip_id, day_number) while swapping.
+    await days.setDayNumber(a.id, -2);
+    await days.setDayNumber(b.id, -1);
+    // Phase 2: positive (the swap).
+    await days.setDayNumberAndDate(a.id, 2, '2026-02-02');
+    await days.setDayNumberAndDate(b.id, 1, '2026-02-01');
+    expect(await days.findById(a.id)).toMatchObject({ day_number: 2, date: '2026-02-02' });
+    expect(await days.findById(b.id)).toMatchObject({ day_number: 1, date: '2026-02-01' });
+  });
+
+  it('DAYREPO-016: insertDay writes trip_id/day_number/date only (no notes column named) and returns the inserted id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const id = await days.insertDay({ trip_id: trip.id, day_number: 1, date: '2026-03-01' });
+    expect(typeof id).toBe('number');
+    const row = rawDay(id) as { notes: string | null; date: string | null; day_number: number; trip_id: number };
+    expect(row).toMatchObject({ trip_id: trip.id, day_number: 1, date: '2026-03-01', notes: null });
+  });
+
+  it('DAYREPO-017: findByTripAndDate finds the day at that date, undefined otherwise, scoped to the trip', async () => {
+    const { user } = createUser(testDb);
+    const tripA = createTrip(testDb, user.id);
+    const tripB = createTrip(testDb, user.id);
+    const day = createDay(testDb, tripA.id, { date: '2026-04-01' });
+    createDay(testDb, tripB.id, { date: '2026-04-01' });
+    expect(await days.findByTripAndDate(tripA.id, '2026-04-01')).toEqual({ id: day.id, day_number: day.day_number });
+    expect(await days.findByTripAndDate(tripA.id, '2026-04-02')).toBeUndefined();
+  });
+
+  // D-shape: `findById` (findOne-based, `disableIdentityMap: true` by the base
+  // class default) must see a column written after an unrelated identity-map
+  // read populated the same entity type — written column (`notes`) is outside
+  // the narrower read's own projection scope, so a stale write-back would
+  // revert it if the base class's guarantee ever regressed.
+  it('DAYREPO-018 (D-shape): a notes write after an unrelated identity-map read is visible in findById', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    await t.repo(Days).find({}); // populate the identity map with an unrelated read
+    await days.updateNotesAndTitle(day.id, 'Fresh notes', null);
+    expect(await days.findById(day.id)).toMatchObject({ notes: 'Fresh notes' });
+  });
+});

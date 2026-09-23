@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
-import { createDay, createTrip, createUser } from '../../../helpers/factories';
+import { createDay, createDayNote, createTrip, createUser } from '../../../helpers/factories';
 import { DayNotes } from '../../../../src/db/entities/DayNotes.entity';
 import type { DayNotesRepository } from '../../../../src/db/repositories/DayNotes.repository';
 import { DB_TIMESTAMP_RE } from '../../../../src/db/types';
@@ -57,5 +57,40 @@ describe('DayNotesRepository timestamps', () => {
     await expect(notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Ghost', time: null, icon: null, sort_order: 0, color: null }))
       .rejects.toThrow('createNote: read-back after insert found no row');
     spy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 2 (DY4) — DaysService.list's day_notes batch load.
+// ---------------------------------------------------------------------------
+
+describe('DayNotesRepository.listByDayIds (DY4)', () => {
+  it('NOTEREPO-005: an empty day_ids array short-circuits to [] without querying', async () => {
+    const connection = t.orm.em.getConnection();
+    const spy = vi.spyOn(connection, 'execute');
+    expect(await notes.listByDayIds([])).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('NOTEREPO-006: spans several days, ordered by sort_order ASC then created_at ASC', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const dayA = createDay(testDb, trip.id, { day_number: 1 });
+    const dayB = createDay(testDb, trip.id, { day_number: 2 });
+    createDayNote(testDb, dayA.id, trip.id, { text: 'Second', sort_order: 2 });
+    createDayNote(testDb, dayA.id, trip.id, { text: 'First', sort_order: 1 });
+    createDayNote(testDb, dayB.id, trip.id, { text: 'Only' });
+
+    const rows = await notes.listByDayIds([dayA.id, dayB.id]);
+    expect(rows.map((r) => r.text)).toEqual(['First', 'Second', 'Only']);
+    expect(rows.map((r) => r.day_id)).toEqual([dayA.id, dayA.id, dayB.id]);
+  });
+
+  it('NOTEREPO-007: a day with no notes contributes no rows', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    expect(await notes.listByDayIds([day.id])).toEqual([]);
   });
 });
