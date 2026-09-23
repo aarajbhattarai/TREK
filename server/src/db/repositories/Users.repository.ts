@@ -1074,4 +1074,44 @@ export class UsersRepository extends TrekRepository<Users> {
   async deleteById(id: number): Promise<void> {
     await this.nativeDelete({ id });
   }
+
+  // ---------------------------------------------------------------------
+  // Plan 3d Task 5 (`FeedsService`) — additive: the all-trips ICS feed
+  // token's `users` half (FD5–FD8, FD10; inventory §5). `id`/`token` are
+  // always real values here — no raw-bind seam on this repository's newest
+  // methods (`FeedsService`'s callers already resolve `userId` off
+  // `@CurrentUser()`/the JWT, never off a route param).
+  // ---------------------------------------------------------------------
+
+  /** FD5 (`feeds.service.ts::getUserToken`, also the probe inside `generateUserToken`) — `SELECT feed_token FROM users WHERE id = ?`. */
+  async getFeedToken(id: number): Promise<string | null> {
+    const row = await this.findOne({ id }, { fields: ['feed_token'] });
+    return row?.feed_token ?? null;
+  }
+
+  /**
+   * FD6/FD7/FD8 (`generateUserToken`/`rotateUserToken`/`disableUserToken`) —
+   * ONE method for the three: `UPDATE users SET feed_token = ? WHERE id =
+   * ?`, `token: null` for disable. Unlike the trip token's
+   * `setFeedTokenIfReachable`, there is no reachability predicate to fold in
+   * here — the legacy statement is scoped by `id` alone (the acting user's
+   * own row, already resolved from the JWT), so a plain `nativeUpdate`
+   * suffices.
+   */
+  async setFeedToken(id: number, token: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { feed_token: token });
+  }
+
+  /**
+   * FD10 (`feeds.service.ts::buildUserIcs`) — `SELECT id, username FROM
+   * users WHERE feed_token = ?`. The anonymous all-trips credential lookup —
+   * same shape as `TripsRepository.findIdByFeedToken` (FD9): `token` is
+   * untrusted, and `idx_users_feed_token`'s partial UNIQUE index (`WHERE
+   * feed_token IS NOT NULL`) is what makes a disabled feed's old token 404
+   * instead of matching a row whose column happens to be NULL.
+   */
+  async findIdAndUsernameByFeedToken(token: string): Promise<{ id: number; username: string } | undefined> {
+    const row = await this.findOne({ feed_token: token }, { fields: ['id', 'username'] });
+    return row ? { id: row.id, username: row.username } : undefined;
+  }
 }

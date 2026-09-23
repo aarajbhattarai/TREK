@@ -605,3 +605,246 @@ describe('Cross-method access parity (Task 7 security review M1, absorbed)', () 
     }
   });
 });
+
+// ── Plan 3d Task 5 (FeedsService) — additive: FD1/FD2-4/FD9/FD11, the
+// anonymous ICS feed token lifecycle's `trips` half (R3/R4). ─────────────────
+
+const LEGACY_TRIP_TOKEN_ROW = `
+  SELECT feed_token FROM trips
+   WHERE id = ? AND (user_id = ? OR id IN (SELECT trip_id FROM trip_members WHERE user_id = ?))
+`;
+const LEGACY_REACHABLE_UPDATE = `
+  UPDATE trips SET feed_token = ?
+   WHERE id = ? AND (user_id = ? OR id IN (SELECT trip_id FROM trip_members WHERE user_id = ?))
+`;
+
+describe('TripsRepository.getFeedTokenIfReachable / setFeedTokenIfReachable (FD1/FD2-4)', () => {
+  it('TRIPREPO-042: getFeedTokenIfReachable — byte-identical to the legacy tripTokenRow statement for owner/member/stranger, token set and null', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+    testDb.prepare('UPDATE trips SET feed_token = ? WHERE id = ?').run('tok-reach', trip.id);
+
+    for (const viewer of [owner, member]) {
+      const legacy = (testDb.prepare(LEGACY_TRIP_TOKEN_ROW).get(trip.id, viewer.id, viewer.id) as { feed_token: string | null } | undefined)?.feed_token ?? null;
+      expect(await trips.getFeedTokenIfReachable(trip.id, viewer.id)).toBe(legacy);
+      expect(await trips.getFeedTokenIfReachable(trip.id, viewer.id)).toBe('tok-reach');
+    }
+    // A stranger: the legacy row is undefined, the repository's null collapse matches.
+    expect(testDb.prepare(LEGACY_TRIP_TOKEN_ROW).get(trip.id, stranger.id, stranger.id)).toBeUndefined();
+    expect(await trips.getFeedTokenIfReachable(trip.id, stranger.id)).toBeNull();
+  });
+
+  it('TRIPREPO-043: getFeedTokenIfReachable returns null for a reachable trip whose column is NULL (rule 16, not the same as "unreachable" but the caller collapses both)', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id); // feed_token NULL by default
+    expect(await trips.getFeedTokenIfReachable(trip.id, owner.id)).toBeNull();
+  });
+
+  it('TRIPREPO-044: an archived trip is still reachable — REACHABLE never filters on is_archived, matching the legacy statement', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    testDb.prepare('UPDATE trips SET is_archived = 1, feed_token = ? WHERE id = ?').run('tok-archived', trip.id);
+    expect(await trips.getFeedTokenIfReachable(trip.id, owner.id)).toBe('tok-archived');
+  });
+
+  it('TRIPREPO-045: setFeedTokenIfReachable — owner and member can write, a stranger cannot; affected count matches the legacy statement\'s row count for each case', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+
+    // Owner writes.
+    const legacyOwner = testDb.prepare(LEGACY_REACHABLE_UPDATE).run('tok-owner', trip.id, owner.id, owner.id);
+    expect(legacyOwner.changes).toBe(1);
+    testDb.prepare('UPDATE trips SET feed_token = NULL WHERE id = ?').run(trip.id); // undo, re-run through the repository
+    expect(await trips.setFeedTokenIfReachable(trip.id, owner.id, 'tok-owner')).toBe(1);
+    expect((testDb.prepare('SELECT feed_token FROM trips WHERE id = ?').get(trip.id) as { feed_token: string }).feed_token).toBe('tok-owner');
+
+    // Member writes.
+    expect(await trips.setFeedTokenIfReachable(trip.id, member.id, 'tok-member')).toBe(1);
+    expect((testDb.prepare('SELECT feed_token FROM trips WHERE id = ?').get(trip.id) as { feed_token: string }).feed_token).toBe('tok-member');
+
+    // A stranger's write affects 0 rows and leaves the column untouched — the
+    // mutation-catching proof (rule: a loosened predicate would make this 1).
+    const legacyStranger = testDb.prepare(LEGACY_REACHABLE_UPDATE).run('tok-stranger', trip.id, stranger.id, stranger.id);
+    expect(legacyStranger.changes).toBe(0);
+    expect(await trips.setFeedTokenIfReachable(trip.id, stranger.id, 'tok-stranger')).toBe(0);
+    expect((testDb.prepare('SELECT feed_token FROM trips WHERE id = ?').get(trip.id) as { feed_token: string }).feed_token).toBe('tok-member');
+  });
+
+  it('TRIPREPO-046: setFeedTokenIfReachable clears the column to NULL (disable) and works on an archived trip', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    testDb.prepare('UPDATE trips SET feed_token = ?, is_archived = 1 WHERE id = ?').run('tok-before', trip.id);
+    expect(await trips.setFeedTokenIfReachable(trip.id, owner.id, null)).toBe(1);
+    expect((testDb.prepare('SELECT feed_token FROM trips WHERE id = ?').get(trip.id) as { feed_token: string | null }).feed_token).toBeNull();
+  });
+
+  // R3 (one visibility predicate, one source): `getFeedTokenIfReachable`/
+  // `setFeedTokenIfReachable` reuse `accessibleTripsQuery` — the SAME join
+  // builder `findAccessible` reads through. Extends TRIPREPO-041's
+  // cross-method matrix rather than re-deriving it: if any of the three
+  // diverged (a loosened membership arm, a dropped alias), this would fail.
+  it('TRIPREPO-047: getFeedTokenIfReachable/setFeedTokenIfReachable agree with findAccessible on the identical owner/member/stranger verdict', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+
+    for (const [viewer, reachable] of [[owner, true], [member, true], [stranger, false]] as const) {
+      const accessible = !!(await trips.findAccessible(trip.id, viewer.id));
+      expect(accessible).toBe(reachable);
+      // A read: getFeedTokenIfReachable returns non-null iff findAccessible does, given a token is set.
+      testDb.prepare('UPDATE trips SET feed_token = ? WHERE id = ?').run('probe-token', trip.id);
+      expect((await trips.getFeedTokenIfReachable(trip.id, viewer.id)) !== null).toBe(reachable);
+      // A write: setFeedTokenIfReachable's affected count is 1 iff findAccessible says reachable.
+      expect(await trips.setFeedTokenIfReachable(trip.id, viewer.id, 'probe-write')).toBe(reachable ? 1 : 0);
+    }
+  });
+});
+
+describe('TripsRepository.findIdByFeedToken (FD9)', () => {
+  it('TRIPREPO-048: byte-identical to SELECT id FROM trips WHERE feed_token = ?', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    testDb.prepare('UPDATE trips SET feed_token = ? WHERE id = ?').run('tok-credential', trip.id);
+    const legacy = testDb.prepare('SELECT id FROM trips WHERE feed_token = ?').get('tok-credential') as { id: number };
+    expect(await trips.findIdByFeedToken('tok-credential')).toBe(legacy.id);
+  });
+
+  it('TRIPREPO-049: an unknown token, and a NULL-token row, both resolve to undefined — the partial UNIQUE index semantics', async () => {
+    const { user } = createUser(testDb);
+    createTrip(testDb, user.id); // feed_token NULL
+    expect(await trips.findIdByFeedToken('does-not-exist')).toBeUndefined();
+    expect(await trips.findIdByFeedToken('')).toBeUndefined();
+  });
+});
+
+describe('TripsRepository.listReachableActiveTrips (FD11)', () => {
+  const LEGACY_ACTIVE_FEED_TRIPS = `
+    SELECT id FROM trips
+     WHERE (user_id = ? OR id IN (SELECT trip_id FROM trip_members WHERE user_id = ?))
+       AND is_archived = 0
+       AND (end_date IS NULL OR end_date >= ?)
+     ORDER BY start_date ASC
+  `;
+
+  it('TRIPREPO-050: byte-identical to the legacy statement — owned, member, archived, ended and undated trips', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: sharer } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const cutoff = '2026-01-01';
+
+    const active = createTrip(testDb, owner.id, { title: 'Active', start_date: '2026-06-01', end_date: '2026-06-10' });
+    const archived = createTrip(testDb, owner.id, { title: 'Archived', start_date: '2026-06-01', end_date: '2099-01-01' });
+    testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(archived.id);
+    const ended = createTrip(testDb, owner.id, { title: 'Ended', start_date: '2020-01-01', end_date: '2020-01-10' });
+    const undated = createTrip(testDb, owner.id, { title: 'Undated' }); // no end_date at all
+    const shared = createTrip(testDb, sharer.id, { title: 'Shared', start_date: '2026-03-01', end_date: '2026-03-10' });
+    addTripMember(testDb, shared.id, owner.id);
+    createTrip(testDb, stranger.id, { title: 'Not mine', start_date: '2026-01-01', end_date: '2026-01-10' });
+
+    const legacy = testDb.prepare(LEGACY_ACTIVE_FEED_TRIPS).all(owner.id, owner.id, cutoff) as { id: number }[];
+    const rows = await trips.listReachableActiveTrips(owner.id, cutoff);
+    expect(rows).toEqual(legacy.map((r) => r.id));
+    expect(rows.sort((a, b) => a - b)).toEqual([shared.id, active.id, undated.id].sort((a, b) => a - b));
+    expect(rows).not.toContain(archived.id);
+    expect(rows).not.toContain(ended.id);
+  });
+
+  it('TRIPREPO-051: ordered by start_date ASC, a NULL start_date sorting per SQLite\'s own NULL-first ordering, matching the legacy statement', async () => {
+    const { user } = createUser(testDb);
+    const later = createTrip(testDb, user.id, { title: 'Later', start_date: '2026-08-01', end_date: '2099-01-01' });
+    const earlier = createTrip(testDb, user.id, { title: 'Earlier', start_date: '2026-01-01', end_date: '2099-01-01' });
+    const undated = createTrip(testDb, user.id, { title: 'Undated' });
+
+    const legacy = (testDb.prepare(LEGACY_ACTIVE_FEED_TRIPS).all(user.id, user.id, '2026-01-01') as { id: number }[]).map((r) => r.id);
+    expect(await trips.listReachableActiveTrips(user.id, '2026-01-01')).toEqual(legacy);
+    expect(legacy).toEqual([undated.id, earlier.id, later.id]);
+  });
+
+  it('TRIPREPO-052: a stranger sees nothing, matching the legacy statement', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    createTrip(testDb, owner.id, { start_date: '2026-01-01', end_date: '2099-01-01' });
+    expect(await trips.listReachableActiveTrips(stranger.id, '2026-01-01')).toEqual([]);
+  });
+});
+
+// ── Plan 3d Task 5 (PublicApiService) — additive: the trip reads on 3d ───────
+// (`listTrips`/`getTrip`/`buildTravellers`), converted onto TripsRepository.
+
+describe('TripsRepository.listSummariesByIds / findSummaryById (PublicApiService.listTrips/getTrip)', () => {
+  const LEGACY_TRIP_PROJECTION_COLS = 'id, title, description, start_date, end_date, currency, is_archived, updated_at';
+
+  it('TRIPREPO-053: listSummariesByIds — byte-identical to the legacy statement, ordered by start_date DESC, id DESC', async () => {
+    const { user } = createUser(testDb);
+    const a = createTrip(testDb, user.id, { title: 'A', start_date: '2026-01-01', description: 'first' });
+    const b = createTrip(testDb, user.id, { title: 'B', start_date: '2026-06-01' });
+    const c = createTrip(testDb, user.id, { title: 'C' }); // start_date NULL
+    createTrip(testDb, user.id, { title: 'Excluded' }); // not in the id list
+
+    const ids = [a.id, b.id, c.id];
+    const legacy = testDb.prepare(
+      `SELECT ${LEGACY_TRIP_PROJECTION_COLS} FROM trips WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY start_date DESC, id DESC`,
+    ).all(...ids);
+    const rows = await trips.listSummariesByIds(ids);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([b.id, a.id, c.id]);
+    expect(rows.find((r) => r.id === a.id)).toMatchObject({ description: 'first' });
+    expect(rows.find((r) => r.id === c.id)).toMatchObject({ description: null, start_date: null });
+  });
+
+  it('TRIPREPO-054: listSummariesByIds returns [] for an empty id list without querying', async () => {
+    expect(await trips.listSummariesByIds([])).toEqual([]);
+  });
+
+  it('TRIPREPO-055: findSummaryById — byte-identical to the legacy single-row statement; a missing trip is null', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Solo', description: 'd', start_date: '2026-01-01', end_date: '2026-01-05' });
+    testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(trip.id);
+    const legacy = testDb.prepare(`SELECT ${LEGACY_TRIP_PROJECTION_COLS} FROM trips WHERE id = ?`).get(trip.id);
+    expect(await trips.findSummaryById(trip.id)).toEqual(legacy);
+    expect(await trips.findSummaryById(trip.id)).toMatchObject({ title: 'Solo', is_archived: 1 });
+    expect(await trips.findSummaryById(999999)).toBeNull();
+  });
+});
+
+describe('TripsRepository.listTravellerUsernames (PublicApiService.buildTravellers)', () => {
+  const LEGACY_TRAVELLERS = `
+    SELECT u.username, 1 AS is_owner
+      FROM trips t JOIN users u ON u.id = t.user_id
+     WHERE t.id = ?
+    UNION ALL
+   SELECT u.username, 0 AS is_owner
+      FROM trip_members m JOIN users u ON u.id = m.user_id
+     WHERE m.trip_id = ?
+     ORDER BY is_owner DESC
+  `;
+
+  it('TRIPREPO-056: byte-identical to the legacy UNION ALL statement — owner first, then members', async () => {
+    const { user: owner } = createUser(testDb, { username: 'owner-handle' });
+    const { user: memberA } = createUser(testDb, { username: 'member-a' });
+    const { user: memberB } = createUser(testDb, { username: 'member-b' });
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, memberA.id);
+    addTripMember(testDb, trip.id, memberB.id);
+
+    const legacy = testDb.prepare(LEGACY_TRAVELLERS).all(trip.id, trip.id);
+    const rows = await trips.listTravellerUsernames(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows[0]).toEqual({ username: 'owner-handle', is_owner: 1 });
+    expect(rows.slice(1).map((r) => r.username).sort()).toEqual(['member-a', 'member-b']);
+  });
+
+  it('TRIPREPO-057: a trip with no members returns only the owner row', async () => {
+    const { user: owner } = createUser(testDb, { username: 'solo-owner' });
+    const trip = createTrip(testDb, owner.id);
+    expect(await trips.listTravellerUsernames(trip.id)).toEqual([{ username: 'solo-owner', is_owner: 1 }]);
+  });
+});

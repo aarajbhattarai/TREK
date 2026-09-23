@@ -554,4 +554,195 @@ export class TripsRepository extends TrekRepository<Trips> {
   async deleteById(id: number): Promise<void> {
     await this.nativeDelete({ id });
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 5 (`FeedsService`) — additive: the anonymous ICS feed token
+  // lifecycle. FD1/FD2-4/FD9/FD11 (inventory §5). `trip_id`/`user_id` are
+  // always real `number`s here, unlike `findAccessible`/`getTitle`/etc above:
+  // the two feed-token REST routes resolve and validate the trip id through
+  // `TripAccessGuard` (`@Trip()` hands the controller the already-numeric,
+  // already-access-checked `TripAccess.id`) before `FeedsService` ever runs,
+  // and the MCP surface's own Zod schema types `tripId` as
+  // `z.number().int().positive()` — there is no raw route-string seam to
+  // preserve on this file's newest methods the way `findAccessible`'s
+  // docstring describes for the pre-existing ones.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * FD1 (`feeds.service.ts::tripTokenRow`) — `SELECT feed_token FROM trips
+   * WHERE id = ? AND (user_id = ? OR id IN (SELECT trip_id FROM trip_members
+   * WHERE user_id = ?))`. R3 (one visibility predicate, one source): reuses
+   * `accessibleTripsQuery` above — the SAME join builder `findAccessible`/
+   * `listAccessibleIds` already share — rather than re-deriving the
+   * "reachable" predicate a third way. `null` covers both "no such trip /
+   * not reachable" and "reachable but the column is NULL" on purpose: every
+   * caller (`FeedsService.getTripToken`/`generateTripToken`) treats the two
+   * identically (no usable token), the same collapse the legacy
+   * `row?.feed_token` optional-chain already made.
+   */
+  async getFeedTokenIfReachable(trip_id: number, user_id: number): Promise<string | null> {
+    const row = await this.accessibleTripsQuery(user_id)
+      .select(['t.feed_token'])
+      .andWhere({ id: trip_id })
+      .execute<{ feed_token: string | null } | undefined>('get', false);
+    return row ? row.feed_token : null;
+  }
+
+  /**
+   * FD2/FD3/FD4 (`generateTripToken`/`rotateTripToken`/`disableTripToken`) —
+   * ONE method for the three legacy statements (identical text, `token |
+   * null` is the only thing that varies): `UPDATE trips SET feed_token = ?
+   * WHERE <REACHABLE>`. Returns the affected row count — §18.7's 0-row case
+   * (`generateTripToken` still hands back a URL for a token this write never
+   * stored, past the guard; R4 mirrors that exactly, unfixed) is now visible
+   * to a caller instead of a fire-and-forget `.run()`.
+   *
+   * `nativeUpdate`, not `accessibleTripsQuery(...).update(...)`: SQLite has
+   * no `UPDATE ... JOIN` — chaining `.update()` onto a query builder that
+   * already carries `accessibleTripsQuery`'s `.leftJoin()` throws
+   * (`near "left": syntax error`, proven directly against a real DB before
+   * choosing this shape, not assumed). The typed `FilterQuery` below reaches
+   * for the SAME relation the join builder does (`trip_members_collection`,
+   * `t.trip_members_collection` in `accessibleTripsQuery`) rather than a
+   * hand-rolled string predicate (rule 23): MikroORM detects the to-many
+   * relation in the `$or` and auto-rewrites the whole `nativeUpdate` into an
+   * `UPDATE trips SET ... WHERE id IN (SELECT id FROM (SELECT DISTINCT t.id
+   * FROM trips t LEFT JOIN trip_members t1 ON t.id = t1.trip_id WHERE t.id =
+   * ? AND (t.user_id = ? OR t1.user_id = ?)) AS t)` — the legacy statement's
+   * `IN`-subquery shape, generated from the identical join, not typed twice.
+   * Proven row-identical to `accessibleTripsQuery`/`findAccessible` by
+   * TRIPREPO-041's extended cross-method parity matrix (owner/member/
+   * stranger/archived).
+   */
+  async setFeedTokenIfReachable(trip_id: number, user_id: number, token: string | null): Promise<number> {
+    return await this.nativeUpdate(
+      { id: trip_id, $or: [{ user: user_id }, { trip_members_collection: { user: user_id } }] },
+      { feed_token: token },
+    );
+  }
+
+  /**
+   * FD9 (`feeds.service.ts::buildTripIcs`) — `SELECT id FROM trips WHERE
+   * feed_token = ?`. The anonymous credential lookup: `token` arrives
+   * untrusted, straight from the URL path, with no access check (the token
+   * itself IS the access check — `idx_trips_feed_token`'s partial UNIQUE
+   * index, `WHERE feed_token IS NOT NULL`, is what makes it a safe credential
+   * to look up by at all: a row with a NULL token can never match, so a
+   * disabled feed's old URL 404s instead of resolving to whichever trip
+   * happens to have a NULL column).
+   */
+  async findIdByFeedToken(token: string): Promise<number | undefined> {
+    const row = await this.findOne({ feed_token: token }, { fields: ['id'] });
+    return row?.id;
+  }
+
+  /**
+   * FD11 (`feeds.service.ts::buildUserIcs`) — `SELECT id FROM trips WHERE
+   * (user_id = ? OR id IN (SELECT trip_id FROM trip_members WHERE user_id =
+   * ?)) AND is_archived = 0 AND (end_date IS NULL OR end_date >= ?) ORDER BY
+   * start_date ASC`. The scope of the anonymous all-trips feed: reachable
+   * (`accessibleTripsQuery`, R3 again), unarchived, not yet ended (or
+   * undated). Named `listReachableActiveTrips` per the task brief's ruling.
+   */
+  async listReachableActiveTrips(user_id: number, cutoff: string): Promise<number[]> {
+    const rows = await this.accessibleTripsQuery(user_id)
+      .select(['t.id'])
+      .andWhere({ is_archived: 0 })
+      .andWhere({ $or: [{ end_date: null }, { end_date: { $gte: cutoff } }] })
+      .orderBy({ 't.start_date': 'asc' })
+      .execute<{ id: number }[]>('all', false);
+    return rows.map((r) => r.id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 5 (`PublicApiService`) — additive: the trip reads on 3d
+  // (public-api joins Plan 3d for its reads on 3d tables, R3/§14.6). All
+  // three convert an existing `public-api.service.ts` statement in place;
+  // `reservations`/`day_accommodations` statements in that file stay raw
+  // (Tasks 2/3 own those tables and had not landed when this task ran — see
+  // the task report).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * `PublicApiService.listTrips`'s statement — `SELECT id, title,
+   * description, start_date, end_date, currency, is_archived, updated_at
+   * FROM trips WHERE id IN (...) ORDER BY start_date DESC, id DESC`. `ids`
+   * is already the caller's own access-checked list
+   * (`TripMembershipService.listAccessibleTripIds`, unchanged, not this
+   * plan's file) — this method does no access check of its own, matching
+   * the legacy statement, which trusted the same pre-filtered id list.
+   */
+  async listSummariesByIds(ids: number[]): Promise<TripSummaryProjectionRow[]> {
+    if (ids.length === 0) return [];
+    return this.qb('t')
+      .select(['t.id', 't.title', 't.description', 't.start_date', 't.end_date', 't.currency', 't.is_archived', 't.updated_at'])
+      .where({ id: { $in: ids } })
+      .orderBy({ start_date: 'desc', id: 'desc' })
+      .execute<TripSummaryProjectionRow[]>('all', false);
+  }
+
+  /**
+   * `PublicApiService.getTrip`'s row read — the SAME 8-column projection as
+   * `listSummariesByIds` above, for one trip. The caller's own
+   * `db.canAccessTrip` check (unchanged, a different file) runs first; this
+   * method, like the legacy statement it replaces, does no access check.
+   */
+  async findSummaryById(id: number): Promise<TripSummaryProjectionRow | null> {
+    const row = await this.qb('t')
+      .select(['t.id', 't.title', 't.description', 't.start_date', 't.end_date', 't.currency', 't.is_archived', 't.updated_at'])
+      .where({ id })
+      .execute<TripSummaryProjectionRow | undefined>('get', false);
+    return row ?? null;
+  }
+
+  /**
+   * `PublicApiService.buildTravellers`'s statement — the owner row (a
+   * literal `1 AS is_owner`) `UNION ALL` every member row (`0 AS is_owner`),
+   * `ORDER BY is_owner DESC`. A QueryBuilder `UNION ALL` of two different
+   * FROMs has no single alias to chain a `.select()`/`.where()` off (unlike
+   * `accessibleTripsQuery`'s single-FROM join), so this is Kysely
+   * (`this.kysely()`, the same escape hatch `tripSelectQuery`'s own
+   * docstring documents) — `eb.val<number>(1)`/`eb.val<number>(0)` for the
+   * two literal branches, the same construct `tripSelectQuery`'s `NULL AS
+   * feed_token` already uses in this file.
+   */
+  async listTravellerUsernames(trip_id: number): Promise<TravellerUsernameRow[]> {
+    const owner = this.kysely<TravellerUsernameKyselyDB>()
+      .selectFrom('trips as t')
+      .innerJoin('users as u', 'u.id', 't.user_id')
+      .select((eb) => ['u.username as username', eb.val<number>(1).as('is_owner')])
+      .where('t.id', '=', trip_id);
+    const member = this.kysely<TravellerUsernameKyselyDB>()
+      .selectFrom('trip_members as m')
+      .innerJoin('users as u', 'u.id', 'm.user_id')
+      .select((eb) => ['u.username as username', eb.val<number>(0).as('is_owner')])
+      .where('m.trip_id', '=', trip_id);
+    const rows = await owner.unionAll(member).orderBy('is_owner', 'desc').execute();
+    return rows as TravellerUsernameRow[];
+  }
+}
+
+/** `PublicApiService.listTrips`/`getTrip`'s 8-column trip projection. */
+export interface TripSummaryProjectionRow {
+  id: number;
+  title: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  currency: string | null;
+  is_archived: number | null;
+  updated_at: string | null;
+}
+
+/** `PublicApiService.buildTravellers`'s output row. */
+export interface TravellerUsernameRow {
+  username: string;
+  is_owner: number;
+}
+
+/** The narrow `trips`/`users`/`trip_members` shape `listTravellerUsernames` needs. */
+interface TravellerUsernameKyselyDB {
+  trips: { id: number; user_id: number };
+  users: { id: number; username: string };
+  trip_members: { id: number; trip_id: number; user_id: number };
 }

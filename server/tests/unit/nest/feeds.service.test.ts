@@ -1,56 +1,34 @@
 /**
- * Unit tests for FeedsService — FEED-SVC-001 through FEED-SVC-021. The domain had
- * no unit suite at all: everything rested on tests/e2e/feeds.e2e.test.ts, which
- * drives the HTTP surface and therefore only ever merges a single trip's calendar.
- * These cases pin what the e2e cannot reach — the merge rules buildUserIcs applies
- * across several trips (TZID dedupe, a failing trip being skipped, header vs body
- * folding) and the second-call branches of the token lifecycle.
+ * Unit tests for FeedsService — FEED-SVC-001 through FEED-SVC-022. The domain had
+ * no unit suite before the SQL statements moved into `TripsRepository`/
+ * `UsersRepository` (Plan 3d Task 5); everything rested on
+ * tests/e2e/feeds.e2e.test.ts, which drives the HTTP surface and therefore only
+ * ever merges a single trip's calendar. These cases pin what the e2e cannot reach
+ * — the merge rules buildUserIcs applies across several trips (TZID dedupe, a
+ * failing trip being skipped, header vs body folding), the second-call branches
+ * of the token lifecycle, and the R4 hole (`generateTripToken` returning a URL
+ * for an unstored token past the guard).
  *
- * buildUserIcs/buildTripIcs consume CalendarService.buildTripCalendar's PARTS now
- * instead of scanning a finished ICS document back apart, so the calendar is a stub
- * here and the parts are the test's own. The token lookups are real SQL against an
- * in-memory SQLite DB (same harness as calendar.service.test.ts).
+ * `TripsRepository`/`UsersRepository` are real, against a real migrated-and-
+ * seeded in-memory SQLite DB (`createSnapshotTestDb()`, the `Trips.repository
+ * .test.ts` precedent) — `tripId`/`userId` are real `number`s now (the route
+ * guard resolves and validates the trip id before `FeedsService` ever runs; see
+ * `feeds.controller.ts`'s `@Trip()` usage), so there is no raw-string seam left
+ * to stub around.
+ *
+ * buildUserIcs/buildTripIcs consume CalendarService.buildTripCalendar's PARTS
+ * instead of scanning a finished ICS document back apart, so the calendar is a
+ * stub here and the parts are the test's own.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
-
-// ── DB setup ──────────────────────────────────────────────────────────────────
-
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: (tripId: number | string, userId: number) =>
-      db.prepare(`
-        SELECT t.id, t.user_id FROM trips t
-        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
-        WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)
-      `).get(userId, tripId, userId),
-    isOwner: (tripId: number | string, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
-  };
-  return { testDb: db, dbMock: mock };
-});
-
-vi.mock('../../../src/db/database', () => dbMock);
-vi.mock('../../../src/config', () => ({
-  JWT_SECRET: 'test-secret',
-  ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
-  updateJwtSecret: () => {},
-}));
-vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
-
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { resetTestDb } from '../../helpers/test-db';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { createUser, createTrip, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { Trips } from '../../../src/db/entities/Trips.entity';
+import { Users } from '../../../src/db/entities/Users.entity';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import { FeedsService } from '../../../src/nest/feeds/feeds.service';
 import { FeedsModule } from '../../../src/nest/feeds/feeds.module';
 import {
@@ -63,11 +41,13 @@ import { expectRegisteredProvider, expectRegisteredController } from '../../help
 
 const BASE = 'https://trek.example.test';
 
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+let tripsRepo: TripsRepository;
+let usersRepo: UsersRepository;
+let svc: FeedsService;
+
 const buildTripCalendar = vi.fn();
-const svc = new FeedsService(
-  new DatabaseService(testDb),
-  { buildTripCalendar } as unknown as CalendarService,
-);
 
 // ── Calendar parts the stub hands back ────────────────────────────────────────
 
@@ -87,18 +67,22 @@ const calendarParts = (overrides: Partial<TripCalendar> = {}): TripCalendar => (
   ...overrides,
 });
 
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  tripsRepo = t.repo(Trips);
+  usersRepo = t.repo(Users);
+  svc = new FeedsService(tripsRepo, usersRepo, { buildTripCalendar } as unknown as CalendarService);
 });
 
 beforeEach(() => {
   resetTestDb(testDb);
+  t.clear();
   buildTripCalendar.mockReset();
   buildTripCalendar.mockImplementation(() => calendarParts());
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 
@@ -106,7 +90,7 @@ function seedTrip(token?: string) {
   const { user } = createUser(testDb);
   const trip = createTrip(testDb, user.id);
   if (token) testDb.prepare('UPDATE trips SET feed_token = ? WHERE id = ?').run(token, trip.id);
-  return { user, trip, tripId: String(trip.id) };
+  return { user, trip };
 }
 
 function seedUserWithToken(token: string, overrides: Partial<{ username: string }> = {}) {
@@ -119,15 +103,15 @@ function seedUserWithToken(token: string, overrides: Partial<{ username: string 
 
 describe('trip feed token lifecycle', () => {
   it('FEED-SVC-001: reports no URL while the trip has no token', async () => {
-    const { user, tripId } = seedTrip();
+    const { user, trip } = seedTrip();
 
-    expect(await svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getTripToken(trip.id, user.id, BASE)).toEqual({ feed_url: null });
   });
 
   it('FEED-SVC-002: reports the absolute feed URL once a token exists', async () => {
-    const { user, tripId } = seedTrip('tok-trip');
+    const { user, trip } = seedTrip('tok-trip');
 
-    expect(await svc.getTripToken(tripId, user.id, BASE)).toEqual({
+    expect(await svc.getTripToken(trip.id, user.id, BASE)).toEqual({
       feed_url: `${BASE}/api/feed/trip/tok-trip.ics`,
     });
   });
@@ -135,9 +119,9 @@ describe('trip feed token lifecycle', () => {
   it('FEED-SVC-003: a trailing slash on the base is stripped, never doubled into //api', async () => {
     // APP_URL is user-supplied config; pasted with a trailing slash it would
     // otherwise produce https://host//api/feed/... which some clients reject.
-    const { user, tripId } = seedTrip('tok-trip');
+    const { user, trip } = seedTrip('tok-trip');
 
-    expect((await svc.getTripToken(tripId, user.id, `${BASE}/`)).feed_url).toBe(
+    expect((await svc.getTripToken(trip.id, user.id, `${BASE}/`)).feed_url).toBe(
       `${BASE}/api/feed/trip/tok-trip.ics`,
     );
   });
@@ -145,21 +129,21 @@ describe('trip feed token lifecycle', () => {
   it('FEED-SVC-004: a user without access gets null, not the token of a foreign trip', async () => {
     // The token is the credential for the public feed, so leaking it through the
     // authenticated GET would hand a stranger the whole trip.
-    const { tripId } = seedTrip('tok-trip');
+    const { trip } = seedTrip('tok-trip');
     const { user: outsider } = createUser(testDb);
 
-    expect(await svc.getTripToken(tripId, outsider.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getTripToken(trip.id, outsider.id, BASE)).toEqual({ feed_url: null });
   });
 
   // Membership is what the service checks, and that stays true: whether the
   // caller may manage the credential at all is decided one layer up, by
   // TripAccessGuard + @RequirePermission('share_manage') on the controller.
   it('FEED-SVC-005: a trip shared with the user as a member resolves too', async () => {
-    const { trip, tripId } = seedTrip('tok-trip');
+    const { trip } = seedTrip('tok-trip');
     const { user: member } = createUser(testDb);
     addTripMember(testDb, trip.id, member.id);
 
-    expect((await svc.getTripToken(tripId, member.id, BASE)).feed_url).toBe(
+    expect((await svc.getTripToken(trip.id, member.id, BASE)).feed_url).toBe(
       `${BASE}/api/feed/trip/tok-trip.ics`,
     );
   });
@@ -167,34 +151,34 @@ describe('trip feed token lifecycle', () => {
   it('FEED-SVC-006: generate mints a token once and stays idempotent', async () => {
     // Enabling twice must not invalidate a URL the user already handed to their
     // calendar client — that is what rotate is for.
-    const { user, tripId } = seedTrip();
+    const { user, trip } = seedTrip();
 
-    const first = await svc.generateTripToken(tripId, user.id, BASE);
-    const second = await svc.generateTripToken(tripId, user.id, BASE);
+    const first = await svc.generateTripToken(trip.id, user.id, BASE);
+    const second = await svc.generateTripToken(trip.id, user.id, BASE);
 
     expect(first.feed_url).toMatch(new RegExp(`^${BASE}/api/feed/trip/[0-9a-f-]+\\.ics$`));
     expect(second.feed_url).toBe(first.feed_url);
   });
 
   it('FEED-SVC-007: rotate issues a fresh token and the previous URL stops resolving', async () => {
-    const { user, tripId } = seedTrip();
-    const before = (await svc.generateTripToken(tripId, user.id, BASE)).feed_url;
+    const { user, trip } = seedTrip();
+    const before = (await svc.generateTripToken(trip.id, user.id, BASE)).feed_url;
     const oldToken = before.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
 
-    const after = (await svc.rotateTripToken(tripId, user.id, BASE)).feed_url;
+    const after = (await svc.rotateTripToken(trip.id, user.id, BASE)).feed_url;
 
     expect(after).not.toBe(before);
     expect(await svc.buildTripIcs(oldToken)).toBeNull();
   });
 
   it('FEED-SVC-008: disable clears the column so the public URL dies', async () => {
-    const { user, tripId } = seedTrip();
-    const url = (await svc.generateTripToken(tripId, user.id, BASE)).feed_url;
+    const { user, trip } = seedTrip();
+    const url = (await svc.generateTripToken(trip.id, user.id, BASE)).feed_url;
     const token = url.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
 
-    await svc.disableTripToken(tripId, user.id);
+    await svc.disableTripToken(trip.id, user.id);
 
-    expect(await svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getTripToken(trip.id, user.id, BASE)).toEqual({ feed_url: null });
     expect(await svc.buildTripIcs(token)).toBeNull();
   });
 
@@ -202,16 +186,39 @@ describe('trip feed token lifecycle', () => {
     // The route guard is what enforces share_manage; this is the second lock, so
     // a caller reaching the service another way cannot mint or clear a token on
     // a trip id it merely guessed.
-    const { user, tripId } = seedTrip();
+    const { user, trip } = seedTrip();
     const { user: outsider } = createUser(testDb);
-    const mine = (await svc.generateTripToken(tripId, user.id, BASE)).feed_url;
+    const mine = (await svc.generateTripToken(trip.id, user.id, BASE)).feed_url;
     const myToken = mine.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
 
-    await svc.rotateTripToken(tripId, outsider.id, BASE);
-    expect((await svc.getTripToken(tripId, user.id, BASE)).feed_url).toBe(mine);
+    await svc.rotateTripToken(trip.id, outsider.id, BASE);
+    expect((await svc.getTripToken(trip.id, user.id, BASE)).feed_url).toBe(mine);
 
-    await svc.disableTripToken(tripId, outsider.id);
+    await svc.disableTripToken(trip.id, outsider.id);
     expect(await svc.buildTripIcs(myToken)).not.toBeNull();
+  });
+
+  // R4 (inventory §18.7, plan ruling R4 — mirrored, not fixed): FD1 finds no
+  // row for a trip the acting user cannot reach, a fresh token is minted
+  // anyway, and FD2's write (`setFeedTokenIfReachable`) affects 0 rows — but
+  // `generateTripToken` still hands back a URL for that never-stored token.
+  // Named for the hole, per the task brief; see the task report for the
+  // one-line fix proposal (compare the affected count and 404/refuse on 0).
+  it('R4 HOLE — generateTripToken returns a feed_url for a token it never stored, for a trip the caller cannot reach', async () => {
+    const { trip } = seedTrip(); // no token yet
+    const { user: stranger } = createUser(testDb);
+
+    const result = await svc.generateTripToken(trip.id, stranger.id, BASE);
+
+    // A URL came back...
+    expect(result.feed_url).toMatch(new RegExp(`^${BASE}/api/feed/trip/[0-9a-f-]+\\.ics$`));
+    // ...but the column was never written (setFeedTokenIfReachable affected 0
+    // rows: the stranger fails REACHABLE), so the URL 404s for anyone who tries it.
+    const mintedToken = result.feed_url.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
+    expect((testDb.prepare('SELECT feed_token FROM trips WHERE id = ?').get(trip.id) as { feed_token: string | null }).feed_token).toBeNull();
+    expect(await svc.buildTripIcs(mintedToken)).toBeNull();
+    // Proven directly at the repository too — the affected count IS the 0-row signal.
+    expect(await tripsRepo.setFeedTokenIfReachable(trip.id, stranger.id, mintedToken)).toBe(0);
   });
 });
 

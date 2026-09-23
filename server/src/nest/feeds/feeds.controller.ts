@@ -17,6 +17,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { User } from '../../types';
 import { RequirePermission, TripAccessGuard } from '../permissions/trip-access.guard';
+import { Trip } from '../permissions/trip.decorator';
+import type { TripAccess } from '../database/database.service';
 import { Public } from '../auth/public.decorator';
 
 // Resolve the public origin used to build feed URLs. APP_URL wins — it is the
@@ -91,24 +93,31 @@ export class FeedsPublicController {
 export class TripFeedTokenController {
   constructor(private readonly feeds: FeedsService) {}
 
+  // `@Trip()` hands back `TripAccessGuard`'s already-resolved, already-numeric
+  // trip id (rule 21: the id is parsed once, at the gate, by the guard's own
+  // `Number(tripId)` + `findAccessible` — every handler below reuses that
+  // value rather than re-parsing `:tripId` itself). `@RequirePermission
+  // ('share_manage')` on the whole controller means the trip is already
+  // access-checked AND permission-checked before any of these run.
+
   @Get('token')
-  async get(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
-    return await this.feeds.getTripToken(tripId, user.id, resolveFeedBase(req));
+  async get(@CurrentUser() user: User, @Trip() trip: TripAccess, @Req() req: Request) {
+    return await this.feeds.getTripToken(trip.id, user.id, resolveFeedBase(req));
   }
 
   @Post('token')
-  async generate(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
-    return await this.feeds.generateTripToken(tripId, user.id, resolveFeedBase(req));
+  async generate(@CurrentUser() user: User, @Trip() trip: TripAccess, @Req() req: Request) {
+    return await this.feeds.generateTripToken(trip.id, user.id, resolveFeedBase(req));
   }
 
   @Put('token')
-  async rotate(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
-    return await this.feeds.rotateTripToken(tripId, user.id, resolveFeedBase(req));
+  async rotate(@CurrentUser() user: User, @Trip() trip: TripAccess, @Req() req: Request) {
+    return await this.feeds.rotateTripToken(trip.id, user.id, resolveFeedBase(req));
   }
 
   @Delete('token')
-  async disable(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    await this.feeds.disableTripToken(tripId, user.id);
+  async disable(@CurrentUser() user: User, @Trip() trip: TripAccess) {
+    await this.feeds.disableTripToken(trip.id, user.id);
     return { feed_url: null };
   }
 }

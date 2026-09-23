@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { PublicApiController } from './public-api.controller';
 import { PublicApiService } from './public-api.service';
 import { ApiTokenGuard } from './api-token.guard';
 import { TokensModule } from '../tokens/tokens.module';
 import { TripMembershipModule } from '../trip-membership/trip-membership.module';
 import { RateLimitModule } from '../common/rate-limit.module';
+import { Trips } from '../../db/entities/Trips.entity';
 
 /**
  * Public API v1 — the versioned read-only surface for third-party integrations.
@@ -24,7 +26,12 @@ import { RateLimitModule } from '../common/rate-limit.module';
  * class itself. No module edge either way — which is the point.
  */
 @Module({
-  imports: [TokensModule, TripMembershipModule, RateLimitModule],
+  // `MikroOrmModule.forFeature([Trips])` registers `TripsRepository` for
+  // `PublicApiService`'s `@InjectRepository` constructor param (Plan 3d Task 5
+  // — its trip reads convert onto the same repository `TripsModule` owns,
+  // without pulling `TripsModule` itself in, per this module's leaf-module
+  // constraint above).
+  imports: [TokensModule, TripMembershipModule, RateLimitModule, MikroOrmModule.forFeature([Trips])],
   controllers: [PublicApiController],
   providers: [PublicApiService, ApiTokenGuard],
 })

@@ -11,6 +11,9 @@ import type {
   PublicApiTrip,
   PublicApiTripSummary,
 } from '@trek/shared';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { DatabaseService } from '../database/database.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
 
@@ -38,19 +41,14 @@ export class PublicApiService {
   constructor(
     private readonly db: DatabaseService,
     private readonly membership: TripMembershipService,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
   ) {}
 
   /** Every trip the token's owner may read, newest first, without itineraries. */
   async listTrips(userId: number): Promise<PublicApiTripSummary[]> {
     const ids = await this.membership.listAccessibleTripIds(userId);
     if (ids.length === 0) return [];
-    const rows = this.db.all<TripRow>(
-      `SELECT id, title, description, start_date, end_date, currency, is_archived, updated_at
-         FROM trips
-        WHERE id IN (${ids.map(() => '?').join(',')})
-        ORDER BY start_date DESC, id DESC`,
-      ...ids,
-    );
+    const rows = await this.tripsRepo.listSummariesByIds(ids);
     return rows.map(toTripSummary);
   }
 
@@ -63,11 +61,7 @@ export class PublicApiService {
    */
   async getTrip(tripId: number, userId: number, include: PublicApiInclude[], granted: readonly string[] = include): Promise<PublicApiTrip | null> {
     if (!(await this.db.canAccessTrip(tripId, userId))) return null;
-    const row = this.db.get<TripRow>(
-      `SELECT id, title, description, start_date, end_date, currency, is_archived, updated_at
-         FROM trips WHERE id = ?`,
-      tripId,
-    );
+    const row = await this.tripsRepo.findSummaryById(tripId);
     if (!row) return null;
 
     const trip: PublicApiTrip = toTripSummary(row);
@@ -181,6 +175,8 @@ export class PublicApiService {
    * way to tell that from three flights.
    */
   private async reservationsByDay(tripId: number): Promise<Map<number, PublicApiReservation[]>> {
+    // Task 2 — ReservationsRepository owns this table; Task 2 had not landed
+    // when this task ran (Plan 3d Task 5), so this statement stays raw.
     const rows = this.db.all<ReservationRow>(
       `SELECT day_id, type, title, location, reservation_time, reservation_end_time,
               status, notes
@@ -199,6 +195,8 @@ export class PublicApiService {
    * TREK day id, and the dates are what it actually needs to match its own nights.
    */
   private async buildAccommodations(tripId: number): Promise<PublicApiAccommodation[]> {
+    // Task 3 — DayAccommodationsRepository owns this table; Task 3 had not
+    // landed when this task ran (Plan 3d Task 5), so this statement stays raw.
     const rows = this.db.all<AccommodationRow>(
       `SELECT p.name, p.address, p.lat, p.lng,
               ds.date AS start_date, de.date AS end_date,
@@ -241,6 +239,12 @@ export class PublicApiService {
    * `accommodations` — listing it twice would read as two different intentions.
    */
   private async buildUnplannedPlaces(tripId: number): Promise<PublicApiPlace[]> {
+    // Task 3 — the `NOT EXISTS (... day_accommodations ...)` arm reaches a
+    // table DayAccommodationsRepository owns; Task 3 had not landed when this
+    // task ran (Plan 3d Task 5). The whole statement stays raw rather than
+    // splitting the `places`/`day_assignments` reads from the one 3d-table
+    // predicate — `places`/`day_assignments` are Plan 3c, DONE, but a single
+    // SQL statement cannot be partially converted.
     const rows = this.db.all<Omit<PlaceRow, 'day_id'>>(
       `SELECT p.name, p.address, p.lat, p.lng, p.place_time, p.end_time,
               p.duration_minutes, p.notes, p.transport_mode,
@@ -262,6 +266,8 @@ export class PublicApiService {
    * pinned to. Reporting only day-bound bookings would quietly lose those.
    */
   private async buildUnscheduledReservations(tripId: number): Promise<PublicApiReservation[]> {
+    // Task 2 — ReservationsRepository owns this table; Task 2 had not landed
+    // when this task ran (Plan 3d Task 5), so this statement stays raw.
     const rows = this.db.all<Omit<ReservationRow, 'day_id'>>(
       `SELECT type, title, location, reservation_time, reservation_end_time,
               status, notes
@@ -311,17 +317,7 @@ export class PublicApiService {
    * exactly what those people already see on the trip in TREK.
    */
   private async buildTravellers(tripId: number): Promise<PublicApiTraveller[]> {
-    const rows = this.db.all<TravellerRow>(
-      `SELECT u.username, 1 AS is_owner
-         FROM trips t JOIN users u ON u.id = t.user_id
-        WHERE t.id = ?
-        UNION ALL
-       SELECT u.username, 0 AS is_owner
-         FROM trip_members m JOIN users u ON u.id = m.user_id
-        WHERE m.trip_id = ?
-        ORDER BY is_owner DESC`,
-      tripId, tripId,
-    );
+    const rows = await this.tripsRepo.listTravellerUsernames(tripId);
     return rows.map((r) => ({ name: r.username, owner: r.is_owner === 1 }));
   }
 }
@@ -440,11 +436,6 @@ interface ReservationRow {
   reservation_end_time: string | null;
   status: string | null;
   notes: string | null;
-}
-
-interface TravellerRow {
-  username: string;
-  is_owner: number;
 }
 
 interface AccommodationRow {

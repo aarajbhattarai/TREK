@@ -938,3 +938,51 @@ describe('UsersRepository — TripMembersService (Plan 3c Task 6)', () => {
     });
   });
 });
+
+// ── Plan 3d Task 5 (FeedsService) — additive: FD5-FD8/FD10, the all-trips ICS
+// feed token's `users` half. Each `toEqual` pins full parity against the
+// legacy statement run raw on the same row, per the task's own ruling.
+describe('UsersRepository — feed tokens (Plan 3d Task 5, FD5-FD8/FD10)', () => {
+  it('USERSREPO-072: getFeedToken reads the stored token, matching SELECT feed_token FROM users WHERE id = ?', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET feed_token = ? WHERE id = ?').run('tok-abc', user.id);
+    const legacy = testDb.prepare('SELECT feed_token FROM users WHERE id = ?').get(user.id) as { feed_token: string | null };
+    expect(await users.getFeedToken(user.id)).toBe(legacy.feed_token);
+    expect(await users.getFeedToken(user.id)).toBe('tok-abc');
+  });
+
+  it('USERSREPO-073: getFeedToken returns null both when the column is NULL and when the user does not exist', async () => {
+    const { user } = createUser(testDb); // feed_token NULL by default
+    expect(await users.getFeedToken(user.id)).toBeNull();
+    expect(await users.getFeedToken(999999)).toBeNull();
+  });
+
+  it('USERSREPO-074: setFeedToken (FD6/FD7) writes a fresh token verbatim', async () => {
+    const { user } = createUser(testDb);
+    await users.setFeedToken(user.id, 'tok-fresh');
+    expect((testDb.prepare('SELECT feed_token FROM users WHERE id = ?').get(user.id) as { feed_token: string }).feed_token).toBe('tok-fresh');
+  });
+
+  it('USERSREPO-075: setFeedToken (FD8) clears the column to NULL when the token is null', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET feed_token = ? WHERE id = ?').run('tok-old', user.id);
+    await users.setFeedToken(user.id, null);
+    expect((testDb.prepare('SELECT feed_token FROM users WHERE id = ?').get(user.id) as { feed_token: string | null }).feed_token).toBeNull();
+  });
+
+  it('USERSREPO-076: findIdAndUsernameByFeedToken (FD10) — the anonymous credential lookup, exact projection', async () => {
+    const { user } = createUser(testDb, { username: 'feed-holder' });
+    testDb.prepare('UPDATE users SET feed_token = ? WHERE id = ?').run('tok-holder', user.id);
+    const legacy = testDb.prepare('SELECT id, username FROM users WHERE feed_token = ?').get('tok-holder');
+    expect(await users.findIdAndUsernameByFeedToken('tok-holder')).toEqual(legacy);
+    expect(await users.findIdAndUsernameByFeedToken('tok-holder')).toEqual({ id: user.id, username: 'feed-holder' });
+  });
+
+  it('USERSREPO-077: findIdAndUsernameByFeedToken returns undefined for an unknown token — a NULL column never matches (the partial UNIQUE index semantics)', async () => {
+    createUser(testDb); // feed_token NULL
+    expect(await users.findIdAndUsernameByFeedToken('does-not-exist')).toBeUndefined();
+    // Belt-and-braces: an empty-string lookup must not accidentally coerce to
+    // an `IS NULL` match against the many NULL-token rows in the DB.
+    expect(await users.findIdAndUsernameByFeedToken('')).toBeUndefined();
+  });
+});
