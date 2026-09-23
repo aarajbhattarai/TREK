@@ -31,6 +31,7 @@ import {
   createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestReservationsRepo,
   createTestReservationEndpointsRepo,
+  createTestDayAccommodationsRepo,
 } from '../helpers/test-uow';
 
 let svc: DaysService;
@@ -47,6 +48,7 @@ beforeAll(async () => {
     await createTestTripsRepo(testDb),
     await createTestReservationsRepo(testDb),
     await createTestReservationEndpointsRepo(testDb),
+    await createTestDayAccommodationsRepo(testDb),
   );
 });
 const reorderDays = async (tripId: number, orderedIds: number[]) => await svc.reorder(tripId, orderedIds);

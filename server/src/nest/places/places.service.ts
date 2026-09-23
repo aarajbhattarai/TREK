@@ -552,15 +552,18 @@ export class PlacesService {
    *
    * Runs inside the caller's transaction.
    */
-  private async cancelStaysAt(tripId: string | number, placeId: string | number, into: CancelledStays): Promise<void> {
-    // PL16 — `day_accommodations` is Plan 3d's table; stays raw. Runs inside
-    // the caller's own transaction (R4 — Plan 3d must not re-open or
-    // re-scope this transaction when it converts `accommodations`).
-    const stays = this.dbs.all<{ id: number }>(
-      'SELECT id FROM day_accommodations WHERE trip_id = ? AND place_id = ?', tripId, placeId,
-    );
-    for (const stay of stays) {
-      const gone = await this.accommodations.deleteAccommodation(stay.id);
+  private async cancelStaysAt(tripId: number, placeId: number, into: CancelledStays): Promise<void> {
+    // PL16 (Plan 3d Task 3) — `day_accommodations` is that task's table;
+    // reached through `AccommodationsService.listStayIdsForPlace` (already
+    // injected here) rather than a new `DayAccommodationsRepository`
+    // dependency of this service's own (keeps this file's constructor, and
+    // the shared positional test-helper wiring, untouched). Runs inside the
+    // caller's own transaction (R4 — Plan 3d must not re-open or re-scope
+    // this transaction), and keeps `id`/`tripId` as the SAME `toRowId`-parsed
+    // numbers `remove`/`removeMany` already resolved (rule 21).
+    const stayIds = await this.accommodations.listStayIdsForPlace(tripId, placeId);
+    for (const stayId of stayIds) {
+      const gone = await this.accommodations.deleteAccommodation(stayId);
       // What went down with the night is what the caller has to announce. The
       // partner booking and its expense are rows the Bookings list and the Costs
       // total are still holding; place:deleted says nothing about either, and a

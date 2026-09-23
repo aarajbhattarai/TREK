@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { AuthService } from '../auth/auth.service';
 import { PlacesService } from '../places/places.service';
 import { noAccess, permissionDenied } from '../../mcp/tools/_shared';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { AccommodationsService, type MirrorSender } from './accommodations.service';
 
@@ -23,15 +22,22 @@ function parseId(value: string | string[]): number | null {
  * DaysMcp when accommodations became their own domain; names, descriptions,
  * schemas, annotations, error shapes and broadcasts are unchanged.
  *
- * It keeps DatabaseService and PlacesService because create_place_accommodation
- * creates the place and the stay in one transaction. That is also what let
- * DaysMcp drop both of them, and DaysModule its PlacesModule import.
+ * It keeps PlacesService because create_place_accommodation creates the place
+ * and the stay in one transaction. That is also what let DaysMcp drop it, and
+ * DaysModule its PlacesModule import.
+ *
+ * R12 (Plan 3d Task 3): the `DatabaseService` this class used to inject was
+ * unused (§18.15 of the inventory) — dropped. The shared positional
+ * test-helper (`tests/helpers/mcp-test-controllers.ts:303`) that builds this
+ * class by constructor position is a concurrent implementer's file (Task 5)
+ * and was not touched here (the task brief's own hard rule); it needs a
+ * one-line follow-up dropping the `dbService` argument from its
+ * `new AccommodationsMcp(...)` call.
  */
 @McpController()
 export class AccommodationsMcp {
   constructor(
     private readonly accommodations: AccommodationsService,
-    private readonly db: DatabaseService,
     private readonly places: PlacesService,
     private readonly auth: AuthService,
     private readonly guards: McpToolGuardsService,

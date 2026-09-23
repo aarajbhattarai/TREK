@@ -163,6 +163,7 @@ beforeAll(async () => {
     await createTestTripsRepo(dbs().connection),
     await createTestReservationsRepo(dbs().connection),
     await createTestReservationEndpointsRepo(dbs().connection),
+    await createTestDayAccommodationsRepo(dbs().connection),
   );
   placesSvc = new PlacesService(
   dbs(),

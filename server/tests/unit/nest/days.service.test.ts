@@ -70,6 +70,7 @@ import {
   createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestReservationsRepo,
   createTestReservationEndpointsRepo,
+  createTestDayAccommodationsRepo,
 } from '../../helpers/test-uow';
 
 let svc: DaysService;
@@ -87,6 +88,7 @@ beforeAll(async () => {
     await createTestTripsRepo(testDb),
     await createTestReservationsRepo(testDb),
     await createTestReservationEndpointsRepo(testDb),
+    await createTestDayAccommodationsRepo(testDb),
   );
 });
 let accommodations: Awaited<ReturnType<typeof makeAccommodationsService>>;
@@ -845,6 +847,7 @@ describe('DaysService.canEdit', () => {
       await createTestTripsRepo(testDb),
       await createTestReservationsRepo(testDb),
       await createTestReservationEndpointsRepo(testDb),
+      await createTestDayAccommodationsRepo(testDb),
     );
     const trip = { id: 1, user_id: 1 } as never;
 

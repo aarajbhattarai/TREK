@@ -1,10 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { RoadtripVia, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type PlaceWithTags, type TripAccess } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { PermissionsService } from '../permissions/permissions.service';
 import { AssignmentsService } from '../assignments/assignments.service';
+import { toRowId } from '../common/row-id';
+import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
+import type { DayAccommodationsRepository, DayAccommodationRow } from '../../db/repositories/DayAccommodations.repository';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
+import type { RoadtripViasRepository } from '../../db/repositories/RoadtripVias.repository';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 import type { User } from '../../types';
 
 type Trip = TripAccess;
@@ -40,6 +54,32 @@ export interface AccommodationMirror {
 /** A write that left the day plan alone. Exported for the surfaces that write a
  *  stay row themselves and have to answer with a mirror either way. */
 export const noStayMirror = (): AccommodationMirror => ({ created: null, moved: null, updated: [], removed: [], stamped: null });
+
+/**
+ * AC33's `accommodation_id` value, in the exact TEXT shape the TRUE legacy
+ * (pre-ORM) statement stored (Task 3 finding, verified empirically against
+ * the live `better-sqlite3` driver, not assumed): the legacy `INSERT INTO
+ * reservations (…, accommodation_id, …) VALUES (…, ?, …)` bound the new
+ * stay's id — a plain JS `number` from `result.lastInsertRowid` — as a
+ * `?` parameter, and `better-sqlite3` binds every plain JS number as SQLite
+ * REAL regardless of integer-ness (confirmed via `typeof(?)`); SQLite's own
+ * "numeric data inserted into a TEXT column is converted to text first"
+ * rule then renders a REAL's decimal form, `14` → `'14.0'`, not the plain
+ * integer text `'14'`. `accommodations.service.test.ts`'s DAY-SVC-020/023/
+ * 025 etc. read this column back with their OWN plain-number-bound raw SQL
+ * (`testDb.prepare('… WHERE accommodation_id = ?').get(accom.id)`, matching
+ * the same REAL-binding path), so this write must reproduce that exact
+ * shape for those UNCHANGED "proof" tests to keep passing — `String(id)`
+ * (`'14'`, what `MikroORM.em.insert()` would store for either a number or a
+ * string, since it inlines the value as a SQL-text literal, rule 22, a
+ * DIFFERENT shape) does not. `ReservationsRepository`'s own reads of this
+ * column (`listIdMetadataByStay`/`listIdsByStay`) go through
+ * `castIntegerKysely` instead, which matches this shape AND `'14'` alike —
+ * see that file's docstring.
+ */
+function legacyBoundIntegerText(id: number): string {
+  return `${id}.0`;
+}
 const noMirror = noStayMirror;
 
 export interface DayAccommodation {
@@ -97,6 +137,12 @@ export class AccommodationsService {
     private readonly realtime: RealtimeService,
     private readonly assignments: AssignmentsService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(DayAccommodations) private readonly dayAccommodationsRepo: DayAccommodationsRepository,
+    @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(RoadtripVias) private readonly roadtripViasRepo: RoadtripViasRepository,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
   ) {}
 
   private get db() {
@@ -184,6 +230,19 @@ export class AccommodationsService {
   }
 
   /**
+   * PL16 (`PlacesService.cancelStaysAt`) — the stays booked at a place, by
+   * id. `PlacesService` reaches this repository read through the
+   * `AccommodationsService` it already injects (for the cascade itself)
+   * rather than a `DayAccommodationsRepository` dependency of its own —
+   * avoids widening `PlacesService`'s constructor (and the shared positional
+   * test-helper wiring several other suites depend on) for one read.
+   */
+  async listStayIdsForPlace(tripId: number, placeId: number): Promise<number[]> {
+    const stays = await this.dayAccommodationsRepo.listForPlace(tripId, placeId);
+    return stays.map(s => s.id);
+  }
+
+  /**
    * Send what a stay write did to the day plan, and let the journey skeletons
    * catch up the way an assignment route does.
    *
@@ -210,8 +269,8 @@ export class AccommodationsService {
     // created/moved event alone puts the row at the end of the day on every other
     // screen, so the day that changed sends its order along.
     for (const dayId of await this.touchedDays(mirror)) {
-      const orderedIds = this.db.all<{ id: number }>(
-        'SELECT id FROM day_assignments WHERE day_id = ? ORDER BY order_index', dayId).map(row => row.id);
+      // AC1
+      const orderedIds = await this.dayAssignmentsRepo.listIdsForDay(dayId);
       send('assignment:reordered', { dayId, orderedIds });
     }
     // After the order, the way the time sort sends them: the planner routes the
@@ -235,39 +294,31 @@ export class AccommodationsService {
   // -------------------------------------------------------------------------
 
 
-  private async getAccommodationWithPlace(id: number | bigint) {
-    return this.db.get(`
-    SELECT a.*, p.name as place_name, p.address as place_address, p.image_url as place_image, p.lat as place_lat, p.lng as place_lng
-    FROM day_accommodations a
-    LEFT JOIN places p ON a.place_id = p.id
-    WHERE a.id = ?
-  `, id);
+  private async getAccommodationWithPlace(id: number) {
+    // AC2
+    return await this.dayAccommodationsRepo.findWithPlace(id);
   }
 
   async listAccommodations(tripId: string | number) {
-    return this.db.all(`
-    SELECT a.*, p.name as place_name, p.address as place_address, p.image_url as place_image, p.lat as place_lat, p.lng as place_lng,
-           r.title as reservation_title
-    FROM day_accommodations a
-    LEFT JOIN places p ON a.place_id = p.id
-    LEFT JOIN reservations r ON r.accommodation_id = a.id
-    WHERE a.trip_id = ?
-    ORDER BY a.created_at ASC
-  `, tripId);
+    // AC3
+    return await this.dayAccommodationsRepo.listForTripWithPlaceAndBooking(tripId);
   }
 
   async validateAccommodationRefs(tripId: string | number, placeId?: number, startDayId?: number, endDayId?: number) {
     const errors: { field: string; message: string }[] = [];
     if (placeId !== undefined) {
-      const place = this.db.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+      // AC4
+      const place = await this.placesRepo.existsInTrip(placeId, Number(tripId));
       if (!place) errors.push({ field: 'place_id', message: 'Place not found' });
     }
     if (startDayId !== undefined) {
-      const startDay = this.db.get('SELECT id FROM days WHERE id = ? AND trip_id = ?', startDayId, tripId);
+      // AC5
+      const startDay = await this.daysRepo.existsInTrip(startDayId, tripId);
       if (!startDay) errors.push({ field: 'start_day_id', message: 'Start day not found' });
     }
     if (endDayId !== undefined) {
-      const endDay = this.db.get('SELECT id FROM days WHERE id = ? AND trip_id = ?', endDayId, tripId);
+      // AC6
+      const endDay = await this.daysRepo.existsInTrip(endDayId, tripId);
       if (!endDay) errors.push({ field: 'end_day_id', message: 'End day not found' });
     }
     return errors;
@@ -300,14 +351,15 @@ export class AccommodationsService {
     // against. Without it a night parked at the end of the day can find itself.
     // Another booked night on the day counts by its check-in, so two bookings on
     // one day settle by the clock.
-    const rows = this.db.all<{ order_index: number; at: string | null }>(`
-      SELECT da.order_index, COALESCE(da.assignment_time, p.place_time, other.check_in) AS at
-      FROM day_assignments da JOIN places p ON p.id = da.place_id
-      LEFT JOIN day_accommodations other ON other.id = da.accommodation_id
-      WHERE da.day_id = ? AND da.id != ? ORDER BY da.order_index
-    `, dayId, excludeId ?? -1);
+    // AC7
+    const rows = await this.dayAssignmentsRepo.listSeatTimes(dayId, excludeId ?? -1);
     let seat = 0;
-    for (const row of rows) if (row.at !== null && row.at <= checkIn) seat = row.order_index + 1;
+    // `Number(row.order_index) + 1`, not `row.order_index + 1`: the legacy row
+    // type claimed `order_index: number` (non-null) although the column is
+    // nullable — a stored NULL there added to 1 in JS coerces to 1
+    // (`null + 1 === 1`), and `Number(null)` reproduces that same coercion
+    // for the repository's honestly-nullable projection.
+    for (const row of rows) if (row.at !== null && row.at <= checkIn) seat = Number(row.order_index) + 1;
     return seat;
   }
 
@@ -323,12 +375,8 @@ export class AccommodationsService {
    */
   private async seatedByCheckIn(dayId: number, ownId: number, checkIn: string | null | undefined): Promise<boolean> {
     if (!checkIn) return true;
-    const rows = this.db.all<{ id: number; at: string | null }>(`
-      SELECT da.id, COALESCE(da.assignment_time, p.place_time, other.check_in) AS at
-      FROM day_assignments da JOIN places p ON p.id = da.place_id
-      LEFT JOIN day_accommodations other ON other.id = da.accommodation_id
-      WHERE da.day_id = ? ORDER BY da.order_index
-    `, dayId);
+    // AC8
+    const rows = await this.dayAssignmentsRepo.listSeatTimesWithIds(dayId);
     const own = rows.findIndex(row => row.id === ownId);
     if (own < 0) return true;
     const laterAhead = rows.slice(0, own).some(row => row.at !== null && row.at > checkIn);
@@ -346,9 +394,12 @@ export class AccommodationsService {
    * (a campsite, say) is theirs.
    */
   private async stampLodging(placeId: number): Promise<PlaceWithTags | null> {
-    const place = this.db.get<{ stop_type: string | null }>('SELECT stop_type FROM places WHERE id = ?', placeId);
+    // AC9
+    const place = await this.placesRepo.getStopType(placeId);
     if (!place || place.stop_type) return null;
-    this.db.run("UPDATE places SET stop_type = 'hotel' WHERE id = ?", placeId);
+    // AC10
+    await this.placesRepo.stampHotel(placeId);
+    // AC11 — primitive, already-converted (`DatabaseService.getPlaceWithTags` → `PlacesRepository.findWithTagsAndRatings`).
     return await this.db.getPlaceWithTags(placeId);
   }
 
@@ -368,11 +419,8 @@ export class AccommodationsService {
   }
 
   private async locatedStopIds(dayId: number): Promise<number[]> {
-    return this.db.all<{ id: number }>(`
-      SELECT da.id FROM day_assignments da JOIN places p ON p.id = da.place_id
-      WHERE da.day_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL
-      ORDER BY da.order_index ASC, da.created_at ASC, da.id ASC
-    `, dayId).map(row => row.id);
+    // AC12
+    return await this.dayAssignmentsRepo.listLocatedIds(dayId);
   }
 
   /**
@@ -393,7 +441,8 @@ export class AccommodationsService {
     for (const [dayId, previousIds] of before) {
       const nextIds = await this.locatedStopIds(dayId);
       if (previousIds.length === nextIds.length && previousIds.every((id, i) => id === nextIds[i])) continue;
-      const vias = this.db.all<PinnedVia>('SELECT id, after_order_index, sequence FROM roadtrip_vias WHERE day_id = ?', dayId);
+      // AC13
+      const vias: PinnedVia[] = await this.roadtripViasRepo.listAnchors(dayId);
       if (!vias.length) continue;
 
       // A via behind the day's last stop bends the drive into the next day. It stays
@@ -413,14 +462,13 @@ export class AccommodationsService {
       }
       if (!remove.length && !moved.length) continue;
 
-      for (const viaId of remove) this.db.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', viaId, dayId);
-      for (const via of moved) this.db.run('UPDATE roadtrip_vias SET after_order_index = ? WHERE id = ? AND day_id = ?', via.after_order_index, via.id, dayId);
+      // AC14
+      for (const viaId of remove) await this.roadtripViasRepo.deleteInDay(viaId, dayId);
+      // AC15
+      for (const via of moved) await this.roadtripViasRepo.setAnchor(via.id, dayId, via.after_order_index);
       await this.renumberMergedLegs(dayId, vias.filter(via => !remove.includes(via.id)), moved);
-      this.noteVias(mirror, {
-        dayId,
-        vias: this.db.all<RoadtripVia>(
-          'SELECT id, day_id, after_order_index, sequence, lat, lng, created_at FROM roadtrip_vias WHERE day_id = ? ORDER BY after_order_index, sequence, id', dayId),
-      });
+      // AC16
+      this.noteVias(mirror, { dayId, vias: await this.roadtripViasRepo.listForDay(dayId) });
     }
   }
 
@@ -459,9 +507,11 @@ export class AccommodationsService {
     for (const onLeg of byLeg.values()) {
       if (!onLeg.some(via => landed.has(via.id))) continue;
       onLeg.sort((a, b) => a.after_order_index - b.after_order_index || a.sequence - b.sequence || a.id - b.id);
-      onLeg.forEach((via, index) => {
-        if (via.sequence !== index) this.db.run('UPDATE roadtrip_vias SET sequence = ? WHERE id = ? AND day_id = ?', index, via.id, dayId);
-      });
+      // AC17 — only rows whose sequence changed (the caller's own guard; the
+      // statement itself is `setSequence`, RoadtripViasRepository's RT22).
+      for (const [index, via] of onLeg.entries()) {
+        if (via.sequence !== index) await this.roadtripViasRepo.setSequence(via.id, dayId, index);
+      }
     }
   }
 
@@ -486,37 +536,38 @@ export class AccommodationsService {
    * Runs inside the caller's transaction.
    */
   private async relocateOwnStop(
-    stop: { id: number; day_id: number; order_index: number },
+    stop: { id: number; day_id: number; order_index: number | null },
     placeId: number,
     dayId: number,
     checkIn?: string | null,
   ): Promise<MirroredAssignment | null> {
-    if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ? AND id != ?', dayId, placeId, stop.id)) {
+    // AC18
+    if (await this.dayAssignmentsRepo.existsForDayAndPlace(dayId, placeId, stop.id)) {
       return null;
     }
 
     // Close the gap the row leaves behind. A no-op when it is not changing days,
     // because it is put back into that same numbering two statements down.
-    this.db.run(
-      'UPDATE day_assignments SET order_index = order_index - 1 WHERE day_id = ? AND order_index > ?',
-      stop.day_id, stop.order_index,
-    );
+    // `Number(stop.order_index)` — see `positionForCheckIn`'s docstring for
+    // why this reproduces the legacy row type's implicit non-null coercion.
+    // AC19
+    await this.dayAssignmentsRepo.closeGap(stop.day_id, Number(stop.order_index));
 
     // Park it at the end of the target day first, then seat it by the check-in the
     // same way a fresh insert would. Two steps, because the index it should get is
     // read off the chain it is not part of yet.
-    const max = this.db.get<{ max: number | null }>(
-      'SELECT MAX(order_index) AS max FROM day_assignments WHERE day_id = ? AND id != ?', dayId, stop.id)!;
-    const end = (max.max !== null ? max.max : -1) + 1;
-    this.db.run('UPDATE day_assignments SET day_id = ?, place_id = ?, order_index = ? WHERE id = ?', dayId, placeId, end, stop.id);
+    // AC20
+    const max = await this.dayAssignmentsRepo.maxOrderIndexExcluding(dayId, stop.id);
+    const end = (max !== null ? max : -1) + 1;
+    // AC21
+    await this.dayAssignmentsRepo.relocate(stop.id, dayId, placeId, end);
 
     const seat = await this.positionForCheckIn(dayId, checkIn, stop.id);
     if (seat < end) {
-      this.db.run(
-        'UPDATE day_assignments SET order_index = order_index + 1 WHERE day_id = ? AND order_index >= ? AND id != ?',
-        dayId, seat, stop.id,
-      );
-      this.db.run('UPDATE day_assignments SET order_index = ? WHERE id = ?', seat, stop.id);
+      // AC22
+      await this.dayAssignmentsRepo.shiftFromExcluding(dayId, seat, stop.id);
+      // AC23 — `setOrderIndex` (exists, AS11/AS19's shared method).
+      await this.dayAssignmentsRepo.setOrderIndex(stop.id, undefined, seat);
     }
 
     return this.assignments.getAssignmentWithPlace(stop.id);
@@ -534,7 +585,8 @@ export class AccommodationsService {
     // Claiming that row would make cancelling the booking delete a stop the traveller
     // placed, so the booking rides along with it and marks nothing as its own. Same
     // answer for a place already planned for that day by hand.
-    if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ?', dayId, placeId)) return mirror;
+    // AC24
+    if (await this.dayAssignmentsRepo.existsForDayAndPlace(dayId, placeId)) return mirror;
 
     const before = await this.stopOrders([dayId]);
     // Through AssignmentsService, seated where the check-in says (see
@@ -555,9 +607,8 @@ export class AccommodationsService {
 
   /** The day stops this booking, and only this booking, put on the plan. */
   private async ownStops(accommodationId: number) {
-    return this.db.all<{ id: number; day_id: number; place_id: number; order_index: number }>(
-      'SELECT id, day_id, place_id, order_index FROM day_assignments WHERE accommodation_id = ?', accommodationId
-    );
+    // AC25
+    return await this.dayAssignmentsRepo.listOwnedByStay(accommodationId);
   }
 
   /**
@@ -580,7 +631,8 @@ export class AccommodationsService {
     const before = await this.stopOrders(own.map(stop => stop.day_id));
     for (const stop of own) {
       if (opts.keepStop) {
-        this.db.run('UPDATE day_assignments SET accommodation_id = NULL WHERE id = ?', stop.id);
+        // AC26
+        await this.dayAssignmentsRepo.clearStay(stop.id);
         // The stop stays, but it is the traveller's now. Days hides a stop whose
         // accommodation_id is set, so a client left holding the old row keeps the
         // place invisible on a day it is standing on.
@@ -588,7 +640,8 @@ export class AccommodationsService {
         if (released) mirror.updated.push(released);
         continue;
       }
-      this.db.run('DELETE FROM day_assignments WHERE id = ?', stop.id);
+      // AC27
+      await this.dayAssignmentsRepo.deleteById(stop.id);
       mirror.removed.push({ id: stop.id, dayId: stop.day_id });
     }
     await this.reanchorVias(mirror, before);
@@ -646,7 +699,8 @@ export class AccommodationsService {
 
     const beforeRebuild = await this.stopOrders(own.map(stop => stop.day_id));
     for (const stop of own) {
-      this.db.run('DELETE FROM day_assignments WHERE id = ?', stop.id);
+      // AC28
+      await this.dayAssignmentsRepo.deleteById(stop.id);
       mirror.removed.push({ id: stop.id, dayId: stop.day_id });
     }
     await this.reanchorVias(mirror, beforeRebuild);
@@ -663,37 +717,54 @@ export class AccommodationsService {
     // The stay, its partner hotel reservation and the day stop it implies are one
     // logical write, and an atomic one, so a failed insert halfway can't leave an orphan.
     const written = await this.uow.transactional(async () => {
-      const result = this.db.run(
-        'INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        tripId, place_id, start_day_id, end_day_id, check_in || null, check_in_end || null, check_out || null, confirmation || null, notes || null
-      );
-
-      const newId = result.lastInsertRowid;
+      // AC30
+      const newId = await this.dayAccommodationsRepo.insertStay({
+        trip_id: tripId,
+        place_id: place_id ?? null,
+        start_day_id,
+        end_day_id,
+        check_in: check_in || null,
+        check_in_end: check_in_end || null,
+        check_out: check_out || null,
+        confirmation: confirmation || null,
+        notes: notes || null,
+      });
 
       // Auto-create linked reservation for this accommodation
-      const placeName = this.db.get<{ name: string }>('SELECT name FROM places WHERE id = ?', place_id)?.name || 'Hotel';
-      const startDayDate = this.db.get<{ date: string }>('SELECT date FROM days WHERE id = ?', start_day_id)?.date || null;
+      // AC31
+      const placeName = (await this.placesRepo.getName(place_id))?.name || 'Hotel';
+      // AC32
+      const startDayDate = (await this.daysRepo.findById(start_day_id))?.date || null;
       const meta: Record<string, string> = {};
       if (check_in) meta.check_in_time = check_in;
       if (check_in_end) meta.check_in_end_time = check_in_end;
       if (check_out) meta.check_out_time = check_out;
-      this.db.run(`
-    INSERT INTO reservations (trip_id, day_id, title, reservation_time, location, confirmation_number, notes, status, type, accommodation_id, metadata)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed', 'hotel', ?, ?)
-  `,
-        tripId, start_day_id, placeName, startDayDate || null, null,
-        confirmation || null, notes || null, newId,
-        Object.keys(meta).length > 0 ? JSON.stringify(meta) : null
-      );
+      // AC33
+      await this.reservationsRepo.insertHotelPartner({
+        trip_id: tripId,
+        day_id: start_day_id,
+        title: placeName,
+        reservation_time: startDayDate || null,
+        confirmation_number: confirmation || null,
+        notes: notes || null,
+        accommodation_id: legacyBoundIntegerText(newId),
+        metadata: Object.keys(meta).length > 0 ? JSON.stringify(meta) : null,
+      });
 
-      return { accommodationId: newId, mirror: await this.mirrorStay(Number(newId), place_id ?? null, start_day_id, check_in) };
+      return { accommodationId: newId, mirror: await this.mirrorStay(newId, place_id ?? null, start_day_id, check_in) };
     });
 
     return { accommodation: await this.getAccommodationWithPlace(written.accommodationId), mirror: written.mirror };
   }
 
-  async getAccommodation(id: string | number, tripId: string | number) {
-    return this.db.get<DayAccommodation>('SELECT * FROM day_accommodations WHERE id = ? AND trip_id = ?', id, tripId);
+  async getAccommodation(id: string | number, tripId: string | number): Promise<DayAccommodationRow | undefined> {
+    // AC34 — the trip-scoping guard every write path (REST update/delete,
+    // MCP, RPC) re-reads through. Both ids parsed ONCE here (rule 21); a
+    // miss reads as `undefined`, matching the legacy raw-bind miss.
+    const idNum = toRowId(id);
+    const tripIdNum = toRowId(tripId);
+    if (idNum === null || tripIdNum === null) return undefined;
+    return await this.dayAccommodationsRepo.findInTrip(idNum, tripIdNum);
   }
 
   async updateAccommodation(id: string | number, existing: DayAccommodation, fields: {
@@ -712,11 +783,21 @@ export class AccommodationsService {
     // The stay row and the day stop that mirrors it describe the same booking, so a
     // move that wrote only one of the two must not survive.
     const mirror = await this.uow.transactional(async () => {
-      this.db.run(
-        'UPDATE day_accommodations SET place_id = ?, start_day_id = ?, end_day_id = ?, check_in = ?, check_in_end = ?, check_out = ?, confirmation = ?, notes = ? WHERE id = ?',
-        newPlaceId, newStartDayId, newEndDayId, newCheckIn, newCheckInEnd, newCheckOut, newConfirmation, newNotes, id
-      );
-      return await this.remirrorStay(Number(id), newPlaceId, newStartDayId, newCheckIn, {
+      // AC36 — `existing.id`, the SAME id AC34's gate (`getAccommodation`)
+      // already resolved (rule 21): the caller always reads `existing` from
+      // that gate first, so this reuses its value rather than re-parsing the
+      // raw `id` parameter.
+      await this.dayAccommodationsRepo.updateStay(existing.id, {
+        place_id: newPlaceId,
+        start_day_id: newStartDayId,
+        end_day_id: newEndDayId,
+        check_in: newCheckIn,
+        check_in_end: newCheckInEnd,
+        check_out: newCheckOut,
+        confirmation: newConfirmation,
+        notes: newNotes,
+      });
+      return await this.remirrorStay(existing.id, newPlaceId, newStartDayId, newCheckIn, {
         checkInChanged: fields.check_in !== undefined && (fields.check_in || null) !== (existing.check_in || null),
       });
     });
@@ -725,17 +806,18 @@ export class AccommodationsService {
     // lets more than one hotel booking point at the same block and there is no
     // unique constraint on reservations.accommodation_id, so a single .get() would
     // silently leave the others on the old times.
-    const linkedRes = this.db.all<{ id: number; metadata: string | null }>('SELECT id, metadata FROM reservations WHERE accommodation_id = ?', Number(id));
+    // AC37 — runs AFTER the transaction above commits (§18.6, R5 class: pre-existing, flagged not fixed).
+    const linkedRes = await this.reservationsRepo.listIdMetadataByStay(existing.id);
     for (const res of linkedRes) {
       const meta = res.metadata ? JSON.parse(res.metadata) : {};
       if (newCheckIn) meta.check_in_time = newCheckIn;
       if (newCheckInEnd) meta.check_in_end_time = newCheckInEnd;
       if (newCheckOut) meta.check_out_time = newCheckOut;
-      this.db.run('UPDATE reservations SET metadata = ?, confirmation_number = COALESCE(?, confirmation_number) WHERE id = ?',
-        JSON.stringify(meta), newConfirmation || null, res.id);
+      // AC38
+      await this.reservationsRepo.setMetadataAndConfirmation(res.id, JSON.stringify(meta), newConfirmation || null);
     }
 
-    return { accommodation: await this.getAccommodationWithPlace(Number(id)), mirror };
+    return { accommodation: await this.getAccommodationWithPlace(existing.id), mirror };
   }
 
   /**
@@ -755,21 +837,31 @@ export class AccommodationsService {
     deletedBudgetItemIds: number[];
     mirror: AccommodationMirror;
   }> {
+    // AC39 — `toRowId(id)!`: every caller (REST `.remove()`, MCP, RPC) already
+    // called `getAccommodation`/AC34 as its own gate before reaching here,
+    // with the SAME raw `id` (rule 21) — the `AssignmentsService` precedent
+    // for a write downstream of a separately-gated existence check.
+    const idNum = toRowId(id)!;
     return await this.uow.transactional(async () => {
-      const linkedRes = this.db.all<{ id: number }>('SELECT id FROM reservations WHERE accommodation_id = ?', Number(id));
+      // AC40
+      const linkedRes = await this.reservationsRepo.listIdsByStay(idNum);
       const deletedBudgetItemIds: number[] = [];
       for (const res of linkedRes) {
+        // AC41/AC42 — `budget_items` is Plan 3e's table; stays raw.
         const linkedBudget = this.db.get<{ id: number }>('SELECT id FROM budget_items WHERE reservation_id = ?', res.id);
         if (linkedBudget) {
           this.db.run('DELETE FROM budget_items WHERE id = ?', linkedBudget.id);
           deletedBudgetItemIds.push(linkedBudget.id);
         }
-        this.db.run('DELETE FROM reservations WHERE id = ?', res.id);
+        // AC43
+        await this.reservationsRepo.deleteById(res.id);
       }
 
-      const mirror = await this.releaseStops(Number(id), opts);
+      const mirror = await this.releaseStops(idNum, opts);
 
-      this.db.run('DELETE FROM day_accommodations WHERE id = ?', id);
+      // AC44 — no trip scoping (the legacy statement has none either; the
+      // caller already scoped `id` via AC34's guard).
+      await this.dayAccommodationsRepo.deleteById(idNum);
       const linkedReservationIds = linkedRes.map(r => r.id);
       return {
         linkedReservationId: linkedReservationIds[0] ?? null,

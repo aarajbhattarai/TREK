@@ -125,6 +125,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestTripsRepo(dbs.connection),
     await createTestReservationsRepo(dbs.connection),
     await createTestReservationEndpointsRepo(dbs.connection),
+    await createTestDayAccommodationsRepo(dbs.connection),
   );
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbs.connection), await createTestPlacesRepo(dbs.connection));
   const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
@@ -145,7 +146,15 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const notifications = await makeNotificationsService(dbs, realtime);
   const llmConfig = new LlmConfigResolver(new SettingsService(await createTestUnitOfWork(dbs.connection), appSettings, await createTestSettingsRepo(dbs.connection)), dbs, addons);
   const oauth = new PluginOAuthService(dbs);
-  const accommodations = new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
+  const accommodations = new AccommodationsService(
+    dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
+    await createTestDayAccommodationsRepo(dbs.connection),
+    await createTestDayAssignmentsRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
+    await createTestDaysRepo(dbs.connection),
+    await createTestRoadtripViasRepo(dbs.connection),
+    await createTestReservationsRepo(dbs.connection),
+  );
   // After it: deleting a place cancels the nights booked at it through this one.
   const places = new PlacesService(
     dbs, permissions, realtime, new MapsService(dbs, photoCache, appSettings, usersRepo), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection),

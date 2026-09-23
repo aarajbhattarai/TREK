@@ -17,6 +17,7 @@ import { DayNotes } from '../../db/entities/DayNotes.entity';
 import { Trips } from '../../db/entities/Trips.entity';
 import { Reservations } from '../../db/entities/Reservations.entity';
 import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
 
 /**
  * Days (S6 — Phase 2 trip sub-domain), mounted at /api/trips/:tripId/days.
@@ -28,12 +29,14 @@ import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.ent
  * own domain now (day-notes/).
  *
  * `MikroOrmModule.forFeature([Days, DayAssignments, DayNotes, Trips,
- * Reservations, ReservationEndpoints])` registers `DaysRepository`/
- * `DayAssignmentsRepository`/`DayNotesRepository`/`TripsRepository`/
- * `ReservationsRepository`/`ReservationEndpointsRepository` for
- * `DaysService`'s `@InjectRepository` constructor params (Plan 3c Task 2;
- * the last two added by Plan 3d Task 2 for DY14–DY18/DY23) — the same
- * forFeature + `@InjectRepository` wiring every converted domain copies
+ * Reservations, ReservationEndpoints, DayAccommodations])` registers
+ * `DaysRepository`/`DayAssignmentsRepository`/`DayNotesRepository`/
+ * `TripsRepository`/`ReservationsRepository`/`ReservationEndpointsRepository`/
+ * `DayAccommodationsRepository` for `DaysService`'s `@InjectRepository`
+ * constructor params (Plan 3c Task 2; `Reservations`/`ReservationEndpoints`
+ * added by Plan 3d Task 2 for DY14–DY18/DY23; `DayAccommodations` added by
+ * Plan 3d Task 3 for DY19/DY20/DY22) — the same forFeature +
+ * `@InjectRepository` wiring every converted domain copies
  * (`trip-membership.module.ts`'s precedent for pulling in a repository this
  * module doesn't otherwise own).
  */
@@ -46,7 +49,7 @@ import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.ent
     AuthModule,
     RealtimeModule,
     PluginGuardsModule,
-    MikroOrmModule.forFeature([Days, DayAssignments, DayNotes, Trips, Reservations, ReservationEndpoints]),
+    MikroOrmModule.forFeature([Days, DayAssignments, DayNotes, Trips, Reservations, ReservationEndpoints, DayAccommodations]),
   ],
   controllers: [DaysController],
   providers: [DaysService, DaysMcp, DaysRpc],

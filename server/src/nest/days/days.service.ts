@@ -21,6 +21,8 @@ import { Reservations } from '../../db/entities/Reservations.entity';
 import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
 import type { ReservationEndpointsRepository } from '../../db/repositories/ReservationEndpoints.repository';
+import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
+import type { DayAccommodationsRepository } from '../../db/repositories/DayAccommodations.repository';
 
 type Trip = TripAccess;
 
@@ -60,11 +62,12 @@ export class DayReorderError extends Error {}
 /**
  * Day domain service — the day + day-assignment-projection SQL now lives in
  * `DaysRepository`/`DayAssignmentsRepository`/`DayNotesRepository` (Plan 3c
- * Task 2); `restampReservationDates`/`assertNoInvertedAccommodation` and the
- * `day_accommodations`/`reservations`/`reservation_endpoints` halves of
- * `resyncAccommodationDays` stay on the raw `DatabaseService` connection —
- * those tables belong to Plan 3d (`// DYn — Plan 3d` marks each site). Trip
- * access still rides `DatabaseService.canAccessTrip` (Task 0b's 110
+ * Task 2); `restampReservationDates`/`assertNoInvertedAccommodation` and
+ * `resyncAccommodationDays`'s `reservations`/`reservation_endpoints`/
+ * `day_accommodations` statements now go through `ReservationsRepository`/
+ * `ReservationEndpointsRepository` (Plan 3d Task 2) and
+ * `DayAccommodationsRepository` (Plan 3d Task 3) — no raw SQL left in this
+ * file. Trip access still rides `DatabaseService.canAccessTrip` (Task 0b's 110
  * unconverted callers, this among them); mutations use the 'day_edit'
  * permission; the WebSocket broadcast keeps its legacy call path.
  *
@@ -124,6 +127,10 @@ export class DaysService {
     // this task adds (`day_accommodations` stays raw here, Task 3's own).
     @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
     @InjectRepository(ReservationEndpoints) private readonly reservationEndpointsRepo: ReservationEndpointsRepository,
+    // Plan 3d Task 3 (DY19/DY20/DY22): `assertNoInvertedAccommodation`'s
+    // read and `resyncAccommodationDays`'s `day_accommodations` statements
+    // convert onto this — Task 2 deliberately left it unadded ("Task 3's own").
+    @InjectRepository(DayAccommodations) private readonly dayAccommodationsRepo: DayAccommodationsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -399,27 +406,19 @@ export class DaysService {
   /**
    * A stay must not end before it begins after a reorder/insert.
    *
-   * DY19 — Plan 3d: the statement's root table is `day_accommodations`
-   * (joined to `days` only to read `day_number`), so it stays raw on
-   * `DatabaseService` per the inventory's ruling, even though `days` itself
-   * is owned here.
+   * DY19 — Plan 3d Task 3: the statement's root table is `day_accommodations`
+   * (joined to `days` only to read `day_number`), so it converts on
+   * `DayAccommodationsRepository.listStartEndDayNumbers` (the shared class
+   * Task 2 stubbed and this task appends to), not a new method on
+   * `DaysRepository` — `days` here is only the JOIN target.
    *
    * `tripId: number` (Task 9 fix wave, H2): the same parsed-once value every
    * other survivor in this class now takes — see `restampReservationDates`'s
    * docstring for why binding the raw route string here was the live bug.
    */
   private async assertNoInvertedAccommodation(tripId: number): Promise<void> {
-    // DY19 — Plan 3d (marker normalised to the `// <SITE> — Plan 3d` shape
-    // every other survivor in this file uses, per the Task 0 review carry
-    // item — this task does not own `day_accommodations`, so the statement
-    // itself is untouched)
-    const spans = this.db.all<{ id: number; start_no: number; end_no: number }>(`
-    SELECT a.id, s.day_number AS start_no, e.day_number AS end_no
-    FROM day_accommodations a
-    JOIN days s ON a.start_day_id = s.id
-    JOIN days e ON a.end_day_id = e.id
-    WHERE a.trip_id = ?
-  `, tripId);
+    // DY19 — Plan 3d Task 3: `DayAccommodationsRepository.listStartEndDayNumbers`.
+    const spans = await this.dayAccommodationsRepo.listStartEndDayNumbers(tripId);
     for (const span of spans) {
       if (span.start_no > span.end_no) {
         throw new DayReorderError('This move would make an accommodation end before it starts.');
@@ -437,8 +436,8 @@ export class DaysService {
    * whole trip still shifts everything together. The linked hotel reservation follows
    * its accommodation's start day in both branches.
    *
-   * DY20/DY22 — Plan 3d (`day_accommodations`) stay raw, Task 3's own table;
-   * DY21 (`DaysRepository.findByTripAndDate`) and DY25
+   * DY20/DY22 — Plan 3d Task 3: `DayAccommodationsRepository.listForResync`/
+   * `setDayRange`. DY21 (`DaysRepository.findByTripAndDate`) and DY25
    * (`DaysRepository.findById`) convert — both root on `days`, which this
    * plan owns. DY24 (the `day_assignments` stop that follows its booking)
    * converts via `DayAssignmentsRepository.reanchorToDay`, a Kysely
@@ -447,7 +446,7 @@ export class DaysService {
    * `ReservationsRepository.restampLinkedReservation` — Plan 3d Task 2.
    *
    * `tripId: number` (Task 9 fix wave, H2): callers now pass their own
-   * `toRowId`-parsed value; DY20's raw bind uses it too (previously the raw
+   * `toRowId`-parsed value; DY20's read uses it too (previously the raw
    * route string — the same affinity-seam mismatch documented on
    * `restampReservationDates`).
    */
@@ -455,15 +454,9 @@ export class DaysService {
     tripId: number,
     prevDateByDayId: Map<number, string | null>,
   ): Promise<void> {
-    // DY20 — Plan 3d
-    const stays = this.db.all<{ id: number; start_day_id: number; end_day_id: number }>(
-      'SELECT id, start_day_id, end_day_id FROM day_accommodations WHERE trip_id = ?',
-      tripId
-    );
+    // DY20
+    const stays = await this.dayAccommodationsRepo.listForResync(tripId);
     if (stays.length === 0) return;
-
-    // DY22 — Plan 3d
-    const updateStay = this.db.prepare('UPDATE day_accommodations SET start_day_id = ?, end_day_id = ? WHERE id = ?');
 
     for (const stay of stays) {
       const oldStartDate = prevDateByDayId.get(stay.start_day_id);
@@ -474,7 +467,8 @@ export class DaysService {
         const newEnd = await this.daysRepo.findByTripAndDate(tripId, oldEndDate);
         if (newStart && newEnd && newStart.day_number <= newEnd.day_number
           && (newStart.id !== stay.start_day_id || newEnd.id !== stay.end_day_id)) {
-          updateStay.run(newStart.id, newEnd.id, stay.id);
+          // DY22
+          await this.dayAccommodationsRepo.setDayRange(stay.id, newStart.id, newEnd.id);
           // The day stop a booking wrote moves with it, the way its linked booking does.
           // Left behind it would sit on a day the traveller no longer sleeps there, with
           // nothing on screen to say why. Re-indexed to the end of the target day, because

@@ -865,4 +865,31 @@ export class PlacesRepository extends TrekRepository<Places> {
       .execute<{ name: string; lat: number | null; lng: number | null; stop_type: string | null } | undefined>('get', false);
     return row ?? undefined;
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 3 (`AccommodationsService`) — additive, per this task's own
+  // file-ownership rule ("additive methods on Days/Places/DayAssignments/
+  // Reservations repositories where a read belongs there").
+  // ---------------------------------------------------------------------------
+
+  /** AC9 (`AccommodationsService.stampLodging`) — `SELECT stop_type FROM places WHERE id = ?`. */
+  async getStopType(id: number): Promise<{ stop_type: string | null } | undefined> {
+    return await this.qb('p')
+      .select(['p.stop_type'])
+      .where({ id })
+      .execute<{ stop_type: string | null } | undefined>('get', false);
+  }
+
+  /** AC10 (`AccommodationsService.stampLodging`) — `UPDATE places SET stop_type = 'hotel' WHERE id = ?`. Does NOT stamp `places.updated_at` (matches the legacy statement, R7 class — flagged, not fixed). */
+  async stampHotel(id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { stop_type: 'hotel' });
+  }
+
+  /** AC31 (`AccommodationsService.createAccommodation`) — `SELECT name FROM places WHERE id = ?`, the auto-created partner booking's title source. */
+  async getName(id: number): Promise<{ name: string } | undefined> {
+    return await this.qb('p')
+      .select(['p.name'])
+      .where({ id })
+      .execute<{ name: string } | undefined>('get', false);
+  }
 }

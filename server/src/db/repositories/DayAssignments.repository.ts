@@ -780,4 +780,157 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
       .execute();
     return rows;
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 3 (`AccommodationsService`) — additive, per this task's own
+  // file-ownership rule ("additive methods on Days/Places/DayAssignments/
+  // Reservations repositories where a read belongs there").
+  // ---------------------------------------------------------------------------
+
+  /** AC1 (`AccommodationsService.announceMirror`) — `SELECT id FROM day_assignments WHERE day_id = ? ORDER BY order_index`, once per touched day. */
+  async listIdsForDay(day_id: number): Promise<number[]> {
+    const rows = await this.qb('da')
+      .select(['da.id'])
+      .where({ day: day_id })
+      .orderBy({ order_index: 'asc' })
+      .execute<{ id: number }[]>('all', false);
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * AC7 (`AccommodationsService.positionForCheckIn`) — `SELECT
+   * da.order_index, COALESCE(da.assignment_time, p.place_time, other.check_in)
+   * AS at FROM day_assignments da JOIN places p ON p.id = da.place_id LEFT
+   * JOIN day_accommodations other ON other.id = da.accommodation_id WHERE
+   * da.day_id = ? AND da.id != ? ORDER BY da.order_index`. Same Kysely
+   * escape hatch as {@link effectiveStart}/{@link listForTimeSort} (no ORM
+   * relation to `day_accommodations`).
+   */
+  async listSeatTimes(day_id: number, exclude_id: number): Promise<{ order_index: number | null; at: string | null }[]> {
+    const rows = await this.kysely<AssignmentTimeSortKyselyDB>()
+      .selectFrom('day_assignments as da')
+      .innerJoin('places as p', 'p.id', 'da.place_id')
+      .leftJoin('day_accommodations as other', 'other.id', 'da.accommodation_id')
+      .select((eb) => ['da.order_index as order_index', eb.fn.coalesce('da.assignment_time', 'p.place_time', 'other.check_in').as('at')])
+      .where('da.day_id', '=', day_id)
+      .where('da.id', '!=', exclude_id)
+      .orderBy('da.order_index', 'asc')
+      .execute();
+    return rows as { order_index: number | null; at: string | null }[];
+  }
+
+  /**
+   * AC8 (`AccommodationsService.seatedByCheckIn`) — {@link listSeatTimes}'s
+   * same joins, projected to `da.id` instead of `order_index`, no exclusion:
+   * `SELECT da.id, COALESCE(da.assignment_time, p.place_time, other.check_in)
+   * AS at FROM day_assignments da JOIN places p ON p.id = da.place_id LEFT
+   * JOIN day_accommodations other ON other.id = da.accommodation_id WHERE
+   * da.day_id = ? ORDER BY da.order_index`.
+   */
+  async listSeatTimesWithIds(day_id: number): Promise<{ id: number; at: string | null }[]> {
+    const rows = await this.kysely<AssignmentTimeSortKyselyDB>()
+      .selectFrom('day_assignments as da')
+      .innerJoin('places as p', 'p.id', 'da.place_id')
+      .leftJoin('day_accommodations as other', 'other.id', 'da.accommodation_id')
+      .select((eb) => ['da.id as id', eb.fn.coalesce('da.assignment_time', 'p.place_time', 'other.check_in').as('at')])
+      .where('da.day_id', '=', day_id)
+      .orderBy('da.order_index', 'asc')
+      .execute();
+    return rows as { id: number; at: string | null }[];
+  }
+
+  /**
+   * AC12 (`AccommodationsService.locatedStopIds`) — `SELECT da.id FROM
+   * day_assignments da JOIN places p ON p.id = da.place_id WHERE da.day_id =
+   * ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL ORDER BY da.order_index
+   * ASC, da.created_at ASC, da.id ASC`. `$ne: null` (a typed operator, rule
+   * 23) for the `IS NOT NULL` pair.
+   */
+  async listLocatedIds(day_id: number): Promise<number[]> {
+    const rows = await this.qb('da')
+      .join('da.place', 'p')
+      .select(['da.id'])
+      .where({ day: day_id, 'p.lat': { $ne: null }, 'p.lng': { $ne: null } })
+      .orderBy({ 'da.order_index': 'asc', 'da.created_at': 'asc', 'da.id': 'asc' })
+      .execute<{ id: number }[]>('all', false);
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * AC18/AC24 (`AccommodationsService.relocateOwnStop`/`mirrorStay`) — one
+   * method, two call shapes (D4): `SELECT id FROM day_assignments WHERE
+   * day_id = ? AND place_id = ? AND id != ?` (AC18, with `exclude_id`) and
+   * `SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ?`
+   * (AC24, without).
+   */
+  async existsForDayAndPlace(day_id: number, place_id: number, exclude_id?: number): Promise<boolean> {
+    const query = this.qb('da').select(['da.id']).where({ day: day_id, place: place_id });
+    if (exclude_id !== undefined) query.andWhere({ id: { $ne: exclude_id } });
+    const row = await query.execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /**
+   * AC19 (`AccommodationsService.relocateOwnStop`) — `UPDATE day_assignments
+   * SET order_index = order_index - 1 WHERE day_id = ? AND order_index > ?`,
+   * a column-from-column update (`columnIncrementedBy`, {@link shiftOrderFrom}'s
+   * precedent).
+   */
+  async closeGap(day_id: number, from_index: number): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.qb()
+      .update({ order_index: columnIncrementedBy(platform, 'order_index', -1) })
+      .where({ day: day_id, order_index: { $gt: from_index } })
+      .execute('run');
+  }
+
+  /**
+   * AC20 (`AccommodationsService.relocateOwnStop`) — `SELECT MAX(order_index)
+   * AS max FROM day_assignments WHERE day_id = ? AND id != ?`, read the same
+   * way {@link maxOrderIndex} is (an ordered `limit(1)`, null NOT pre-folded —
+   * the caller's own `max.max !== null ? max.max : -1` check needs to tell
+   * "no rows" from a stored `0`).
+   */
+  async maxOrderIndexExcluding(day_id: number, exclude_id: number): Promise<number | null> {
+    const row = await this.qb('da')
+      .select('da.order_index')
+      .where({ day: day_id, id: { $ne: exclude_id } })
+      .orderBy({ order_index: 'desc' })
+      .limit(1)
+      .execute<{ order_index: number | null } | undefined>('get', false);
+    return row?.order_index ?? null;
+  }
+
+  /** AC21 (`AccommodationsService.relocateOwnStop`) — `UPDATE day_assignments SET day_id = ?, place_id = ?, order_index = ? WHERE id = ?`. */
+  async relocate(id: number, day_id: number, place_id: number, order_index: number): Promise<void> {
+    await this.nativeUpdate({ id }, { day: day_id, place: place_id, order_index });
+  }
+
+  /**
+   * AC22 (`AccommodationsService.relocateOwnStop`) — `UPDATE day_assignments
+   * SET order_index = order_index + 1 WHERE day_id = ? AND order_index >= ?
+   * AND id != ?`, the same column-from-column shape as {@link shiftOrderFrom}
+   * with an extra exclusion.
+   */
+  async shiftFromExcluding(day_id: number, from_index: number, exclude_id: number): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.qb()
+      .update({ order_index: columnIncrementedBy(platform, 'order_index', 1) })
+      .where({ day: day_id, order_index: { $gte: from_index }, id: { $ne: exclude_id } })
+      .execute('run');
+  }
+
+  /** AC25 (`AccommodationsService.ownStops`) — `SELECT id, day_id, place_id, order_index FROM day_assignments WHERE accommodation_id = ?`. `day_id`/`place_id` are `persist(false)` relation mirrors — `columnRef`, the same trap {@link getDayId} documents. */
+  async listOwnedByStay(accommodation_id: number): Promise<{ id: number; day_id: number; place_id: number; order_index: number | null }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    return await this.qb('da')
+      .select(['da.id', columnRef(platform, 'da.day_id').as('day_id'), columnRef(platform, 'da.place_id').as('place_id'), 'da.order_index'])
+      .where({ accommodation_id })
+      .execute<{ id: number; day_id: number; place_id: number; order_index: number | null }[]>('all', false);
+  }
+
+  /** AC26 (`AccommodationsService.releaseStops`, `keepStop` branch) — `UPDATE day_assignments SET accommodation_id = NULL WHERE id = ?`. */
+  async clearStay(id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { accommodation_id: null });
+  }
 }

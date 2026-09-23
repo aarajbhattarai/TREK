@@ -705,6 +705,35 @@ describe('remove', () => {
 
     expect(removeIfUnreferencedSpy).toHaveBeenCalledWith('ChIJgid');
   });
+
+  it('PLACE-SVC-019c (R5, MikroORM 7.2.1 nested transactional on SQLite) — a stay\'s own transaction nests as a SAVEPOINT under this transaction: a later failure in the OUTER write rolls the already-released inner savepoint back too', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const hotel = createPlace(testDb, trip.id, { name: 'Hotel Adlon' });
+    const { accommodation } = (await accommodations.createAccommodation(trip.id, {
+      place_id: hotel.id, start_day_id: day.id, end_day_id: day.id,
+    })) as { accommodation: { id: number } };
+    const reservation = testDb.prepare('SELECT id FROM reservations WHERE accommodation_id = ?').get(accommodation.id) as { id: number };
+
+    // cancelStaysAt (PL16) calls AccommodationsService.deleteAccommodation
+    // FIRST inside this transaction — its own `uow.transactional` call nests
+    // as a SAVEPOINT (UnitOfWork's NESTED propagation) and releases
+    // successfully, deleting the stay and its reservation. Only THEN does
+    // the place row's own DELETE fail. If the nested call were an
+    // independent, already-committed transaction instead of a true
+    // savepoint, the stay and its reservation would stay deleted regardless
+    // of what happens to the place afterward — they do not.
+    testDb.exec("CREATE TRIGGER boom BEFORE DELETE ON places BEGIN SELECT RAISE(ABORT, 'boom'); END");
+    try {
+      await expect(svc.remove(String(trip.id), String(hotel.id))).rejects.toThrow();
+      expect(testDb.prepare('SELECT id FROM day_accommodations WHERE id = ?').get(accommodation.id)).toBeDefined();
+      expect(testDb.prepare('SELECT id FROM reservations WHERE id = ?').get(reservation.id)).toBeDefined();
+      expect(testDb.prepare('SELECT id FROM places WHERE id = ?').get(hotel.id)).toBeDefined();
+    } finally {
+      testDb.exec('DROP TRIGGER boom');
+    }
+  });
 });
 
 // ── removeMany ────────────────────────────────────────────────────────────────

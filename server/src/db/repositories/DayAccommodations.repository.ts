@@ -1,6 +1,84 @@
 import type { DayAccommodations } from '../entities/DayAccommodations.entity';
 import { coalesceParam, columnRef } from '../dialect/sql-functions';
+import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
+
+/**
+ * A `day_accommodations` row exactly as AC34 (`AccommodationsService
+ * .getAccommodation`) re-selects it — every scalar column of the entity
+ * (`a.*`), the trip-scoping guard every write path (REST update/delete, MCP,
+ * RPC) re-reads through.
+ */
+export interface DayAccommodationRow {
+  id: number;
+  trip_id: number;
+  place_id: number | null;
+  start_day_id: number;
+  end_day_id: number;
+  check_in: string | null;
+  check_in_end: string | null;
+  check_out: string | null;
+  confirmation: string | null;
+  notes: string | null;
+  created_at: string | null;
+}
+
+const _dayAccommodationRowKeys: AssertRowKeys<DayAccommodationRow, DayAccommodations> = true;
+
+/** AC2's projection: {@link DayAccommodationRow} plus the linked place's display fields. */
+export interface DayAccommodationWithPlaceRow extends DayAccommodationRow {
+  place_name: string | null;
+  place_address: string | null;
+  place_image: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+}
+
+/** AC3's projection: {@link DayAccommodationWithPlaceRow} plus the linked booking's title — one row per linked `reservations` row (the LEFT JOIN fans out; parity keeps the duplicates, AC3's own ruling). */
+export interface DayAccommodationListRow extends DayAccommodationWithPlaceRow {
+  reservation_title: string | null;
+}
+
+/**
+ * Kysely typing for AC3 (`listForTripWithPlaceAndBooking`) — `reservations
+ * .accommodation_id` is a bare `p.text().nullable()` column with no FK to
+ * `day_accommodations` (§18.1 of the inventory, the same gap
+ * `ReservationsRepository.joinedQuery` documents from the other side), so
+ * the QueryBuilder's relation-path `.join()` cannot express `LEFT JOIN
+ * reservations r ON r.accommodation_id = a.id` at all.
+ */
+interface DayAccommodationListKyselyDB {
+  day_accommodations: {
+    id: number;
+    // `number | string` — `ReservationsRepository.listForTrip`'s own
+    // `trip_id` widening: the raw-bind flexibility a `.where(col, '=',
+    // value)` call keeps regardless of how loosely its value is typed
+    // (program rule 23 bans a raw SQL-text condition, not a loosely-typed
+    // bound value).
+    trip_id: number | string;
+    place_id: number | null;
+    start_day_id: number;
+    end_day_id: number;
+    check_in: string | null;
+    check_in_end: string | null;
+    check_out: string | null;
+    confirmation: string | null;
+    notes: string | null;
+    created_at: string | null;
+  };
+  places: {
+    id: number;
+    name: string;
+    address: string | null;
+    image_url: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
+  reservations: {
+    accommodation_id: string | null;
+    title: string;
+  };
+}
 
 /**
  * Plan 3d Task 2 (`ReservationsService`'s `day_accommodations` writes — RS27,
@@ -145,5 +223,199 @@ export class DayAccommodationsRepository extends TrekRepository<DayAccommodation
       .where({ id })
       .execute<{ trip_id: number } | undefined>('get', false);
     return row?.trip_id;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 3 (`AccommodationsService`, `days.service.ts` DY19/DY20/DY22,
+  // `places.service.ts` PL16) — appended after Task 2's own methods above,
+  // per this task's file-ownership rule ("the class is shared... Task 3
+  // appends rather than replaces").
+  // ---------------------------------------------------------------------------
+
+  /**
+   * AC2 (`AccommodationsService.getAccommodationWithPlace`) — `SELECT a.*,
+   * p.name as place_name, p.address as place_address, p.image_url as
+   * place_image, p.lat as place_lat, p.lng as place_lng FROM
+   * day_accommodations a LEFT JOIN places p ON a.place_id = p.id WHERE a.id
+   * = ?`. The re-select every stay write answers with, post-commit.
+   */
+  async findWithPlace(id: number): Promise<DayAccommodationWithPlaceRow | undefined> {
+    // `{ 'a.id': id }`, not a bare `{ id }` (`DayAssignmentsRepository
+    // .findWithPlaceAndCategory`'s precedent): the LEFT JOIN to `places`
+    // means an unqualified `id` key is ambiguous between `a.id` and `p.id`.
+    return await this.qb('a')
+      .leftJoin('a.place', 'p')
+      .select(['a.*', 'p.name as place_name', 'p.address as place_address', 'p.image_url as place_image', 'p.lat as place_lat', 'p.lng as place_lng'])
+      .where({ 'a.id': id })
+      .execute<DayAccommodationWithPlaceRow | undefined>('get', false);
+  }
+
+  /**
+   * AC3 (`AccommodationsService.listAccommodations`) — AC2's projection plus
+   * `r.title as reservation_title` via `LEFT JOIN reservations r ON
+   * r.accommodation_id = a.id`, `WHERE a.trip_id = ? ORDER BY a.created_at
+   * ASC`. Kysely (the reservations join, see {@link DayAccommodationListKyselyDB}).
+   * Fans out one row per linked booking — the legacy statement's own shape
+   * (the delete path documents more than one booking per stay is legal) —
+   * parity keeps the duplicates, no `DISTINCT`.
+   */
+  async listForTripWithPlaceAndBooking(trip_id: number | string): Promise<DayAccommodationListRow[]> {
+    const rows = await this.kysely<DayAccommodationListKyselyDB>()
+      .selectFrom('day_accommodations as a')
+      .leftJoin('places as p', 'p.id', 'a.place_id')
+      .leftJoin('reservations as r', 'r.accommodation_id', 'a.id')
+      .selectAll('a')
+      .select([
+        'p.name as place_name',
+        'p.address as place_address',
+        'p.image_url as place_image',
+        'p.lat as place_lat',
+        'p.lng as place_lng',
+        'r.title as reservation_title',
+      ])
+      .where('a.trip_id', '=', trip_id)
+      .orderBy('a.created_at', 'asc')
+      .execute();
+    return rows as DayAccommodationListRow[];
+  }
+
+  /**
+   * AC34 (`AccommodationsService.getAccommodation`) — `SELECT * FROM
+   * day_accommodations WHERE id = ? AND trip_id = ?`, the trip-scoping
+   * guard every write path (REST update/delete, MCP, RPC) re-reads through.
+   * `id`/`trip_id: number` (rule 21 — the SERVICE parses both ONCE via
+   * `toRowId` before calling this).
+   */
+  async findInTrip(id: number, trip_id: number): Promise<DayAccommodationRow | undefined> {
+    return await this.qb('a')
+      .select(['a.*'])
+      .where({ id, trip: trip_id })
+      .execute<DayAccommodationRow | undefined>('get', false);
+  }
+
+  /**
+   * AC30 (`AccommodationsService.createAccommodation`) — `INSERT INTO
+   * day_accommodations (trip_id, place_id, start_day_id, end_day_id,
+   * check_in, check_in_end, check_out, confirmation, notes) VALUES (?×9)`.
+   * Nine columns — a DIFFERENT method from Task 2's own `insertBookingStay`
+   * (seven columns, no `check_in_end`/`notes`, D4). The caller passes
+   * already-decided values (the `|| null` coercions stay in the service);
+   * `em.insert()` returns the generated PK (R6's `lastInsertRowid`
+   * replacement).
+   */
+  async insertStay(input: {
+    trip_id: number | string;
+    place_id: number | null;
+    start_day_id: number;
+    end_day_id: number;
+    check_in: string | null;
+    check_in_end: string | null;
+    check_out: string | null;
+    confirmation: string | null;
+    notes: string | null;
+  }): Promise<number> {
+    return await this.insert({
+      trip: input.trip_id,
+      place: input.place_id,
+      startDay: input.start_day_id,
+      endDay: input.end_day_id,
+      check_in: input.check_in,
+      check_in_end: input.check_in_end,
+      check_out: input.check_out,
+      confirmation: input.confirmation,
+      notes: input.notes,
+    });
+  }
+
+  /**
+   * AC36 (`AccommodationsService.updateAccommodation`) — `UPDATE
+   * day_accommodations SET place_id = ?, start_day_id = ?, end_day_id = ?,
+   * check_in = ?, check_in_end = ?, check_out = ?, confirmation = ?, notes =
+   * ? WHERE id = ?`. Eight columns, written verbatim — the caller's
+   * `fields.x !== undefined ? fields.x : existing.x` presence sentinel
+   * (note: NO `|| null` here, unlike AC30 — the legacy statement itself has
+   * none for these columns, so `''` is stored as `''`).
+   */
+  async updateStay(id: number, write: {
+    place_id: number | null;
+    start_day_id: number;
+    end_day_id: number;
+    check_in: string | null;
+    check_in_end: string | null;
+    check_out: string | null;
+    confirmation: string | null;
+    notes: string | null;
+  }): Promise<void> {
+    await this.nativeUpdate({ id }, {
+      place: write.place_id,
+      startDay: write.start_day_id,
+      endDay: write.end_day_id,
+      check_in: write.check_in,
+      check_in_end: write.check_in_end,
+      check_out: write.check_out,
+      confirmation: write.confirmation,
+      notes: write.notes,
+    });
+  }
+
+  /**
+   * AC44 (`AccommodationsService.deleteAccommodation`) — `DELETE FROM
+   * day_accommodations WHERE id = ?`. No trip scoping (the legacy statement
+   * has none either — the caller already scoped `id` via AC34's guard,
+   * rule 21).
+   */
+  async deleteById(id: number): Promise<void> {
+    await this.nativeDelete({ id });
+  }
+
+  /**
+   * DY19 (`DaysService.assertNoInvertedAccommodation`) — `SELECT a.id,
+   * s.day_number AS start_no, e.day_number AS end_no FROM day_accommodations
+   * a JOIN days s ON a.start_day_id = s.id JOIN days e ON a.end_day_id =
+   * e.id WHERE a.trip_id = ?`. Both `days` joins are declared relations
+   * (`startDay`/`endDay`), so the QueryBuilder expresses this directly.
+   */
+  async listStartEndDayNumbers(trip_id: number): Promise<{ id: number; start_no: number; end_no: number }[]> {
+    return await this.qb('a')
+      .join('a.startDay', 's')
+      .join('a.endDay', 'e')
+      .select(['a.id', 's.day_number as start_no', 'e.day_number as end_no'])
+      .where({ trip: trip_id })
+      .execute<{ id: number; start_no: number; end_no: number }[]>('all', false);
+  }
+
+  /**
+   * DY20 (`DaysService.resyncAccommodationDays`) — `SELECT id,
+   * start_day_id, end_day_id FROM day_accommodations WHERE trip_id = ?`.
+   * `start_day_id`/`end_day_id` are `persist(false)` mirrors of the
+   * `startDay`/`endDay` relations — a bare select would drop them (the
+   * `RoadtripDayBoundariesRepository` trap, Task 1's report), so both go
+   * through `columnRef`.
+   */
+  async listForResync(trip_id: number): Promise<{ id: number; start_day_id: number; end_day_id: number }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    return await this.qb('a')
+      .select(['a.id', columnRef(platform, 'a.start_day_id').as('start_day_id'), columnRef(platform, 'a.end_day_id').as('end_day_id')])
+      .where({ trip: trip_id })
+      .execute<{ id: number; start_day_id: number; end_day_id: number }[]>('all', false);
+  }
+
+  /** DY22 (`DaysService.resyncAccommodationDays`) — `UPDATE day_accommodations SET start_day_id = ?, end_day_id = ? WHERE id = ?`. */
+  async setDayRange(id: number, start_day_id: number, end_day_id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { startDay: start_day_id, endDay: end_day_id });
+  }
+
+  /**
+   * PL16 (`PlacesService.cancelStaysAt`) — `SELECT id FROM day_accommodations
+   * WHERE trip_id = ? AND place_id = ?`. Reached from `PlacesService` through
+   * `AccommodationsService` (already injected there for the cascade itself),
+   * not a new repository dependency of `PlacesService`'s own (R4 — keeps the
+   * trip scoping AC44's own unscoped delete relies on, inventory §14.3).
+   */
+  async listForPlace(trip_id: number, place_id: number): Promise<{ id: number }[]> {
+    return await this.qb('a')
+      .select(['a.id'])
+      .where({ trip: trip_id, place: place_id })
+      .execute<{ id: number }[]>('all', false);
   }
 }

@@ -1,7 +1,7 @@
 import type { Reservations } from '../entities/Reservations.entity';
 import { DayAssignments } from '../entities/DayAssignments.entity';
 import { Days } from '../entities/Days.entity';
-import { columnRef, concatKysely, dayDistance, substringKysely } from '../dialect/sql-functions';
+import { castIntegerKysely, coalesceParam, columnRef, concatKysely, dayDistance, substringKysely } from '../dialect/sql-functions';
 import { TrekRepository } from './_shared/trek-repository';
 
 /**
@@ -116,6 +116,42 @@ interface ReservationRestampKyselyDB {
     type: string | null;
     day_id: number | null;
     reservation_time: string | null;
+  };
+}
+
+/**
+ * Kysely typing for AC37/AC40 (`listIdMetadataByStay`/`listIdsByStay`).
+ *
+ * A bound-parameter `WHERE accommodation_id = ?` on this TEXT column is NOT
+ * the same comparison the legacy statement's own `Number(id)` bind produced
+ * (Task 3 finding, verified empirically against the live driver, not
+ * assumed from the inventory's §18.1 wording): `better-sqlite3` binds every
+ * plain JS number as SQLite REAL, integer-valued or not (`typeof(?)` on a
+ * bound `14` reads back `'real'`) — including through MikroORM's Kysely
+ * dialect — and SQLite's TEXT-affinity conversion of a REAL for a
+ * comparison renders its decimal form (`14` → `'14.0'`), not the plain
+ * integer text `'14'`. A row this repository itself writes through
+ * `em.insert()`/`nativeUpdate()` stores the OTHER shape (`'14'`, no `.0` —
+ * MikroORM inlines the value as a literal in the generated SQL, rule 22,
+ * which SQLite's parser treats as a genuine INTEGER token, not a
+ * REAL-bound parameter) — so a plain `WHERE accommodation_id = ?` bound
+ * with a number would consistently MISS every row this cluster's own
+ * `em.insert()` calls write, not just the documented `"14.0"` edge case.
+ * {@link castIntegerKysely} (SQLF-057, `sql-functions.test.ts`) sidesteps
+ * the whole shape question: `CAST(accommodation_id AS INTEGER) = ?` matches
+ * `'14'` AND `'14.0'` alike (SQLite compares the CAST result against the
+ * bound REAL/INTEGER numerically, not as text), which is what "every
+ * linked booking" (AC37/AC40's own contract — more than one reservation,
+ * written by different call sites with different shapes, can point at one
+ * stay) actually needs, and is R2's own "tested with both `'14'` and
+ * `'14.0'` rows" requirement satisfied structurally rather than by picking
+ * a side.
+ */
+interface ReservationsByAccommodationKyselyDB {
+  reservations: {
+    id: number;
+    accommodation_id: string | null;
+    metadata: string | null;
   };
 }
 
@@ -423,6 +459,101 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
       .limit(1)
       .execute<{ id: number } | undefined>('get', false);
     return row?.id;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 3 (`AccommodationsService`) — additive, per this task's own
+  // file-ownership rule ("additive methods on Days/Places/DayAssignments/
+  // Reservations repositories where a read belongs there").
+  // ---------------------------------------------------------------------------
+
+  /**
+   * AC33 (`AccommodationsService.createAccommodation`) — `INSERT INTO
+   * reservations (trip_id, day_id, title, reservation_time, location,
+   * confirmation_number, notes, status, type, accommodation_id, metadata)
+   * VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed', 'hotel', ?, ?)` — the
+   * auto-created partner hotel booking. `status`/`type` literals, `location`
+   * always `null` (matching the legacy statement exactly — it never binds a
+   * value there). `accommodation_id: string` — R2: the caller stringifies
+   * the new stay's numeric id (`String(newId)`) the same way `insertReservation`'s
+   * own `accommodation_id` caller already does, so SQLite's TEXT-affinity
+   * storage is identical to the legacy raw bind of the bare number.
+   */
+  async insertHotelPartner(input: {
+    trip_id: number | string;
+    day_id: number;
+    title: string;
+    reservation_time: string | null;
+    confirmation_number: string | null;
+    notes: string | null;
+    accommodation_id: string;
+    metadata: string | null;
+  }): Promise<number> {
+    return await this.insert({
+      trip: input.trip_id,
+      day: input.day_id,
+      title: input.title,
+      reservation_time: input.reservation_time,
+      location: null,
+      confirmation_number: input.confirmation_number,
+      notes: input.notes,
+      status: 'confirmed',
+      type: 'hotel',
+      accommodation_id: input.accommodation_id,
+      metadata: input.metadata,
+    });
+  }
+
+  /**
+   * AC37 (`AccommodationsService.updateAccommodation`) — `SELECT id,
+   * metadata FROM reservations WHERE accommodation_id = ?`, every linked
+   * booking (no unique constraint on the column — more than one booking can
+   * point at the same stay, and different write paths can leave it in
+   * either TEXT shape). `castIntegerKysely` (see
+   * {@link ReservationsByAccommodationKyselyDB}'s docstring for why).
+   */
+  async listIdMetadataByStay(accommodation_id: number): Promise<{ id: number; metadata: string | null }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    const rows = await this.kysely<ReservationsByAccommodationKyselyDB>()
+      .selectFrom('reservations')
+      .select(['id', 'metadata'])
+      .where((eb) => eb(castIntegerKysely(platform, eb, 'accommodation_id'), '=', accommodation_id))
+      .execute();
+    return rows as { id: number; metadata: string | null }[];
+  }
+
+  /**
+   * AC38 (`AccommodationsService.updateAccommodation`) — `UPDATE
+   * reservations SET metadata = ?, confirmation_number = COALESCE(?,
+   * confirmation_number) WHERE id = ?`. Runs AFTER `updateAccommodation`'s
+   * own transaction commits (§18.6 — R5 class, flagged not fixed).
+   * `coalesceParam` for the value-side COALESCE (`DayAccommodationsRepository
+   * .patchConfirmation`'s precedent).
+   */
+  async setMetadataAndConfirmation(id: number, metadata: string, confirmation: string | null): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.qb()
+      .update({
+        metadata,
+        confirmation_number: coalesceParam(platform, 'confirmation_number', confirmation),
+      })
+      .where({ id })
+      .execute('run');
+  }
+
+  /**
+   * AC40 (`AccommodationsService.deleteAccommodation`) — `SELECT id FROM
+   * reservations WHERE accommodation_id = ?`, ALL linked bookings. Same
+   * `castIntegerKysely` reasoning as {@link listIdMetadataByStay}.
+   */
+  async listIdsByStay(accommodation_id: number): Promise<{ id: number }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    const rows = await this.kysely<ReservationsByAccommodationKyselyDB>()
+      .selectFrom('reservations')
+      .select(['id'])
+      .where((eb) => eb(castIntegerKysely(platform, eb, 'accommodation_id'), '=', accommodation_id))
+      .execute();
+    return rows as { id: number }[];
   }
 }
 
