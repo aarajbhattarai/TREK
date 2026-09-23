@@ -10,6 +10,10 @@ import { InviteTokens } from '../../db/entities/InviteTokens.entity';
 import { McpTokens } from '../../db/entities/McpTokens.entity';
 import { OauthTokens } from '../../db/entities/OauthTokens.entity';
 import { PasswordResetTokens } from '../../db/entities/PasswordResetTokens.entity';
+import { JourneyShareTokens } from '../../db/entities/JourneyShareTokens.entity';
+import { Journeys } from '../../db/entities/Journeys.entity';
+import { JourneyEntries } from '../../db/entities/JourneyEntries.entity';
+import { JourneyContributors } from '../../db/entities/JourneyContributors.entity';
 import { TokensModule } from '../tokens/tokens.module';
 import { AuthPublicController } from './auth-public.controller';
 import { AuthController } from './auth.controller';
@@ -84,7 +88,12 @@ import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
     // resolves from THIS module's own `forFeature` graph regardless of who
     // else also registers it (`tokens.module.ts`'s own docstring explains
     // why). PasswordResetTokens: AuthService's own table (Plan 3b Task 5).
-    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens, BudgetItems])],
+    // JourneyShareTokens/Journeys/JourneyEntries/JourneyContributors: Plan
+    // 3g Task 4's own addition — `UserCleanupService.cleanupUserReferences`'s
+    // UC7-10 GDPR-erasure deletes, reached the same cross-domain way as
+    // McpTokens/OauthTokens above (owned by `nest/journey`, registered here
+    // for THIS module's own `@InjectRepository` params).
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens, BudgetItems, JourneyShareTokens, Journeys, JourneyEntries, JourneyContributors])],
   controllers: [AuthPublicController, AuthController, PasskeyController],
   providers: [AuthService, UserProfileService, RegistrationInvitesService, PasskeyService, UserCleanupService, WebauthnConfigService, AuthMcp],
   exports: [AuthService, RegistrationInvitesService, PasskeyService, UserCleanupService],

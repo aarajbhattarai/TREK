@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { PluginsRuntimeModule } from '../plugins-runtime.module';
 import { AddonsModule } from '../../addons/addons.module';
 import { JourneyDomainModule } from '../../journey/journey-domain.module';
+import { JourneyEntries } from '../../../db/entities/JourneyEntries.entity';
 import { PlaceDetailsController } from './place-details.controller';
 import { PluginSearchController } from './plugin-search.controller';
 import { TripWarningsController } from './trip-warnings.controller';
@@ -32,9 +34,16 @@ import { JournalEntryRowsController } from './journal-entry-rows.controller';
  * throws — so they belong together and nowhere else. None of them can install,
  * activate or configure anything, which is why they are separated from the CRUD
  * surface in PluginsModule.
+ *
+ * `MikroOrmModule.forFeature([JourneyEntries])` registers
+ * `JourneyEntriesRepository` for `JournalEntryRowsController`'s own
+ * `@InjectRepository` constructor param (JEC1, Plan 3g Task 4) — importing
+ * `JourneyDomainModule` above brings in `JourneyDomainService` for the
+ * `canAccessJourney` call but does NOT export `MikroOrmModule`, so the
+ * entity needs its own registration here too.
  */
 @Module({
-  imports: [PluginsRuntimeModule, AddonsModule, JourneyDomainModule],
+  imports: [PluginsRuntimeModule, AddonsModule, JourneyDomainModule, MikroOrmModule.forFeature([JourneyEntries])],
   controllers: [
     PlaceDetailsController,
     PluginSearchController,

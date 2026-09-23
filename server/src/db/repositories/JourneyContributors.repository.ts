@@ -131,4 +131,19 @@ export class JourneyContributorsRepository extends TrekRepository<JourneyContrib
   async deleteNonOwner(journeyId: number, userId: number): Promise<number> {
     return await this.nativeDelete({ journey: journeyId, user: userId, role: { $ne: 'owner' } });
   }
+
+  /**
+   * UC10 (Plan 3g Task 4 survivor, `UserCleanupService.cleanupUserReferences`)
+   * — `DELETE FROM journey_contributors WHERE user_id = ?`: contributor rows
+   * on OTHER users' journeys (not covered by UC8's cascade). Unscoped by
+   * journey and carries no `role != 'owner'` guard, unlike {@link
+   * deleteNonOwner}/JG119 — by the call order UC8 already ran first and
+   * deleted every journey this user owns (cascading away their own
+   * `role='owner'` row on each), so no remaining row for this user can be
+   * `role='owner'`; the absent guard is preserved exactly, not added
+   * defensively.
+   */
+  async deleteAllForUser(userId: number): Promise<void> {
+    await this.nativeDelete({ user: userId });
+  }
 }

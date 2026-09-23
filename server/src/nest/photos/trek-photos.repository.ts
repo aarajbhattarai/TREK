@@ -7,6 +7,8 @@ import { TrekPhotos } from '../../db/entities/TrekPhotos.entity';
 import type { TrekPhotosRepository } from '../../db/repositories/TrekPhotos.repository';
 import { TripPhotos } from '../../db/entities/TripPhotos.entity';
 import type { TripPhotosRepository } from '../../db/repositories/TripPhotos.repository';
+import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';
+import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhotos.repository';
 
 /**
  * The `trek_photos` table: register a photo, look one up, retarget it, drop it
@@ -35,6 +37,9 @@ export class TrekPhotoRegistrationService {
   constructor(
     @InjectRepository(TrekPhotos) private readonly trekPhotos: TrekPhotosRepository,
     @InjectRepository(TripPhotos) private readonly tripPhotos: TripPhotosRepository,
+    // Plan 3g Task 4 (PH10) — the `journey_photos` half of `deleteIfOrphan`'s
+    // split orphan-check.
+    @InjectRepository(JourneyPhotos) private readonly journeyPhotos: JourneyPhotosRepository,
     private readonly db: DatabaseService,
   ) {}
 
@@ -137,16 +142,15 @@ export class TrekPhotoRegistrationService {
    *
    * PH10's original statement was one `UNION ALL` existence check across
    * `trip_photos` and `journey_photos`; split into its two halves here
-   * (`TripPhotosRepository.existsForPhoto` for the 3e-owned table, a still
-   * -raw `journey_photos` read for the not-yet-converted Plan 3g table) —
-   * logically identical (neither half needs to run if the other already
-   * found a row), never a transaction (both are reads).
+   * (`TripPhotosRepository.existsForPhoto` for the 3e-owned table,
+   * `JourneyPhotosRepository.existsForPhoto` for the Plan 3g-owned table,
+   * converted by Plan 3g Task 4) — logically identical (neither half needs
+   * to run if the other already found a row), never a transaction (both are
+   * reads).
    */
   async deleteIfOrphan(photoId: number): Promise<void> {
     if (await this.tripPhotos.existsForPhoto(photoId)) return;
-    // PH10 — Plan 3g (journey_photos is not yet an owned repository table).
-    const stillUsedByJourney = this.db.get('SELECT 1 FROM journey_photos WHERE photo_id = ?', photoId);
-    if (stillUsedByJourney) return;
+    if (await this.journeyPhotos.existsForPhoto(photoId)) return; // PH10 — converted (Plan 3g Task 4)
     await this.trekPhotos.deleteNonLocal(photoId);
   }
 }

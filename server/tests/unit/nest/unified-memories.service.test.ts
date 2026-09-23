@@ -51,6 +51,9 @@ import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { TripAlbumLinks } from '../../../src/db/entities/TripAlbumLinks.entity';
 import { Trips } from '../../../src/db/entities/Trips.entity';
 import { PhotoProviders } from '../../../src/db/entities/PhotoProviders.entity';
+import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
+import { Journeys } from '../../../src/db/entities/Journeys.entity';
+import { JourneyContributors } from '../../../src/db/entities/JourneyContributors.entity';
 import type { ServiceResult } from '../../../src/nest/memories/memories.helpers';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { ImmichService } from '../../../src/nest/memories/immich.service';
@@ -117,10 +120,10 @@ beforeAll(async () => {
   usersRepo = await createTestUsersRepo(testDb);
   svc = new UnifiedMemoriesService(
     dbs,
-    new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs),
+    new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), dbs),
     {} as ImmichService,
     {} as SynologyService,
-    new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips)),
+    new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos)),
     notificationsStub(),
     await createTestAddonsService(testDb, dbs),
     await createTestUnitOfWork(testDb),

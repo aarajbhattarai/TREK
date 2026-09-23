@@ -26,6 +26,7 @@ import { createUser } from '../../helpers/factories';
 import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
+import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { db as trekDb } from '../../../src/db/database';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
@@ -42,7 +43,7 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   t = await createTestOrm(testDb);
-  trekPhotos = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), new DatabaseService(trekDb, t.em));
+  trekPhotos = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), new DatabaseService(trekDb, t.em));
 });
 
 beforeEach(() => {

@@ -12,6 +12,12 @@ import { TripAlbumLinks } from '../../db/entities/TripAlbumLinks.entity';
 import type { TripAlbumLinksRepository } from '../../db/repositories/TripAlbumLinks.repository';
 import { Trips } from '../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Journeys } from '../../db/entities/Journeys.entity';
+import type { JourneysRepository } from '../../db/repositories/Journeys.repository';
+import { JourneyContributors } from '../../db/entities/JourneyContributors.entity';
+import type { JourneyContributorsRepository } from '../../db/repositories/JourneyContributors.repository';
+import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';
+import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhotos.repository';
 
 /**
  * Who may see which photo, and the album-link lookups the provider syncs need.
@@ -24,9 +30,14 @@ import type { TripsRepository } from '../../db/repositories/Trips.repository';
  * Stays a service, not a single-table repository (Plan 3e): it composes
  * access logic across `trip_photos`/`trek_photos`/`trip_album_links`
  * (this plan's own tables) and `journeys`/`journey_contributors`/
- * `journey_photos` (Plan 3g's, not yet converted — every read against them
- * below stays raw, marked `// <SITE> — Plan 3g`). `DatabaseService` stays
- * injected for exactly those raw reads and for the `canAccessTrip` primitive
+ * `journey_photos` (Plan 3g's — MA1/MA2/MA6, converted by Plan 3g Task 4
+ * onto `JourneysRepository`/`JourneyContributorsRepository`/
+ * `JourneyPhotosRepository`, NOT routed through `JourneyDomainService
+ * .canAccessJourney` — this service re-implements the same owner-or
+ * -contributor logic inline for its own reasons, composing it with the
+ * trip-photo check in one method; a service-to-service dependency here
+ * would be a bigger structural change than a survivor cleanup is scoped
+ * for). `DatabaseService` stays injected for the `canAccessTrip` primitive
  * (a cross-cutting primitive, not a per-domain SQL statement this plan
  * converts).
  */
@@ -38,7 +49,18 @@ export class MemoriesAccessService {
     @InjectRepository(TrekPhotos) private readonly trekPhotos: TrekPhotosRepository,
     @InjectRepository(TripAlbumLinks) private readonly tripAlbumLinks: TripAlbumLinksRepository,
     @InjectRepository(Trips) private readonly trips: TripsRepository,
+    // Plan 3g Task 4 (MA1/MA2/MA6) — the journey half of the cross-domain
+    // photo-access checks below.
+    @InjectRepository(Journeys) private readonly journeys: JourneysRepository,
+    @InjectRepository(JourneyContributors) private readonly journeyContributors: JourneyContributorsRepository,
+    @InjectRepository(JourneyPhotos) private readonly journeyPhotos: JourneyPhotosRepository,
   ) {}
+
+  /** MA2's owner-OR-contributor check, shared by MA2 and MA6's per-journey loop — the same two-branch `journeys`/`journey_contributors` logic `canAccessJourney` uses, re-implemented here (see the class docstring on why it isn't a call to `JourneyDomainService`). */
+  private async ownerOrContributor(journeyId: number, userId: number): Promise<boolean> {
+    if (await this.journeys.isOwnedByUser(journeyId, userId)) return true;
+    return await this.journeyContributors.existsForUser(journeyId, userId);
+  }
 
   async canAccessUserPhoto(requestingUserId: number, ownerUserId: number, tripId: string, assetId: string, provider: string): Promise<boolean> {
     if (requestingUserId === ownerUserId) {
@@ -47,26 +69,12 @@ export class MemoriesAccessService {
 
     // Journey photos use tripId=0 — check journey_photos + journey_contributors
     if (tripId === '0') {
-      // MA1 — Plan 3g (journey_photos is not yet an owned repository table).
-      const journeyPhoto = this.db.get<{ journey_id: number }>(`
-            SELECT gp.journey_id
-            FROM journey_photos gp
-            JOIN trek_photos tkp ON tkp.id = gp.photo_id
-            WHERE tkp.asset_id = ?
-              AND tkp.provider = ?
-              AND tkp.owner_id = ?
-            LIMIT 1
-        `, assetId, provider, ownerUserId);
-      if (!journeyPhoto) return false;
+      // MA1 — converted (Plan 3g Task 4).
+      const journeyId = await this.journeyPhotos.findJourneyIdForAsset(assetId, provider, ownerUserId);
+      if (journeyId === undefined) return false;
 
-      // MA2 — Plan 3g (journeys/journey_contributors are not yet owned repository tables).
-      const access = this.db.get(`
-            SELECT 1 FROM journeys WHERE id = ? AND user_id = ?
-            UNION ALL
-            SELECT 1 FROM journey_contributors WHERE journey_id = ? AND user_id = ?
-            LIMIT 1
-        `, journeyPhoto.journey_id, requestingUserId, journeyPhoto.journey_id, requestingUserId);
-      return !!access;
+      // MA2 — converted (Plan 3g Task 4).
+      return await this.ownerOrContributor(journeyId, requestingUserId);
     }
 
     // Regular trip photos — join through trek_photos (MA3).
@@ -100,22 +108,21 @@ export class MemoriesAccessService {
     }
 
     // Check journey_photos — is this photo in a journey the user can access?
-    // MA6 — Plan 3g (journey_photos/journeys/journey_contributors are not yet owned repository tables).
-    const journeyAccess = this.db.get(`
-        SELECT 1 FROM journey_photos gp
-        WHERE gp.photo_id = ?
-          AND EXISTS (
-            SELECT 1 FROM journeys j WHERE j.id = gp.journey_id AND j.user_id = ?
-            UNION ALL
-            SELECT 1 FROM journey_contributors jc WHERE jc.journey_id = gp.journey_id AND jc.user_id = ?
-          )
-        LIMIT 1
-    `, trekPhotoId, requestingUserId, requestingUserId);
+    // MA6 — converted (Plan 3g Task 4). Every journey this photo is linked
+    // into (a photo can be in more than one journey's gallery), probed the
+    // same loop-and-check shape as the trip-photo half above (MA5).
+    let journeyAccess = false;
+    for (const journeyId of await this.journeyPhotos.listJourneyIdsForPhoto(trekPhotoId)) {
+      if (await this.ownerOrContributor(journeyId, requestingUserId)) {
+        journeyAccess = true;
+        break;
+      }
+    }
     if (journeyAccess) return true;
 
     // Local photos without owner (uploaded files) — check if user has journey access
     if (photo.provider === 'local' && !photo.owner_id) {
-      return !!journeyAccess;
+      return journeyAccess;
     }
 
     return false;

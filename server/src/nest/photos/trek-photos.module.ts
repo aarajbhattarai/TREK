@@ -3,6 +3,7 @@ import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { TrekPhotoRegistrationService } from './trek-photos.repository';
 import { TrekPhotos } from '../../db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../db/entities/TripPhotos.entity';
+import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';
 
 /**
  * The trek_photos store on its own, so both halves can have it without
@@ -16,10 +17,12 @@ import { TripPhotos } from '../../db/entities/TripPhotos.entity';
  *
  * `MikroOrmModule.forFeature` registers `TrekPhotosRepository`/
  * `TripPhotosRepository` (the ORM ones) for `TrekPhotoRegistrationService`'s
- * `@InjectRepository` constructor params (Plan 3e Task 6).
+ * `@InjectRepository` constructor params (Plan 3e Task 6). `JourneyPhotos` is
+ * Plan 3g Task 4's own addition — PH10's `journey_photos` orphan-check half
+ * (`deleteIfOrphan`) now injects `JourneyPhotosRepository` too.
  */
 @Module({
-  imports: [MikroOrmModule.forFeature([TrekPhotos, TripPhotos])],
+  imports: [MikroOrmModule.forFeature([TrekPhotos, TripPhotos, JourneyPhotos])],
   providers: [TrekPhotoRegistrationService],
   exports: [TrekPhotoRegistrationService],
 })

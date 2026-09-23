@@ -147,6 +147,44 @@ export class JourneyEntriesRepository extends TrekRepository<JourneyEntries> {
     );
   }
 
+  /**
+   * TP32 (Plan 3g Task 4 survivor, `TripsService.remove`) — `DELETE FROM
+   * journey_entries WHERE source_trip_id = ? AND type = 'skeleton'`. NO
+   * `journey_id` scope, unlike {@link deleteSkeletonsForTrip}/JG31 — a trip
+   * delete drops every skeleton synced from it across every journey it was
+   * ever linked to, not just one. A genuinely different statement text, not
+   * a call to {@link deleteSkeletonsForTrip}.
+   */
+  async deleteAllSkeletonsForTrip(tripId: number): Promise<void> {
+    await this.nativeDelete({ sourceTrip: tripId, type: 'skeleton' });
+  }
+
+  /**
+   * TP33 (Plan 3g Task 4 survivor, `TripsService.remove`) — `UPDATE
+   * journey_entries SET source_trip_id=NULL, source_place_id=NULL,
+   * source_assignment_id=NULL WHERE source_trip_id = ?`. NO `journey_id`
+   * scope AND no `type != 'skeleton'` filter, unlike {@link
+   * detachFilledForTrip}/JG32 — by the time this runs, {@link
+   * deleteAllSkeletonsForTrip}/TP32 has already removed every skeleton row
+   * with this `source_trip_id` (same transaction, called first in
+   * `TripsService.remove`), so every row this statement can still match is
+   * already non-skeleton; the missing filter is preserved exactly, not
+   * "fixed" into a redundant one.
+   */
+  async detachAllFilledForTrip(tripId: number): Promise<void> {
+    await this.nativeUpdate({ sourceTrip: tripId }, { sourcePlace: null, sourceTrip: null, source_assignment_id: null });
+  }
+
+  /**
+   * UC9 (Plan 3g Task 4 survivor, `UserCleanupService.cleanupUserReferences`)
+   * — `DELETE FROM journey_entries WHERE author_id = ?`: entries this user
+   * authored on OTHER users' journeys (not covered by UC8's cascade, since
+   * those journeys aren't owned by the departing user).
+   */
+  async deleteByAuthorId(userId: number): Promise<void> {
+    await this.nativeDelete({ author: userId });
+  }
+
   /** JG35 — `syncTripPlaces`'s existing-skeleton dedup-key read: `SELECT source_place_id, source_assignment_id FROM journey_entries WHERE journey_id = ? AND source_trip_id = ?`. */
   async listSourceKeysForTrip(journeyId: number, tripId: number): Promise<{ source_place_id: number; source_assignment_id: number | null }[]> {
     return await this.qb('je')

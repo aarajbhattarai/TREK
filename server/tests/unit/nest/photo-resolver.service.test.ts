@@ -37,6 +37,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
+import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { PhotoResolverService } from '../../../src/nest/memories/photo-resolver.service';
 import type { ImmichService } from '../../../src/nest/memories/immich.service';
@@ -100,7 +101,7 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   t = await createTestOrm(testDb);
-  const repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs);
+  const repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), dbs);
   svc = new PhotoResolverService(
     repo,
     thumbnails as unknown as ThumbnailService,

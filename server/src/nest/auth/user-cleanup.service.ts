@@ -12,6 +12,14 @@ import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
+import { JourneyShareTokens } from '../../db/entities/JourneyShareTokens.entity';
+import type { JourneyShareTokensRepository } from '../../db/repositories/JourneyShareTokens.repository';
+import { Journeys } from '../../db/entities/Journeys.entity';
+import type { JourneysRepository } from '../../db/repositories/Journeys.repository';
+import { JourneyEntries } from '../../db/entities/JourneyEntries.entity';
+import type { JourneyEntriesRepository } from '../../db/repositories/JourneyEntries.repository';
+import { JourneyContributors } from '../../db/entities/JourneyContributors.entity';
+import type { JourneyContributorsRepository } from '../../db/repositories/JourneyContributors.repository';
 
 /**
  * Account erasure — everything that has to happen around `DELETE FROM users`
@@ -34,6 +42,13 @@ export class UserCleanupService {
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
     // Plan 3e Task 2 (budget) — additive, UC5 only.
     @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
+    // Plan 3g Task 4 (UC7-10) — the genuinely-journey GDPR-erasure deletes.
+    // UC6 (`share_tokens`, `nest/share`, Plan 3h) is NOT one of these — see
+    // `cleanupUserReferences`'s own doc comment.
+    @InjectRepository(JourneyShareTokens) private readonly journeyShareTokensRepo: JourneyShareTokensRepository,
+    @InjectRepository(Journeys) private readonly journeysRepo: JourneysRepository,
+    @InjectRepository(JourneyEntries) private readonly journeyEntriesRepo: JourneyEntriesRepository,
+    @InjectRepository(JourneyContributors) private readonly journeyContributorsRepo: JourneyContributorsRepository,
   ) {}
 
   /**
@@ -82,27 +97,35 @@ export class UserCleanupService {
   }
 
   /**
-   * UC4–UC10: every table here is owned by a domain outside this plan —
-   * `trip_members` (`nest/trip-membership`, Plan 3c), `budget_items`
-   * (`nest/budget`, Plan 3e), `share_tokens`/`journey_share_tokens`/
-   * `journeys`/`journey_entries`/`journey_contributors` (`nest/share`/
-   * `nest/journey-share`/`nest/journey-domain`, Plan 3g) — so they stay raw
-   * `DatabaseService` calls (Plan 3b Task 5 ruling; inventory §6). Verbatim
-   * otherwise: same statement order, same bounded 3-table
-   * journey/journey_entries/journey_contributors sequence,
-   * `this.budget.removeUserFromBudgetItems` unchanged.
+   * UC4–UC10: `trip_members` (`nest/trip-membership`, Plan 3c) and
+   * `budget_items` (`nest/budget`, Plan 3e) are owned by domains outside
+   * this plan, so UC4 stays a raw `DatabaseService` call (Plan 3b Task 5
+   * ruling; inventory §6) — UC5 is already converted (`budgetItemsRepo
+   * .clearPaidByUser`). `share_tokens` (UC6) belongs to `nest/share`
+   * (trip-level share links, Plan 3h) — a genuinely different table from
+   * the four below despite sharing this method and this erasure
+   * transaction, so it ALSO stays a raw `DatabaseService` call, but for a
+   * different reason than UC4 (not this plan's table at all, not merely
+   * "another plan hasn't converted it yet"). `journey_share_tokens`/
+   * `journeys`/`journey_entries`/`journey_contributors` (UC7-10,
+   * `nest/journey-share`/`nest/journey-domain`, Plan 3g) ARE this plan's
+   * own and are converted (Plan 3g Task 4) onto their owning repositories.
+   * Verbatim otherwise: same statement order, same bounded 4-table
+   * share_tokens/journey_share_tokens/journeys/journey_entries/
+   * journey_contributors sequence, `this.budget.removeUserFromBudgetItems`
+   * unchanged.
    */
   private async cleanupUserReferences(userId: number): Promise<void> {
     this.db.run('UPDATE trip_members SET invited_by = NULL WHERE invited_by = ?', userId); // UC4 — Plan 3c
     await this.budgetItemsRepo.clearPaidByUser(userId); // UC5 — Plan 3e Task 2, converted.
     await this.budget.removeUserFromBudgetItems(userId);
-    this.db.run('DELETE FROM share_tokens WHERE created_by = ?', userId); // UC6 — Plan 3g
-    this.db.run('DELETE FROM journey_share_tokens WHERE created_by = ?', userId); // UC7 — Plan 3g
+    this.db.run('DELETE FROM share_tokens WHERE created_by = ?', userId); // UC6 — Plan 3h
+    await this.journeyShareTokensRepo.deleteByCreatedBy(userId); // UC7 — converted (Plan 3g Task 4)
     // Owned journeys cascade-delete their entries/contributors/share_tokens/photos via journey_id FKs
-    this.db.run('DELETE FROM journeys WHERE user_id = ?', userId); // UC8 — Plan 3g
+    await this.journeysRepo.deleteOwnedByUser(userId); // UC8 — converted (Plan 3g Task 4)
     // Entries authored on other users' journeys (not covered by the cascade above)
-    this.db.run('DELETE FROM journey_entries WHERE author_id = ?', userId); // UC9 — Plan 3g
-    this.db.run('DELETE FROM journey_contributors WHERE user_id = ?', userId); // UC10 — Plan 3g
+    await this.journeyEntriesRepo.deleteByAuthorId(userId); // UC9 — converted (Plan 3g Task 4)
+    await this.journeyContributorsRepo.deleteAllForUser(userId); // UC10 — converted (Plan 3g Task 4)
   }
 
   /**

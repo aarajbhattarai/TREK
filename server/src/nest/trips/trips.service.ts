@@ -4,6 +4,7 @@ import { EntityManager } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
 import { Trips } from '../../db/entities/Trips.entity';
 import { Days } from '../../db/entities/Days.entity';
+import { JourneyEntries } from '../../db/entities/JourneyEntries.entity';
 import { Users } from '../../db/entities/Users.entity';
 import { Places } from '../../db/entities/Places.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
@@ -178,14 +179,17 @@ export class TripsService {
     private readonly em: EntityManager,
   ) {}
 
-  // Plan 3c Task 7: the raw better-sqlite3 handle now backs only the three
-  // documented survivors — `remove`'s TP32/TP33 (journey_entries, Plan 3g)
-  // and `copy`/`getCopiedTrip` (Task 8's own file). Every other method below
-  // reads/writes through `tripsRepo`/`daysRepo` (or a sibling repository
-  // reached the same way `TripsService.canAccessTrip`/`.isOwner` already
-  // did since Task 0b: `this.em.getRepository(...)`, not a new constructor
-  // parameter — the shared per-request `EntityManager` caches repositories,
-  // so this is the same instance a hand-constructed test spies on).
+  // Plan 3c Task 7: the raw better-sqlite3 handle used to back `remove`'s
+  // TP32/TP33 (journey_entries) — converted by Plan 3g Task 4 onto
+  // `JourneyEntriesRepository` below, leaving `db`/`dbs` unused in this file
+  // (kept rather than removed, to avoid a `TripsService` constructor-shape
+  // change outside this survivor task's scope). Every method in this file
+  // reads/writes through `tripsRepo`/`daysRepo`/`journeyEntriesRepo` (or a
+  // sibling repository reached the same way `TripsService.canAccessTrip`/
+  // `.isOwner` already did since Task 0b: `this.em.getRepository(...)`, not
+  // a new constructor parameter — the shared per-request `EntityManager`
+  // caches repositories, so this is the same instance a hand-constructed
+  // test spies on).
   private get db() {
     return this.dbs.connection;
   }
@@ -196,6 +200,13 @@ export class TripsService {
 
   private get daysRepo() {
     return this.em.getRepository(Days);
+  }
+
+  // Plan 3g Task 4 (TP32/TP33) — `journey_entries`' trip-wide skeleton
+  // cleanup/detach, reached the same `this.em.getRepository(...)` way as
+  // `tripsRepo`/`daysRepo` above.
+  private get journeyEntriesRepo() {
+    return this.em.getRepository(JourneyEntries);
   }
 
   // Plan 3c Task 8 (`copy`'s own 6 owned tables): resolved the same way
@@ -632,9 +643,9 @@ export class TripsService {
   // ── Delete ─────────────────────────────────────────────────────────────────
 
   /**
-   * TP30–TP34 (inventory §11c) — TP32/TP33 (`journey_entries`) stay raw
-   * inside the transaction (`// Plan 3g`, that table's owning plan); every
-   * other statement moved through `TripsRepository`.
+   * TP30–TP34 (inventory §11c) — every statement, including TP32/TP33
+   * (`journey_entries`), moves through a repository (TP32/TP33 converted by
+   * Plan 3g Task 4 onto `JourneyEntriesRepository`).
    */
   async remove(tripId: string | number, userId: number, userRole: string): Promise<DeleteTripInfo> {
     const trip = await this.tripsRepo.findIdTitleOwner(tripId); // TP30 (the `id` field this method also selects is unused here)
@@ -652,15 +663,9 @@ export class TripsService {
     await this.uow.transactional(async () => {
       // Clean up journey entries synced from this trip before deleting
       // Delete skeleton entries (unfilled synced places)
-      this.db.prepare(`
-        DELETE FROM journey_entries
-        WHERE source_trip_id = ? AND type = 'skeleton'
-      `).run(tripId); // TP32 — Plan 3g
+      await this.journeyEntriesRepo.deleteAllSkeletonsForTrip(Number(tripId)); // TP32 — converted (Plan 3g Task 4)
       // Detach filled entries (keep user's written content, just remove trip link)
-      this.db.prepare(`
-        UPDATE journey_entries SET source_trip_id = NULL, source_place_id = NULL, source_assignment_id = NULL
-        WHERE source_trip_id = ?
-      `).run(tripId); // TP33 — Plan 3g
+      await this.journeyEntriesRepo.detachAllFilledForTrip(Number(tripId)); // TP33 — converted (Plan 3g Task 4)
 
       await this.tripsRepo.deleteById(Number(tripId)); // TP34 — safe: `trip` above only resolved through the raw-bind seam on a real row
     });

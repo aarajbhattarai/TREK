@@ -18,6 +18,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
+import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
 import { TripAlbumLinks } from '../../../src/db/entities/TripAlbumLinks.entity';
 import { decrypt_api_key } from '../../../src/nest/common/crypto/apiKeyCrypto';
 
@@ -27,7 +28,7 @@ let repo: TrekPhotoRegistrationService;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), new DatabaseService(testDb, t.em));
+  repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), new DatabaseService(testDb, t.em));
 });
 
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
@@ -214,7 +215,7 @@ describe('TrekPhotoRegistrationService.deleteIfOrphan (PH10-11)', () => {
     expect(rawRow(id)).toBeDefined();
   });
 
-  it('TREKPHOTO-062: a photo still referenced by journey_photos (Plan 3g, raw) is kept', async () => {
+  it('TREKPHOTO-062: a photo still referenced by journey_photos (Plan 3g, converted onto JourneyPhotosRepository.existsForPhoto) is kept', async () => {
     const { user } = createUser(testDb);
     const id = await repo.getOrCreate('immich', 'referenced-2', user.id);
     testDb.prepare("INSERT INTO journeys (user_id, title, status, created_at, updated_at) VALUES (?, 'J', 'draft', 0, 0)").run(user.id);

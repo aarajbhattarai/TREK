@@ -8,18 +8,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { entryJourney, canAccessJourney, isAddonEnabled, pluginsEnabled } = vi.hoisted(() => ({
-  entryJourney: vi.fn((entryId: number) => (entryId === 7 ? { journey_id: 3 } : undefined)),
+  entryJourney: vi.fn((entryId: number) => (entryId === 7 ? { journey_id: 3 } : null)),
   canAccessJourney: vi.fn((journeyId: number, userId: number) => (journeyId === 3 && userId === 5 ? { id: 3 } : null)),
   isAddonEnabled: vi.fn(() => true),
   pluginsEnabled: vi.fn(() => true),
 }));
-vi.mock('../../../src/db/database', () => ({
-  db: { prepare: () => ({ get: (entryId: number) => entryJourney(entryId) }) },
-  canAccessTrip: vi.fn(),
-}));
-import { db as dbConn } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
+import type { JourneyEntriesRepository } from '../../../src/db/repositories/JourneyEntries.repository';
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
 import { JournalEntryRowsController } from '../../../src/nest/plugins/contributions/journal-entry-rows.controller';
@@ -27,6 +22,10 @@ import type { PluginHooks } from '../../../src/nest/plugins/plugin-hooks.service
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 
 const addonsStub = { isAddonEnabled } as unknown as AddonsService;
+// JEC1 (Plan 3g Task 4) — `JournalEntryRowsController` now injects
+// `JourneyEntriesRepository` instead of the raw `DatabaseService`/`db.prepare`
+// stub this test used to mock; `findById` stands in for the converted read.
+const journeyEntriesStub = { findById: vi.fn((entryId: number) => entryJourney(entryId)) } as unknown as JourneyEntriesRepository;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const req = (id?: number) => ({ user: id === undefined ? undefined : { id } }) as any;
@@ -35,7 +34,7 @@ function controller(invoke: (id: string) => unknown, providers = ['p1']) {
     providersOf: vi.fn(() => providers),
     journalRows: vi.fn(async (id: string) => invoke(id)),
   } as unknown as PluginHooks;
-  return { c: new JournalEntryRowsController(runtime, new DatabaseService(dbConn), addonsStub, { canAccessJourney } as unknown as JourneyDomainService), runtime };
+  return { c: new JournalEntryRowsController(runtime, journeyEntriesStub, addonsStub, { canAccessJourney } as unknown as JourneyDomainService), runtime };
 }
 const row = (over: Record<string, unknown> = {}) => ({ label: 'Distance', value: '12 km', ...over });
 

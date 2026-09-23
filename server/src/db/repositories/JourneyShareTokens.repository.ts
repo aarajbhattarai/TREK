@@ -261,6 +261,15 @@ export class JourneyShareTokensRepository extends TrekRepository<JourneyShareTok
   }
 
   /**
+   * UC7 (Plan 3g Task 4 survivor, `UserCleanupService.cleanupUserReferences`)
+   * — `DELETE FROM journey_share_tokens WHERE created_by = ?`: erasure of
+   * public share links this user created (on any journey, owned or not).
+   */
+  async deleteByCreatedBy(userId: number): Promise<void> {
+    await this.nativeDelete({ createdByRef: userId });
+  }
+
+  /**
    * JS6/JS9 — the public photo/asset validators' token lookup: `SELECT
    * journey_id, share_gallery FROM journey_share_tokens WHERE token = ?`.
    * Exact-match only (R4) — a differently-cased or NUL-truncated token binds

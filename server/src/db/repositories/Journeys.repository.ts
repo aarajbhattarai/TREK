@@ -236,4 +236,14 @@ export class JourneysRepository extends TrekRepository<Journeys> {
   async deleteById(id: number): Promise<void> {
     await this.nativeDelete({ id });
   }
+
+  /**
+   * UC8 (Plan 3g Task 4 survivor, `UserCleanupService.cleanupUserReferences`)
+   * — `DELETE FROM journeys WHERE user_id = ?`: every journey this user
+   * owns, cascading to its entries/contributors/share_tokens/photos via the
+   * already-declared `deleteRule('cascade')` FKs.
+   */
+  async deleteOwnedByUser(userId: number): Promise<void> {
+    await this.nativeDelete({ user: userId });
+  }
 }

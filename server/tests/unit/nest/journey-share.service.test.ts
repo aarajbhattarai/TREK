@@ -70,7 +70,7 @@ beforeAll(async () => {
   const journeysRepo = await createTestJourneysRepo(testDb);
   svc = new JourneyShareService(
     new JourneyDomainService(
-      dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), uow,
+      dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb), dbs), uow,
       journeysRepo, await createTestJourneyContributorsRepo(testDb),
       await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
       // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.

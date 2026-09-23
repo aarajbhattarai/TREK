@@ -33,6 +33,9 @@ import { Trips } from '../../db/entities/Trips.entity';
 import { TrekPhotoCacheMeta } from '../../db/entities/TrekPhotoCacheMeta.entity';
 import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
 import { Users } from '../../db/entities/Users.entity';
+import { Journeys } from '../../db/entities/Journeys.entity';
+import { JourneyContributors } from '../../db/entities/JourneyContributors.entity';
+import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';
 
 /**
  * Memories (photo-providers) domain — mounted at /api/integrations/memories.
@@ -63,12 +66,16 @@ import { Users } from '../../db/entities/Users.entity';
  * this module) and `Users` (owned elsewhere, reached the same way `Trips`
  * is above) are added for `UnifiedMemoriesService`/`ImmichService`/
  * `SynologyService`/`MemoriesMcp`'s `@InjectRepository` constructor params
- * (Plan 3e Task 7).
+ * (Plan 3e Task 7). `Journeys`/`JourneyContributors`/`JourneyPhotos` are
+ * Plan 3g Task 4's own addition: `MemoriesAccessService`'s MA1/MA2/MA6
+ * (`canAccessUserPhoto`/`canAccessTrekPhoto`'s journey half) now inject
+ * `JourneysRepository`/`JourneyContributorsRepository`/
+ * `JourneyPhotosRepository` directly instead of raw `DatabaseService` reads.
  */
 @Module({
   imports: [
     NotificationsModule, AddonsModule, AuditModule, TrekPhotosModule, RealtimeModule, SchedulingModule, StorageModule,
-    MikroOrmModule.forFeature([TripPhotos, TrekPhotos, TripAlbumLinks, Trips, TrekPhotoCacheMeta, PhotoProviders, Users]),
+    MikroOrmModule.forFeature([TripPhotos, TrekPhotos, TripAlbumLinks, Trips, TrekPhotoCacheMeta, PhotoProviders, Users, Journeys, JourneyContributors, JourneyPhotos]),
   ],
   controllers: [UnifiedMemoriesController, ImmichMemoriesController, SynologyMemoriesController],
   providers: [

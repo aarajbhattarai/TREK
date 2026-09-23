@@ -106,7 +106,7 @@ beforeAll(async () => {
   entryPhotosRepoDirect = await createTestJourneyEntryPhotosRepo(testDb);
   placesRepoDirect = await createTestPlacesRepo(testDb);
   svc = new JourneyDomainService(
-    dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(testDb),
+    dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), photosRepoDirect, dbs), await createTestUnitOfWork(testDb),
     journeysRepoDirect, contributorsRepoDirect, journeyTripsRepoDirect, entriesRepoDirect, tripsRepoDirect,
     // Plan 3g Task 2's own append to this SAME construction call — the two
     // repositories this task builds, plus `PlacesRepository` (JG44) — per

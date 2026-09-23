@@ -49,10 +49,16 @@ import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.se
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import type { BudgetItemsRepository } from '../../../src/db/repositories/BudgetItems.repository';
+import type { JourneyShareTokensRepository } from '../../../src/db/repositories/JourneyShareTokens.repository';
+import type { JourneysRepository } from '../../../src/db/repositories/Journeys.repository';
+import type { JourneyEntriesRepository } from '../../../src/db/repositories/JourneyEntries.repository';
+import type { JourneyContributorsRepository } from '../../../src/db/repositories/JourneyContributors.repository';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourneyContributorsRepo } from '../../helpers/journey-repos';
+import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
 
 const dbs = new DatabaseService(testDb);
 
@@ -69,7 +75,12 @@ beforeAll(async () => {
   vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
-  svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
+  svc = new UserCleanupService(
+    dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection),
+    // Plan 3g Task 4 constructor-ripple: UC7-10's repositories.
+    await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection),
+    await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+  );
 });
 
 const installPlugin = (id: string, permissions: string[] | null) => {
@@ -164,8 +175,14 @@ describe('erasePluginUserData', () => {
     const slim = new (require('better-sqlite3'))(':memory:');
     slim.exec('CREATE TABLE users (id INTEGER PRIMARY KEY)');
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
-    // `erasePluginUserData` (this test's only call) never reaches `budgetItemsRepo` (UC5's own method) — a stub is enough.
-    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim), {} as unknown as BudgetItemsRepository);
+    // `erasePluginUserData` (this test's only call) never reaches `budgetItemsRepo`
+    // (UC5's own method) or the Plan 3g Task 4 journey repositories (UC7-10) —
+    // stubs are enough, and the slim schema has no journey tables to bind against.
+    const slimSvc = new UserCleanupService(
+      new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim), {} as unknown as BudgetItemsRepository,
+      {} as unknown as JourneyShareTokensRepository, {} as unknown as JourneysRepository,
+      {} as unknown as JourneyEntriesRepository, {} as unknown as JourneyContributorsRepository,
+    );
 
     await expect(slimSvc.erasePluginUserData(1)).resolves.toBeUndefined();
 
@@ -205,6 +222,46 @@ describe('deleteUserCompletely', () => {
     expect(testDb.prepare('SELECT COUNT(*) AS c FROM journey_entries').get()).toEqual({ c: 0 });
   });
 
+  it('USER-CLEANUP-010: GDPR erasure — UC7-10 remove every journey-table row the departing user reaches, and only those', async () => {
+    const { user: victim } = createUser(testDb, { username: 'gdpr-victim' });
+    const { user: second } = createUser(testDb, { username: 'gdpr-second' });
+    const { user: third } = createUser(testDb, { username: 'gdpr-third' });
+
+    // Victim owns a journey with an entry, a gallery photo and a share token
+    // they created — every one of these is reached by UC8's FK cascade.
+    const ownJourney = createJourney(victim.id, 'Mine');
+    testDb.prepare("INSERT INTO journey_entries (journey_id, author_id, type, title, entry_date, created_at, updated_at) VALUES (?, ?, 'entry', 'Own entry', '2026-01-01', 0, 0)")
+      .run(ownJourney, victim.id);
+    const photoId = Number(testDb.prepare("INSERT INTO trek_photos (provider, owner_id, created_at) VALUES ('local', ?, 0)").run(victim.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(ownJourney, photoId);
+    testDb.prepare("INSERT INTO journey_share_tokens (journey_id, token, created_by) VALUES (?, 'own-tok', ?)").run(ownJourney, victim.id);
+
+    // Victim contributes (editor) to a SECOND user's journey — not owned, so UC8's cascade never reaches it; UC10 must.
+    const secondJourney = createJourney(second.id, 'Theirs');
+    testDb.prepare("INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, 'editor', 0)").run(secondJourney, victim.id);
+
+    // Victim authored an entry, and separately created a share link, on a THIRD user's journey — UC9/UC7 must catch these.
+    const thirdJourney = createJourney(third.id, 'Elsewhere');
+    testDb.prepare("INSERT INTO journey_entries (journey_id, author_id, type, title, entry_date, created_at, updated_at) VALUES (?, ?, 'entry', 'Guest entry', '2026-01-02', 0, 0)")
+      .run(thirdJourney, victim.id);
+    testDb.prepare("INSERT INTO journey_share_tokens (journey_id, token, created_by) VALUES (?, 'third-tok', ?)").run(thirdJourney, victim.id);
+
+    await svc.deleteUserCompletely(victim.id);
+
+    // Everything the departing user owned is gone (UC8 + cascade).
+    expect(testDb.prepare('SELECT id FROM journeys WHERE id = ?').get(ownJourney)).toBeUndefined();
+    expect(testDb.prepare('SELECT COUNT(*) AS c FROM journey_entries WHERE journey_id = ?').get(ownJourney)).toEqual({ c: 0 });
+    expect(testDb.prepare('SELECT COUNT(*) AS c FROM journey_photos WHERE journey_id = ?').get(ownJourney)).toEqual({ c: 0 });
+    expect(testDb.prepare('SELECT COUNT(*) AS c FROM journey_share_tokens WHERE journey_id = ?').get(ownJourney)).toEqual({ c: 0 });
+    // Everything the departing user merely touched on OTHER users' journeys is gone too (UC7/UC9/UC10).
+    expect(testDb.prepare('SELECT id FROM journey_entries WHERE journey_id = ? AND author_id = ?').get(thirdJourney, victim.id)).toBeUndefined();
+    expect(testDb.prepare('SELECT user_id FROM journey_contributors WHERE journey_id = ? AND user_id = ?').get(secondJourney, victim.id)).toBeUndefined();
+    expect(testDb.prepare('SELECT id FROM journey_share_tokens WHERE journey_id = ? AND created_by = ?').get(thirdJourney, victim.id)).toBeUndefined();
+    // Nothing extra removed: the other two users' own journeys survive.
+    expect(testDb.prepare('SELECT id FROM journeys WHERE id = ?').get(secondJourney)).toBeDefined();
+    expect(testDb.prepare('SELECT id FROM journeys WHERE id = ?').get(thirdJourney)).toBeDefined();
+  });
+
   it('USER-CLEANUP-008: re-derives the expense divisor before the member rows cascade away', async () => {
     const { user: owner } = createUser(testDb);
     const { user: victim } = createUser(testDb, { username: 'victim' });
@@ -234,7 +291,11 @@ describe('deleteUserCompletely', () => {
     const usersRepo = await createTestUsersRepo(testDb);
     const deleteByIdSpy = vi.spyOn(usersRepo, 'deleteById').mockRejectedValue(new Error('boom'));
     try {
-      await expect(new UserCleanupService(dbs, budget, await createTestUnitOfWork(testDb), usersRepo, await createTestBudgetItemsRepo(testDb)).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
+      await expect(new UserCleanupService(
+        dbs, budget, await createTestUnitOfWork(testDb), usersRepo, await createTestBudgetItemsRepo(testDb),
+        await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb),
+        await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+      ).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
 
       expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeDefined();
       expect((testDb.prepare('SELECT invited_by FROM trip_members WHERE user_id = ?').get(owner.id) as { invited_by: number | null }).invited_by).toBe(victim.id);

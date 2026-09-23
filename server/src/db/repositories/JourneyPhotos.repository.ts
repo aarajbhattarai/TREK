@@ -117,6 +117,58 @@ export class JourneyPhotosRepository extends TrekRepository<JourneyPhotos> {
     return await this.count({ journey: journeyId });
   }
 
+  /**
+   * PH10 (Plan 3g Task 4 survivor, `TrekPhotoRegistrationService.deleteIfOrphan`)
+   * — `SELECT 1 FROM journey_photos WHERE photo_id = ?`: the `journey_photos`
+   * half of PH10's split orphan-check (the `trip_photos` half is 3e's own,
+   * already converted onto `TripPhotosRepository.existsForPhoto`).
+   */
+  async existsForPhoto(photoId: number): Promise<boolean> {
+    const row = await this.qb('gp').select(['gp.id']).where({ photo: photoId }).execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /**
+   * MA1 (Plan 3g Task 4 survivor, `MemoriesAccessService.canAccessUserPhoto`'s
+   * journey-photo half) — `SELECT gp.journey_id FROM journey_photos gp JOIN
+   * trek_photos tkp ON tkp.id=gp.photo_id WHERE tkp.asset_id=? AND
+   * tkp.provider=? AND tkp.owner_id=? LIMIT 1`. Security-critical: returns
+   * only the FIRST matching row's `journey_id` (the legacy statement's own
+   * `LIMIT 1`), not every journey the asset might appear in — preserved
+   * exactly, not "fixed" into a list.
+   */
+  async findJourneyIdForAsset(assetId: string, provider: string, ownerId: number): Promise<number | undefined> {
+    const row = await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos as gp')
+      .innerJoin('trek_photos as tkp', 'tkp.id', 'gp.photo_id')
+      .select('gp.journey_id')
+      .where('tkp.asset_id', '=', assetId)
+      .where('tkp.provider', '=', provider)
+      .where('tkp.owner_id', '=', ownerId)
+      .executeTakeFirst();
+    return row?.journey_id;
+  }
+
+  /**
+   * MA6 (Plan 3g Task 4 survivor, `MemoriesAccessService.canAccessTrekPhoto`'s
+   * unified-photo-access read) — the outer `SELECT 1 FROM journey_photos gp
+   * WHERE gp.photo_id=?` half of the original correlated `EXISTS` statement;
+   * returns every DISTINCT `journey_id` a `journey_photos` row links this
+   * `trek_photos.id` to (a photo can be added to more than one journey's
+   * gallery), so the caller can probe owner-or-contributor access against
+   * each one in turn — same loop shape `MemoriesAccessService`'s own MA5
+   * (`sharedTripIds`/`findAccessible`) already uses for the trip-photo half.
+   */
+  async listJourneyIdsForPhoto(photoId: number): Promise<number[]> {
+    const rows = await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos')
+      .select('journey_id')
+      .distinct()
+      .where('photo_id', '=', photoId)
+      .execute();
+    return rows.map((r) => r.journey_id);
+  }
+
   /** JG88/JG99 — `ensureInGallery`'s and `uploadGalleryPhotos`'s next-sort-order probe: `SELECT MAX(sort_order) as m FROM journey_photos WHERE journey_id = ?`, one statement text. */
   async maxSortOrder(journeyId: number): Promise<number | null> {
     const row = await this.kysely<GalleryKyselyDB>()

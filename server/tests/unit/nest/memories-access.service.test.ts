@@ -64,13 +64,18 @@ import { Trips } from '../../../src/db/entities/Trips.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripAlbumLinks } from '../../../src/db/entities/TripAlbumLinks.entity';
+import { Journeys } from '../../../src/db/entities/Journeys.entity';
+import { JourneyContributors } from '../../../src/db/entities/JourneyContributors.entity';
+import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
 import { sharedTestOrm } from '../../helpers/test-uow';
 
-// Plan 3c Task 0b / Plan 3e Task 6: `access` used to be constructed at module
-// load, before any `beforeAll` could resolve a real `EntityManager` — it now
-// also needs `TripPhotosRepository`/`TrekPhotosRepository`/
-// `TripAlbumLinksRepository`/`TripsRepository` (the ORM ones), which the
-// same `sharedTestOrm(testDb)` this file already used for the
+// Plan 3c Task 0b / Plan 3e Task 6 / Plan 3g Task 4: `access` used to be
+// constructed at module load, before any `beforeAll` could resolve a real
+// `EntityManager` — it now also needs `TripPhotosRepository`/
+// `TrekPhotosRepository`/`TripAlbumLinksRepository`/`TripsRepository` (the
+// ORM ones) and, for MA1/MA2/MA6's journey half, `JourneysRepository`/
+// `JourneyContributorsRepository`/`JourneyPhotosRepository`, all of which
+// the same `sharedTestOrm(testDb)` this file already used for the
 // `canAccessTrip` patch hands out. Built inside the async `beforeAll` below.
 let access: MemoriesAccessService;
 // A typed forwarder, not a `.bind` alias: a bound alias is typed `any`, which
@@ -89,7 +94,7 @@ beforeAll(async () => {
   vi.spyOn(DatabaseService.prototype, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
     t.em.getRepository(Trips).findAccessible(tripId, userId),
   );
-  access = new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips));
+  access = new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos));
 });
 
 beforeEach(() => {
@@ -396,6 +401,34 @@ describe('canAccessUserPhoto', () => {
     expect(await access.canAccessUserPhoto(contributor.id, owner.id, '0', 'j-asset', 'immich')).toBe(true);
   });
 
+  it('MEM-ACCESS-006b: tripId "0" — the journey OWNER (not the photo\'s own owner_id) passes via MA2\'s owner branch, not the trivial requestingUserId===ownerUserId shortcut', async () => {
+    const { user: journeyOwner } = createUser(testDb, { username: 'journey-owner' });
+    const { user: uploader } = createUser(testDb, { username: 'uploader-6b' });
+    const journeyId = makeJourney(journeyOwner.id);
+    const photoId = Number(testDb.prepare(
+      "INSERT INTO trek_photos (provider, asset_id, owner_id) VALUES ('immich', 'j-asset-owner', ?)"
+    ).run(uploader.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
+
+    // requestingUserId (journeyOwner) !== ownerUserId (uploader) — MA1's read is
+    // scoped to tkp.owner_id=uploader, so the trivial owner shortcut at the top
+    // of canAccessUserPhoto never fires; access is decided by MA2's owner branch.
+    expect(await access.canAccessUserPhoto(journeyOwner.id, uploader.id, '0', 'j-asset-owner', 'immich')).toBe(true);
+  });
+
+  it('MEM-ACCESS-006c: tripId "0" — a VIEWER-role contributor also passes (MA2 checks any role, not just editor)', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: viewer } = createUser(testDb, { username: 'viewer-6c' });
+    const journeyId = makeJourney(owner.id);
+    const photoId = Number(testDb.prepare(
+      "INSERT INTO trek_photos (provider, asset_id, owner_id) VALUES ('immich', 'j-asset-viewer', ?)"
+    ).run(owner.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
+    testDb.prepare("INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, 'viewer', 0)").run(journeyId, viewer.id);
+
+    expect(await access.canAccessUserPhoto(viewer.id, owner.id, '0', 'j-asset-viewer', 'immich')).toBe(true);
+  });
+
   it('MEM-ACCESS-007: tripId "0" refuses someone with no journey link', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb, { username: 'stranger' });
@@ -461,6 +494,21 @@ describe('canAccessTrekPhoto', () => {
     testDb.prepare("INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, 'editor', 0)").run(journeyId, contributor.id);
 
     expect(await access.canAccessTrekPhoto(contributor.id, photoId)).toBe(true);
+  });
+
+  it('MEM-ACCESS-014b: a VIEWER-role journey contributor also passes MA6\'s unified check (any role, not just editor)', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: viewer } = createUser(testDb, { username: 'viewer-14b' });
+    const { user: stranger } = createUser(testDb, { username: 'stranger-14b' });
+    const journeyId = makeJourney(owner.id);
+    const photoId = Number(testDb.prepare(
+      "INSERT INTO trek_photos (provider, asset_id, owner_id) VALUES ('immich', 'j-trek-viewer', ?)"
+    ).run(owner.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
+    testDb.prepare("INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, 'viewer', 0)").run(journeyId, viewer.id);
+
+    expect(await access.canAccessTrekPhoto(viewer.id, photoId)).toBe(true);
+    expect(await access.canAccessTrekPhoto(stranger.id, photoId)).toBe(false);
   });
 
   it('MEM-ACCESS-015: an ownerless local upload is reachable only through its journey', async () => {
@@ -551,6 +599,47 @@ describe('canAccessTrekPhoto — MA5 parity (TripsRepository.findAccessible rewr
 
     expect(await access.canAccessTrekPhoto(tripOwner.id, photoId)).toBe(legacyMA5(photoId, tripOwner.id));
     expect(await access.canAccessTrekPhoto(tripOwner.id, photoId)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MA1/MA2/MA6 — the journey half of the cross-domain photo-access checks
+// (Plan 3g Task 4), onto `JourneysRepository.isOwnedByUser`/
+// `JourneyContributorsRepository.existsForUser` via the private
+// `ownerOrContributor` helper. MEM-ACCESS-006/006b/006c/014/014b above
+// already cover owner (006b), editor (006/014) and viewer (006c/014b)
+// contributors passing, and MEM-ACCESS-007/008/016 cover a stranger/no-link
+// case refused — this block is the explicit mutation-proof line item the
+// plan's "security-critical" flag on these three sites calls for.
+//
+// Mutation proof (performed once by hand, not run in CI): editing
+// `MemoriesAccessService.ownerOrContributor` from
+//   `if (await this.journeys.isOwnedByUser(...)) return true; return await
+//   this.journeyContributors.existsForUser(...);`
+// to an AND (`return (await this.journeys.isOwnedByUser(...)) &&
+// (await this.journeyContributors.existsForUser(...));`) — collapsing the
+// owner-OR-contributor union into an owner-AND-contributor intersection —
+// turns MEM-ACCESS-006 (an editor who is NOT also the owner) and
+// MEM-ACCESS-006c (a viewer who is NOT also the owner) red: both contributors
+// incorrectly lose access, since neither is also a row in `journeys` for that
+// id. MEM-ACCESS-006b (the journey owner, who has no `journey_contributors`
+// row of their own reachable through this photo's read) would ALSO go red
+// under the same mutation. Confirmed by hand; the fix is reverted here.
+// ---------------------------------------------------------------------------
+
+describe('canAccessUserPhoto/canAccessTrekPhoto — MA1/MA2/MA6 mutation-proof coverage', () => {
+  it('MEMACCESS-MA2-001: an editor who is not the journey owner still passes (breaks under an owner-AND-contributor mutation)', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: editor } = createUser(testDb, { username: 'ma2-editor' });
+    const journeyId = makeJourney(owner.id);
+    const photoId = Number(testDb.prepare(
+      "INSERT INTO trek_photos (provider, asset_id, owner_id) VALUES ('immich', 'ma2-editor-asset', ?)"
+    ).run(owner.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
+    testDb.prepare("INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, 'editor', 0)").run(journeyId, editor.id);
+
+    expect(await access.canAccessUserPhoto(editor.id, owner.id, '0', 'ma2-editor-asset', 'immich')).toBe(true);
+    expect(await access.canAccessTrekPhoto(editor.id, photoId)).toBe(true);
   });
 });
 
