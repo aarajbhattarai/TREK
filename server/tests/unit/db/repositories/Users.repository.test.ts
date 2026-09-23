@@ -796,13 +796,14 @@ describe('UsersRepository — TripMembersService (Plan 3c Task 6)', () => {
       expect((await users.findOwnerSummary(user.id))?.avatar).toBe('me.png');
     });
 
-    // D-shape (rule 20): `findOwnerSummary` is a `qb().execute('get', false)`
-    // projection, which never hydrates an entity into the identity map by
-    // construction — proven anyway, the same "not required, proven
-    // regardless" shape `AssignmentParticipantsRepository`'s D-shape tests
-    // document. The FIRST, wider setup read passes `{ disableIdentityMap:
-    // false }` explicitly per the program rule.
-    it('USERSREPO-062 (D-shape): a display_name written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+    // Task 9 fix wave (B-M3): relabelled. `findOwnerSummary` is a
+    // `qb().execute('get', false)` projection, which never hydrates an
+    // entity into the identity map by construction, and the base default
+    // leaves the identity map disabled for every read anyway — there is no
+    // live identity-map entry here to bypass. This proves a DB round-trip,
+    // not an identity-map bypass. The FIRST, wider setup read still passes
+    // `{ disableIdentityMap: false }` explicitly per the program rule.
+    it('USERSREPO-062 (fresh after a raw UPDATE, not D-shape): a display_name written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
       const { user } = createUser(testDb, { username: 'fresh-owner' });
       await t.repo(Users).find({}, { disableIdentityMap: false }); // populate the identity map with an unrelated read
       testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Fresh Name', user.id);
@@ -875,6 +876,26 @@ describe('UsersRepository — TripMembersService (Plan 3c Task 6)', () => {
       testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
       expect(await users.findIdEmailGuest(user.id)).toEqual({ id: user.id, email: 'target@example.test', is_guest: 1 });
       expect(await users.findIdEmailGuest(999999)).toBeNull();
+    });
+
+    // Task 9 fix wave (B-M3): `findIdEmailGuest` is the third PK-only
+    // `findOne` this plan added (`{ id }` alone, nothing else) — a genuine
+    // rule 20/21 D-shape case, the TM10 guest gate. USERSREPO-066 above
+    // already catches the M7 identity-map-default mutation (it re-reads
+    // after a raw UPDATE without an intervening wider read), but the review
+    // asked for the explicit labelled case anyway.
+    it('USERSREPO-073 (D-shape): an is_guest flip written after an unrelated identity-map read is visible in the next findIdEmailGuest call, in one query (disableIdentityMap regression)', async () => {
+      const { user } = createUser(testDb, { email: 'guest-gate@example.test' });
+      // rule 20: the FIRST, wider setup read passes `disableIdentityMap:
+      // false` explicitly and carries the column the later write targets
+      // (`is_guest`) — a PK-only `findOne` on `id` alone, the exact shape
+      // `findIdEmailGuest` itself uses.
+      await t.repo(Users).findOne({ id: user.id }, { disableIdentityMap: false });
+      testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
+
+      const { value, queries } = await withQueryCount(() => users.findIdEmailGuest(user.id));
+      expect(value).toEqual({ id: user.id, email: 'guest-gate@example.test', is_guest: 1 });
+      expect(queries).toBe(1);
     });
   });
 

@@ -1,8 +1,24 @@
 /**
  * Trips module e2e — exercises the migrated /api/trips aggregate-root endpoints
- * through the real JwtAuthGuard against a temp SQLite db. TripsService runs its
- * real (DI-native) SQL — trips/trip_members/days DDL below; auditLog, demo, the
- * permission check, canAccessTrip and the WebSocket broadcast are mocked.
+ * through the real JwtAuthGuard against a real migrated-and-seeded temp SQLite
+ * db (createSnapshotTestDb(), Task 9 fix wave M6 — this used to hand-roll
+ * about two dozen CREATE TABLEs, a second hand-maintained schema copy that
+ * diverged from the real migrated one in ways no `SELECT *`/`toMatchObject`
+ * read could see: the hand-rolled `journey_entries` table had no
+ * `author_id`/`entry_date` NOT NULL columns and no FK to a real `journeys`
+ * row, so the delete-trip test's inserts would have failed loudly against
+ * the real schema — see that test's setup below for the fix). TripsService
+ * and every domain `bundle()` touches (days, places, packing, files,
+ * reservations, todos) now run their real SQL over the same migrated
+ * connection; trip access resolves through `TripsRepository.findAccessible`
+ * via the real request-scoped `EntityManager` `createTestMikroOrmModule`
+ * wires in, not a hand-rolled `canAccessTrip`/`getPlaceWithTags` mock (the
+ * legacy overrides this file used to export from `db/database.ts` — deleted
+ * there since Plan 3c Task 0b; a stale mock here would silently do nothing,
+ * not fail loudly, which is worse than removing it — the same reasoning
+ * `days.e2e.test.ts`'s identical comment gives). Only the permission check,
+ * `BudgetService` (the budget fold's own container spy, unrelated to this
+ * conversion) and the WebSocket broadcast stay mocked.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockInstance } from 'vitest';
 import request from 'supertest';
@@ -11,120 +27,20 @@ import type { Server } from 'http';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
-import { seedUser, sessionCookie } from './harness';
+import { sessionCookie } from './harness';
 import { MAX_TRIP_DAYS } from '@trek/shared';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0,
-    avatar TEXT, display_name TEXT, is_guest INTEGER NOT NULL DEFAULT 0);`);
-  // TripsService runs its real SQL (DI-native since the trip fold) — full trip
-  // column set for TRIP_SELECT + create/update/delete, plus the membership and
-  // day-content tables generateDays/listMembers/deleteTrip touch.
-  tmp.exec(`CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL,
-    description TEXT, start_date TEXT, end_date TEXT, currency TEXT DEFAULT 'EUR', is_archived INTEGER DEFAULT 0,
-    cover_image TEXT, reminder_days INTEGER DEFAULT 3, feed_token TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE trip_members (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL, invited_by INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE day_assignments (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
-    place_id INTEGER NOT NULL, order_index INTEGER DEFAULT 0, notes TEXT, reservation_status TEXT,
-    reservation_notes TEXT, reservation_datetime TEXT, assignment_time TEXT, assignment_end_time TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE day_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
-    trip_id INTEGER NOT NULL, text TEXT, time TEXT, icon TEXT, sort_order INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  // deleteTrip cleans up synced journey entries before dropping the trip row.
-  tmp.exec(`CREATE TABLE journey_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, journey_id INTEGER,
-    source_trip_id INTEGER, source_place_id INTEGER, source_assignment_id INTEGER, type TEXT NOT NULL);`);
-  // bundle()'s todoItems now runs TodoService's real SQL (DI-injected, no mock).
-  tmp.exec(`CREATE TABLE todo_items (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
-    name TEXT NOT NULL, checked INTEGER NOT NULL DEFAULT 0, category TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
-    due_date TEXT, description TEXT, assigned_user_id INTEGER, priority INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  // bundle()'s packingItems now runs PackingService's real SQL (DI-injected, no
-  // mock) — viewer-scoped (#858), so the recipients table must exist too.
-  tmp.exec(`CREATE TABLE packing_items (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
-    name TEXT NOT NULL, checked INTEGER DEFAULT 0, category TEXT, sort_order INTEGER DEFAULT 0,
-    weight_grams INTEGER, bag_id INTEGER, quantity INTEGER NOT NULL DEFAULT 1,
-    is_private INTEGER NOT NULL DEFAULT 0, owner_id INTEGER, updated_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE packing_item_recipients (item_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
-    PRIMARY KEY (item_id, user_id));`);
-  // bundle()'s files now runs FilesService's real SQL (DI-injected, no mock) —
-  // empty tables satisfy the FILE_SELECT joins and the file_links batch.
-  tmp.exec(`CREATE TABLE trip_files (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
-    place_id INTEGER, reservation_id INTEGER, message_id INTEGER, filename TEXT NOT NULL,
-    original_name TEXT NOT NULL, file_size INTEGER, mime_type TEXT, description TEXT,
-    uploaded_by INTEGER, starred INTEGER DEFAULT 0,
-    deleted_at DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE file_links (id INTEGER PRIMARY KEY AUTOINCREMENT, file_id INTEGER NOT NULL,
-    reservation_id INTEGER, assignment_id INTEGER, place_id INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  // bundle()'s reservations now runs ReservationsService's real SQL
-  // (DI-injected, no mock) — the joined list query needs the full reservation
-  // table set (trimmed from src/db/schema.ts; accommodation_id is TEXT there).
-  tmp.exec(`CREATE TABLE reservations (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER, title TEXT,
-    day_id INTEGER, end_day_id INTEGER, place_id INTEGER, assignment_id INTEGER, type TEXT,
-    status TEXT DEFAULT 'pending', reservation_time TEXT, reservation_end_time TEXT, location TEXT,
-    confirmation_number TEXT, notes TEXT, url TEXT, accommodation_id TEXT, metadata TEXT,
-    needs_review INTEGER DEFAULT 0, day_plan_position REAL, external_source TEXT, sync_enabled INTEGER,
-    ingest_state TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec('CREATE TABLE days (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, day_number INTEGER, date TEXT);');
-  // Task 2 review M1: DaysRepository.listByTrip (a plain `em.find(Days)`)
-  // needs this table to exist — Days.entity.ts declares an inverse 1:1 to
-  // it (`roadtrip_day_tracks: () => p.oneToOne(RoadtripDayTracks).ref()
-  // .mappedBy('day')`), so MikroORM's find() resolves the relation's
-  // presence against the real table even though the property is hidden.
-  // Columns match the real migration
-  // (`Migration20200101032900_which_imported_track_a_day_s_drive.ts`).
-  tmp.exec(`CREATE TABLE roadtrip_day_tracks (day_id INTEGER PRIMARY KEY, place_id INTEGER NOT NULL,
-    stray_km REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE places (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, name TEXT,
-    image_url TEXT, address TEXT, lat REAL, lng REAL, category_id INTEGER, description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  // PlacesService.list joins categories and batch-loads tags/ratings.
-  tmp.exec('CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, icon TEXT);');
-  // Plan 3c Task 1: TagsRepository.listForPlaces (QH1) selects `user_id`
-  // explicitly — see places.e2e.test.ts's identical comment.
-  tmp.exec('CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT, color TEXT, created_at DATETIME);');
-  tmp.exec('CREATE TABLE place_tags (place_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY (place_id, tag_id));');
-  tmp.exec('CREATE TABLE place_ratings (place_id INTEGER NOT NULL, user_id INTEGER NOT NULL, rating INTEGER, created_at DATETIME, UNIQUE(place_id, user_id));');
-  tmp.exec(`CREATE TABLE day_accommodations (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
-    place_id INTEGER, start_day_id INTEGER, end_day_id INTEGER, check_in TEXT, check_in_end TEXT,
-    check_out TEXT, confirmation TEXT, notes TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE reservation_day_positions (reservation_id INTEGER NOT NULL, day_id INTEGER NOT NULL,
-    position REAL, PRIMARY KEY (reservation_id, day_id));`);
-  tmp.exec(`CREATE TABLE reservation_endpoints (id INTEGER PRIMARY KEY AUTOINCREMENT, reservation_id INTEGER NOT NULL,
-    role TEXT, sequence INTEGER, name TEXT, code TEXT, lat REAL NOT NULL, lng REAL NOT NULL,
-    timezone TEXT, local_time TEXT, local_date TEXT);`);
-  tmp.exec(`CREATE TABLE reservation_travelers (reservation_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
-    PRIMARY KEY (reservation_id, user_id));`);
-  // AuditService now runs its real INSERT (DI-injected, no mock) — slim
-  // audit_log mirror (no FKs), same shape as plugin-runtime.test.ts.
-  tmp.exec(`CREATE TABLE audit_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    user_id INTEGER, action TEXT NOT NULL, resource TEXT, details TEXT, ip TEXT);`);
-  // StorageRegistryService (behind StorageModule, now in this module chain) reads
-  // this at onModuleInit.
-  tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
-  return { db: tmp };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-const { canAccessTrip } = vi.hoisted(() => ({ canAccessTrip: vi.fn() }));
-vi.mock('../../src/db/database', () => ({
-  db, canAccessTrip, getPlaceWithTags: vi.fn(), closeDb: () => {}, reinitialize: () => {},
-}));
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn() }));
 // The audit domain is DI-native now: writeAudit runs for real against the temp
 // db's audit_log table; only the file logger is silenced.
 vi.mock('../../src/nest/audit/audit-log.logger', () => ({ LOG_LEVEL: 'error', logInfo: vi.fn(), logDebug: vi.fn(), logError: vi.fn(), logWarn: vi.fn() }));
 vi.mock('../../src/nest/common/demo', () => ({ isDemoEmail: vi.fn(() => false) }));
 
+import { db } from '../../src/db/database';
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
 
 // Since the permissions DI migration, the check is a spy on the container's
@@ -132,13 +48,12 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 let checkPermission: MockInstance;
 
 // TripsService itself is real since the trip fold — no tripService mock; the
-// trips/trip_members/days DDL above serves its SQL.
+// real migrated trips/trip_members/days tables serve its SQL.
 // bundle()'s days + accommodations now run DaysService's real SQL (DI-injected,
-// no mock) — the days/places/day_accommodations/reservations DDL above serves them.
-// bundle()'s places now run PlacesService's real SQL (DI-injected since the
-// place fold, no mock) — the places/categories/tags DDL above serves them.
-// bundle()'s budget items come from the DI-injected BudgetService since the
-// budget fold — stubbed via a container spy in beforeAll (no budget DDL here).
+// no mock). bundle()'s places now run PlacesService's real SQL (DI-injected
+// since the place fold, no mock). bundle()'s budget items come from the
+// DI-injected BudgetService since the budget fold — stubbed via a container
+// spy in beforeAll (unrelated to this file's schema conversion).
 
 import { BudgetService } from '../../src/nest/budget/budget.service';
 import { TripsModule } from '../../src/nest/trips/trips.module';
@@ -160,7 +75,12 @@ describe('Trips e2e (real auth guard + temp SQLite)', () => {
   }
 
   beforeAll(async () => {
-    seedUser(db as never, { id: 1 });
+    // harness.ts's seedUser() omits password_hash, which the real migrated
+    // schema requires NOT NULL (days.e2e.test.ts/addons.e2e.test.ts hit the
+    // same thing) — a raw insert here instead.
+    db.prepare(
+      "INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (1, 'e2e-user', 'e2e@example.test', 'x', 'user', 0)",
+    ).run();
     app = await build();
     checkPermission = vi.spyOn(app.get(PermissionsService), 'checkPermission');
     vi.spyOn(app.get(BudgetService), 'listBudgetItems').mockResolvedValue([]);
@@ -297,8 +217,25 @@ describe('Trips e2e (real auth guard + temp SQLite)', () => {
 
   it('200 delete cleans up synced journey entries (real SQL)', async () => {
     const tripId = seedTrip('D');
-    db.prepare("INSERT INTO journey_entries (journey_id, source_trip_id, type) VALUES (1, ?, 'skeleton')").run(tripId);
-    const filledId = Number(db.prepare("INSERT INTO journey_entries (journey_id, source_trip_id, type) VALUES (1, ?, 'story')").run(tripId).lastInsertRowid);
+    // Task 9 fix wave (M6) finding: the hand-rolled DDL this test used to run
+    // against had no NOT NULL/FK constraints on `journey_entries` at all
+    // (no `author_id`, no `entry_date`, no FK to a real `journeys` row) — a
+    // bare `INSERT INTO journey_entries (journey_id, source_trip_id, type)
+    // VALUES (1, ?, 'skeleton')` passed silently there. The real migrated
+    // schema requires `journey_id` to reference a real `journeys` row (NOT
+    // NULL FK) plus `author_id`/`entry_date`/`created_at`/`updated_at` NOT
+    // NULL — a real journey row (and those columns) are seeded here so the
+    // insert that used to pass for the wrong reason now passes for the real
+    // one. The assertions below are untouched, character-for-character.
+    const journeyId = Number(db.prepare(
+      "INSERT INTO journeys (user_id, title, created_at, updated_at) VALUES (1, 'J', 0, 0)",
+    ).run().lastInsertRowid);
+    db.prepare(
+      "INSERT INTO journey_entries (journey_id, source_trip_id, author_id, type, entry_date, created_at, updated_at) VALUES (?, ?, 1, 'skeleton', '2026-01-01', 0, 0)",
+    ).run(journeyId, tripId);
+    const filledId = Number(db.prepare(
+      "INSERT INTO journey_entries (journey_id, source_trip_id, author_id, type, entry_date, created_at, updated_at) VALUES (?, ?, 1, 'story', '2026-01-01', 0, 0)",
+    ).run(journeyId, tripId).lastInsertRowid);
     const res = await request(server).delete(`/api/trips/${tripId}`).set('Cookie', sessionCookie(1));
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });

@@ -227,10 +227,13 @@ describe('TripsRepository — TripMembersService / TripReadModelService (Plan 3c
       expect(await trips.findRaw('not-a-number')).toBeNull();
     });
 
-    // D-shape (rule 20): `findRaw` is a `qb().execute('get', false)`
-    // projection with an explicit `t.*` select, never hydrating an entity
-    // into the identity map by construction — proven anyway.
-    it('TRIPREPO-022 (D-shape): a title written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+    // Task 9 fix wave (B-M3): relabelled. `findRaw` is a `qb().execute('get',
+    // false)` projection with an explicit `t.*` select, which never
+    // hydrates an entity into the identity map by construction, and the
+    // base default leaves the identity map disabled for every read anyway —
+    // there is no live identity-map entry here to bypass. This proves a DB
+    // round-trip, not an identity-map bypass.
+    it('TRIPREPO-022 (fresh after a raw UPDATE, not D-shape): a title written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
       const { user } = createUser(testDb);
       const trip = createTrip(testDb, user.id, { title: 'Before' });
       await t.repo(Trips).find({}, { disableIdentityMap: false }); // populate the identity map with an unrelated read

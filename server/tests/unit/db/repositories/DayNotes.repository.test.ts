@@ -95,16 +95,21 @@ describe('DayNotesRepository.listByDayIds (DY4)', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Plan 3c Task 2 review (task-2-review.md, L2) — appended per the Task 3
-  // coordinator addendum: `listByDayIds` is `find`-based (unlike Task 3's own
-  // qb()/Kysely reads), so the identity-map guard is a real, provable
-  // guarantee here, not "proven regardless". The setup read passes `{
-  // disableIdentityMap: false }` so it genuinely caches a managed entity
-  // first — a bare `find({})` would be a no-op under the base's own default
-  // (`DAYREPO-018`'s vacuousness).
+  // Task 9 fix wave (B-M3): relabelled. The Task 2 review comment this
+  // replaces claimed `listByDayIds` being `find`-based made the identity-map
+  // guard "a real, provable guarantee here, not 'proven regardless'" — that
+  // is not true: `TrekRepository.find` applies `disableIdentityMap: true` to
+  // EVERY read by default (rule 14), `listByDayIds` never opts in, and its
+  // filter (`day: { $in: day_ids }`) is not a primary-key lookup regardless.
+  // There is no live identity-map entry here to bypass. The setup read still
+  // passes `{ disableIdentityMap: false }` so it genuinely caches a managed
+  // entity first (a bare `find({})` would be a no-op under the base's own
+  // default, the same vacuousness `DAYREPO-018` had) — but what this proves
+  // is a DB round-trip (a text write after an unrelated wider read is
+  // visible), not an identity-map bypass.
   // ---------------------------------------------------------------------------
 
-  it('NOTEREPO-008 (D-shape): a text write after an unrelated identity-map read is visible in the FIRST wider listByDayIds', async () => {
+  it('NOTEREPO-008 (fresh after a raw UPDATE, not D-shape): a text write after an unrelated identity-map read is visible in the FIRST wider listByDayIds', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -120,17 +125,32 @@ describe('DayNotesRepository.listByDayIds (DY4)', () => {
 // ── Plan 3c Task 8 (`TripsService.copy`, TP70/TP71) — additive ──────────────
 
 describe('DayNotesRepository.listByTrip (TP70)', () => {
-  it('NOTEREPO-009: every note of the trip, scoped by trip_id (not day_id)', async () => {
+  // Task 9 fix wave (B-M4, rule 19): widened from an ids-only assertion to
+  // full-row parity on a fully seeded fixture — every nullable column
+  // non-null in one row, null in the other, plus a unicode string and a
+  // '007'-style digit string — `toEqual(<the legacy SELECT * FROM day_notes
+  // WHERE trip_id = ? run raw>)`, so a renamed/dropped column or a changed
+  // row order would fail this, not just the id list.
+  it('NOTEREPO-009: every note of the trip, scoped by trip_id (not day_id) — toEqual(legacy) on a fully seeded fixture', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const other = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    const note = createDayNote(testDb, day.id, trip.id, { text: 'Keep' });
+
+    const insert = testDb.prepare('INSERT INTO day_notes (day_id, trip_id, text, time, icon, sort_order, color) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    // Row A: every nullable column non-null, a unicode string and a
+    // '007'-style digit string among the values.
+    const n1 = insert.run(day.id, trip.id, 'Keep — 日本 ☕️ 007', '09:00', '🗒️', 1, '#00ff00').lastInsertRowid as number;
+    // Row B: every nullable column NULL.
+    const n2 = insert.run(day.id, trip.id, 'Bare note', null, null, null, null).lastInsertRowid as number;
+
     const otherDay = createDay(testDb, other.id);
     createDayNote(testDb, otherDay.id, other.id, { text: 'Not this trip' });
 
     const rows = await notes.listByTrip(trip.id);
-    expect(rows.map((r) => r.id)).toEqual([note.id]);
+    const legacy = testDb.prepare('SELECT * FROM day_notes WHERE trip_id = ?').all(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([n1, n2]);
   });
 
   it('NOTEREPO-010: a trip with no notes returns []', async () => {

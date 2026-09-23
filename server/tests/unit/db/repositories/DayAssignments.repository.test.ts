@@ -171,7 +171,7 @@ describe('DayAssignmentsRepository — the DY1/DY3/AS1/AS3 projection', () => {
   // so, `listForDay` is `qb().execute('all', false)`, never `find`/
   // `findOne`, so it cannot return that cached entity regardless; this test
   // proves the projection's OWN freshness, not the identity-map guard.
-  it('ASSIGNPLACEREPO-008 (D-shape): a place rename after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+  it('ASSIGNPLACEREPO-008 (fresh after a raw UPDATE, not D-shape): a place rename after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -430,6 +430,34 @@ describe('DayAssignmentsRepository — AS10/AS11/AS13/AS14/AS19 (delete / order 
     const row = testDb.prepare('SELECT day_id, order_index FROM day_assignments WHERE id = ?').get(a.id);
     expect(row).toEqual({ day_id: target.id, order_index: 4 });
   });
+
+  // Task 9 fix wave (B-M5, the OAUTHTOKREPO-012/REANCHORDAY-003 rollback
+  // shape): `moveToDay` writes inside a `uow.transactional` body that then
+  // throws — the write must roll back with it. MUTATION-PROVED (see the
+  // report): removing the `throw` makes the post-rollback assertion below
+  // fail (the row WOULD have moved).
+  it('ASSIGNREPO-031: inside a uow.transactional that then ROLLS BACK, moveToDay is left un-moved', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const target = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
+
+    let caught: unknown;
+    try {
+      await withRequestContext(t.orm, async () => {
+        await uow.transactional(async () => {
+          await assignments.moveToDay(a.id, target.id, 4);
+          throw new Error('force rollback');
+        });
+      });
+    } catch (e) { caught = e; }
+    expect((caught as Error).message).toBe('force rollback');
+
+    const row = testDb.prepare('SELECT day_id, order_index FROM day_assignments WHERE id = ?').get(a.id);
+    expect(row).toEqual({ day_id: day.id, order_index: 0 });
+  });
 });
 
 describe('DayAssignmentsRepository.effectiveStart (AS16, Kysely)', () => {
@@ -541,6 +569,31 @@ describe('DayAssignmentsRepository — AS17/AS24/AS25/AS26/AS27 (single-column w
       .toEqual({ assignment_time: null, assignment_end_time: null });
   });
 
+  // Task 9 fix wave (B-M5, the OAUTHTOKREPO-012/REANCHORDAY-003 rollback
+  // shape): `setTimes` writes inside a `uow.transactional` body that then
+  // throws — the write must roll back with it.
+  it('ASSIGNREPO-032: inside a uow.transactional that then ROLLS BACK, setTimes is left unwritten', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+
+    let caught: unknown;
+    try {
+      await withRequestContext(t.orm, async () => {
+        await uow.transactional(async () => {
+          await assignments.setTimes(a.id, '09:00', '10:30');
+          throw new Error('force rollback');
+        });
+      });
+    } catch (e) { caught = e; }
+    expect((caught as Error).message).toBe('force rollback');
+
+    expect(testDb.prepare('SELECT assignment_time, assignment_end_time FROM day_assignments WHERE id = ?').get(a.id))
+      .toEqual({ assignment_time: null, assignment_end_time: null });
+  });
+
   it('ASSIGNREPO-020 (AS24, setEndDay): writes the 0/1 flag', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -585,7 +638,7 @@ describe('DayAssignmentsRepository — AS17/AS24/AS25/AS26/AS27 (single-column w
 // `{ disableIdentityMap: false }` so it genuinely caches the managed
 // assignment entity first (a bare `find({})` would be a no-op read under
 // the base's own default, the same vacuousness `DAYREPO-018` had).
-it('ASSIGNREPO-023 (D-shape): a notes write after an unrelated identity-map read is visible in findInTrip', async () => {
+it('ASSIGNREPO-023 (fresh after a raw UPDATE, not D-shape): a notes write after an unrelated identity-map read is visible in findInTrip', async () => {
   const { user } = createUser(testDb);
   const trip = createTrip(testDb, user.id);
   const day = createDay(testDb, trip.id);
@@ -645,19 +698,52 @@ describe('DayAssignmentsRepository.listItineraryForGpx (PL30)', () => {
 // ── Plan 3c Task 8 (`TripsService.copy`, TP48/TP49/TP57) — additive ─────────
 
 describe('DayAssignmentsRepository.listAllForTrip (TP48)', () => {
-  it('ASSIGNREPO-027: every assignment of the trip, no ORDER BY guarantee, scoped by the day→trip join', async () => {
+  // Task 9 fix wave (B-M4, rule 19): widened from an ids-only assertion to
+  // full-row parity on a fully seeded fixture — every nullable column
+  // non-null in one row, null in the other, plus a unicode string and a
+  // '007'-style digit string — `toEqual(<the legacy da.*-joined-through-d
+  // statement run raw>)`, so a renamed/dropped column or a changed row
+  // order would fail this, not just the id list.
+  it('ASSIGNREPO-027: every assignment of the trip, no ORDER BY guarantee, scoped by the day→trip join — toEqual(legacy) on a fully seeded fixture', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const other = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    const place = createPlace(testDb, trip.id);
-    const a1 = createDayAssignment(testDb, day.id, place.id);
+    const place = createPlace(testDb, trip.id, { name: 'Stop A' });
+    const bare = createPlace(testDb, trip.id, { name: 'Stop B' });
+    const accommodation = createDayAccommodation(testDb, trip.id, place.id, day.id, day.id);
+
+    const insert = testDb.prepare(`
+      INSERT INTO day_assignments (
+        day_id, place_id, order_index, notes, reservation_status, reservation_notes,
+        reservation_datetime, created_at, assignment_time, assignment_end_time,
+        leg_transport_mode, incoming_leg_transport_mode, end_day, accommodation_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    // Row A: every nullable column non-null, a unicode string and a
+    // '007'-style digit string among the values.
+    const a1 = insert.run(
+      day.id, place.id, 5, 'Notes — 日本 ☕️ 007', 'confirmed', 'resv notes 007',
+      '2026-01-01T10:00:00Z', '2026-01-01 09:00:00', '10:00', '11:00',
+      'walking', 'driving', 1, accommodation.id,
+    ).lastInsertRowid as number;
+
+    // Row B: every nullable column NULL (end_day is NOT NULL, given 0).
+    const a2 = insert.run(
+      day.id, bare.id, null, null, null, null,
+      null, null, null, null,
+      null, null, 0, null,
+    ).lastInsertRowid as number;
+
     const otherDay = createDay(testDb, other.id);
     const otherPlace = createPlace(testDb, other.id);
     createDayAssignment(testDb, otherDay.id, otherPlace.id);
 
     const rows = await assignments.listAllForTrip(trip.id);
-    expect(rows.map((r) => r.id)).toEqual([a1.id]);
+    const legacy = testDb.prepare('SELECT da.* FROM day_assignments da JOIN days d ON d.id = da.day_id WHERE d.trip_id = ?').all(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([a1, a2]);
   });
 
   it('ASSIGNREPO-028: an empty trip returns []', async () => {

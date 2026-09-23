@@ -207,11 +207,13 @@ describe('TripMembersRepository.listWithUserAndInviter (TM2, Plan 3c Task 6)', (
     expect(await tripMembers.listWithUserAndInviter(trip.id, owner.id)).toEqual([]);
   });
 
-  // D-shape (rule 20): a `qb().execute('all', false)` projection, which
-  // never hydrates an entity into the identity map by construction — proven
-  // anyway, the `AssignmentParticipantsRepository`/`PlaceRatingsRepository`
-  // precedent shape.
-  it('TMEMREPO-014 (D-shape): a member added after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+  // Task 9 fix wave (B-M3): relabelled. `listWithUserAndInviter` is a
+  // `qb().execute('all', false)` projection, and `TrekRepository` applies
+  // `disableIdentityMap: true` to every read by default anyway, so there is
+  // no live identity-map entry here to bypass — this proves a DB round-trip
+  // (a member added after an unrelated wider read is visible), not an
+  // identity-map bypass.
+  it('TMEMREPO-014 (fresh after a raw UPDATE, not D-shape): a member added after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
     const { user: owner } = createUser(testDb);
     const { user: fresh } = createUser(testDb, { username: 'fresh-member' });
     const trip = createTrip(testDb, owner.id);

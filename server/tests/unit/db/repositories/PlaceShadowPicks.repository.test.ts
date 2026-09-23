@@ -159,15 +159,14 @@ describe('PlaceShadowPicksRepository.deleteAll / purgeOlderThan', () => {
   });
 });
 
-// D-shape (Task 1 brief item): `page`/`totals`/`countBySource`/`countByLiveRank`
-// all go through `find`/`qb().execute()`, neither of which hydrates a
-// long-lived entity here — proven anyway for `page` (the one `find()`-based
-// read), the honest "not required, proven regardless" shape: `page()` itself
-// always passes the base's own `disableIdentityMap: true` default (it never
-// opts in), so a stale cached entity can't leak into it regardless of what
-// the setup read below does.
-describe('PlaceShadowPicksRepository — D-shape', () => {
-  it('PSPICKREPO-011: a row inserted after an unrelated identity-map read is visible in the FIRST wider projection (page)', async () => {
+// Task 9 fix wave (B-M3): relabelled. `page`/`totals`/`countBySource`/
+// `countByLiveRank` all go through `find`/`qb().execute()`; `TrekRepository`
+// applies `disableIdentityMap: true` to every read by default, so `page()`
+// never has a live identity-map entry to bypass in the first place — this
+// proves a DB round-trip (a row inserted after an unrelated wider read is
+// visible), not an identity-map bypass.
+describe('PlaceShadowPicksRepository — fresh after a raw UPDATE', () => {
+  it('PSPICKREPO-011 (fresh after a raw UPDATE, not D-shape): a row inserted after an unrelated identity-map read is visible in the FIRST wider projection (page)', async () => {
     await picks.insertPick(row({ query: 'seed' }));
     // rule 20: the FIRST, wider setup read passes `disableIdentityMap: false`
     // explicitly and carries the column the later write targets (`query`) —

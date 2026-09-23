@@ -28,19 +28,18 @@ const { testDb, dbMock } = vi.hoisted(() => {
     db,
     closeDb: () => {},
     reinitialize: () => {},
-    getPlaceWithTags: (placeId: any) => {
-      const place: any = db.prepare(`
-        SELECT p.*, c.name as category_name, c.color as category_color, c.icon as category_icon
-        FROM places p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?
-      `).get(placeId);
-      if (!place) return null;
-      const tags = db.prepare(`SELECT t.* FROM tags t JOIN place_tags pt ON t.id = pt.tag_id WHERE pt.place_id = ?`).all(placeId);
-      return { ...place, category: place.category_id ? { id: place.category_id, name: place.category_name, color: place.category_color, icon: place.category_icon } : null, tags };
-    },
+    // Task 9 fix wave (item 10, A-L4c follow-up): the `getPlaceWithTags`/
+    // `isOwner` fakes removed — `DatabaseService.getPlaceWithTags`/`.isOwner`
+    // already go through the real ORM
+    // (`entityManager().getRepository(Places/Trips)...`), never through this
+    // mocked `db/database` module's exports, so these module-level fakes
+    // were dead (nothing calls `getPlaceWithTags`/`isOwner` AS MODULE
+    // FUNCTIONS — see the `dbs.getPlaceWithTags` INSTANCE-METHOD spy below,
+    // which is a different, still-live thing: `AccommodationsService` calls
+    // `this.db.getPlaceWithTags(...)` on the injected `DatabaseService`
+    // instance, not on this module).
     canAccessTrip: (tripId: any, userId: number) =>
       db.prepare(`SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)`).get(userId, tripId, userId),
-    isOwner: (tripId: any, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
   return { testDb: db, dbMock: mock };
 });
@@ -150,15 +149,26 @@ let accommodations: Awaited<ReturnType<typeof accommodationsOver>>;
 let svc: Awaited<ReturnType<typeof makePlacesService>>;
 beforeAll(async () => {
   // Plan 3c Task 0b: `dbs` is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — the four
-  // repository-backed methods are spied directly on this instance instead,
-  // routed to a real `DatabaseService` built with one.
+  // `beforeAll` can resolve a real `EntityManager` — `canAccessTrip` and
+  // `getPlaceWithTags` are spied directly on this instance instead, routed
+  // to a real `DatabaseService` built with one.
   const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
   vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
-  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
-  // Task 9 fix wave (A-L4c): `dbs.rosterUserIds` is dead here — `PlacesService`
-  // now calls `TripMembersRepository.rosterUserIds` directly (PL1, injected,
-  // not through `DatabaseService`), so this spy was inert.
+  // Task 9 fix wave (A-L4c, then item 10): `dbs.rosterUserIds` was dead here
+  // — `PlacesService` now calls `TripMembersRepository.rosterUserIds`
+  // directly (PL1, injected, not through `DatabaseService`) — and its
+  // `rosterUserIds` spy was removed in that fix-wave commit. `dbs.isOwner`
+  // was ALSO dead the same way (verified: `grep -n "\.isOwner("
+  // src/nest/places/places.service.ts src/nest/accommodations/
+  // accommodations.service.ts` has zero hits reachable from this file's
+  // constructed service graph) — removed here, along with the now-unused
+  // `real.isOwner` target it pointed at. `dbs.getPlaceWithTags` is NOT dead,
+  // though (unlike the module-level fake above): `AccommodationsService
+  // .stampLodging` — constructed below via `accommodationsOver(dbs)` and
+  // exercised by the PLACE-SVC-019d/019e/057b place-delete tests — calls
+  // `this.db.getPlaceWithTags(...)` on this exact `dbs` instance, which
+  // without this spy throws "no EntityManager available" (`dbs` here has
+  // none; only `real` does).
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   accommodations = await accommodationsOver(dbs);
   svc = await makePlacesService();

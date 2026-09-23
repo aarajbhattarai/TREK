@@ -111,18 +111,18 @@ describe('GooglePlacePhotoMetaRepository.listPlaceIds', () => {
   });
 });
 
-// D-shape (Task 1 brief item): findLive/findErrored are `findOne`-based
-// (`TrekRepository`'s `disableIdentityMap: true` default), the class of read
-// program rule 14 targets directly.
-describe('GooglePlacePhotoMetaRepository — D-shape', () => {
-  it('GPPMREPO-014: a raw write after an unrelated identity-map read is visible in the next findLive call, in one query (disableIdentityMap regression)', async () => {
+// Task 9 fix wave (B-M3): relabelled. `findLive`/`findErrored` are
+// `findOne`-based, but their filter is `{ place_id, error_at: null }` /
+// `{ place_id, error_at: { $ne: null } }` — the PK plus a second condition,
+// not a PK-only lookup, so rule 20's D-shape guarantee does not apply (a
+// non-PK-only `findOne` always re-runs its WHERE against the live table).
+describe('GooglePlacePhotoMetaRepository — fresh after a raw UPDATE', () => {
+  it('GPPMREPO-014 (fresh after a raw UPDATE, not D-shape): a raw write after an unrelated identity-map read is visible in the next findLive call, in one query (disableIdentityMap regression)', async () => {
     testDb.prepare('INSERT INTO google_place_photo_meta (place_id, attribution, fetched_at, error_at) VALUES (?, ?, ?, NULL)').run('p1', 'Old', 1000);
-    // rule 20: the FIRST, wider setup read passes `disableIdentityMap:
-    // false` explicitly and carries the column the later write targets
-    // (`attribution`) — a PK-only `findOne`, not `findLive`'s own
-    // `error_at IS NULL`-narrowed filter, matching the shape that makes
-    // `PlaceDetailsCacheRepository`'s PDCREPO-008 fail under the
-    // disableIdentityMap-default mutation.
+    // The FIRST, wider setup read passes `disableIdentityMap: false`
+    // explicitly and carries the column the later write targets
+    // (`attribution`) — a PK-only `findOne` on `place_id` alone (not
+    // `findLive`'s own `error_at IS NULL`-narrowed filter under test).
     await t.repo(GooglePlacePhotoMeta).findOne({ place_id: 'p1' }, { disableIdentityMap: false });
     testDb.prepare('UPDATE google_place_photo_meta SET attribution = ? WHERE place_id = ?').run('New', 'p1');
 

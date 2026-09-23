@@ -83,12 +83,20 @@ describe('PlaceDetailsCacheRepository.upsertEntry — composite-key INSERT OR RE
 });
 
 // D-shape (Task 1 brief item): `findEntry` is `findOne`-based
-// (`TrekRepository`'s `disableIdentityMap: true` default).
+// (`TrekRepository`'s `disableIdentityMap: true` default), filtered solely
+// on the table's real composite PRIMARY KEY (`place_id`, `lang`, `expanded`)
+// — a PK-only `findOne`, the class rule 20/21 targets directly.
 describe('PlaceDetailsCacheRepository — D-shape', () => {
-  it('PDCREPO-008: a raw write after findEntry is visible in the next findEntry call, in one query (disableIdentityMap regression)', async () => {
+  it('PDCREPO-008 (D-shape): a raw write after an unrelated identity-map read is visible in the next findEntry call, in one query (disableIdentityMap regression)', async () => {
     testDb.prepare('INSERT INTO place_details_cache (place_id, lang, expanded, payload_json, fetched_at) VALUES (?, ?, ?, ?, ?)')
       .run('p1', 'en', 2, '{"v":"old"}', 100);
-    expect(await cache.findEntry('p1', 'en', 2)).toEqual({ payload_json: '{"v":"old"}', fetched_at: 100 }); // populate the identity map
+    // Task 9 fix wave (B-M3): rule 20 requires the FIRST, wider setup read to
+    // opt out of the base default explicitly, SEPARATE from the method under
+    // test — `findEntry` itself always uses the base's own
+    // `disableIdentityMap: true` default, so calling it here could never
+    // populate an entry for the later assertion to prove stale (the D-shape
+    // claim would be vacuous, the same class of gap rule 20 exists to close).
+    await t.repo(PlaceDetailsCache).findOne({ place_id: 'p1', lang: 'en', expanded: 2 }, { disableIdentityMap: false });
     testDb.prepare('UPDATE place_details_cache SET payload_json = ?, fetched_at = ? WHERE place_id = ? AND lang = ? AND expanded = ?')
       .run('{"v":"new"}', 200, 'p1', 'en', 2);
 

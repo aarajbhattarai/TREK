@@ -91,11 +91,12 @@ describe('AssignmentParticipantsRepository.listForAssignments', () => {
     expect(await participants.listForAssignments([assignment.id])).toEqual([]);
   });
 
-  // D-shape (Task 1 brief item): `listForAssignments` is a `qb().execute('all',
-  // false)` projection, which never hydrates an entity into the identity map
-  // by construction — proven anyway, the honest "not required, proven
-  // regardless" shape.
-  it('ASSIGNPARTREPO-005 (D-shape): a participant added after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+  // Task 9 fix wave (B-M3): relabelled. `listForAssignments` is a
+  // `qb().execute('all', false)` projection, and `TrekRepository` applies
+  // `disableIdentityMap: true` to every read by construction anyway, so
+  // there is no live identity-map entry here to bypass — this proves a DB
+  // round-trip, not an identity-map bypass.
+  it('ASSIGNPARTREPO-005 (fresh after a raw UPDATE, not D-shape): a participant added after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
     const { user: owner } = createUser(testDb);
     const { user: participant } = createUser(testDb, { username: 'fresh-participant' });
     const trip = createTrip(testDb, owner.id);
@@ -176,9 +177,11 @@ describe('AssignmentParticipantsRepository.listWithDisplayName (AS2/AS15/AS31)',
     expect(await participants.listWithDisplayName(assignment.id)).toEqual([]);
   });
 
-  // D-shape: a `qb().execute('all', false)` projection, which never hydrates
-  // an entity into the identity map by construction — proven anyway.
-  it('ASSIGNPARTREPO-009 (D-shape): a participant added after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+  // Task 9 fix wave (B-M3): relabelled — same reasoning as ASSIGNPARTREPO-005
+  // above: a `qb().execute('all', false)` projection never hydrates an
+  // entity into the identity map, and the base default leaves it disabled
+  // anyway, so this proves a DB round-trip, not an identity-map bypass.
+  it('ASSIGNPARTREPO-009 (fresh after a raw UPDATE, not D-shape): a participant added after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
     const { user: owner } = createUser(testDb);
     const { user: participant } = createUser(testDb, { username: 'fresh-participant-2' });
     const trip = createTrip(testDb, owner.id);

@@ -246,7 +246,13 @@ describe('PlacesRepository.existsInTrip / findInTrip / reclaimInputs / deleteByI
     expect(await places.existsInTrip(999999, trip.id)).toBe(false);
   });
 
-  it('PLACEREPO-013 (D-shape): a name write after an unrelated identity-map read is visible in findInTrip\'s FIRST wider read', async () => {
+  // Task 9 fix wave (B-M3): relabelled. `findInTrip` is a
+  // `qb().execute('get', false)` projection, which never hydrates an entity
+  // into the identity map by construction, and the base default leaves the
+  // identity map disabled for every read anyway — there is no live
+  // identity-map entry here to bypass. This proves a DB round-trip, not an
+  // identity-map bypass.
+  it('PLACEREPO-013 (fresh after a raw UPDATE, not D-shape): a name write after an unrelated identity-map read is visible in findInTrip\'s FIRST wider read', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Before' });
@@ -258,14 +264,49 @@ describe('PlacesRepository.existsInTrip / findInTrip / reclaimInputs / deleteByI
     expect(row?.name).toBe('After');
   });
 
-  it('PLACEREPO-014: findInTrip returns every scalar column (PL9/PL48\'s SELECT *), undefined cross-trip', async () => {
+  // Task 9 fix wave (B-M4, rule 19): widened from `toMatchObject` on 3 keys
+  // (a title claiming "every scalar column" that only checked 3 of 28) to
+  // `toEqual(legacy SELECT p.* ... WHERE p.id = ? AND p.trip_id = ? run raw)`
+  // on the full key set, plus a fully NULL-nullable-column row, so a
+  // renamed or dropped column would fail this test.
+  it('PLACEREPO-014: findInTrip returns every scalar column (PL9/PL48\'s SELECT *), full toEqual(legacy) parity, undefined cross-trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const otherTrip = createTrip(testDb, user.id);
+    const category = createCategory(testDb);
     const place = createPlace(testDb, trip.id, { name: 'Full Row' });
+    testDb.prepare(`
+      UPDATE places SET description = ?, lat = ?, lng = ?, address = ?, category_id = ?, price = ?, currency = ?,
+        reservation_status = ?, reservation_notes = ?, reservation_datetime = ?, place_time = ?, end_time = ?,
+        duration_minutes = ?, notes = ?, image_url = ?, google_place_id = ?, google_ftid = ?, website = ?, phone = ?,
+        transport_mode = ?, osm_id = ?, route_geometry = ?, route_color = ?, stop_type = ?, fill_percent = ?,
+        amap_poi_id = ?, source = ?
+      WHERE id = ?
+    `).run(
+      'A description with 007-style digits', 48.1, 2.2, '007 Rue de Paris', category.id, 12.5, 'EUR',
+      'confirmed', 'notes-a', '2026-01-01T10:00:00Z', '10:00', '11:00',
+      45, 'place notes', '/img/a.png', 'gpid-007', 'gftid-a', 'https://a.example', '+33 1 23 45 67 89',
+      'driving', 'osm-a', '{"type":"LineString"}', '#ff0000', 'hotel', 50,
+      'amap-a', 'manual',
+      place.id,
+    );
+
     const row = await places.findInTrip(place.id, trip.id);
-    expect(row).toMatchObject({ id: place.id, trip_id: trip.id, name: 'Full Row' });
+    const legacy = testDb.prepare('SELECT * FROM places WHERE id = ? AND trip_id = ?').get(place.id, trip.id);
+    expect(row).toEqual(legacy);
+    expect(row).toMatchObject({ id: place.id, trip_id: trip.id, name: 'Full Row', google_place_id: 'gpid-007' });
     expect(await places.findInTrip(place.id, otherTrip.id)).toBeUndefined();
+  });
+
+  it('PLACEREPO-052: findInTrip on a bare row — every nullable column comes back null (rule 16), matching legacy', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Bare Place' });
+    const row = await places.findInTrip(place.id, trip.id);
+    const legacy = testDb.prepare('SELECT * FROM places WHERE id = ? AND trip_id = ?').get(place.id, trip.id);
+    expect(row).toEqual(legacy);
+    expect(row?.description).toBeNull();
+    expect(row?.google_ftid).toBeNull();
   });
 
   it('PLACEREPO-015: reclaimInputs projects only google_place_id/image_url', async () => {
@@ -982,5 +1023,64 @@ describe('PlacesRepository.listForTripOrdered (RP2)', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     expect(await places.listForTripOrdered(trip.id)).toEqual([]);
+  });
+});
+
+// Task 9 fix wave (B-M4, rule 19): `listAllForTrip` (TP40, `TripsService.copy`'s
+// places read) had no repository test at all. Full-row parity on a fully
+// seeded fixture — every nullable column non-null in one row, null in the
+// other, plus a unicode string and a '007'-style digit string — so a
+// renamed/dropped column or a changed row order would fail this, not a
+// `toMatchObject` on a few keys.
+describe('PlacesRepository.listAllForTrip (TP40)', () => {
+  it('PLACEREPO-050: every column, rowid scan order (no ORDER BY) — toEqual(legacy SELECT * run raw) on a fully seeded fixture', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const otherTrip = createTrip(testDb, user.id);
+    const category = createCategory(testDb);
+
+    const insert = testDb.prepare(`
+      INSERT INTO places (
+        trip_id, name, description, lat, lng, address, category_id, price, currency,
+        reservation_status, reservation_notes, reservation_datetime, place_time, end_time,
+        duration_minutes, notes, image_url, google_place_id, google_ftid, website, phone,
+        transport_mode, created_at, updated_at, osm_id, route_geometry, route_color, stop_type,
+        fill_percent, amap_poi_id, source
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    // Row A: every nullable column non-null — a unicode string and a
+    // '007'-style digit string among the values (rule 19's fixture bar).
+    const rowA = insert.run(
+      trip.id, 'Café — 日本 ☕️', 'A description with 007-style digits', 48.1, 2.2, '007 Rue de Paris', category.id, 12.5, 'EUR',
+      'confirmed', 'notes-a', '2026-01-01T10:00:00Z', '10:00', '11:00',
+      45, 'place notes', '/img/a.png', 'gpid-007', 'gftid-a', 'https://a.example', '+33 1 23 45 67 89',
+      'driving', '2026-01-01 09:00:00', '2026-01-01 09:30:00', 'osm-a', '{"type":"LineString"}', '#ff0000', 'hotel',
+      50, 'amap-a', 'manual',
+    ).lastInsertRowid as number;
+
+    // Row B: every nullable column NULL.
+    const rowB = insert.run(
+      trip.id, 'Bare Place', null, null, null, null, null, null, null,
+      null, null, null, null, null,
+      null, null, null, null, null, null, null,
+      null, null, null, null, null, null, null,
+      null, null, null,
+    ).lastInsertRowid as number;
+
+    // A place on another trip — must not leak into this trip's listAllForTrip.
+    createPlace(testDb, otherTrip.id, { name: 'Elsewhere' });
+
+    const rows = await places.listAllForTrip(trip.id);
+    const legacy = testDb.prepare('SELECT * FROM places WHERE trip_id = ?').all(trip.id);
+    expect(rows).toEqual(legacy);
+    // rowid-ascending scan order (no ORDER BY), not insertion-reversed or re-sorted.
+    expect(rows.map((r) => r.id)).toEqual([rowA, rowB]);
+  });
+
+  it('PLACEREPO-051: an empty trip returns an empty array, not a throw', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await places.listAllForTrip(trip.id)).toEqual([]);
   });
 });

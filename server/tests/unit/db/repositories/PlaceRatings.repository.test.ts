@@ -81,13 +81,13 @@ describe('PlaceRatingsRepository.listForPlaces', () => {
     expect(await placeRatings.listForPlaces([place.id])).toEqual([]);
   });
 
-  // D-shape (Task 1 brief item): `listForPlaces` is a `qb().execute('all',
-  // false)` projection, which never hydrates an entity into the identity
-  // map by construction (unlike `find`/`findOne`), so there is no staleness
-  // hazard here to reproduce — this proves it anyway, the same honest
-  // "not required, proven regardless" shape `Tags.repository.test.ts`'s
-  // TAGREPO comments already use for a method that IS at risk.
-  it('PLACERATINGSREPO-005 (D-shape): a rating written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+  // Task 9 fix wave (B-M3): relabelled. `listForPlaces` is a
+  // `qb().execute('all', false)` projection, which never hydrates an entity
+  // into the identity map by construction (unlike `find`/`findOne`), and the
+  // base default leaves the identity map disabled for every read anyway —
+  // there is no live identity-map entry here to bypass. This proves a DB
+  // round-trip, not an identity-map bypass.
+  it('PLACERATINGSREPO-005 (fresh after a raw UPDATE, not D-shape): a rating written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
     const { user: owner } = createUser(testDb);
     const { user: seedVoter } = createUser(testDb, { username: 'seed-voter' });
     const { user: voter } = createUser(testDb, { username: 'fresh-voter' });

@@ -5,14 +5,18 @@ import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createPlace, createTag, createTrip, createUser } from '../../../helpers/factories';
 import { Tags } from '../../../../src/db/entities/Tags.entity';
 import type { TagsRepository } from '../../../../src/db/repositories/Tags.repository';
+import { UnitOfWork } from '../../../../src/nest/database/unit-of-work';
+import { withRequestContext } from '../../../../src/nest/database/request-context';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
 let tags: TagsRepository;
+let uow: UnitOfWork;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
   tags = t.repo(Tags);
+  uow = new UnitOfWork(t.em);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });
@@ -313,7 +317,12 @@ describe('TagsRepository', () => {
       expect(await tags.listForPlaces([place.id])).toEqual([]);
     });
 
-    it('LISTFORPLACESREPO-006 (D-shape): a tag written via place_tags is visible in the FIRST wider (non-compact) projection, bypassing the identity map', async () => {
+    // Task 9 fix wave (B-M3): relabelled. `listForPlaces` is a
+    // `qb().execute('all', false)` projection, and the base default leaves
+    // the identity map disabled for every read anyway — there is no live
+    // identity-map entry here to bypass. This proves a DB round-trip, not an
+    // identity-map bypass.
+    it('LISTFORPLACESREPO-006 (fresh after a raw UPDATE, not D-shape): a tag written via place_tags is visible in the FIRST wider (non-compact) projection', async () => {
       const { user } = createUser(testDb);
       const trip = createTrip(testDb, user.id);
       const place = createPlace(testDb, trip.id);
@@ -384,6 +393,52 @@ describe('TagsRepository.insertIgnore / deleteForPlace (PL5/PL12/PL13 — place_
     expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(place.id)).toEqual([]);
     expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(other.id)).toHaveLength(1);
   });
+
+  // Task 9 fix wave (B-M5, the OAUTHTOKREPO-012/REANCHORDAY-003 rollback
+  // shape): both Kysely pivot writes join the ambient `uow.transactional`
+  // rather than autocommitting on their own — a thrown error after the
+  // statement rolls the write back, and the raw read afterwards proves the
+  // pre-transaction state.
+  it('PLACETAGSREPO-006: insertIgnore inside a uow.transactional that then ROLLS BACK attaches nothing', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    const tag = createTag(testDb, user.id);
+
+    let caught: unknown;
+    try {
+      await withRequestContext(t.orm, async () => {
+        await uow.transactional(async () => {
+          await tags.insertIgnore(place.id, [tag.id]);
+          throw new Error('force rollback');
+        });
+      });
+    } catch (e) { caught = e; }
+    expect((caught as Error).message).toBe('force rollback');
+
+    expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(place.id)).toEqual([]);
+  });
+
+  it('PLACETAGSREPO-007: deleteForPlace inside a uow.transactional that then ROLLS BACK leaves the pairs in place', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    const tag = createTag(testDb, user.id);
+    await tags.insertIgnore(place.id, [tag.id]);
+
+    let caught: unknown;
+    try {
+      await withRequestContext(t.orm, async () => {
+        await uow.transactional(async () => {
+          await tags.deleteForPlace(place.id);
+          throw new Error('force rollback');
+        });
+      });
+    } catch (e) { caught = e; }
+    expect((caught as Error).message).toBe('force rollback');
+
+    expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(place.id)).toHaveLength(1);
+  });
 });
 
 // ── Plan 3c Task 8 (`TripsService.copy`, TP46) — additive ───────────────────
@@ -410,5 +465,33 @@ describe('TagsRepository.listPlaceTagsForTrip (TP46)', () => {
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id);
     expect(await tags.listPlaceTagsForTrip(trip.id)).toEqual([]);
+  });
+
+  // Task 9 fix wave (B-M5, the OAUTHTOKREPO-012 read shape): `listPlaceTagsForTrip`
+  // is a Kysely read that joins the ambient `uow.transactional` rather than
+  // opening its own connection — it sees an uncommitted write made earlier
+  // in the SAME open transaction, and once that transaction rolls back the
+  // pair is gone again, proven by a raw read afterwards.
+  it('PLACETAGSREPO-008: sees an uncommitted insertIgnore inside the SAME open transaction; a ROLLBACK erases it', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    const tag = createTag(testDb, user.id);
+
+    let caught: unknown;
+    try {
+      await withRequestContext(t.orm, async () => {
+        await uow.transactional(async () => {
+          await tags.insertIgnore(place.id, [tag.id]);
+          const seenInTransaction = await tags.listPlaceTagsForTrip(trip.id);
+          expect(seenInTransaction).toEqual([{ place_id: place.id, tag_id: tag.id }]);
+          throw new Error('force rollback');
+        });
+      });
+    } catch (e) { caught = e; }
+    expect((caught as Error).message).toBe('force rollback');
+
+    expect(await tags.listPlaceTagsForTrip(trip.id)).toEqual([]);
+    expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(place.id)).toEqual([]);
   });
 });
