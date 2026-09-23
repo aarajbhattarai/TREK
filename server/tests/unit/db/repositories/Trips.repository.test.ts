@@ -61,6 +61,13 @@ describe('TripsRepository.findAccessible — parity with canAccessTrip', () => {
     addTripMember(testDb, trip.id, member.id);
     expect(await trips.isOwner(trip.id, owner.id)).toBe(true);
     expect(await trips.isOwner(trip.id, member.id)).toBe(false);
+
+    // 0b security review F-B6: full parity against the legacy statement run
+    // raw on the same rows, not just the boolean the method returns.
+    const legacyIsOwner = (tripId: number, userId: number): boolean =>
+      !!testDb.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
+    expect(await trips.isOwner(trip.id, owner.id)).toEqual(legacyIsOwner(trip.id, owner.id));
+    expect(await trips.isOwner(trip.id, member.id)).toEqual(legacyIsOwner(trip.id, member.id));
   });
 
   it('TRIPREPO-007: a missing trip id resolves to undefined, not a throw, for both findAccessible and isOwner', async () => {
@@ -78,6 +85,56 @@ describe('TripsRepository.findAccessible — parity with canAccessTrip', () => {
     const raw = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(trip.id) as Record<string, unknown>;
     const { wrap } = await import('@mikro-orm/core');
     expect(wrap(entity).toObject()).toStrictEqual(raw);
+  });
+});
+
+// Plan 3c Task 1 (TB1/TB3/TB4): the trip-membership primitives, added onto
+// the same repository so `TripMembershipService` never touches raw SQL.
+describe('TripsRepository — getOwnerId / findIdAndOwner / listAccessibleIds (Plan 3c Task 1)', () => {
+  it('TRIPREPO-008: getOwnerId returns the owner id, null for a missing trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await trips.getOwnerId(trip.id)).toBe(user.id);
+    expect(await trips.getOwnerId(999999)).toBeNull();
+  });
+
+  it('TRIPREPO-009: getOwnerId binds a string id raw, matching the `0x10`/`007`-shaped id parity seam', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    // A numeric-looking string binds fine under SQLite's affinity comparison.
+    expect(await trips.getOwnerId(String(trip.id))).toBe(user.id);
+    // A non-numeric string never matches any row — no throw, no coercion.
+    expect(await trips.getOwnerId('not-a-number')).toBeNull();
+  });
+
+  it('TRIPREPO-010: findIdAndOwner returns {id, user_id} for a real trip, undefined for a missing one', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await trips.findIdAndOwner(trip.id)).toEqual({ id: trip.id, user_id: user.id });
+    expect(await trips.findIdAndOwner(999999)).toBeUndefined();
+  });
+
+  it('TRIPREPO-011: listAccessibleIds returns owned + member trips, newest first, excluding a stranger\'s trips', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const a = createTrip(testDb, owner.id);
+    testDb.prepare('UPDATE trips SET created_at = ? WHERE id = ?').run('2026-01-01 00:00:00', a.id);
+    const b = createTrip(testDb, owner.id);
+    testDb.prepare('UPDATE trips SET created_at = ? WHERE id = ?').run('2026-02-01 00:00:00', b.id);
+    const c = createTrip(testDb, stranger.id);
+    addTripMember(testDb, c.id, member.id);
+
+    expect(await trips.listAccessibleIds(owner.id)).toEqual([b.id, a.id]);
+    expect(await trips.listAccessibleIds(member.id)).toEqual([c.id]);
+    expect(await trips.listAccessibleIds(stranger.id)).toEqual([c.id]);
+  });
+
+  it('TRIPREPO-012: listAccessibleIds never double-counts a trip where the caller is both owner and, somehow, member-listed', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, owner.id);
+    expect(await trips.listAccessibleIds(owner.id)).toEqual([trip.id]);
   });
 });
 

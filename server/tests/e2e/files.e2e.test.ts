@@ -111,7 +111,8 @@ describe('Files + photos e2e (real auth guard + temp SQLite)', () => {
   });
 
   beforeEach(() => {
-    canAccessTrip.mockReturnValue({ id: 5, user_id: 1 });
+    // 0b review L2 / security review F-B7: dead mock scaffolding — see
+    // budget.e2e.test.ts's identical comment.
     checkPermission.mockReturnValue(true);
     helperSvc.canAccessTrekPhoto.mockReturnValue(true);
   });

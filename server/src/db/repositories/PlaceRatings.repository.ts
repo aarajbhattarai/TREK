@@ -1,4 +1,43 @@
 import type { PlaceRatings } from '../entities/PlaceRatings.entity';
 import { TrekRepository } from './_shared/trek-repository';
 
-export class PlaceRatingsRepository extends TrekRepository<PlaceRatings> {}
+/** One rated place, from `QueryHelpersService.loadRatingsByPlaceIds` (QH2). */
+export interface PlaceRatingForPlaceRow {
+  place_id: number;
+  user_id: number;
+  username: string;
+  avatar: string | null;
+  rating: number;
+}
+
+export class PlaceRatingsRepository extends TrekRepository<PlaceRatings> {
+  /**
+   * `SELECT pr.place_id, pr.user_id, u.username, u.avatar, pr.rating
+   *  FROM place_ratings pr JOIN users u ON pr.user_id = u.id
+   *  WHERE pr.place_id IN (${…}) ORDER BY pr.created_at`
+   * (`query-helpers.service.ts:65-70`, QH2) — the batch loader behind
+   * `PlacesService.list`'s ratings column. Empty `placeIds` short-circuits
+   * before any query, matching the legacy service method (which never
+   * built the `IN (...)` placeholder list for an empty array either).
+   */
+  async listForPlaces(placeIds: number[]): Promise<PlaceRatingForPlaceRow[]> {
+    if (placeIds.length === 0) return [];
+    // `pr.place` selects the plain FK scalar as `place_id` (that relation is
+    // never separately joined here). `pr.user` IS separately joined (to `u`,
+    // for the username/avatar), and selecting a relation property that is
+    // ALSO an active join's target makes MikroORM alias the column off the
+    // JOINED entity's own primary key (`u__id`) instead of the FK scalar —
+    // verified directly, not assumed — so the user id is pulled explicitly
+    // off the join instead (`u.id as user_id`), the same "physical alias"
+    // shape `Places.repository.ts`'s `'c.name as category_name'` uses.
+    // Selecting the `persist(false)` scalar mirror directly (`pr.user_id`)
+    // was tried and silently drops the column from the result — also
+    // verified directly, not assumed.
+    return this.qb('pr')
+      .join('pr.user', 'u')
+      .select(['pr.place', 'u.id as user_id', 'u.username', 'u.avatar', 'pr.rating'])
+      .where({ 'pr.place': { $in: placeIds } })
+      .orderBy({ 'pr.created_at': 'asc' })
+      .execute<PlaceRatingForPlaceRow[]>('all', false);
+  }
+}

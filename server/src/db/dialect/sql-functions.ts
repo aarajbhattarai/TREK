@@ -157,9 +157,33 @@ export function nowMinusDays(platform: Platform, days: number): RawQueryFragment
   return unsupported(platform);
 }
 
-/** `TRIM(<col>)`. Pairs with `lower()` for the `LOWER(TRIM(name))` shape (`places.service.ts:642`). */
+/**
+ * `TRIM(<col>)`, standalone. **Does NOT compose with `lower()`** to build
+ * `LOWER(TRIM(name))` (Task 0b review M3): `lower()`'s `ref` argument goes
+ * through `column()`, whose regex rejects anything but a bare
+ * `alias.column` reference — `TRIM(name)` fails it — and even if it didn't,
+ * `coalesce()`'s own docstring in this file documents that a
+ * `RawQueryFragment` cannot be nested inside another one (`raw()`'s
+ * `[Symbol.toPrimitive]` only implements the `'string'` coercion hint, which
+ * is the object-key position, not template-literal interpolation). Use
+ * `lowerTrim()` below for the composed shape.
+ */
 export function trim(platform: Platform, ref: string): RawQueryFragment {
   if (platform instanceof SqlitePlatform) return raw(`TRIM(${column(ref)})`);
+  return unsupported(platform);
+}
+
+/**
+ * `LOWER(TRIM(<col>))` as one fragment — the shape `places.service.ts:642`
+ * (`lower(trim(name))`, PL26) actually needs; `lower()`/`trim()` above
+ * cannot be composed to build it (see `trim()`'s docstring, Task 0b review
+ * M3). Typed `RawQueryFragment & symbol`, the same brand `lower()` carries,
+ * for use as a filter KEY: `{ [lowerTrim(platform, 'name')]: lowerParam(...) }`.
+ * SQLite's `LOWER()` is ASCII-only (program rule 18) — unchanged by the
+ * `TRIM()`.
+ */
+export function lowerTrim(platform: Platform, ref: string): RawQueryFragment & symbol {
+  if (platform instanceof SqlitePlatform) return raw(`LOWER(TRIM(${column(ref)}))`);
   return unsupported(platform);
 }
 
@@ -206,6 +230,39 @@ export function coalesceParam(platform: Platform, ref: string, value: string | n
  */
 export function absDifference(platform: Platform, ref: string, value: number): RawQueryFragment & symbol {
   if (platform instanceof SqlitePlatform) return raw(`ABS(${column(ref)} - ?)`, [value]);
+  return unsupported(platform);
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 1 — aggregate SELECT projections (`PlaceShadowPicksRepository
+// .totals`/`countBySource`/`countByLiveRank`, `place-shadow.service.ts:144,
+// 149, 157`). `alias` is a hand-written literal at every call site today
+// (never user input), validated the same way `column()` validates a column
+// reference, so a future caller cannot smuggle SQL through it either.
+// ---------------------------------------------------------------------------
+
+function alias(name: string): string {
+  if (!/^[a-z_][a-z0-9_]*$/i.test(name)) {
+    throw new Error(`sql-functions: not an alias: ${name}`);
+  }
+  return name;
+}
+
+/** `COUNT(*) as <alias>`, for a single-row totals read or a `GROUP BY` count column. */
+export function countAll(platform: Platform, aliasName: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(`COUNT(*) as ${alias(aliasName)}`);
+  return unsupported(platform);
+}
+
+/** `MIN(<col>) as <alias>`. */
+export function minOf(platform: Platform, ref: string, aliasName: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(`MIN(${column(ref)}) as ${alias(aliasName)}`);
+  return unsupported(platform);
+}
+
+/** `MAX(<col>) as <alias>`. */
+export function maxOf(platform: Platform, ref: string, aliasName: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(`MAX(${column(ref)}) as ${alias(aliasName)}`);
   return unsupported(platform);
 }
 

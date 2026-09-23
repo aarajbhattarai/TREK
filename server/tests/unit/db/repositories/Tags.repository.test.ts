@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
-import { createTag, createUser } from '../../../helpers/factories';
+import { createPlace, createTag, createTrip, createUser } from '../../../helpers/factories';
 import { Tags } from '../../../../src/db/entities/Tags.entity';
 import type { TagsRepository } from '../../../../src/db/repositories/Tags.repository';
 
@@ -252,6 +252,78 @@ describe('TagsRepository', () => {
       const remaining = await tags.listByUser(user.id);
       expect(remaining).toHaveLength(1);
       expect(remaining[0].id).toBe(keep.id);
+    });
+  });
+
+  // Plan 3c Task 1 (QH1): the batch tag-by-place loader behind
+  // `QueryHelpersService.loadTagsByPlaceIds`, moved off `query-helpers.service.ts`.
+  describe('listForPlaces', () => {
+    function attach(tagId: number, placeId: number): void {
+      testDb.prepare('INSERT INTO place_tags (tag_id, place_id) VALUES (?, ?)').run(tagId, placeId);
+    }
+
+    it('LISTFORPLACESREPO-001: an empty placeIds array short-circuits to [] without querying', async () => {
+      const { value, queries } = await withQueryCount(() => tags.listForPlaces([]));
+      expect(value).toEqual([]);
+      expect(queries).toBe(0);
+    });
+
+    it('LISTFORPLACESREPO-002: non-compact returns every tags column except the join key, plus place_id', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id);
+      const tag = createTag(testDb, user.id, { name: 'Beach', color: '#ff0000' });
+      attach(tag.id, place.id);
+
+      const rows = await tags.listForPlaces([place.id]);
+      expect(rows).toEqual([
+        { id: tag.id, user_id: user.id, name: 'Beach', color: '#ff0000', created_at: (rawTag(tag.id) as { created_at: string }).created_at, place_id: place.id },
+      ]);
+    });
+
+    it('LISTFORPLACESREPO-003: compact returns {id, name, color, created_at, place_id} — no user_id', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id);
+      const tag = createTag(testDb, user.id, { name: 'Compact', color: '#00ff00' });
+      attach(tag.id, place.id);
+
+      const rows = await tags.listForPlaces([place.id], { compact: true });
+      expect(rows).toEqual([{ id: tag.id, name: 'Compact', color: '#00ff00', created_at: (rawTag(tag.id) as { created_at: string }).created_at, place_id: place.id }]);
+      expect(rows[0]).not.toHaveProperty('user_id');
+    });
+
+    it('LISTFORPLACESREPO-004: one row per (tag, place) pair — the same tag on two places yields two rows', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const placeA = createPlace(testDb, trip.id, { name: 'A' });
+      const placeB = createPlace(testDb, trip.id, { name: 'B' });
+      const tag = createTag(testDb, user.id);
+      attach(tag.id, placeA.id);
+      attach(tag.id, placeB.id);
+
+      const rows = await tags.listForPlaces([placeA.id, placeB.id]);
+      expect(rows.map((r) => r.place_id).sort()).toEqual([placeA.id, placeB.id].sort());
+    });
+
+    it('LISTFORPLACESREPO-005: a place with no tags contributes no rows', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id);
+      expect(await tags.listForPlaces([place.id])).toEqual([]);
+    });
+
+    it('LISTFORPLACESREPO-006 (D-shape): a tag written via place_tags is visible in the FIRST wider (non-compact) projection, bypassing the identity map', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id);
+      const tag = createTag(testDb, user.id, { name: 'Fresh' });
+      // Populate the identity map with a narrower read first.
+      await tags.findByIdAndUser(tag.id, user.id);
+      attach(tag.id, place.id);
+      testDb.prepare('UPDATE tags SET name = ? WHERE id = ?').run('Renamed', tag.id);
+      const rows = await tags.listForPlaces([place.id]);
+      expect(rows[0]?.name).toBe('Renamed');
     });
   });
 });

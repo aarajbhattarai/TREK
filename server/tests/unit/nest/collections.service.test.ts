@@ -55,17 +55,25 @@ import { CollectionsService } from '../../../src/nest/collections/collections.se
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo } from '../../helpers/test-uow';
 
 const storageFx = makeStorageFixture('');
 let svc: CollectionsService;
-beforeAll(async () => {
-  svc = new CollectionsService(await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(notifSend), storageFx.storage, await createTestUnitOfWork(testDb));
-});
 // The real cache: these cases assert what removeIfUnreferenced actually does
 // about collection_places (#1081), so a stub would assert nothing.
-const photoCache = new PlacePhotoCacheService(new DatabaseService(testDb), makeStorageFixture('photos/google/').storage);
+// Plan 3c Task 1: built inside the async `beforeAll` below now — the
+// constructor needs two repositories, resolved through `createTestOrm`.
+let photoCache: PlacePhotoCacheService;
 const removeIfUnreferenced = (id: string) => photoCache.removeIfUnreferenced(id);
+beforeAll(async () => {
+  svc = new CollectionsService(await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(notifSend), storageFx.storage, await createTestUnitOfWork(testDb));
+  photoCache = new PlacePhotoCacheService(
+    new DatabaseService(testDb),
+    makeStorageFixture('photos/google/').storage,
+    await createTestGooglePlacePhotoMetaRepo(testDb),
+    await createTestPlacesRepo(testDb),
+  );
+});
 
 function clearCollections() {
   testDb.exec(`

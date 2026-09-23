@@ -9,22 +9,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDbGet, mockDbRun } = vi.hoisted(() => ({
-  // The prepare() stub below forwards the SQL and then the bound values, so the
-  // spy has to declare that shape. Inferred from a zero-arg implementation it
-  // would reject the spread at the call site.
-  mockDbGet: vi.fn((_sql: string, ..._params: unknown[]): unknown => undefined),
-  mockDbRun: vi.fn(),
-}));
-
-vi.mock('../../../src/db/database', () => ({
-  db: {
-    prepare: (sql: string) => ({
-      get: (...params: unknown[]) => mockDbGet(sql, ...params),
-      run: (...params: unknown[]) => mockDbRun(sql, ...params),
-      all: () => [],
-    }),
-  },
+// Rebuilt on PlaceDetailsCacheRepository/AppSettingsRepository (Plan 3c Task
+// 1, R8's rewrite list) — see place-enrichment.service.test.ts's header for
+// why the legacy SQL-text-keyed `db.prepare` stub cannot survive the service
+// calling two named repository methods instead.
+const { mockGetValue, mockFindEntry, mockUpsertEntry } = vi.hoisted(() => ({
+  mockGetValue: vi.fn(async (_key: string): Promise<string | null> => null),
+  mockFindEntry: vi.fn(async (..._args: unknown[]): Promise<{ payload_json: string; fetched_at: number } | null> => null),
+  mockUpsertEntry: vi.fn(async (_row: { place_id: string; lang: string; expanded: number; payload_json: string; fetched_at: number }): Promise<void> => {}),
 }));
 
 vi.mock('../../../src/utils/ssrfGuard', () => ({
@@ -42,11 +34,11 @@ vi.mock('../../../src/nest/maps/trek-places.client', () => ({
   trekPlacesById: mockTrekPlacesById,
 }));
 
-import { db } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PlaceEnrichmentService } from '../../../src/nest/place-enrichment/place-enrichment.service';
 import type { MapsService } from '../../../src/nest/maps/maps.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
+import type { PlaceDetailsCacheRepository } from '../../../src/db/repositories/PlaceDetailsCache.repository';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 
 const GOOGLE_REQ = { lat: 53.6323, lng: 10.0067, name: 'Hamburg Airport', placeId: 'ChIJham', lang: 'de' };
 const OSM_REQ = { lat: 52.525, lng: 13.3694, name: 'Berlin Hauptbahnhof', placeId: 'relation:3600565', lang: 'de' };
@@ -83,12 +75,23 @@ function mapsStub(over: Partial<Record<keyof MapsService, unknown>> = {}) {
 const cacheStub = () =>
   ({ get: vi.fn(() => null), put: vi.fn(async () => ({ photoUrl: '/x', filePath: '/x', attribution: null })) }) as unknown as PlacePhotoCacheService;
 
-const make = (maps: MapsService) => new PlaceEnrichmentService(new DatabaseService(db as never), maps, cacheStub());
+function appSettingsStub(): AppSettingsRepository {
+  return { getValue: mockGetValue } as unknown as AppSettingsRepository;
+}
+
+function cacheRepoStub(): PlaceDetailsCacheRepository {
+  return { findEntry: mockFindEntry, upsertEntry: mockUpsertEntry } as unknown as PlaceDetailsCacheRepository;
+}
+
+const make = (maps: MapsService) => new PlaceEnrichmentService(cacheRepoStub(), appSettingsStub(), maps, cacheStub());
 
 beforeEach(() => {
-  mockDbGet.mockReset();
-  mockDbGet.mockReturnValue(undefined);
-  mockDbRun.mockReset();
+  mockGetValue.mockReset();
+  mockGetValue.mockResolvedValue(null);
+  mockFindEntry.mockReset();
+  mockFindEntry.mockResolvedValue(null);
+  mockUpsertEntry.mockReset();
+  mockUpsertEntry.mockResolvedValue(undefined);
   mockTrekPlacesById.mockReset();
   mockTrekPlacesById.mockResolvedValue(null);
 });
@@ -417,9 +420,10 @@ describe("the description on the place's own website", () => {
       source: 'website',
       sourceUrl: 'https://losteria.net/rostock',
     });
-    const written = mockDbRun.mock.calls.find(([sql]) => String(sql).includes('INSERT OR REPLACE INTO place_details_cache'));
+    expect(mockUpsertEntry).toHaveBeenCalledTimes(1);
+    const [written] = mockUpsertEntry.mock.calls[0];
     expect(written).toBeTruthy();
-    expect(String(written![4])).not.toContain('phish.example');
+    expect(written.payload_json).not.toContain('phish.example');
   });
 
   it('ENRICH-101: asks when the caller passed no details, all the same', async () => {
@@ -468,8 +472,8 @@ describe("the description on the place's own website", () => {
     });
 
     expect(out.description).toBeNull();
-    for (const [sql, ...params] of mockDbRun.mock.calls) {
-      expect(JSON.stringify(params), String(sql)).not.toContain('phish.example');
+    for (const [row] of mockUpsertEntry.mock.calls) {
+      expect(JSON.stringify(row)).not.toContain('phish.example');
     }
   });
 
@@ -490,7 +494,7 @@ describe("the description on the place's own website", () => {
     const out = await make(mapsStub()).enrich(1, carried);
 
     expect(out.description).toMatchObject({ source: 'osm', text: 'Buchung nur noch über https://phish.example' });
-    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('place_details_cache'))).toBe(false);
+    expect(mockUpsertEntry).not.toHaveBeenCalled();
 
     // The same summary from the service's own lookup is the map's, and keeps.
     const maps = mapsStub({
@@ -498,10 +502,10 @@ describe("the description on the place's own website", () => {
         place: { source: 'openstreetmap', summary: 'Größter Kreuzungsbahnhof Europas.', osm_url: 'https://www.openstreetmap.org/relation/3600565' },
       })),
     });
-    mockDbRun.mockClear();
+    mockUpsertEntry.mockClear();
     const own = await make(maps).enrich(1, OSM_REQ);
     expect(own.description).toMatchObject({ source: 'osm', text: 'Größter Kreuzungsbahnhof Europas.' });
-    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('INSERT OR REPLACE INTO place_details_cache'))).toBe(true);
+    expect(mockUpsertEntry).toHaveBeenCalledTimes(1);
   });
 
   it('ENRICH-121: a menu link the request carried is answered, but not cached for everyone', async () => {
@@ -515,16 +519,16 @@ describe("the description on the place's own website", () => {
     });
 
     expect(out.facts).toContainEqual({ kind: 'menu', value: null, url: 'https://phish.example/menu' });
-    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('place_details_cache'))).toBe(false);
+    expect(mockUpsertEntry).not.toHaveBeenCalled();
 
     // The same link from the service's own lookup is the map's, and keeps.
     const maps = mapsStub({
       details: vi.fn(async () => ({ place: { source: 'openstreetmap', menu_url: 'https://example.org/karte' } })),
     });
-    mockDbRun.mockClear();
+    mockUpsertEntry.mockClear();
     const own = await make(maps).enrich(1, OSM_REQ);
     expect(own.facts).toContainEqual({ kind: 'menu', value: null, url: 'https://example.org/karte' });
-    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('INSERT OR REPLACE INTO place_details_cache'))).toBe(true);
+    expect(mockUpsertEntry).toHaveBeenCalledTimes(1);
   });
 
   it('ENRICH-119: with the index switched off, no lookup leaves for the description', async () => {

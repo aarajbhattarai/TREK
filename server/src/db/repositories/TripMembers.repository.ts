@@ -42,4 +42,45 @@ export class TripMembersRepository extends TrekRepository<TripMembers> {
     if (owner) ids.add(owner.user_id);
     return ids;
   }
+
+  /**
+   * `SELECT user_id FROM trip_members WHERE trip_id = ? ORDER BY added_at ASC`
+   * (`trip-membership.service.ts:29-31`, TB2) — the owner is excluded by
+   * construction (the table has no row for the owner), matching the legacy
+   * statement exactly. Raw-bind (D4's T5 escape hatch), the same
+   * `number | string` seam `TripsRepository.findAccessible` documents.
+   */
+  async listUserIdsByTrip(trip_id: number | string): Promise<number[]> {
+    const rows = await this.qb('m')
+      .select(['m.user'])
+      .where('m.trip_id = ?', [trip_id])
+      .orderBy({ 'm.added_at': 'asc' })
+      .execute<{ user_id: number }[]>('all', false);
+    return rows.map((r) => r.user_id);
+  }
+
+  /**
+   * `SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?`
+   * (`trip-membership.service.ts:70`, TB5) — `joinTripAsMember`'s
+   * already-a-member check, the second leg of the non-transactional
+   * check-then-act sequence (§18.4: unchanged by this conversion). Both
+   * callers (`TripMembershipService.joinTripAsMember`) always pass real
+   * `number`s, so no raw-bind seam here.
+   */
+  async exists(trip_id: number, user_id: number): Promise<boolean> {
+    const row = await this.qb('m')
+      .select(['m.id'])
+      .where({ trip: trip_id, user: user_id })
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /**
+   * `INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)`
+   * (`trip-membership.service.ts:72`, TB6) — the third leg of the same
+   * non-transactional sequence as `exists` above; `invitedBy` may be `null`.
+   */
+  async addMember(trip_id: number, user_id: number, invitedBy: number | null): Promise<void> {
+    await this.insert({ trip: trip_id, user: user_id, invited_by: invitedBy });
+  }
 }

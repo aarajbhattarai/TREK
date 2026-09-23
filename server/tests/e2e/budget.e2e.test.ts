@@ -90,7 +90,11 @@ describe('Budget e2e (real auth guard + temp SQLite, real budget SQL)', () => {
   });
 
   beforeEach(() => {
-    canAccessTrip.mockReturnValue({ id: tripId, user_id: 1, currency: 'EUR' });
+    // 0b review L2 / security review F-B7: `canAccessTrip` is dead mock
+    // scaffolding — `TripAccessGuard` reads `TripsRepository.findAccessible`
+    // directly now (Plan 3c Task 0b), so `db/database`'s `canAccessTrip`
+    // property is never imported by production code; this line used to be a
+    // no-op that read as if it still controlled access.
     checkPermission.mockReturnValue(true);
   });
 

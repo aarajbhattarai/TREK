@@ -35,7 +35,7 @@ const dbRegistry = () => {
 /** trips.getById lives on the decorators now, so the audit cases bind it through them. */
 const tripsRegistry = () => {
   const db = {
-    canAccessTrip: (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined),
+    canAccessTrip: async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined),
     prepare: () => ({ get: () => ({ id: 1, title: 'Japan' }), all: () => [] }),
   } as unknown as DatabaseService;
   const guards = new PluginGuards(db, {} as never, {} as never);

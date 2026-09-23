@@ -67,6 +67,7 @@ import type { Day } from '../../../src/types';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+  createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
 } from '../../helpers/test-uow';
 
 let svc: DaysService;
@@ -76,7 +77,7 @@ beforeAll(async () => {
     dbs,
     new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
-    new QueryHelpersService(dbs),
+    new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
     await createTestUnitOfWork(testDb),
     await createTestDaysRepo(testDb),
     await createTestDayAssignmentsRepo(testDb),
@@ -832,7 +833,7 @@ describe('DaysService.canEdit', () => {
       new DatabaseService(testDb),
       permissions,
       new RealtimeService(),
-      new QueryHelpersService(new DatabaseService(testDb)),
+      new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
       await createTestUnitOfWork(testDb),
       await createTestDaysRepo(testDb),
       await createTestDayAssignmentsRepo(testDb),

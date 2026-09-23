@@ -1,48 +1,27 @@
 /**
- * PlaceShadowService against a real in-memory database.
+ * PlaceShadowService against real rows (Plan 3c Task 1).
  *
  * The interesting parts of this service ARE the SQL — the id-paged export, the
- * rank bucketing, the age-based retention — so a mocked DatabaseService would
- * assert that the strings were passed along and prove nothing about what they
- * do. The table is created here rather than by running the migration array, so
- * appending the next migration cannot drag this file along.
+ * rank bucketing, the age-based retention — so a mocked repository would
+ * assert that values were passed along and prove nothing about what they do.
+ * Rebuilt off the real migrated schema snapshot (`createSnapshotTestDb()` +
+ * `createTestOrm()`, the harness every other converted repository test uses)
+ * rather than the legacy hand-written `SCHEMA`/`dbFacade` — R8's rewrite list.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { resetTestDb } from '../../helpers/test-db';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { PlaceShadowService, RETENTION_DAYS } from '../../../src/nest/place-shadow/place-shadow.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import { PlaceShadowPicks } from '../../../src/db/entities/PlaceShadowPicks.entity';
+import type { PlaceShadowPicksRepository } from '../../../src/db/repositories/PlaceShadowPicks.repository';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { PlaceShadowPickRequest } from '@trek/shared';
 
-const SCHEMA = `
-  CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);
-  CREATE TABLE place_shadow_picks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    query TEXT NOT NULL,
-    lang TEXT,
-    bias_lat REAL,
-    bias_lng REAL,
-    source TEXT NOT NULL,
-    live_rank INTEGER NOT NULL,
-    live_count INTEGER NOT NULL,
-    picked_name TEXT NOT NULL,
-    picked_lat REAL NOT NULL,
-    picked_lng REAL NOT NULL,
-    picked_place_id TEXT
-  );
-`;
-
-let conn: Database.Database;
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
 let svc: PlaceShadowService;
-
-/** Just the three methods the service uses, backed by the real connection. */
-function dbFacade(c: Database.Database): DatabaseService {
-  return {
-    get: <T>(sql: string, ...p: unknown[]) => c.prepare(sql).get(...p) as T | undefined,
-    all: <T>(sql: string, ...p: unknown[]) => c.prepare(sql).all(...p) as T[],
-    run: (sql: string, ...p: unknown[]) => c.prepare(sql).run(...p),
-  } as unknown as DatabaseService;
-}
 
 const PICK: PlaceShadowPickRequest = {
   query: 'losteria rostock',
@@ -59,27 +38,30 @@ const PICK: PlaceShadowPickRequest = {
 };
 
 function enable(on = true) {
-  conn.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)')
+  testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)')
     .run('place_shadow_enabled', on ? 'true' : 'false');
 }
 
-beforeEach(async () => {
-  conn = new Database(':memory:');
-  conn.exec(SCHEMA);
-  svc = new PlaceShadowService(dbFacade(conn));
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  const picks: PlaceShadowPicksRepository = t.repo(PlaceShadowPicks);
+  const appSettings: AppSettingsRepository = t.repo(AppSettings);
+  svc = new PlaceShadowService(picks, appSettings);
 });
+beforeEach(() => { resetTestDb(testDb); t.clear(); });
+afterAll(async () => { await t.close(); testDb.close(); });
 
 describe('PlaceShadowService', () => {
   describe('the switch', () => {
     it('is off when the setting row is absent', async () => {
       expect(await svc.enabled()).toBe(false);
       expect(await svc.record(PICK)).toBe(false);
-      expect(conn.prepare('SELECT COUNT(*) AS n FROM place_shadow_picks').get()).toEqual({ n: 0 });
+      expect(testDb.prepare('SELECT COUNT(*) AS n FROM place_shadow_picks').get()).toEqual({ n: 0 });
     });
 
     it('is off for any value that is not exactly "true"', async () => {
       for (const value of ['false', '1', 'yes', 'TRUE', '']) {
-        conn.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)')
+        testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)')
           .run('place_shadow_enabled', value);
         expect(await svc.enabled(), `value ${JSON.stringify(value)}`).toBe(false);
       }
@@ -97,7 +79,7 @@ describe('PlaceShadowService', () => {
 
     it('rounds every coordinate to three decimals', async () => {
       await svc.record({ ...PICK, pickedLat: 54.0891234, pickedLng: 12.1372987, biasLat: 54.08871, biasLng: 12.14049 });
-      const row = conn.prepare('SELECT * FROM place_shadow_picks').get() as Record<string, number>;
+      const row = testDb.prepare('SELECT * FROM place_shadow_picks').get() as Record<string, number>;
       expect(row.picked_lat).toBe(54.089);
       expect(row.picked_lng).toBe(12.137);
       expect(row.bias_lat).toBe(54.089);
@@ -106,7 +88,7 @@ describe('PlaceShadowService', () => {
 
     it('stores an absent bias and place id as NULL rather than inventing zeroes', async () => {
       await svc.record({ ...PICK, biasLat: undefined, biasLng: undefined, pickedPlaceId: undefined });
-      const row = conn.prepare('SELECT * FROM place_shadow_picks').get() as Record<string, unknown>;
+      const row = testDb.prepare('SELECT * FROM place_shadow_picks').get() as Record<string, unknown>;
       expect(row.bias_lat).toBeNull();
       expect(row.bias_lng).toBeNull();
       expect(row.picked_place_id).toBeNull();
@@ -156,7 +138,7 @@ describe('PlaceShadowService', () => {
     });
 
     it('answers on an empty corpus without dividing by zero', async () => {
-      conn.exec('DELETE FROM place_shadow_picks');
+      testDb.exec('DELETE FROM place_shadow_picks');
       const s = await svc.summary();
       expect(s).toMatchObject({ total: 0, liveTopOneShare: 0, liveTopFiveShare: 0, oldest: null, newest: null });
       expect(s.retentionDays).toBe(RETENTION_DAYS);
@@ -214,21 +196,25 @@ describe('PlaceShadowService', () => {
     it('removes only rows past the window', async () => {
       await svc.record(PICK);
       await svc.record(PICK);
-      conn.prepare("UPDATE place_shadow_picks SET created_at = datetime('now', '-200 days') WHERE id = 1").run();
+      // `resetTestDb` never resets `sqlite_sequence` (ids keep growing across
+      // tests in this file, by design — see its own docstring), so the
+      // "first" row's id is read back rather than hardcoded as `1`.
+      const [first] = testDb.prepare('SELECT id FROM place_shadow_picks ORDER BY id ASC').all() as { id: number }[];
+      testDb.prepare("UPDATE place_shadow_picks SET created_at = datetime('now', '-200 days') WHERE id = ?").run(first.id);
       expect(await svc.purgeExpired()).toBe(1);
       expect((await svc.summary()).total).toBe(1);
     });
 
     it('keeps a row that is one day short of the window', async () => {
       await svc.record(PICK);
-      conn.prepare("UPDATE place_shadow_picks SET created_at = datetime('now', ?)")
+      testDb.prepare("UPDATE place_shadow_picks SET created_at = datetime('now', ?)")
         .run(`-${RETENTION_DAYS - 1} days`);
       expect(await svc.purgeExpired()).toBe(0);
     });
 
     it('runs even while the log is switched off, so old rows still age out', async () => {
       await svc.record(PICK);
-      conn.prepare("UPDATE place_shadow_picks SET created_at = datetime('now', '-200 days')").run();
+      testDb.prepare("UPDATE place_shadow_picks SET created_at = datetime('now', '-200 days')").run();
       enable(false);
       expect(await svc.purgeExpired()).toBe(1);
     });

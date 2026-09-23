@@ -81,6 +81,8 @@ import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repos
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+  createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
+  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
 } from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
@@ -88,10 +90,11 @@ import {
 // up here instead of being papered over by a stub.
 const dbs = () => new DatabaseService(testDb);
 
-
 // One shared cache instance (the PlacePhotoCacheService rule): the in-flight dedup in
 // PlacePhotoCacheService only works while both consumers hold the same object.
-const photoCache = new PlacePhotoCacheService(dbs(), makeStorageFixture('photos/google/').storage);
+// Plan 3c Task 1: built inside the async `beforeAll` below now — the
+// constructor needs two repositories, resolved through `createTestOrm`.
+let photoCache: PlacePhotoCacheService;
 
 let accommodationsSvc: Awaited<ReturnType<typeof makeAccommodationsService>>;
 beforeAll(async () => {
@@ -102,12 +105,18 @@ let daysSvc: DaysService;
 let placesSvc: PlacesService;
 let membersSvc: TripMembersService;
 beforeAll(async () => {
+  photoCache = new PlacePhotoCacheService(
+    dbs(),
+    makeStorageFixture('photos/google/').storage,
+    await createTestGooglePlacePhotoMetaRepo(dbs().connection),
+    await createTestPlacesRepo(dbs().connection),
+  );
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
   daysSvc = new DaysService(
     dbs(),
     new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
     new RealtimeService(),
-    new QueryHelpersService(dbs()),
+    new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
     await createTestUnitOfWork(dbs().connection),
     await createTestDaysRepo(dbs().connection),
     await createTestDayAssignmentsRepo(dbs().connection),
@@ -116,7 +125,7 @@ beforeAll(async () => {
   );
   placesSvc = new PlacesService(
   dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
-  new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)), new QueryHelpersService(dbs()),
+  new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)), new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
   new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,

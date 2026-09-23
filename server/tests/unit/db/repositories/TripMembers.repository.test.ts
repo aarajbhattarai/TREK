@@ -82,3 +82,55 @@ describe('TripMembersRepository.rosterUserIds — parity with the legacy UNION s
     expect(await tripMembers.rosterUserIds('abc')).toEqual(new Set());
   });
 });
+
+// Plan 3c Task 1 (TB2/TB5/TB6): TripMembershipService.listMemberUserIds/
+// joinTripAsMember's own check-then-act sequence.
+describe('TripMembersRepository — listUserIdsByTrip / exists / addMember (Plan 3c Task 1)', () => {
+  it('TMEMREPO-007: listUserIdsByTrip excludes the owner and orders by added_at ASC', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: first } = createUser(testDb);
+    const { user: second } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, first.id);
+    testDb.prepare('UPDATE trip_members SET added_at = ? WHERE trip_id = ? AND user_id = ?').run('2026-01-01 00:00:00', trip.id, first.id);
+    addTripMember(testDb, trip.id, second.id);
+    testDb.prepare('UPDATE trip_members SET added_at = ? WHERE trip_id = ? AND user_id = ?').run('2026-02-01 00:00:00', trip.id, second.id);
+
+    expect(await tripMembers.listUserIdsByTrip(trip.id)).toEqual([first.id, second.id]);
+  });
+
+  it('TMEMREPO-008: listUserIdsByTrip returns an empty array for an owner-only trip', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    expect(await tripMembers.listUserIdsByTrip(trip.id)).toEqual([]);
+  });
+
+  it('TMEMREPO-009: exists is true only for an actual (trip, user) membership row', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+
+    expect(await tripMembers.exists(trip.id, member.id)).toBe(true);
+    expect(await tripMembers.exists(trip.id, stranger.id)).toBe(false);
+    // The owner has no trip_members row unless one was explicitly added.
+    expect(await tripMembers.exists(trip.id, owner.id)).toBe(false);
+  });
+
+  it('TMEMREPO-010: addMember inserts a row with the given invited_by, nullable', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: inviter } = createUser(testDb);
+    const { user: joiner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+
+    await tripMembers.addMember(trip.id, joiner.id, inviter.id);
+    const row = testDb.prepare('SELECT trip_id, user_id, invited_by FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, joiner.id);
+    expect(row).toEqual({ trip_id: trip.id, user_id: joiner.id, invited_by: inviter.id });
+
+    const { user: joiner2 } = createUser(testDb);
+    await tripMembers.addMember(trip.id, joiner2.id, null);
+    const row2 = testDb.prepare('SELECT invited_by FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, joiner2.id);
+    expect(row2).toEqual({ invited_by: null });
+  });
+});

@@ -37,6 +37,16 @@ import { DayAssignments } from '../../src/db/entities/DayAssignments.entity';
 import type { DayAssignmentsRepository } from '../../src/db/repositories/DayAssignments.repository';
 import { DayNotes } from '../../src/db/entities/DayNotes.entity';
 import type { DayNotesRepository } from '../../src/db/repositories/DayNotes.repository';
+import { PlaceRatings } from '../../src/db/entities/PlaceRatings.entity';
+import type { PlaceRatingsRepository } from '../../src/db/repositories/PlaceRatings.repository';
+import { AssignmentParticipants } from '../../src/db/entities/AssignmentParticipants.entity';
+import type { AssignmentParticipantsRepository } from '../../src/db/repositories/AssignmentParticipants.repository';
+import { PlaceShadowPicks } from '../../src/db/entities/PlaceShadowPicks.entity';
+import type { PlaceShadowPicksRepository } from '../../src/db/repositories/PlaceShadowPicks.repository';
+import { GooglePlacePhotoMeta } from '../../src/db/entities/GooglePlacePhotoMeta.entity';
+import type { GooglePlacePhotoMetaRepository } from '../../src/db/repositories/GooglePlacePhotoMeta.repository';
+import { PlaceDetailsCache } from '../../src/db/entities/PlaceDetailsCache.entity';
+import type { PlaceDetailsCacheRepository } from '../../src/db/repositories/PlaceDetailsCache.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -384,5 +394,68 @@ export function createTestDayNotesRepo(db: Database.Database): Promise<DayNotesR
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(DayNotes));
   dayNotesRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 1 (`QueryHelpersService`/`TripMembershipService`/
+// `PlaceShadowService`/`PlaceEnrichmentService`/`PlacePhotoCacheService` onto
+// repositories) — appended at the end per the task's own file-ownership rule
+// (append only). Same memoisation-per-handle pattern as every helper above.
+// `TagsRepository` already has `createTestTagsRepo` (Plan 3a Task 3) — a
+// hand-constructed `QueryHelpersService` reuses that one rather than a second
+// copy. `TripsRepository`/`TripMembersRepository` already have
+// `createTestTripsRepo`/`createTestTripMembersRepo` (Plan 3c Task 0b) — a
+// hand-constructed `TripMembershipService` reuses those too.
+// ---------------------------------------------------------------------------
+
+const placeRatingsRepoPerHandle = new WeakMap<Database.Database, Promise<PlaceRatingsRepository>>();
+const assignmentParticipantsRepoPerHandle = new WeakMap<Database.Database, Promise<AssignmentParticipantsRepository>>();
+const placeShadowPicksRepoPerHandle = new WeakMap<Database.Database, Promise<PlaceShadowPicksRepository>>();
+const googlePlacePhotoMetaRepoPerHandle = new WeakMap<Database.Database, Promise<GooglePlacePhotoMetaRepository>>();
+const placeDetailsCacheRepoPerHandle = new WeakMap<Database.Database, Promise<PlaceDetailsCacheRepository>>();
+
+/** The `PlaceRatingsRepository` a hand-constructed `QueryHelpersService` needs (QH2). */
+export function createTestPlaceRatingsRepo(db: Database.Database): Promise<PlaceRatingsRepository> {
+  const existing = placeRatingsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(PlaceRatings));
+  placeRatingsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `AssignmentParticipantsRepository` a hand-constructed `QueryHelpersService` needs (QH3). */
+export function createTestAssignmentParticipantsRepo(db: Database.Database): Promise<AssignmentParticipantsRepository> {
+  const existing = assignmentParticipantsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(AssignmentParticipants));
+  assignmentParticipantsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `PlaceShadowPicksRepository` a hand-constructed `PlaceShadowService` needs. */
+export function createTestPlaceShadowPicksRepo(db: Database.Database): Promise<PlaceShadowPicksRepository> {
+  const existing = placeShadowPicksRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(PlaceShadowPicks));
+  placeShadowPicksRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `GooglePlacePhotoMetaRepository` a hand-constructed `PlacePhotoCacheService` needs. */
+export function createTestGooglePlacePhotoMetaRepo(db: Database.Database): Promise<GooglePlacePhotoMetaRepository> {
+  const existing = googlePlacePhotoMetaRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(GooglePlacePhotoMeta));
+  googlePlacePhotoMetaRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `PlaceDetailsCacheRepository` a hand-constructed `PlaceEnrichmentService` needs. */
+export function createTestPlaceDetailsCacheRepo(db: Database.Database): Promise<PlaceDetailsCacheRepository> {
+  const existing = placeDetailsCacheRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(PlaceDetailsCache));
+  placeDetailsCacheRepoPerHandle.set(db, pending);
   return pending;
 }

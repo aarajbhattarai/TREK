@@ -38,6 +38,7 @@ import type { PhotoProviderFieldsRepository } from '../../../src/db/repositories
 import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
+import { PlaceShadowPicks } from '../../../src/db/entities/PlaceShadowPicks.entity';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 const { getPhotoProviderConfig } = vi.hoisted(() => ({ getPhotoProviderConfig: vi.fn(() => ({})) }));
@@ -587,7 +588,7 @@ describe('AddonsService place shadow flag', () => {
   });
 
   it('ADDONS-SVC-093 answers the same as PlaceShadowService.enabled() for every stored value', async () => {
-    const shadow = new PlaceShadowService(new DatabaseService(testDb));
+    const shadow = new PlaceShadowService(t.repo(PlaceShadowPicks), appSettingsRepo);
     const cases: Array<[string | undefined, boolean]> = [
       [undefined, false],
       ['true', true],

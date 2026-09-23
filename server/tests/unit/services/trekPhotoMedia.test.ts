@@ -9,7 +9,7 @@ const { testDb, dbMock } = vi.hoisted(() => {
   const db = new Database(':memory:');
   // FKs off: this suite only checks media_type persistence, not owner/user integrity.
   db.exec('PRAGMA foreign_keys = OFF');
-  const mock = { db, closeDb: () => {}, reinitialize: () => {}, getPlaceWithTags: () => null, canAccessTrip: () => null, isOwner: () => false };
+  const mock = { db, closeDb: () => {}, reinitialize: () => {}, getPlaceWithTags: async () => null, canAccessTrip: async () => null, isOwner: async () => false };
   return { testDb: db, dbMock: mock };
 });
 

@@ -115,21 +115,24 @@ import {
   createTestOauthTokensRepo,
   createTestWebauthnCredentialsRepo,
   createTestPasswordResetTokensRepo,
+  createTestTripsRepo,
+  createTestTripMembersRepo,
 } from '../../helpers/test-uow';
 
 // MailerService is injected since the notifications fold — a stub instead of a
 // module mock. sendPasswordResetEmail is the only thing auth reaches for.
 const mailerStub = { sendPasswordResetEmail: vi.fn() } as unknown as MailerService;
 
-const membership = new TripMembershipService(new DatabaseService(testDb));
 // Positional, and previously shifted by one: an AtlasService sat in the membership
 // slot, which AuthService no longer takes at all, so webauthn/userCleanup/mailer
 // each landed one place too late and the EphemeralTokenService was missing
 // entirely. Nothing failed, because no case below reaches those collaborators.
 
+let membership: TripMembershipService;
 let auth: AuthService;
 let svc: OidcService;
 beforeAll(async () => {
+  membership = new TripMembershipService(await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb));
   auth = new AuthService(
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   membership,

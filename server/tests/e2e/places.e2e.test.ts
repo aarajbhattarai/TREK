@@ -31,7 +31,11 @@ const { db } = vi.hoisted(() => {
     route_geometry TEXT, route_color TEXT, stop_type TEXT, fill_percent INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
   tmp.exec(`CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, icon TEXT);`);
-  tmp.exec(`CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT,
+  // Plan 3c Task 1: TagsRepository.listForPlaces (QH1) selects `user_id`
+  // explicitly (the legacy statement's `t.*` tolerated a narrower fixture
+  // schema; a named column list does not) — added here, matching the real
+  // `tags` table (`Migration20200101000000_baseline_schema.ts`).
+  tmp.exec(`CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT, color TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
   tmp.exec(`CREATE TABLE place_tags (place_id INTEGER NOT NULL, tag_id INTEGER NOT NULL,
     PRIMARY KEY (place_id, tag_id));`);
@@ -137,7 +141,6 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
     // tests below re-seed their own data-bearing row with `INSERT OR
     // REPLACE` over this default.
     db.prepare("INSERT INTO trips (id, title, user_id) VALUES (5, 'Trip', 1)").run();
-    canAccessTrip.mockReturnValue({ id: 5, user_id: 1 });
     checkPermission.mockReturnValue(true);
   });
 

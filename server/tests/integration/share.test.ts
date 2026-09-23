@@ -34,6 +34,9 @@ import { LocalDriver } from '../../src/nest/storage/drivers/local.driver';
 import { StorageService } from '../../src/nest/storage/storage.service';
 import type { StorageRegistryService, ResolvedCategory } from '../../src/nest/storage/storage-registry.service';
 import { DEFAULT_UPLOADS_ROOT, GLOBAL_TEMP_DIR } from '../../src/nest/storage/storage-paths';
+import { createTestOrm } from '../helpers/test-orm';
+import { GooglePlacePhotoMeta } from '../../src/db/entities/GooglePlacePhotoMeta.entity';
+import { Places } from '../../src/db/entities/Places.entity';
 
 // A real instance over the same connection the app uses — these cases write a
 // cache entry and then read it back through the HTTP route, so the stub
@@ -46,7 +49,12 @@ const testStorage = new StorageService({
   tempDir: () => GLOBAL_TEMP_DIR,
   replicaFailures: () => [],
 } as unknown as StorageRegistryService);
-const placePhotoCache = new PlacePhotoCacheService(new DatabaseService(sharedDb), testStorage);
+// Plan 3c Task 1: PlacePhotoCacheService now needs two repositories — a
+// second, throwaway MikroORM bound to the SAME `sharedDb` connection
+// (`allowGlobalContext: true`, the same shape `place-photo-cache.service
+// .test.ts` uses), since this helper's two call sites below run outside any
+// HTTP request the app's own `withRequestContext` would wrap.
+let placePhotoCache: PlacePhotoCacheService;
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -57,6 +65,8 @@ let app: Application;
 beforeAll(async () => {
   nestApp = await buildApp();
   app = nestApp.getHttpAdapter().getInstance();
+  const t = await createTestOrm(sharedDb, { allowGlobalContext: true });
+  placePhotoCache = new PlacePhotoCacheService(new DatabaseService(sharedDb), testStorage, t.repo(GooglePlacePhotoMeta), t.repo(Places));
 });
 
 beforeEach(() => {

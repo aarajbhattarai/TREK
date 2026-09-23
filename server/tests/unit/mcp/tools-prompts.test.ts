@@ -87,7 +87,7 @@ import type { TodoService } from '../../../src/nest/todo/todo.service';
 import type { CollabService } from '../../../src/nest/collab/collab.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { EntityManager } from '@mikro-orm/core';
 
 // The trip-summary prompt moved to the DI-discovered TripsMcp — its cases below
@@ -148,7 +148,7 @@ beforeAll(async () => {
   new ExchangeRatesService(),
   promptDbs(),
   new RuntimeEnvService(),
-  new TripMembershipService(promptDbs()),
+  new TripMembershipService(await createTestTripsRepo(promptDbs().connection), await createTestTripMembersRepo(promptDbs().connection)),
   addonsStub,
   promptGuards,
   await createTestUnitOfWork(promptDbs().connection),

@@ -11,21 +11,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDbGet, mockDbRun } = vi.hoisted(() => ({
-  // Declared with the shape the fake statement below calls it with (the SQL plus
-  // whatever the caller bound), otherwise the spread has no rest parameter to land in.
-  mockDbGet: vi.fn((_sql: string, ..._params: unknown[]): unknown => undefined),
-  mockDbRun: vi.fn(),
-}));
-
-vi.mock('../../../src/db/database', () => ({
-  db: {
-    prepare: (sql: string) => ({
-      get: (...params: unknown[]) => mockDbGet(sql, ...params),
-      run: (...params: unknown[]) => mockDbRun(sql, ...params),
-      all: () => [],
-    }),
-  },
+// Rebuilt on PlaceDetailsCacheRepository/AppSettingsRepository (Plan 3c Task
+// 1, R8's rewrite list) — see place-enrichment.service.test.ts's header for
+// why the legacy SQL-text-keyed `db.prepare` stub cannot survive the service
+// calling two named repository methods instead.
+const { mockGetValue, mockFindEntry, mockUpsertEntry } = vi.hoisted(() => ({
+  mockGetValue: vi.fn(async (_key: string): Promise<string | null> => null),
+  mockFindEntry: vi.fn(async (..._args: unknown[]): Promise<{ payload_json: string; fetched_at: number } | null> => null),
+  mockUpsertEntry: vi.fn(async (_row: { place_id: string; lang: string; expanded: number; payload_json: string; fetched_at: number }): Promise<void> => {}),
 }));
 
 vi.mock('../../../src/utils/ssrfGuard', () => ({
@@ -36,12 +29,12 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
 
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'test-secret', ENCRYPTION_KEY: '0'.repeat(64) }));
 
-import { db } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PlaceEnrichmentService } from '../../../src/nest/place-enrichment/place-enrichment.service';
 import { readBrandIdentity } from '../../../src/nest/maps/maps.service';
 import type { MapsService } from '../../../src/nest/maps/maps.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
+import type { PlaceDetailsCacheRepository } from '../../../src/db/repositories/PlaceDetailsCache.repository';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 
 const REQ = { lat: 54.088, lng: 12.1409, name: "L'Osteria Rostock", placeId: 'ChIJosteria', lang: 'de' };
 
@@ -83,7 +76,15 @@ function mapsStub(over: Partial<Record<keyof MapsService, unknown>> = {}) {
 const cacheStub = () =>
   ({ get: vi.fn(() => null), put: vi.fn(async () => ({ photoUrl: '/x', filePath: '/x', attribution: null })) }) as unknown as PlacePhotoCacheService;
 
-const make = (maps: MapsService) => new PlaceEnrichmentService(new DatabaseService(db as never), maps, cacheStub());
+function appSettingsStub(): AppSettingsRepository {
+  return { getValue: mockGetValue } as unknown as AppSettingsRepository;
+}
+
+function cacheRepoStub(): PlaceDetailsCacheRepository {
+  return { findEntry: mockFindEntry, upsertEntry: mockUpsertEntry } as unknown as PlaceDetailsCacheRepository;
+}
+
+const make = (maps: MapsService) => new PlaceEnrichmentService(cacheRepoStub(), appSettingsStub(), maps, cacheStub());
 
 /** A place whose own identity is empty but that belongs to a chain. */
 const branchOfAChain = (over: Partial<Record<keyof MapsService, unknown>> = {}) =>
@@ -93,9 +94,12 @@ const branchOfAChain = (over: Partial<Record<keyof MapsService, unknown>> = {}) 
   });
 
 beforeEach(() => {
-  mockDbGet.mockReset();
-  mockDbGet.mockReturnValue(undefined);
-  mockDbRun.mockReset();
+  mockGetValue.mockReset();
+  mockGetValue.mockResolvedValue(null);
+  mockFindEntry.mockReset();
+  mockFindEntry.mockResolvedValue(null);
+  mockUpsertEntry.mockReset();
+  mockUpsertEntry.mockResolvedValue(undefined);
 });
 
 describe('readBrandIdentity', () => {

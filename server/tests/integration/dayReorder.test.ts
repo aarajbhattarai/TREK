@@ -28,6 +28,7 @@ import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.
 import {
   createTestUnitOfWork, createTestAppSettingsRepo,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+  createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
 } from '../helpers/test-uow';
 
 let svc: DaysService;
@@ -36,7 +37,7 @@ beforeAll(async () => {
     new DatabaseService(testDb),
     new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
-    new QueryHelpersService(new DatabaseService(testDb)),
+    new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
     await createTestUnitOfWork(testDb),
     await createTestDaysRepo(testDb),
     await createTestDayAssignmentsRepo(testDb),

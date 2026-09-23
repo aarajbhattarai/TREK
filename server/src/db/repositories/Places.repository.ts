@@ -1,5 +1,6 @@
 import type { Places } from '../entities/Places.entity';
 import type { Tags } from '../entities/Tags.entity';
+import { columnRef } from '../dialect/sql-functions';
 import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -121,17 +122,37 @@ export class PlacesRepository extends TrekRepository<Places> {
       .where('p.id = ?', [place_id])
       .execute<TagRow[]>('all', false);
 
+    // Task 0b review B1 (HIGH, live regression): `.select(['pr.user', ...])`
+    // makes MikroORM resolve `pr.user` through the ACTIVE `join('pr.user',
+    // 'u')` and emit the joined entity's own PK under its join alias
+    // (`u__id`), not the FK scalar (`user_id`) — `ratings[].user_id` never
+    // existed at runtime, silently breaking the client's
+    // `ratings.find(r => r.user_id === currentUserId)` own-rating lookup.
+    // `columnRef(...).as('user_id')` routes the FK column through the
+    // dialect layer and aliases it back explicitly; `'pr.user_id'` (the
+    // `persist(false)` scalar mirror) was tried and silently drops the
+    // column, `'pr.user as user_id'` was tried and is still `u__id` — both
+    // verified directly, not assumed (same finding independently reproduced
+    // in `PlaceRatingsRepository.listForPlaces`'s docstring, Plan 3c Task 1).
+    const platform = this.getEntityManager().getPlatform();
     const ratings = await this.qb('p')
       .join('p.place_ratings_collection', 'pr')
       .join('pr.user', 'u')
-      .select(['pr.user', 'u.username', 'u.avatar', 'pr.rating'])
+      .select([columnRef(platform, 'pr.user_id').as('user_id'), 'u.username', 'u.avatar', 'pr.rating'])
       .where('p.id = ?', [place_id])
       .orderBy({ 'pr.created_at': 'asc' })
       .execute<PlaceRatingRow[]>('all', false);
 
-    const { category_name, category_color, category_icon, ...placeRest } = place;
+    // Task 0b review B2 (HIGH, live regression): the legacy `getPlaceWithTags`
+    // returned `{ ...place, category: ... }` over the raw driver row of
+    // `SELECT p.*, c.name as category_name, c.color as category_color, c.icon
+    // as category_icon` — the three alias columns ride along on the wire
+    // body (map popups, dashboard, shared-trip page all read them flat, per
+    // the review's blast-radius list). Read them, don't strip them: spread
+    // `place` whole, not `placeRest`.
+    const { category_name, category_color, category_icon } = place;
     return {
-      ...placeRest,
+      ...place,
       category: place.category_id
         ? { id: place.category_id, name: category_name!, color: category_color!, icon: category_icon! }
         : null,
@@ -140,5 +161,24 @@ export class PlacesRepository extends TrekRepository<Places> {
       rating_avg: ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : null,
       rating_count: ratings.length,
     };
+  }
+
+  /**
+   * `SELECT 1 FROM places WHERE google_place_id = ? OR image_url = ? LIMIT 1`
+   * — the `places`-owned half of `PlacePhotoCacheService.isReferenced`
+   * (`place-photo-cache.service.ts:205-211`, PP6), split per the Plan 3c
+   * Task 1 PP6 ruling (option 2): the legacy single `UNION ALL … LIMIT 1`
+   * statement spans this table AND `collection_places` (Plan 3h's), so the
+   * service evaluates this half first and only runs the `collection_places`
+   * half when this one is `false` — reproducing the legacy `UNION ALL …
+   * LIMIT 1`'s short-circuit by evaluation order rather than by SQL.
+   */
+  async existsByGoogleIdOrImageUrl(googlePlaceId: string, imageUrl: string): Promise<boolean> {
+    const row = await this.qb('p')
+      .select(['p.id'])
+      .where({ $or: [{ google_place_id: googlePlaceId }, { image_url: imageUrl }] })
+      .limit(1)
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
   }
 }

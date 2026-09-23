@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { placeWebsiteSchema } from '@trek/shared';
 import type {
   MapsPlaceEnrichmentRequest,
@@ -11,7 +12,10 @@ import type {
   PlaceRating,
 } from '@trek/shared';
 import { safeFetchFollow } from '../../utils/ssrfGuard';
-import { DatabaseService } from '../database/database.service';
+import { PlaceDetailsCache } from '../../db/entities/PlaceDetailsCache.entity';
+import type { PlaceDetailsCacheRepository } from '../../db/repositories/PlaceDetailsCache.repository';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import {
   MapsService,
   isGoogleMapsHost,
@@ -307,7 +311,8 @@ export function collectRating(details: Record<string, unknown> | null): PlaceRat
 @Injectable()
 export class PlaceEnrichmentService {
   constructor(
-    private readonly database: DatabaseService,
+    @InjectRepository(PlaceDetailsCache) private readonly cache: PlaceDetailsCacheRepository,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly maps: MapsService,
     private readonly photoCache: PlacePhotoCacheService,
   ) {}
@@ -319,8 +324,8 @@ export class PlaceEnrichmentService {
    * working, and there is nothing here that warrants a migration.
    */
   async enrichDisabled(): Promise<boolean> {
-    const row = this.database.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', 'places_enrich_enabled');
-    return row?.value === 'false';
+    const value = await this.appSettings.getValue('places_enrich_enabled');
+    return value === 'false';
   }
 
   async enrich(userId: number, req: MapsPlaceEnrichmentRequest): Promise<MapsPlaceEnrichmentResult> {
@@ -807,12 +812,7 @@ export class PlaceEnrichmentService {
 
   private async readCache(placeId: string, lang: string | undefined): Promise<CachedEnrichment | null> {
     try {
-      const row = this.database.get<{ payload_json: string; fetched_at: number }>(
-        'SELECT payload_json, fetched_at FROM place_details_cache WHERE place_id = ? AND lang = ? AND expanded = ?',
-        placeId,
-        lang ?? '',
-        CACHE_KIND,
-      );
+      const row = await this.cache.findEntry(placeId, lang ?? '', CACHE_KIND);
       if (!row) return null;
       const parsed = JSON.parse(row.payload_json) as CachePayload;
       if (parsed.v !== CACHE_VERSION) return null;
@@ -844,14 +844,13 @@ export class PlaceEnrichmentService {
 
   private async writeCache(placeId: string, lang: string | undefined, value: CachedEnrichment): Promise<void> {
     try {
-      this.database.run(
-        'INSERT OR REPLACE INTO place_details_cache (place_id, lang, expanded, payload_json, fetched_at) VALUES (?, ?, ?, ?, ?)',
-        placeId,
-        lang ?? '',
-        CACHE_KIND,
-        JSON.stringify({ ...value, v: CACHE_VERSION } satisfies CachePayload),
-        Date.now(),
-      );
+      await this.cache.upsertEntry({
+        place_id: placeId,
+        lang: lang ?? '',
+        expanded: CACHE_KIND,
+        payload_json: JSON.stringify({ ...value, v: CACHE_VERSION } satisfies CachePayload),
+        fetched_at: Date.now(),
+      });
     } catch (err) {
       console.error('Failed to cache place enrichment:', err);
     }

@@ -92,6 +92,8 @@ import {
   createTestMcpTokensRepo,
   createTestOauthTokensRepo,
   createTestPasswordResetTokensRepo,
+  createTestTripsRepo,
+  createTestTripMembersRepo,
 } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
@@ -113,7 +115,7 @@ beforeAll(async () => {
   permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection)), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection));
   auth = new AuthService(
-    permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection),
+    permissions, new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection),
     await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),
     await createTestOauthTokensRepo(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestPasswordResetTokensRepo(dbs.connection),
   );

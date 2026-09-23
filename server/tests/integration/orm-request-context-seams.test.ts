@@ -147,7 +147,17 @@ describe('ORM request-context seams populated in production', () => {
    * per-job pattern for a register-only job.
    */
   it('SEAM-003: PlaceShadowRetentionJob registers against the real CronRegistrarService, and firing its tick runs inside the same request context with no missing-context error', async () => {
+    const orm = app.get(MikroORM);
     const registrar = app.get(CronRegistrarService);
+    // 0b security review F-B4: a structural identity proof, matching
+    // SEAM-001/002's shape, not just the behavioural one below — a future
+    // refactor that quietly drops CronRegistrarService's ORM constructor arg
+    // (but leaves SOME orm-shaped stub wired) would still pass the
+    // behavioural half if that stub happened to work; this catches it
+    // directly, the same way SEAM-001 already does for the OTHER three
+    // choke points.
+    expect((registrar as unknown as { orm?: MikroORM }).orm).toBe(orm);
+
     const isEnabledSpy = vi.spyOn(registrar, 'isEnabled').mockReturnValue(true);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
@@ -156,15 +166,39 @@ describe('ORM request-context seams populated in production', () => {
         VALUES (datetime('now', '-999 days'), 'seam-003', 'nominatim', 1, 1, 'expired pick', 0, 0)
       `).run();
 
-      app.get(PlaceShadowRetentionJob).onApplicationBootstrap();
+      // Real bug found converting `purgeExpired` to a genuinely async
+      // repository call (0b security review F-B4): the `cron` package's
+      // `CronJob.fireOnTick()` only awaits its callback when the job is
+      // constructed with `waitForCompletion: true`
+      // (`node_modules/cron/dist/job.js`'s `fireOnTick`) — `cron-registrar
+      // .service.ts`'s `CronJob.from({...})` never sets that option, so
+      // `await job.fireOnTick()` resolves as soon as the SYNCHRONOUS part of
+      // `wrappedTick` returns, before the awaited `withRequestContext(orm,
+      // () => onTick())` promise (and therefore the repository delete
+      // inside it) has actually settled. Verified directly: without the
+      // spy below, `remaining.n` read `1`, not `0` — a race, not a context
+      // failure (the previous, all-synchronous `better-sqlite3` DELETE never
+      // exposed this gap). Spying on the job's own `tick()` and awaiting the
+      // promise IT returns is the fix — the same promise `wrappedTick`
+      // itself awaits, just observed from outside.
+      const jobInstance = app.get(PlaceShadowRetentionJob);
+      const tickSpy = vi.spyOn(jobInstance, 'tick');
+      jobInstance.onApplicationBootstrap();
       const job = app.get(SchedulerRegistry).getCronJob('place-shadow-retention');
       await job.fireOnTick();
+      await tickSpy.mock.results[0]?.value;
 
       const suspicious = errSpy.mock.calls
         .map((args) => args.map(String).join(' '))
         .filter((line) => /cannotUseGlobalContext|global EntityManager/i.test(line));
       expect(suspicious).toEqual([]);
 
+      // Plan 3c Task 1: `purgeExpired` is now `PlaceShadowPicksRepository`-backed
+      // (a real ORM call, not raw `better-sqlite3`), so this outcome is now a
+      // load-bearing mutation ratchet on its own — removing the
+      // `withRequestContext` wrap in `cron-registrar.service.ts`'s `register()`
+      // makes the repository call throw inside `PlaceShadowRetentionJob.tick`'s
+      // own try/catch, and the row survives (verified by hand, reverted).
       const remaining = testDb.prepare("SELECT COUNT(*) as n FROM place_shadow_picks WHERE query = 'seam-003'").get() as { n: number };
       expect(remaining.n).toBe(0);
     } finally {

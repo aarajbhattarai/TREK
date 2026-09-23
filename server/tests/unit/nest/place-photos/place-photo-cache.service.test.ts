@@ -10,6 +10,16 @@
  * bare keys) — via the shared stub-registry fixture. The real mode flip is
  * pinned by the storage-registry tests; here the two prefixes prove the cache
  * itself is mode-agnostic.
+ *
+ * Rebuilt on GooglePlacePhotoMetaRepository/PlacesRepository (Plan 3c Task 1):
+ * the legacy version cast a hand-rolled 3-table SQLite fixture to
+ * `DatabaseService`; that cannot survive the service now calling two
+ * repositories for its owned reads/writes. The same minimal 3-table fixture
+ * stays (every column these repositories touch is already in it — the R8
+ * `createSnapshotTestDb()` migration only applies once a converted read
+ * needs a column the hand-rolled DDL omits, which is not the case here), but
+ * it is now wired through `createTestOrm()` and `DatabaseService` is kept
+ * ONLY for the one raw `collection_places` statement (PP6's Plan 3h half).
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import path from 'node:path';
@@ -48,6 +58,11 @@ vi.mock('../../../../src/db/database', () => ({ db: testDb }));
 
 import { PlacePhotoCacheService } from '../../../../src/nest/place-photos/place-photo-cache.service';
 import { DatabaseService } from '../../../../src/nest/database/database.service';
+import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
+import { GooglePlacePhotoMeta } from '../../../../src/db/entities/GooglePlacePhotoMeta.entity';
+import type { GooglePlacePhotoMetaRepository } from '../../../../src/db/repositories/GooglePlacePhotoMeta.repository';
+import { Places } from '../../../../src/db/entities/Places.entity';
+import type { PlacesRepository } from '../../../../src/db/repositories/Places.repository';
 import { makeStorageFixture, type StorageFixture } from '../../../helpers/storage-fixture';
 
 async function makeJpeg(width: number, height: number): Promise<Buffer> {
@@ -58,6 +73,17 @@ async function makeJpeg(width: number, height: number): Promise<Buffer> {
 function nameFor(placeId: string): string {
   return `${crypto.createHash('sha1').update(placeId).digest('hex')}.jpg`;
 }
+
+let t: TestOrm;
+let metaRepo: GooglePlacePhotoMetaRepository;
+let placesRepo: PlacesRepository;
+
+beforeAll(async () => {
+  t = await createTestOrm(testDb, { allowGlobalContext: true });
+  metaRepo = t.repo(GooglePlacePhotoMeta);
+  placesRepo = t.repo(Places);
+});
+afterAll(async () => { await t.close(); });
 
 describe.each([
   ['mode A (photos/google/ prefix)', 'photos/google/'],
@@ -75,11 +101,12 @@ describe.each([
 
   beforeAll(() => {
     fx = makeStorageFixture(keyPrefix);
-    cache = new PlacePhotoCacheService(new DatabaseService(testDb as never), fx.storage);
+    cache = new PlacePhotoCacheService(new DatabaseService(testDb as never), fx.storage, metaRepo, placesRepo);
   });
 
   beforeEach(() => {
     testDb.exec('DELETE FROM places; DELETE FROM collection_places; DELETE FROM google_place_photo_meta;');
+    t.clear();
     for (const f of fs.readdirSync(fx.root)) {
       if (f === '.tmp') continue;
       fs.rmSync(path.join(fx.root, f), { recursive: true, force: true });
@@ -175,6 +202,20 @@ describe.each([
       await cache.put(id, await makeJpeg(50, 50), null);
       const proxy = `/api/maps/place-photo/${encodeURIComponent(id)}/bytes`;
       testDb.prepare('INSERT INTO places (image_url) VALUES (?)').run(proxy);
+
+      await cache.removeIfUnreferenced(id);
+
+      expect(fs.existsSync(filePathFor(id))).toBe(true);
+    });
+
+    // Plan 3c Task 1 PP6 ruling: the `collection_places` half stays raw
+    // (Plan 3h owns that table) and only runs when the `places` half comes
+    // back false — this is the direct proof that half is still wired,
+    // through the SAME `isReferenced` call as the two above.
+    it('PPC-016: keeps an entry referenced only through collection_places, proving the Plan 3h raw fallback still fires', async () => {
+      const id = 'coll-only';
+      await cache.put(id, await makeJpeg(50, 50), null);
+      testDb.prepare('INSERT INTO collection_places (google_place_id) VALUES (?)').run(id);
 
       await cache.removeIfUnreferenced(id);
 

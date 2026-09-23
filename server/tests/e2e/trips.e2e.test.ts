@@ -75,12 +75,23 @@ const { db } = vi.hoisted(() => {
     needs_review INTEGER DEFAULT 0, day_plan_position REAL, external_source TEXT, sync_enabled INTEGER,
     ingest_state TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
   tmp.exec('CREATE TABLE days (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, day_number INTEGER, date TEXT);');
+  // Task 2 review M1: DaysRepository.listByTrip (a plain `em.find(Days)`)
+  // needs this table to exist — Days.entity.ts declares an inverse 1:1 to
+  // it (`roadtrip_day_tracks: () => p.oneToOne(RoadtripDayTracks).ref()
+  // .mappedBy('day')`), so MikroORM's find() resolves the relation's
+  // presence against the real table even though the property is hidden.
+  // Columns match the real migration
+  // (`Migration20200101032900_which_imported_track_a_day_s_drive.ts`).
+  tmp.exec(`CREATE TABLE roadtrip_day_tracks (day_id INTEGER PRIMARY KEY, place_id INTEGER NOT NULL,
+    stray_km REAL, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
   tmp.exec(`CREATE TABLE places (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, name TEXT,
     image_url TEXT, address TEXT, lat REAL, lng REAL, category_id INTEGER, description TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
   // PlacesService.list joins categories and batch-loads tags/ratings.
   tmp.exec('CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, icon TEXT);');
-  tmp.exec('CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, created_at DATETIME);');
+  // Plan 3c Task 1: TagsRepository.listForPlaces (QH1) selects `user_id`
+  // explicitly — see places.e2e.test.ts's identical comment.
+  tmp.exec('CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT, color TEXT, created_at DATETIME);');
   tmp.exec('CREATE TABLE place_tags (place_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY (place_id, tag_id));');
   tmp.exec('CREATE TABLE place_ratings (place_id INTEGER NOT NULL, user_id INTEGER NOT NULL, rating INTEGER, created_at DATETIME, UNIQUE(place_id, user_id));');
   tmp.exec(`CREATE TABLE day_accommodations (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
@@ -162,7 +173,8 @@ describe('Trips e2e (real auth guard + temp SQLite)', () => {
     db.prepare('DELETE FROM trip_members').run();
     db.prepare('DELETE FROM days').run();
     db.prepare('DELETE FROM audit_log').run();
-    canAccessTrip.mockReturnValue({ user_id: 1 });
+    // 0b review L2 / security review F-B7: dead mock scaffolding — see
+    // budget.e2e.test.ts's identical comment.
     checkPermission.mockReturnValue(true);
   });
 

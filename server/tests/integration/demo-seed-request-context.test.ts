@@ -16,14 +16,16 @@
  * conversion never meets a second C1 (task-6-review-parity.md's boot-sweep
  * finding).
  *
- * Deliberately does NOT `vi.mock('../../src/db/database', ...)` the way
- * most integration suites do: `buildDbMock`'s `runDemoSeed` is a
- * deliberate no-op stub (tests/helpers/db-mock.ts) so that suite's app
- * boots don't carry demo-seed side effects — which would silence the very
- * thing this file exists to exercise. `NODE_ENV=test` already gives
- * `db/database.ts`'s own singleton an isolated, per-worker `:memory:` copy
- * of the migrated schema snapshot (`readSchemaSnapshot()`), so no mock is
- * needed here at all.
+ * Does NOT use `buildDbMock` the way most integration suites do — its
+ * `runDemoSeed` is a deliberate no-op stub (tests/helpers/db-mock.ts) so
+ * that suite's app boots don't carry demo-seed side effects, which would
+ * silence the very thing this file exists to exercise. `NODE_ENV=test`
+ * already gives `db/database.ts`'s own singleton an isolated, per-worker
+ * `:memory:` copy of the migrated schema snapshot (`readSchemaSnapshot()`),
+ * so nothing needs stubbing for the boot itself — the `vi.mock` below (Task
+ * 0b review M2) exists only to wrap `runDemoSeed` with a context-recording
+ * spy, not to replace its behaviour: `importOriginal` re-exports everything
+ * else from the real module unchanged.
  *
  * `seedDemoData`'s own `require('../demo/demo-seed')` (a deliberate dynamic
  * require — see that file's docstring) cannot resolve under vitest's SWC
@@ -41,6 +43,43 @@
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
+import { RequestContext } from '@mikro-orm/core';
+
+/**
+ * Task 0b review M2: the pre-fix version of this file only asserted "no
+ * `cannotUseGlobalContext`/`global EntityManager` line reached the log",
+ * which cannot distinguish a wrapped call from an unwrapped one — `runDemoSeed`
+ * is raw `better-sqlite3` and never touches the ORM, so it produces neither
+ * line either way (verified: deleting the `withRequestContext` wrap in
+ * `db/orm.ts:59` left this ratchet green, 1/1). Fixed by asserting the
+ * context POSITIVELY: a thin spy around the real `runDemoSeed`, preserving
+ * everything else `../../src/db/database` exports (`importOriginal`),
+ * records whether `RequestContext.currentRequestContext()` is defined at the
+ * instant `runDemoSeed` is entered — this is exactly the ratchet MikroORM's
+ * own `allowGlobalContext: false` gate reads at query time, so it is the
+ * real signal, not a log-line proxy for it. Deleting the `withRequestContext`
+ * wrap now fails this test directly (verified).
+ */
+// `vi.hoisted`, not a plain top-level `const`: `vi.mock`'s factory is
+// invoked when something up the import chain first resolves
+// `../../src/db/database` (during `buildApp`'s own module graph, not at
+// this file's textual position), and vitest hoists the `vi.mock` call
+// itself above every import — a plain `const` here would still be in its
+// temporal dead zone when the factory closes over it. Same hazard the
+// legacy `trip-membership.service.test.ts` guarded against with its own
+// `vi.hoisted(() => ({ testDb, dbMock }))`.
+const { contextSeenOnEntry } = vi.hoisted(() => ({ contextSeenOnEntry: [] as boolean[] }));
+vi.mock('../../src/db/database', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/db/database')>();
+  return {
+    ...actual,
+    runDemoSeed: (): void => {
+      contextSeenOnEntry.push(RequestContext.currentRequestContext() !== undefined);
+      return actual.runDemoSeed();
+    },
+  };
+});
+
 import { buildApp } from '../../src/bootstrap';
 
 describe('runDemoSeed runs inside a request context (Plan 3c Task 0b)', () => {
@@ -50,6 +89,7 @@ describe('runDemoSeed runs inside a request context (Plan 3c Task 0b)', () => {
   afterEach(async () => {
     await app?.close();
     app = undefined;
+    contextSeenOnEntry.length = 0;
     if (prevDemo === undefined) delete process.env.DEMO_MODE;
     else process.env.DEMO_MODE = prevDemo;
   });
@@ -69,6 +109,12 @@ describe('runDemoSeed runs inside a request context (Plan 3c Task 0b)', () => {
       // The one thing this task could regress: a missing request context.
       const suspicious = demoLines.filter((line) => /cannotUseGlobalContext|global EntityManager/i.test(line));
       expect(suspicious).toEqual([]);
+
+      // DEMO-SEED-002 (0b review M2): the positive ratchet. runDemoSeed was
+      // actually entered (the spy fired) AND every entry saw a defined
+      // request context.
+      expect(contextSeenOnEntry.length).toBeGreaterThan(0);
+      expect(contextSeenOnEntry.every(Boolean)).toBe(true);
     } finally {
       errSpy.mockRestore();
     }

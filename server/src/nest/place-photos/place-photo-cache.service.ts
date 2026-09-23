@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { Jimp, JimpMime } from 'jimp';
 import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import { DatabaseService } from '../database/database.service';
 import { StorageService } from '../storage/storage.service';
+import { GooglePlacePhotoMeta } from '../../db/entities/GooglePlacePhotoMeta.entity';
+import type { GooglePlacePhotoMetaRepository } from '../../db/repositories/GooglePlacePhotoMeta.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
 
 // How long a "no photo for this place" answer stays remembered. Nothing about it
 // changes until a photo appears upstream, so it is worth keeping: without it every
@@ -46,6 +51,11 @@ interface CachedPhoto {
  * The registry's mode-aware prefix reproduces both TREK_PLACE_PHOTO_DIR
  * layouts (unset: uploads/photos/google; set: that dir, bare keys), so the
  * cache itself is mode-agnostic.
+ *
+ * `DatabaseService` stays injected (Plan 3c Task 1, PP6 ruling option 2)
+ * purely for the `collection_places` half of `isReferenced` — that table is
+ * Plan 3h's, so it stays a raw statement with a `// Plan 3h` comment until
+ * then. Every other statement in this file is repository-backed.
  */
 @Injectable()
 export class PlacePhotoCacheService {
@@ -59,6 +69,8 @@ export class PlacePhotoCacheService {
   constructor(
     private readonly db: DatabaseService,
     private readonly storage: StorageService,
+    @InjectRepository(GooglePlacePhotoMeta) private readonly meta: GooglePlacePhotoMetaRepository,
+    @InjectRepository(Places) private readonly places: PlacesRepository,
   ) {}
 
   private fileName(placeId: string): string {
@@ -73,10 +85,7 @@ export class PlacePhotoCacheService {
   }
 
   async get(placeId: string): Promise<CachedPhoto | null> {
-    const row = this.db.get<{ attribution: string | null }>(
-      'SELECT attribution FROM google_place_photo_meta WHERE place_id = ? AND error_at IS NULL',
-      placeId,
-    );
+    const row = await this.meta.findLive(placeId);
 
     if (!row) return null;
 
@@ -84,7 +93,7 @@ export class PlacePhotoCacheService {
       // First time this placeId is checked this session — verify the object exists.
       // (Guards against volume wipes or manual deletion between server restarts.)
       if (!(await this.storage.exists('photos-google', this.fileName(placeId)))) {
-        this.db.run('DELETE FROM google_place_photo_meta WHERE place_id = ?', placeId);
+        await this.meta.deleteByPlaceId(placeId);
         return null;
       }
       this.knownOnDisk.add(placeId);
@@ -100,10 +109,7 @@ export class PlacePhotoCacheService {
       this.recentFailures.delete(placeId);
     }
 
-    const row = this.db.get<{ error_at: number }>(
-      'SELECT error_at FROM google_place_photo_meta WHERE place_id = ? AND error_at IS NOT NULL',
-      placeId,
-    );
+    const row = await this.meta.findErrored(placeId);
 
     if (!row) return false;
     return Date.now() - row.error_at < MISSING_TTL;
@@ -128,10 +134,7 @@ export class PlacePhotoCacheService {
 
     this.recentFailures.delete(placeId);
     this.knownOnDisk.delete(placeId);
-    this.db.run(
-      'INSERT OR REPLACE INTO google_place_photo_meta (place_id, attribution, fetched_at, error_at) VALUES (?, NULL, ?, ?)',
-      placeId, Date.now(), Date.now(),
-    );
+    await this.meta.upsertError(placeId, Date.now());
   }
 
   /**
@@ -158,10 +161,7 @@ export class PlacePhotoCacheService {
     this.knownOnDisk.add(placeId);
     this.recentFailures.delete(placeId);
 
-    this.db.run(
-      'INSERT OR REPLACE INTO google_place_photo_meta (place_id, attribution, fetched_at, error_at) VALUES (?, ?, ?, NULL)',
-      placeId, attribution, Date.now(),
-    );
+    await this.meta.upsertPhoto(placeId, attribution, Date.now());
 
     return { photoUrl: this.proxyUrl(placeId), attribution };
   }
@@ -200,14 +200,20 @@ export class PlacePhotoCacheService {
    * the google_place_id itself, so collection_places must count as a referencing
    * table — otherwise the nightly sweep + trip-place delete would evict a photo
    * still shown on a collection thumbnail (#1081 photo-cache pitfall).
+   *
+   * Plan 3c Task 1 PP6 ruling (option 2): the legacy single `UNION ALL … LIMIT 1`
+   * statement spans `places` (this plan's) and `collection_places` (Plan 3h's),
+   * so it is split into two existence checks, evaluated in the SAME order the
+   * legacy `UNION ALL … LIMIT 1` would short-circuit in — the `collection_places`
+   * half only runs when the `places` half comes back false.
    */
   private async isReferenced(placeId: string): Promise<boolean> {
+    const proxyUrl = this.proxyUrl(placeId);
+    if (await this.places.existsByGoogleIdOrImageUrl(placeId, proxyUrl)) return true;
+    // Plan 3h: collection_places is not yet repository-backed.
     const row = this.db.get(
-      `SELECT 1 FROM places WHERE google_place_id = ? OR image_url = ?
-       UNION ALL
-       SELECT 1 FROM collection_places WHERE google_place_id = ? OR image_url = ?
-       LIMIT 1`,
-      placeId, this.proxyUrl(placeId), placeId, this.proxyUrl(placeId),
+      `SELECT 1 FROM collection_places WHERE google_place_id = ? OR image_url = ? LIMIT 1`,
+      placeId, proxyUrl,
     );
     return !!row;
   }
@@ -216,7 +222,7 @@ export class PlacePhotoCacheService {
     await this.storage.delete('photos-google', this.fileName(placeId)).catch(() => {
       /* already gone */
     });
-    this.db.run('DELETE FROM google_place_photo_meta WHERE place_id = ?', placeId);
+    await this.meta.deleteByPlaceId(placeId);
     this.knownOnDisk.delete(placeId);
   }
 
@@ -236,9 +242,9 @@ export class PlacePhotoCacheService {
   async sweepOrphans(): Promise<number> {
     let removed = 0;
 
-    const rows = this.db.all<{ place_id: string }>('SELECT place_id FROM google_place_photo_meta');
+    const placeIds = await this.meta.listPlaceIds();
     const keepFiles = new Set<string>();
-    for (const { place_id } of rows) {
+    for (const place_id of placeIds) {
       if (await this.isReferenced(place_id)) {
         keepFiles.add(this.fileName(place_id));
       } else {

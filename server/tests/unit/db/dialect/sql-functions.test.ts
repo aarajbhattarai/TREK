@@ -11,11 +11,15 @@ import {
   coalesceParam,
   columnIncrementedBy,
   columnRef,
+  countAll,
   currentTimestamp,
   dateAdd,
   dateOf,
   lower,
   lowerParam,
+  lowerTrim,
+  maxOf,
+  minOf,
   nowMinusDays,
   trim,
 } from '../../../../src/db/dialect/sql-functions';
@@ -325,5 +329,103 @@ describe('sql-functions (sqlite)', () => {
     expect(() => coalesce(foreign, 'u.a', 'u.b')).toThrow(/no implementation for platform FakePlatform/);
     expect(() => coalesceParam(foreign, 'u.a', 'x')).toThrow(/no implementation for platform FakePlatform/);
     expect(() => absDifference(foreign, 'u.lat', 1)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3c Task 1 (§17a: COUNT(*)/MIN/MAX aggregates — `PlaceShadowPicksRepository
+  // .totals`/`countBySource`/`countByLiveRank`). ESLint bans `raw()` inside
+  // src/db/repositories/**, so these three aliased-aggregate helpers exist
+  // for repositories that need a COUNT/MIN/MAX in a SELECT projection.
+
+  it('SQLF-023: countAll/minOf/maxOf render one aliased aggregate row, matching a hand-written statement', async () => {
+    const { user: a } = createUser(testDb);
+    testDb.prepare("UPDATE users SET created_at = '2026-01-01 00:00:00' WHERE id = ?").run(a.id);
+    const { user: b } = createUser(testDb);
+    testDb.prepare("UPDATE users SET created_at = '2026-06-15 00:00:00' WHERE id = ?").run(b.id);
+    const platform = t.em.getPlatform();
+
+    const row = await t.em.createQueryBuilder(Users, 'u')
+      .select([countAll(platform, 'total'), minOf(platform, 'u.created_at', 'oldest'), maxOf(platform, 'u.created_at', 'newest')])
+      .where({ id: { $in: [a.id, b.id] } })
+      .execute('get', false);
+    expect(row).toEqual({ total: 2, oldest: '2026-01-01 00:00:00', newest: '2026-06-15 00:00:00' });
+
+    const expected = testDb
+      .prepare('SELECT COUNT(*) as total, MIN(created_at) as oldest, MAX(created_at) as newest FROM users WHERE id IN (?, ?)')
+      .get(a.id, b.id);
+    expect(row).toEqual(expected);
+  });
+
+  // No `.orderBy({ count: 'desc' })` here: MikroORM's QueryBuilder cannot
+  // order by an ad-hoc raw-fragment alias (verified directly — it throws
+  // "Trying to query by not existing property" at runtime, since `raw()`'s
+  // alias carries no literal type for `ExtractRawAliases` to register). The
+  // repository callers that need "ORDER BY <aliased count> DESC"
+  // (`PlaceShadowPicksRepository.countBySource`) sort the fetched rows in JS
+  // instead — `Array.prototype.sort` is stable (ES2019+), so the resulting
+  // order matches a real `ORDER BY count DESC` byte for byte.
+  it('SQLF-024: countAll composes with GROUP BY, matching a hand-written GROUP BY statement', async () => {
+    createUser(testDb, { role: 'admin' });
+    createUser(testDb, { role: 'admin' });
+    createUser(testDb, { role: 'user' });
+    const platform = t.em.getPlatform();
+
+    const rows = await t.em.createQueryBuilder(Users, 'u')
+      .select(['u.role', countAll(platform, 'count')])
+      .groupBy('u.role')
+      .execute('all', false);
+
+    const expected = testDb.prepare('SELECT role, COUNT(*) as count FROM users GROUP BY role').all();
+    expect([...(rows as { role: string; count: number }[])].sort((a, b) => a.role.localeCompare(b.role)))
+      .toEqual([...(expected as { role: string; count: number }[])].sort((a, b) => a.role.localeCompare(b.role)));
+  });
+
+  it('SQLF-025: countAll/minOf/maxOf reject an alias that is not a plain identifier', () => {
+    const platform = t.em.getPlatform();
+    expect(() => countAll(platform, 'x; DROP TABLE users; --')).toThrow(/not an alias/);
+    expect(() => minOf(platform, 'u.created_at', '1bad')).toThrow(/not an alias/);
+    expect(() => maxOf(platform, 'u.created_at', '')).toThrow(/not an alias/);
+  });
+
+  it('SQLF-026: an unknown platform fails closed for countAll/minOf/maxOf', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => countAll(foreign, 'total')).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => minOf(foreign, 'u.created_at', 'oldest')).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => maxOf(foreign, 'u.created_at', 'newest')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Task 0b review M3 (blocks Task 4's PL26, places.service.ts:642
+  // `lower(trim(name))`): `lower()`/`trim()` cannot compose to build
+  // `LOWER(TRIM(name))` — `lowerTrim()` is the one fragment for that shape.
+  it('SQLF-027: lowerTrim renders LOWER(TRIM(<col>)) as one fragment, matching a hand-written statement', async () => {
+    const { user } = createUser(testDb, { username: '  Padded Name  ' });
+    const platform = t.em.getPlatform();
+    const row = await t.em.createQueryBuilder(Users, 'u')
+      .select([lowerTrim(platform, 'u.username').as('n')])
+      .where({ id: user.id })
+      .execute('get', false);
+    expect((row as { n: string }).n).toBe('padded name');
+
+    const expected = testDb.prepare('SELECT LOWER(TRIM(username)) as n FROM users WHERE id = ?').get(user.id) as { n: string };
+    expect((row as { n: string }).n).toBe(expected.n);
+  });
+
+  it('SQLF-028: lowerTrim is usable as a find() filter key, and SQLite LOWER() stays ASCII-only through the TRIM', async () => {
+    const { user } = createUser(testDb, { username: '  JOSÉ  ' });
+    const platform = t.em.getPlatform();
+    const rows = await t.em.find(Users, { [lowerTrim(platform, 'username')]: 'josé'.toLowerCase() });
+    // toLowerCase() is full-Unicode ('é' stays 'é'), but SQLite's LOWER() is
+    // ASCII-only and leaves 'É' untouched — so the JS-lowered bind does NOT
+    // match the SQL-lowered, SQL-trimmed column (program rule 18: mixing
+    // engines is the bug, not the fix).
+    expect(rows).toEqual([]);
+    const matching = await t.em.find(Users, { [lowerTrim(platform, 'username')]: 'josÉ' });
+    expect(matching.map((r) => r.id)).toEqual([user.id]);
+  });
+
+  it('SQLF-029: an unknown platform fails closed for lowerTrim', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => lowerTrim(foreign, 'u.name')).toThrow(/no implementation for platform FakePlatform/);
   });
 });

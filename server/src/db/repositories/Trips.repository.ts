@@ -10,6 +10,25 @@ export interface TripAccess {
 
 export class TripsRepository extends TrekRepository<Trips> {
   /**
+   * The `LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
+   * WHERE (t.user_id = ? OR m.user_id IS NOT NULL)` half `findAccessible`
+   * and `listAccessibleIds` (Plan 3c Task 1, TB3) share — one join builder,
+   * per the task brief's ruling that the two must derive from the same
+   * source rather than hand-keeping two copies in sync (the cross-plan note
+   * in the inventory: TB3 and `TripsService.list`'s id half are "the same
+   * query with different projections"). No explicit return-type annotation,
+   * for the same inference reason `TrekRepository.kysely()` gives (the
+   * QueryBuilder's fluent generic parameters do not survive being spelled
+   * out via a separate type alias) — every caller chains `.select()`/
+   * `.where()`/`.orderBy()` straight off this method's return value.
+   */
+  private accessibleTripsQuery(user_id: number) {
+    return this.qb('t')
+      .leftJoin('t.trip_members_collection', 'm', { 'm.user': user_id })
+      .andWhere({ $or: [{ 't.user': user_id }, { 'm.user': { $ne: null } }] });
+  }
+
+  /**
    * The trip if the user owns it or is a member of it, else undefined.
    *
    * Byte-for-byte the legacy `canAccessTrip` statement:
@@ -30,9 +49,8 @@ export class TripsRepository extends TrekRepository<Trips> {
    * affinity comparison of the unconverted string never matches one).
    */
   async findAccessible(trip_id: number | string, user_id: number): Promise<TripAccess | undefined> {
-    const row = await this.qb('t')
+    const row = await this.accessibleTripsQuery(user_id)
       .select(['t.id', 't.user', 't.currency'])
-      .leftJoin('t.trip_members_collection', 'm', { 'm.user': user_id })
       // Raw condition (D4's T5 escape hatch), not `.where({ 't.id': trip_id })`:
       // MikroORM's typed filter rejects a `string` against `t.id`'s branded
       // `number` type, and coercing to `Number(trip_id)` first would be
@@ -40,8 +58,7 @@ export class TripsRepository extends TrekRepository<Trips> {
       // `t.id`/`t.user_id` are the physical column names (not translated
       // through the entity's `trip`/`user` property aliasing the way a typed
       // filter object is), so the raw text names them directly.
-      .where('t.id = ?', [trip_id])
-      .andWhere({ $or: [{ 't.user': user_id }, { 'm.user': { $ne: null } }] })
+      .andWhere('t.id = ?', [trip_id])
       // `mapResults: false` leaves the driver's row alone: the keys are the
       // column names, which is why the result type is spelled out here rather
       // than inferred from the entity's properties.
@@ -68,5 +85,51 @@ export class TripsRepository extends TrekRepository<Trips> {
       .andWhere({ user: user_id })
       .execute<{ id: number } | undefined>('get', false);
     return !!row;
+  }
+
+  /**
+   * `SELECT user_id FROM trips WHERE id = ?` (`trip-membership.service.ts:23`,
+   * TB1) — `row ? row.user_id : null` stays the caller's decision to make
+   * ("owner id for budget/MCP guards"); this returns exactly that shape.
+   * Raw-bind (D4's T5 escape hatch), same `number | string` seam as
+   * `findAccessible`/`isOwner` above.
+   */
+  async getOwnerId(trip_id: number | string): Promise<number | null> {
+    const row = await this.qb('t')
+      .select(['t.user'])
+      .where('t.id = ?', [trip_id])
+      .execute<{ user_id: number } | undefined>('get', false);
+    return row ? row.user_id : null;
+  }
+
+  /**
+   * `SELECT id, user_id FROM trips WHERE id = ?` (`trip-membership.service.ts:66`,
+   * TB4) — `joinTripAsMember`'s first check-then-act read (§18.4: the
+   * sequence stays non-transactional, unchanged by this conversion). The
+   * only caller (`TripMembershipService.joinTripAsMember(tripId: number, …)`)
+   * always passes a real `number`, so this takes one too — no raw-bind seam
+   * to preserve here, unlike `findAccessible`/`isOwner`/`getOwnerId`.
+   */
+  async findIdAndOwner(trip_id: number): Promise<{ id: number; user_id: number } | undefined> {
+    return this.qb('t')
+      .select(['t.id', 't.user'])
+      .where({ id: trip_id })
+      .execute<{ id: number; user_id: number } | undefined>('get', false);
+  }
+
+  /**
+   * `SELECT t.id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id
+   *  AND m.user_id = :userId WHERE (t.user_id = :userId OR m.user_id IS NOT NULL)
+   *  ORDER BY t.created_at DESC` (`trip-membership.service.ts:40-46`, TB3) —
+   * the id half of `TripsService.list(userId, null)`, sharing `findAccessible`'s
+   * join builder per the task brief's ruling (this class's `accessibleTripsQuery`
+   * above).
+   */
+  async listAccessibleIds(user_id: number): Promise<number[]> {
+    const rows = await this.accessibleTripsQuery(user_id)
+      .select(['t.id'])
+      .orderBy({ 't.created_at': 'desc' })
+      .execute<{ id: number }[]>('all', false);
+    return rows.map((r) => r.id);
   }
 }

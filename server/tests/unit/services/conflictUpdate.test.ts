@@ -21,8 +21,8 @@ const { testDb, dbMock } = vi.hoisted(() => {
     closeDb: () => {},
     reinitialize: () => {},
     getPlaceWithTags,
-    canAccessTrip: () => null,
-    isOwner: () => false,
+    canAccessTrip: async () => null,
+    isOwner: async () => false,
   };
   return { testDb: db, dbMock: mock };
 });
@@ -54,19 +54,36 @@ import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repos
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import {
+  createTestUnitOfWork,
+  createTestAppSettingsRepo,
+  createTestUsersRepo,
+  createTestTagsRepo,
+  createTestPlaceRatingsRepo,
+  createTestAssignmentParticipantsRepo,
+  createTestGooglePlacePhotoMetaRepo,
+  createTestPlacesRepo,
+  sharedTestOrm,
+} from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
 const runtimeEnv = new RuntimeEnvService();
-// One cache instance shared by maps and places, the way the container wires it:
-// the service's stampede guard only works if there is exactly one of them.
-const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
-
 
 let packing: PackingService;
 let places: PlacesService;
+let photoCache: PlacePhotoCacheService;
 beforeAll(async () => {
+  // One cache instance shared by maps and places, the way the container
+  // wires it: the service's stampede guard only works if there is exactly
+  // one of them. Plan 3c Task 1: PlacePhotoCacheService now takes the two
+  // repositories too.
+  photoCache = new PlacePhotoCacheService(
+    dbs,
+    makeStorageFixture('photos/google/').storage,
+    await createTestGooglePlacePhotoMetaRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
+  );
   // Plan 3c Task 0b: `dbs` is constructed at module load, before any
   // `beforeAll` can resolve a real `EntityManager` — the four
   // repository-backed methods are spied directly on this instance instead,
@@ -82,7 +99,7 @@ beforeAll(async () => {
   new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
   realtime,
   new MapsService(dbs, photoCache, await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection)),
-  new QueryHelpersService(dbs),
+  new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), runtimeEnv, makeStorageFixture('').storage),
   photoCache,
   new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),

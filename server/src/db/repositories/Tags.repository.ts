@@ -14,6 +14,22 @@ export interface TagRow {
 
 const _tagRowKeys: AssertRowKeys<TagRow, Tags> = true;
 
+/**
+ * One tag attached to one place, from `QueryHelpersService.loadTagsByPlaceIds`
+ * (QH1). `user_id` is present only on the non-compact projection — `listForPlaces`
+ * selects a narrower column set when `compact` is set, so a compact row never
+ * carries the key at all (matching the legacy's destructuring, which drops it
+ * rather than nulling it).
+ */
+export interface TagForPlaceRow {
+  place_id: number;
+  id: number;
+  user_id?: number;
+  name: string;
+  color: string | null;
+  created_at: string | null;
+}
+
 export class TagsRepository extends TrekRepository<Tags> {
   /**
    * `SELECT * FROM tags WHERE user_id = ? ORDER BY name ASC`, via the shared
@@ -115,10 +131,36 @@ export class TagsRepository extends TrekRepository<Tags> {
     return this.nativeDelete({ id });
   }
 
-  // `loadForPlaces` (a batch `findByPlaceIds`-style tag loader) is reserved
-  // here for Plan 3c, which moves QueryHelpersService's tag batch loader
-  // (`query-helpers.service.ts:42`, `SELECT t.*, pt.place_id FROM tags t …`)
-  // onto TagsRepository (spec D4). Not implemented in Plan 3a Task 3 — no
-  // throwing stub, just this reservation, so `nest/places`'s later migration
-  // doesn't duplicate the method name.
+  /**
+   * `SELECT t.*, pt.place_id FROM tags t JOIN place_tags pt ON t.id = pt.tag_id
+   *  WHERE pt.place_id IN (${…})` (`query-helpers.service.ts:41-45`, QH1) —
+   * ONE method, TWO projections (Plan 3c Task 1 ruling): `compact` selects
+   * `{id, name, color, created_at, place_id}`; the non-compact path selects
+   * every `tags` column except the join key (`{id, user_id, name, color,
+   * created_at, place_id}`), exactly the legacy's `t.*` minus `place_id`.
+   *
+   * Joined through `t.place_tags_inverse` (the inverse side of `Places.place_tags`,
+   * a many-to-many over the `place_tags` pivot table): selecting the joined
+   * place's own `id` as `place_id` is the same value the legacy's `pt.place_id`
+   * read off the pivot row directly (the pivot's `place_id` column IS the
+   * places row it points at), so this is not an approximation.
+   *
+   * Empty `placeIds` short-circuits before any query, matching the legacy
+   * service method.
+   */
+  async listForPlaces(placeIds: number[], options?: { compact?: boolean }): Promise<TagForPlaceRow[]> {
+    if (placeIds.length === 0) return [];
+    if (options?.compact) {
+      return this.qb('t')
+        .join('t.place_tags_inverse', 'p')
+        .select(['t.id', 't.name', 't.color', 't.created_at', 'p.id as place_id'])
+        .where({ 'p.id': { $in: placeIds } })
+        .execute<TagForPlaceRow[]>('all', false);
+    }
+    return this.qb('t')
+      .join('t.place_tags_inverse', 'p')
+      .select(['t.id', 't.user', 't.name', 't.color', 't.created_at', 'p.id as place_id'])
+      .where({ 'p.id': { $in: placeIds } })
+      .execute<TagForPlaceRow[]>('all', false);
+  }
 }

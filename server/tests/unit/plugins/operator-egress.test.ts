@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 const { testDb, dbMock } = vi.hoisted(() => {
   const Database = require('better-sqlite3');
   const db = new Database(':memory:');
-  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => null } };
+  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null } };
 });
 vi.mock('../../../src/db/database', () => dbMock);
 import { db as dbConn } from '../../../src/db/database';
