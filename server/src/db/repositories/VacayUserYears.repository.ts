@@ -45,7 +45,7 @@ export class VacayUserYearsRepository extends TrekRepository<VacayUserYears> {
    * legacy SQL text inserts the exact same row a bound `30` does), so a
    * single flexible method, not four near-duplicates.
    */
-  async insertIgnore(userId: number, planId: number, year: number, vacationDays: number, carriedOver: number): Promise<void> {
+  async insertIgnore(userId: number, planId: number, year: number, vacationDays: number | null, carriedOver: number | null): Promise<void> {
     await this.upsert(
       { user: userId, plan: planId, year, vacation_days: vacationDays, carried_over: carriedOver },
       { onConflictFields: ['user', 'plan', 'year'], onConflictAction: 'ignore' },

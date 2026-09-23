@@ -49,6 +49,7 @@ vi.mock('../../../src/utils/ssrfGuard', () => {
 import { getEventText, buildEmailHtml } from '../../../src/nest/notifications/mailer/email-html';
 import { WebhookService, buildWebhookBody } from '../../../src/nest/notifications/transports/webhook.service';
 import { NtfyService, resolveNtfyUrl, resolveAdminNtfyUrl, resolveNtfyToken, type NtfyConfig } from '../../../src/nest/notifications/transports/ntfy.service';
+import { buildBuiltinChannels } from '../../../src/nest/notifications/channels/builtins';
 import { checkSsrf } from '../../../src/utils/ssrfGuard';
 import { logError } from '../../../src/nest/audit/audit-log.logger';
 import { createTables } from '../../../src/db/schema';
@@ -58,10 +59,13 @@ import { createTestSettingsRepo, createTestAppSettingsRepo } from '../../helpers
 // The transports are providers now, taking SettingsRepository/
 // AppSettingsRepository instead of DatabaseService — a real, throwaway
 // in-memory DB (never read by any case in this file: every case here drives
-// sendWebhook/sendNtfy directly, never the config getters, except the
-// GHSA-7pqc-fj3c-9346 case below, which resolves real configs through the
-// same repositories) replaces the STUB-DB fixture the fake `DatabaseService`
-// connection used to supply.
+// sendWebhook/sendNtfy directly, never the config getters — including the
+// GHSA-7pqc-fj3c-9346 case below, which hand-builds both NtfyConfigs and never
+// reaches ntfy.getUserNtfyConfig/getAdminNtfyConfig or the production send
+// path; the "GHSA-7pqc live path" case further down is the one that seeds this
+// same DB and resolves real configs through the repositories, driving
+// buildBuiltinChannels(...).sendToUser) replaces the STUB-DB fixture the fake
+// `DatabaseService` connection used to supply.
 let webhookSvc: WebhookService;
 let ntfySvc: NtfyService;
 let sendWebhook: WebhookService['sendWebhook'];
@@ -447,6 +451,54 @@ describe('GHSA-7pqc-fj3c-9346: ntfy token is only attached when the target is th
 
     await sendNtfy(resolveNtfyUrl(adminCfg, nonOperatorTargetUser)!, resolveNtfyToken(adminCfg, nonOperatorTargetUser), payload);
     expect(mockFetch.mock.calls[1][1].headers['Authorization']).toBeUndefined();
+  });
+});
+
+// M4 fix-wave (task-7-review.md): the case above drives resolveNtfyToken/sendNtfy
+// directly and never reaches ntfy.getUserNtfyConfig/getAdminNtfyConfig or the
+// production dispatch path (channels/builtins.ts sendToUser) — reverting the fix
+// on that live-send leg (`resolveNtfyToken(adminCfg, userCfg)` back to
+// `userCfg?.token ?? adminCfg.token` at builtins.ts:98) leaves every committed
+// test in this file green. This case seeds the DB for real, builds NtfyService
+// on the real repositories, and drives buildBuiltinChannels(...).sendToUser —
+// the same call NotificationsService.send() makes.
+describe('GHSA-7pqc-fj3c-9346 (live path): buildBuiltinChannels sendToUser resolves configs through the repositories', () => {
+  it('operator-server user gets the admin token; foreign-server user does not', async () => {
+    const liveDb = new Database(':memory:');
+    createTables(liveDb);
+    runMigrations(liveDb);
+    liveDb
+      .prepare("INSERT INTO users (id, username, email, password_hash, role) VALUES (1,'op','op@x','x','admin'),(2,'u2','u2@x','x','user')")
+      .run();
+    liveDb
+      .prepare(
+        "INSERT INTO app_settings (key, value) VALUES ('admin_ntfy_server','https://ntfy.operator.example'),('admin_ntfy_topic','ops'),('admin_ntfy_token','operator-secret')",
+      )
+      .run();
+    liveDb
+      .prepare(
+        "INSERT INTO settings (user_id, key, value) VALUES (1,'ntfy_topic','t1'),(2,'ntfy_topic','t2'),(2,'ntfy_server','https://ntfy.attacker.example')",
+      )
+      .run();
+    const liveNtfy = new NtfyService(await createTestSettingsRepo(liveDb), await createTestAppSettingsRepo(liveDb));
+    const ntfyChannel = buildBuiltinChannels({ mailer: {} as never, webhook: {} as never, ntfy: liveNtfy }).find((c) => c.id === 'ntfy')!;
+
+    const mockFetch = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({ ok: true, text: async () => '' } as never);
+    vi.mocked(checkSsrf).mockResolvedValue({ allowed: true, isPrivate: false, resolvedIp: '1.2.3.4' });
+
+    await ntfyChannel.sendToUser(1, { event: 'trip_reminder', title: 'T', body: 'B' });
+    await ntfyChannel.sendToUser(2, { event: 'trip_reminder', title: 'T', body: 'B' });
+
+    expect(mockFetch.mock.calls[0][0]).toBe('https://ntfy.operator.example/t1');
+    expect((mockFetch.mock.calls[0][1] as RequestInit & { headers: Record<string, string> }).headers['Authorization']).toBe(
+      'Bearer operator-secret',
+    );
+    expect(mockFetch.mock.calls[1][0]).toBe('https://ntfy.attacker.example/t2');
+    expect(
+      (mockFetch.mock.calls[1][1] as RequestInit & { headers: Record<string, string> }).headers['Authorization'],
+    ).toBeUndefined();
   });
 });
 

@@ -83,7 +83,12 @@ export class VacayEntriesRepository extends TrekRepository<VacayEntries> {
    */
   async shiftForOwnerWindow(planId: number, userId: number, start: string, end: string, offset: number): Promise<void> {
     const platform = this.getEntityManager().getPlatform();
-    const rows = await this.find({ plan: planId, user: userId, date: { $gte: start, $lte: end } }, { fields: ['id', 'date'] });
+    // M1 (task-7-review.md): legacy's single `UPDATE OR IGNORE` walks rows in
+    // rowid order; without an explicit orderBy here, SQLite returns rows in
+    // (user, plan, date) index order instead, so the per-row collision check
+    // above skips different rows than legacy did on consecutive days inserted
+    // out of id order.
+    const rows = await this.find({ plan: planId, user: userId, date: { $gte: start, $lte: end } }, { fields: ['id', 'date'], orderBy: { id: 'asc' } });
     for (const row of rows) {
       const shiftedDate = shiftIsoDate(row.date, offset);
       const collision = await this.findOne({ plan: planId, user: userId, date: shiftedDate }, { fields: ['id'] });

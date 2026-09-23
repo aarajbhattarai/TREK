@@ -33,7 +33,7 @@ export class VacayUserColorsRepository extends TrekRepository<VacayUserColors> {
    * `acceptInvite`'s own-color migration and its no-collision else-branch —
    * three identical-text call sites, one method).
    */
-  async insertIgnore(userId: number, planId: number, color: string): Promise<void> {
+  async insertIgnore(userId: number, planId: number, color: string | null): Promise<void> {
     await this.upsert({ user: userId, plan: planId, color }, { onConflictFields: ['user', 'plan'], onConflictAction: 'ignore' });
   }
 

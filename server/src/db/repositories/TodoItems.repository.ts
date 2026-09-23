@@ -42,6 +42,13 @@ interface TodoItemsCopyInsertKyselyDB {
   };
 }
 
+/** `isoDate` + 1 calendar day, in UTC — turns {@link TodoItemsRepository.listDueForReminder}'s inclusive cutoff into an exclusive `$lt` bound (L2, task-7-review.md). */
+function dayAfter(isoDate: string): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * `todo_items` — Kysely throughout: `trip_id`/`assigned_user_id` are
  * `persist(false)` relation mirrors (the program-wide bare-`select`/`fields`
@@ -192,12 +199,17 @@ export class TodoItemsRepository extends TrekRepository<TodoItems> {
    * JS-computed by the caller (`todayDate`/`cutoffDate`, both `Date.UTC`-
    * based `YYYY-MM-DD` text — matching SQLite's own UTC `date('now')`, per
    * the same reasoning RJ3's restructuring documents) and bound directly
-   * against `ti.due_date` (documented elsewhere as always canonical
-   * `YYYY-MM-DD` text, so `date(ti.due_date)`'s normalization is a no-op for
-   * well-formed rows and the wrapping is dropped). The `datetime('now',
-   * '-20 hours')` dedup bound stays genuinely in SQL, via `nowMinusHours`
-   * (Task 0's R9 helper) — RJ5's brief explicitly calls for it, not a JS
-   * equivalent.
+   * against `ti.due_date`. `due_date` is an unconstrained `z.string()` on
+   * the wire, not always canonical `YYYY-MM-DD` text, so `date(ti.due_date)`'s
+   * normalization is NOT a no-op: a time-bearing due date on the cutoff day
+   * itself (`2026-07-14T09:00`) sorts lexically AFTER the bare cutoff date
+   * string, so a plain `$lte: cutoffDate` drops it a day early (L2,
+   * task-7-review.md). `date(ti.due_date) <= cutoffDate` is reproduced as an
+   * exclusive `$lt` against the day AFTER cutoff instead of re-adding the
+   * `date()` wrap (Kysely `sql` is banned under repositories). The
+   * `datetime('now', '-20 hours')` dedup bound stays genuinely in SQL, via
+   * `nowMinusHours` (Task 0's R9 helper) — RJ5's brief explicitly calls for
+   * it, not a JS equivalent.
    */
   async listDueForReminder(todayDate: string, cutoffDate: string): Promise<TodoReminderRow[]> {
     const platform = this.getEntityManager().getPlatform();
@@ -208,7 +220,7 @@ export class TodoItemsRepository extends TrekRepository<TodoItems> {
       .andWhere({ due_date: { $ne: null } })
       .andWhere({ due_date: { $ne: '' } })
       .andWhere({ due_date: { $gte: todayDate } })
-      .andWhere({ due_date: { $lte: cutoffDate } })
+      .andWhere({ due_date: { $lt: dayAfter(cutoffDate) } })
       .andWhere({ $or: [{ reminded_at: null }, { reminded_at: { $lte: nowMinusHours(platform, 20) } }] })
       .execute<TodoReminderQueryRow[]>('all', false);
     return rows.map((row) => ({

@@ -183,11 +183,44 @@ describe('SystemNoticesService (Plan 3f Task 6)', () => {
       expect((await svc.getActiveFor(BASE_USER.id, new Set(['release']), 'dev')).map((n) => n.id)).toEqual(['sn-test-generic']);
     });
 
+    // L3 (task-7-review.md): dropped by Task 6, restored — the running app
+    // version is read loosely (`semver.coerce`-shaped, tolerating a leading
+    // `v`), same as the server reads its own.
+    it('reads the version loosely, as the server reads its own', async () => {
+      const { svc } = makeService();
+      const ids = (await svc.getActiveFor(BASE_USER.id, new Set(['release']), 'v' + getCurrentAppVersion())).map((n) => n.id);
+      expect(ids).toContain('sn-test-release');
+      expect(ids).toContain('sn-test-generic');
+    });
+
     it('always delivers a notice without a release block', async () => {
       const { svc } = makeService();
       expect((await svc.getActiveFor(BASE_USER.id)).map((n) => n.id)).toEqual(['sn-test-generic']);
       expect((await svc.getActiveFor(BASE_USER.id, new Set(['release']), getCurrentAppVersion())).map((n) => n.id)).toContain('sn-test-generic');
     });
+  });
+
+  // L3 (task-7-review.md): dropped by Task 6, restored. The emitted
+  // design:paramtypes metadata guards an unresolved class binding with
+  // `typeof AddonsService === 'undefined' ? Object : AddonsService`.
+  // Simulate that mid-cycle state: the module must still evaluate and the
+  // instance must still serve notices.
+  it('still loads and works when the AddonsService binding is unresolved (import-cycle fallback)', async () => {
+    vi.resetModules();
+    vi.doMock('../../../src/nest/addons/addons.service', () => ({ AddonsService: undefined }));
+    const { SystemNoticesService: Reloaded } = await import('../../../src/nest/system-notices/system-notices.service');
+    const isAddonEnabled = vi.fn(async () => false);
+    const inst = new Reloaded(
+      { isAddonEnabled } as never,
+      { isManaged: () => false } as never,
+      { findById: async () => BASE_USER } as never,
+      { countForUser: async () => 1 } as never,
+      { listForUser: async () => [] } as never,
+      { getValue: async () => null } as never,
+    );
+    const out = await inst.getActiveFor(BASE_USER.id);
+    expect(out.map((n) => n.id)).toEqual(['sn-test-generic']);
+    vi.doUnmock('../../../src/nest/addons/addons.service');
   });
 
   describe('dismiss', () => {

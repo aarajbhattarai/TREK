@@ -187,6 +187,21 @@ function windowEndYear(end: string): number {
 }
 
 /**
+ * Parse a date or datetime string the way SQLite's `julianday()` does — the
+ * numeric components taken at face value as UTC, never the host's local
+ * timezone. `Date.parse` only does this for a bare `YYYY-MM-DD`; a datetime
+ * string with no zone suffix (`2025-06-12T23:30`) is local time per the ES
+ * spec, which drifted from `julianday`'s always-UTC reading by whatever the
+ * server's offset is (M2, task-7-review.md). Unparseable input returns `NaN`.
+ */
+function parseAsUtcMillis(value: string): number {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(value);
+  if (!m) return NaN;
+  const [, y, mo, d, h, mi, s] = m;
+  return Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h ?? 0), Number(mi ?? 0), Number(s ?? 0));
+}
+
+/**
  * Vacay domain service — owns the vacay SQL, now through the ten vacay
  * repositories (+ `SchoolHolidayRegionsRepository`'s cross-domain read,
  * Task 2's) instead of `DatabaseService` (Plan 3f Task 5). Broadcasts go
@@ -403,9 +418,15 @@ export class VacayService {
     // VC4 (R9's verified restructured shape): `CAST(julianday(?) - julianday(?)
     // AS INTEGER)` on two BOUND VALUES is plain JS date-diff arithmetic —
     // verified against the SQL on 5 date pairs incl. a leap-year boundary and a
-    // negative offset, all matched exactly (task-0-report.md).
-    const offset = Math.round((Date.parse(newStart) - Date.parse(oldStart)) / 86400000);
-    if (offset === 0) return;
+    // negative offset, all matched exactly (task-0-report.md). M2
+    // (task-7-review.md): `trip.start_date` is an unconstrained `z.string()`,
+    // so both bounds are parsed as UTC (never the host's local time) and
+    // truncated — not rounded — to match `CAST(... AS INTEGER)`; a non-finite
+    // offset (an unparseable start, legacy's NULL-julianday case) is a no-op,
+    // same as legacy, instead of writing a NaN date and 500ing after the trip
+    // row is already committed.
+    const offset = Math.trunc((parseAsUtcMillis(newStart) - parseAsUtcMillis(oldStart)) / 86400000);
+    if (!Number.isFinite(offset) || offset === 0) return;
 
     const plan = await this.getOwnPlan(ownerId);
 
@@ -557,7 +578,14 @@ export class VacayService {
           for (const u of users) {
             const used = await this.usedDays(u.id, planId, yr);
             const config = await this.userYears.findForYear(u.id, planId, yr);
-            const total = (config ? config.vacation_days ?? 30 : 30) + (config ? config.carried_over ?? 0 : 0);
+            // L1 (task-7-review.md): legacy bound `config.vacation_days`/
+            // `config.carried_over` into this total AS-IS, letting a NULL
+            // column pass through and coerce to 0 in the `+` (JS: `null + n
+            // = n`) — never defaulting a NULL vacation_days to 30. `?? 0`
+            // (not `?? 30`) reproduces that exact coercion under strict
+            // nullable typing; only the OUTER `config ? … : 30` (no row at
+            // all) is a genuine default.
+            const total = (config ? config.vacation_days ?? 0 : 30) + (config ? config.carried_over ?? 0 : 0);
             const carry = Math.max(0, total - used);
             await this.userYears.upsertCarriedOver(u.id, planId, nextYr, carry);
           }
@@ -719,11 +747,15 @@ export class VacayService {
         await this.entries.updatePlanIdForUser(planId, ownPlan.id, userId);
         const ownYears = await this.userYears.listForUserAndPlan(userId, ownPlan.id);
         for (const y of ownYears) {
-          await this.userYears.insertIgnore(userId, planId, y.year, y.vacation_days ?? 30, y.carried_over ?? 0);
+          // L1 (task-7-review.md): legacy bound these AS-IS — a NULL
+          // vacation_days/carried_over on the source row migrates as NULL,
+          // never defaulted to 30/0.
+          await this.userYears.insertIgnore(userId, planId, y.year, y.vacation_days, y.carried_over);
         }
         const colorRow = await this.userColors.findColor(userId, ownPlan.id);
         if (colorRow) {
-          await this.userColors.insertIgnore(userId, planId, colorRow.color ?? '#6366f1');
+          // L1: same — a NULL color migrates as NULL, not '#6366f1'.
+          await this.userColors.insertIgnore(userId, planId, colorRow.color);
         }
       }
 
@@ -1020,7 +1052,10 @@ export class VacayService {
             const prevConfig = await this.userYears.findForYear(u.id, planId, year - 1);
             if (prevConfig) {
               const used = await this.usedDays(u.id, planId, year - 1);
-              const total = (prevConfig.vacation_days ?? 30) + (prevConfig.carried_over ?? 0);
+              // L1 (task-7-review.md): `?? 0`, not `?? 30` — reproduces
+              // legacy's raw `prevConfig.vacation_days + prevConfig.carried_over`,
+              // where a NULL vacation_days coerced to 0 in the `+`, never to 30.
+              const total = (prevConfig.vacation_days ?? 0) + (prevConfig.carried_over ?? 0);
               carriedOver = Math.max(0, total - used);
             }
           }
@@ -1078,7 +1113,10 @@ export class VacayService {
             const prevConfig = await this.userYears.findForYear(u.id, planId, prevYear);
             if (prevConfig) {
               const used = await this.usedDays(u.id, planId, prevYear);
-              const total = (prevConfig.vacation_days ?? 30) + (prevConfig.carried_over ?? 0);
+              // L1 (task-7-review.md): `?? 0`, not `?? 30` — reproduces
+              // legacy's raw `prevConfig.vacation_days + prevConfig.carried_over`,
+              // where a NULL vacation_days coerced to 0 in the `+`, never to 30.
+              const total = (prevConfig.vacation_days ?? 0) + (prevConfig.carried_over ?? 0);
               carry = Math.max(0, total - used);
             }
           }
@@ -1165,7 +1203,7 @@ export class VacayService {
     // rather than left silently un-transacted.
     const rows: {
       user_id: number; person_name: string; person_color: string;
-      year: number; vacation_days: number; carried_over: number;
+      year: number; vacation_days: number | null; carried_over: number | null;
       total_available: number; used: number; remaining: number; comp_used: number;
       window_start: string; window_end: string;
     }[] = [];
@@ -1174,9 +1212,15 @@ export class VacayService {
         const used = await this.usedDays(u.id, planId, year);
         const compUsed = await this.compUsedDays(u.id, planId, year);
         const config = await this.userYears.findForYear(u.id, planId, year);
-        const vacationDays = config ? config.vacation_days ?? 30 : 30;
-        const carriedOver = carryOverEnabled ? (config ? config.carried_over ?? 0 : 0) : 0;
-        const total = vacationDays + carriedOver;
+        // L1 (task-7-review.md): a NULL vacation_days/carried_over passes
+        // through on the wire, never defaulted to 30/0 — only the "no row at
+        // all" case (`config` itself null) is a genuine default. `total`
+        // still needs a number, so it null-coalesces separately, the same
+        // way legacy's `vacationDays + carriedOver` silently coerced a NULL
+        // operand to 0 in the `+`.
+        const vacationDays = config ? config.vacation_days : 30;
+        const carriedOver = carryOverEnabled ? (config ? config.carried_over : 0) : 0;
+        const total = (vacationDays ?? 0) + (carriedOver ?? 0);
         const remaining = total - used;
         const colorRow = await this.userColors.findColor(u.id, planId);
         // The period this row was computed over (#737) — the UI labels the window and

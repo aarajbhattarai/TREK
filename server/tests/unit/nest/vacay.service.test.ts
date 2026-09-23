@@ -583,6 +583,60 @@ describe('shiftOwnerEntriesForTripWindow', () => {
     const row = testDb.prepare('SELECT date FROM vacay_entries WHERE plan_id = ? AND user_id = ?').get(plan.id, user.id) as { date: string };
     expect(row.date).toBe('2026-05-05');
   });
+
+  it('VACAY-SVC-030d (M2 parity): an unparseable start (garbage) resolves as a no-op, same as legacy\'s NULL-julianday offset of 0, instead of writing a NaN date', async () => {
+    const { user, plan } = await setupUserWithPlan();
+    testDb.prepare('INSERT INTO vacay_entries (plan_id, user_id, date, note) VALUES (?, ?, ?, ?)').run(plan.id, user.id, '2026-05-05', '');
+
+    await expect(svc.shiftOwnerEntriesForTripWindow(user.id, '2026-05-01', '2026-05-10', 'soon')).resolves.toBeUndefined();
+
+    const row = testDb.prepare('SELECT date FROM vacay_entries WHERE plan_id = ? AND user_id = ?').get(plan.id, user.id) as { date: string };
+    expect(row.date).toBe('2026-05-05');
+  });
+
+  it('VACAY-SVC-030e (M2 parity): a datetime start with no zone suffix is parsed as UTC and truncated, matching base\'s CAST(julianday(...) AS INTEGER) rather than a local-time round', async () => {
+    // base: CAST(julianday('2025-06-12T23:30') - julianday('2025-06-10') AS INTEGER) = 2
+    // (2 days 23.5 hours, truncated toward zero) — a local-time Date.parse +
+    // Math.round of the same pair computed 3 instead (task-7-review.md M2).
+    const { user, plan } = await setupUserWithPlan();
+    testDb.prepare('INSERT INTO vacay_entries (plan_id, user_id, date, note) VALUES (?, ?, ?, ?)').run(plan.id, user.id, '2025-06-15', '');
+
+    await svc.shiftOwnerEntriesForTripWindow(user.id, '2025-06-10', '2025-06-20', '2025-06-12T23:30');
+
+    const row = testDb.prepare('SELECT date FROM vacay_entries WHERE plan_id = ? AND user_id = ?').get(plan.id, user.id) as { date: string };
+    expect(row.date).toBe('2025-06-17');
+  });
+
+  it('VACAY-SVC-030f (M1 parity): consecutive-day entries inserted in descending-id order shift to the rowid-ordered (legacy) outcome, not the date-index-ordered one', async () => {
+    // Legacy's single `UPDATE OR IGNORE` walks rows in rowid order.
+    // VacayEntriesRepository.shiftForOwnerWindow's `find` had no `orderBy`, so
+    // SQLite returned candidates in (user, plan, date) index order instead —
+    // a different per-row collision check skips different rows
+    // (task-7-review.md M1). Inserting the latest date first makes the id
+    // order run opposite the date order, so the two orderings disagree.
+    const { user, plan } = await setupUserWithPlan();
+    const insertEntry = (date: string) =>
+      testDb.prepare('INSERT INTO vacay_entries (plan_id, user_id, date, note) VALUES (?, ?, ?, ?)').run(plan.id, user.id, date, '');
+    const readDates = () =>
+      (testDb.prepare('SELECT date FROM vacay_entries WHERE plan_id = ? AND user_id = ? ORDER BY date').all(plan.id, user.id) as { date: string }[]).map(
+        (r) => r.date,
+      );
+
+    insertEntry('2026-07-12');
+    insertEntry('2026-07-11');
+    insertEntry('2026-07-10');
+
+    await svc.shiftOwnerEntriesForTripWindow(user.id, '2026-07-01', '2026-07-20', '2026-07-02'); // offset +1
+    expect(readDates()).toEqual(['2026-07-11', '2026-07-12', '2026-07-13']);
+
+    testDb.prepare('DELETE FROM vacay_entries WHERE plan_id = ?').run(plan.id);
+    insertEntry('2026-07-12');
+    insertEntry('2026-07-11');
+    insertEntry('2026-07-10');
+
+    await svc.shiftOwnerEntriesForTripWindow(user.id, '2026-07-02', '2026-07-21', '2026-07-01'); // offset -1
+    expect(readDates()).toEqual(['2026-07-09', '2026-07-11', '2026-07-12']);
+  });
 });
 
 // ── getEntries / toggleEntry ──────────────────────────────────────────────────
@@ -973,6 +1027,24 @@ describe('getStats', () => {
       used: 0,
       remaining: 30,
     });
+  });
+
+  it('VACAY-SVC-044a (L1 parity): a legacy NULL vacation_days/carried_over row passes through on the wire, not defaulted to 30/0', async () => {
+    // task-7-review.md L1: `?? 30`/`?? 0` on these nullable columns would show
+    // a fabricated default instead of the row's actual NULL — legacy bound
+    // them AS-IS. `total_available`/`remaining` still need a number, so the
+    // arithmetic null-coalesces separately, reproducing legacy's `null + n =
+    // n` coercion without lying about the row on the wire.
+    const { user, plan } = await setupUserWithPlan();
+    const yr = new Date().getFullYear();
+    testDb.prepare('UPDATE vacay_user_years SET vacation_days = NULL, carried_over = NULL WHERE user_id = ? AND plan_id = ? AND year = ?').run(user.id, plan.id, yr);
+
+    const stats = await svc.getStats(plan.id, yr);
+
+    expect(stats[0].vacation_days).toBeNull();
+    expect(stats[0].carried_over).toBeNull();
+    expect(stats[0].total_available).toBe(0);
+    expect(stats[0].remaining).toBe(0);
   });
 
   it('VACAY-SVC-045: used reflects the actual number of entries for that user and year', async () => {

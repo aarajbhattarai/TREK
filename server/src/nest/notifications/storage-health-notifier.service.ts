@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnApplicationBootstrap, Optional } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { MikroORM } from '@mikro-orm/core';
 import { withRequestContext } from '../database/request-context';
 import { StorageEventsService } from '../storage/storage-events.service';
@@ -23,11 +23,13 @@ const DEBOUNCE_WINDOW_MS = 60 * 60 * 1000;
  * its OWN fresh request context on every invocation — the same
  * `withRequestContext` shape `CronRegistrarService.register`'s wrapped tick
  * uses — independent of whatever context (if any) was active at the call
- * site that triggered the failure. `orm` is `@Optional()` (matching
- * `CronRegistrarService`'s own reasoning): a hand-built test double that
- * constructs this service directly, with no MikroORM, still gets the exact
- * pre-Task-4 behavior (send called without a context wrapper) rather than
- * failing to compile or throwing.
+ * site that triggered the failure. `orm` is a required constructor param
+ * (L4, task-7-review.md): in production it is always injected, so
+ * `@Optional()` was a fail-open seam that existed only to serve hand-built
+ * test doubles — a DI miswire would have sent without a request context
+ * instead of refusing. A test double now passes the shared test ORM, the
+ * same real MikroORM instance STORAGE-HEALTH-CTX-001's full `buildApp()`
+ * boot exercises this against.
  */
 @Injectable()
 export class StorageHealthNotifierService implements OnApplicationBootstrap {
@@ -37,7 +39,7 @@ export class StorageHealthNotifierService implements OnApplicationBootstrap {
   constructor(
     private readonly events: StorageEventsService,
     private readonly notifications: NotificationsService,
-    @Optional() private readonly orm?: MikroORM,
+    private readonly orm: MikroORM,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -64,11 +66,7 @@ export class StorageHealthNotifierService implements OnApplicationBootstrap {
               `replica_failure notification failed: ${err instanceof Error ? err.message : String(err)}`,
             );
           });
-      if (this.orm) {
-        void withRequestContext(this.orm, sendNotification);
-      } else {
-        void sendNotification();
-      }
+      void withRequestContext(this.orm, sendNotification);
     });
   }
 }

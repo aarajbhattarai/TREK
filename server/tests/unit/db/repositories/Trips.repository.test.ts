@@ -848,3 +848,41 @@ describe('TripsRepository.listTravellerUsernames (PublicApiService.buildTravelle
     expect(await trips.listTravellerUsernames(trip.id)).toEqual([{ username: 'solo-owner', is_owner: 1 }]);
   });
 });
+
+// L6 (task-7-review.md item 11): AT1 had no full-key legacy-raw `toEqual` —
+// TRIPREPO-011/012 above only proved `listAccessibleIds` (ids only). One
+// seeded world: an owned trip, a trip the caller only belongs to as a
+// member, and a stranger's trip that must not appear.
+describe('TripsRepository.listOwnedOrMember — AT1 parity with the legacy statement', () => {
+  const LEGACY_OWNED_OR_MEMBER = `
+    SELECT DISTINCT t.* FROM trips t
+    LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
+    WHERE t.user_id = ? OR m.user_id = ?
+    ORDER BY t.start_date DESC
+  `;
+
+  it('TRIPREPO-058: byte-identical to the legacy DISTINCT/LEFT JOIN statement — owned and member trips, in the same start_date-desc order, a stranger\'s trip excluded', async () => {
+    const { user: caller } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const owned = createTrip(testDb, caller.id, { start_date: '2026-03-01', end_date: '2026-03-05' });
+    const memberOf = createTrip(testDb, stranger.id, { start_date: '2026-06-01', end_date: '2026-06-05' });
+    addTripMember(testDb, memberOf.id, caller.id);
+    createTrip(testDb, stranger.id, { start_date: '2026-01-01', end_date: '2026-01-02' }); // not the caller's
+
+    const legacy = testDb.prepare(LEGACY_OWNED_OR_MEMBER).all(caller.id, caller.id, caller.id);
+    const rows = await trips.listOwnedOrMember(caller.id);
+
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([memberOf.id, owned.id]);
+  });
+
+  it('TRIPREPO-059: no owned or member trips returns an empty array, matching the legacy statement', async () => {
+    const { user: caller } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    createTrip(testDb, stranger.id);
+
+    const legacy = testDb.prepare(LEGACY_OWNED_OR_MEMBER).all(caller.id, caller.id, caller.id);
+    expect(await trips.listOwnedOrMember(caller.id)).toEqual(legacy);
+    expect(legacy).toEqual([]);
+  });
+});
