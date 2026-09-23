@@ -193,6 +193,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestTripsRepo(dbService.connection),
     await createTestReservationsRepo(dbService.connection),
     await createTestReservationEndpointsRepo(dbService.connection),
+    await createTestDayAccommodationsRepo(dbService.connection),
   );
   const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection));
   const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection));
@@ -218,7 +219,15 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestTripMembersRepo(dbService.connection),
     await createTestRoadtripViasRepo(dbService.connection),
   );
-  const accommodationsService = new AccommodationsService(dbService, permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection));
+  const accommodationsService = new AccommodationsService(
+    dbService, permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection),
+    await createTestDayAccommodationsRepo(dbService.connection),
+    await createTestDayAssignmentsRepo(dbService.connection),
+    await createTestPlacesRepo(dbService.connection),
+    await createTestDaysRepo(dbService.connection),
+    await createTestRoadtripViasRepo(dbService.connection),
+    await createTestReservationsRepo(dbService.connection),
+  );
   // Built after it: deleting a place cancels the nights booked at it through this one.
   const placesService = new PlacesService(
     dbService, permissionsService, realtimeService, mapsService, queryHelpersService,
@@ -300,7 +309,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
         addonsService,
       ),
       new FilesMcp(new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em), authService, guards),
-      new AccommodationsMcp(accommodationsService, dbService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
+      new AccommodationsMcp(accommodationsService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),
       new CollabMcp(collabService, authService, addonsService, guards),
       new VacayMcp(new VacayService(dbService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection)), authService, addonsService),
