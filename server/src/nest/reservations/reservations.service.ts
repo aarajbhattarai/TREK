@@ -4,7 +4,7 @@ import { UnitOfWork } from '../database/unit-of-work';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
-import { ReservationsReadRepository, toTraveler } from './reservations-read.repository';
+import { ReservationsReadService, toTraveler } from './reservations-read.service';
 import { keepMirroredPrice } from './reservation-metadata';
 import type { Reservation, User } from '../../types';
 import { BudgetService } from '../budget/budget.service';
@@ -150,7 +150,7 @@ export class ReservationsService {
     private readonly budget: BudgetService,
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
-    private readonly reads: ReservationsReadRepository,
+    private readonly reads: ReservationsReadService,
     private readonly accommodations: AccommodationsService,
     private readonly uow: UnitOfWork,
   ) {}

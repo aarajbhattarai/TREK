@@ -23,7 +23,7 @@ export const RoadtripDayBoundariesSchema = defineEntity({
   checks: [
     {
       name: 'roadtrip_day_boundaries_fraction_check',
-      expression: 'fraction BETWEEN 0 AND 1),        PRIMARY KEY (trip_id, day_number',
+      expression: 'fraction BETWEEN 0 AND 1',
     },
     {
       name: 'roadtrip_day_boundaries_day_number_check',

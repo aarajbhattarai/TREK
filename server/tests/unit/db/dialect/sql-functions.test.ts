@@ -8,21 +8,26 @@ import { Users } from '../../../../src/db/entities/Users.entity';
 import {
   absDifference,
   caseWhenEquals,
+  castInteger,
   coalesce,
   coalesceParam,
   columnIncrementedBy,
   columnRef,
+  concat,
   countAll,
   countAllRef,
   currentTimestamp,
   dateAdd,
   dateOf,
+  dayDistance,
   lower,
   lowerParam,
   lowerTrim,
   maxOf,
   minOf,
   nowMinusDays,
+  startsWithIsoDate,
+  substring,
   trim,
 } from '../../../../src/db/dialect/sql-functions';
 
@@ -488,5 +493,197 @@ describe('sql-functions (sqlite)', () => {
     class FakePlatform extends Platform {}
     const foreign = new FakePlatform();
     expect(() => countAllRef(foreign)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3d Task 0 (R6): no consumer yet — Tasks 2/4 wire these in as each
+  // converts RS11/RS20/RV2/DY23. Pinned here so a later task imports a
+  // tested helper instead of writing one inline.
+
+  it('SQLF-034: startsWithIsoDate matches a value that begins with YYYY-MM-DD, and only that shape (dates, non-dates, "2026-1-1", empty, NULL)', async () => {
+    const platform = t.em.getPlatform();
+    const cases: Array<[string | null, boolean]> = [
+      ['2026-09-21', true],
+      ['2026-09-21T13:05:09Z', true],
+      ['2026-09-21 13:05:09', true],
+      ['not-a-date', false],
+      ['2026-1-1', false], // not zero-padded — the legacy pattern is exactly 4-2-2 digit classes, not a wildcard shorthand
+      ['', false],
+      [null, false],
+    ];
+    for (const [value, expected] of cases) {
+      const { user } = createUser(testDb);
+      testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(value, user.id);
+
+      const row = await t.em.createQueryBuilder(Users, 'u')
+        .select([startsWithIsoDate(platform, 'u.display_name').as('matched')])
+        .where({ id: user.id })
+        .execute('get', false);
+      expect(Boolean((row as { matched: number | null }).matched)).toBe(expected);
+
+      const raw = testDb
+        .prepare(`SELECT (display_name GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*') as matched FROM users WHERE id = ?`)
+        .get(user.id) as { matched: number | null };
+      expect(Boolean(raw.matched)).toBe(expected);
+    }
+  });
+
+  it('SQLF-035: an unknown platform fails closed for startsWithIsoDate', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => startsWithIsoDate(foreign, 'u.reservation_time')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it('SQLF-036: substring(ref, start) — the two-arg form — reads from a 1-based position to the end, matching substr(col, N)', async () => {
+    const { user } = createUser(testDb, { username: 'iso-ts' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('2026-09-21T13:05:09Z', user.id);
+    const platform = t.em.getPlatform();
+
+    const row = await t.em.createQueryBuilder(Users, 'u')
+      .select([substring(platform, 'u.display_name', 12).as('n')])
+      .where({ id: user.id })
+      .execute('get', false);
+    expect((row as { n: string }).n).toBe('13:05:09Z');
+
+    const expected = testDb.prepare('SELECT substr(display_name, 12) as n FROM users WHERE id = ?').get(user.id) as { n: string };
+    expect((row as { n: string }).n).toBe(expected.n);
+  });
+
+  it('SQLF-037: substring(ref, start, length) — the three-arg form — matches substr(col, N, L)', async () => {
+    const { user } = createUser(testDb, { username: 'iso-ts-2' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('2026-09-21T13:05:09Z', user.id);
+    const platform = t.em.getPlatform();
+
+    const row = await t.em.createQueryBuilder(Users, 'u')
+      .select([substring(platform, 'u.display_name', 1, 10).as('n')])
+      .where({ id: user.id })
+      .execute('get', false);
+    expect((row as { n: string }).n).toBe('2026-09-21');
+
+    const expected = testDb.prepare('SELECT substr(display_name, 1, 10) as n FROM users WHERE id = ?').get(user.id) as { n: string };
+    expect((row as { n: string }).n).toBe(expected.n);
+  });
+
+  it('SQLF-038: substring rejects a non-positive start or a negative length', () => {
+    const platform = t.em.getPlatform();
+    expect(() => substring(platform, 'u.x', 0)).toThrow(/1-based integer start/);
+    expect(() => substring(platform, 'u.x', 1.5)).toThrow(/1-based integer start/);
+    expect(() => substring(platform, 'u.x', 1, -1)).toThrow(/non-negative integer length/);
+    expect(() => substring(platform, 'u.x', 1, 1.5)).toThrow(/non-negative integer length/);
+  });
+
+  it('SQLF-039: an unknown platform fails closed for substring', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => substring(foreign, 'u.x', 1)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it('SQLF-040: concat renders <col> || <bound-literal> || <col>, matching the legacy d.date || \'T\' || a.check_in shape', async () => {
+    const { user } = createUser(testDb, { username: 'concat-me' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('13:05', user.id);
+    const platform = t.em.getPlatform();
+
+    const row = await t.em.createQueryBuilder(Users, 'u')
+      .select([concat(platform, { column: 'u.username' }, { value: 'T' }, { column: 'u.display_name' }).as('n')])
+      .where({ id: user.id })
+      .execute('get', false);
+    expect((row as { n: string }).n).toBe('concat-meT13:05');
+
+    const expected = testDb.prepare("SELECT username || ? || display_name as n FROM users WHERE id = ?").get('T', user.id) as { n: string };
+    expect((row as { n: string }).n).toBe(expected.n);
+  });
+
+  it('SQLF-041: concat rejects fewer than two parts', () => {
+    const platform = t.em.getPlatform();
+    expect(() => concat(platform, { column: 'u.a' })).toThrow(/at least two parts/);
+    expect(() => concat(platform)).toThrow(/at least two parts/);
+  });
+
+  it('SQLF-042: an unknown platform fails closed for concat', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => concat(foreign, { column: 'u.a' }, { value: 'x' })).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // §18.1: reservations.accommodation_id is TEXT holding integer ids with no
+  // FK; some rows read back as "14.0". castInteger exists so a comparison
+  // against a genuine INTEGER column matches both spellings the way the
+  // legacy CAST(... AS INTEGER) statement does.
+  it('SQLF-043: castInteger matches both "14" and "14.0" TEXT rows against a bound INTEGER value (the accommodation_id shape, §18.1)', async () => {
+    const platform = t.em.getPlatform();
+    const { user: exact } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('14', exact.id);
+    const { user: dotZero } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('14.0', dotZero.id);
+    const { user: other } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('15', other.id);
+
+    const rows = await t.em.createQueryBuilder(Users, 'u')
+      .select('u.id')
+      .where({ id: { $in: [exact.id, dotZero.id, other.id] }, [castInteger(platform, 'u.display_name')]: 14 })
+      .orderBy({ id: 'asc' })
+      .execute('all', false);
+    expect((rows as { id: number }[]).map((r) => r.id)).toEqual([exact.id, dotZero.id]);
+
+    const expected = testDb
+      .prepare('SELECT id FROM users WHERE id IN (?, ?, ?) AND CAST(display_name AS INTEGER) = ? ORDER BY id ASC')
+      .all(exact.id, dotZero.id, other.id, 14);
+    expect(rows).toEqual(expected);
+  });
+
+  it('SQLF-044: castInteger compares against another column via columnRef, matching CAST(col AS INTEGER) = other_col (the real RV2/RS20 shape)', async () => {
+    const platform = t.em.getPlatform();
+    const { user: exact } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(String(exact.id), exact.id);
+    const { user: dotZero } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(`${dotZero.id}.0`, dotZero.id);
+    const { user: mismatched } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(String(exact.id), mismatched.id);
+
+    const rows = await t.em.createQueryBuilder(Users, 'u')
+      .select('u.id')
+      .where({ id: { $in: [exact.id, dotZero.id, mismatched.id] }, [castInteger(platform, 'u.display_name')]: columnRef(platform, 'u.id') })
+      .orderBy({ id: 'asc' })
+      .execute('all', false);
+    expect((rows as { id: number }[]).map((r) => r.id)).toEqual([exact.id, dotZero.id]);
+
+    const expected = testDb
+      .prepare('SELECT id FROM users WHERE id IN (?, ?, ?) AND CAST(display_name AS INTEGER) = id ORDER BY id ASC')
+      .all(exact.id, dotZero.id, mismatched.id);
+    expect(rows).toEqual(expected);
+  });
+
+  it('SQLF-045: an unknown platform fails closed for castInteger', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => castInteger(foreign, 'u.accommodation_id')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it('SQLF-046: dayDistance orders by nearest calendar date, matching ORDER BY ABS(JULIANDAY(col) - JULIANDAY(?)) ASC', async () => {
+    const platform = t.em.getPlatform();
+    const { user: a } = createUser(testDb);
+    testDb.prepare("UPDATE users SET created_at = '2026-01-01 00:00:00' WHERE id = ?").run(a.id);
+    const { user: b } = createUser(testDb);
+    testDb.prepare("UPDATE users SET created_at = '2026-06-15 00:00:00' WHERE id = ?").run(b.id);
+    const { user: c } = createUser(testDb);
+    testDb.prepare("UPDATE users SET created_at = '2026-06-20 00:00:00' WHERE id = ?").run(c.id);
+    const target = '2026-06-18';
+
+    const rows = await t.em.createQueryBuilder(Users, 'u')
+      .select('u.id')
+      .where({ id: { $in: [a.id, b.id, c.id] } })
+      .orderBy({ [dayDistance(platform, 'u.created_at', target)]: 'asc' })
+      .execute('all', false);
+    expect((rows as { id: number }[]).map((r) => r.id)).toEqual([c.id, b.id, a.id]);
+
+    const expected = testDb
+      .prepare('SELECT id FROM users WHERE id IN (?, ?, ?) ORDER BY ABS(JULIANDAY(created_at) - JULIANDAY(?)) ASC')
+      .all(a.id, b.id, c.id, target);
+    expect(rows).toEqual(expected);
+  });
+
+  it('SQLF-047: an unknown platform fails closed for dayDistance', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => dayDistance(foreign, 'u.date', '2026-01-01')).toThrow(/no implementation for platform FakePlatform/);
   });
 });

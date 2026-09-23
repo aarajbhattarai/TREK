@@ -895,6 +895,79 @@ export function RULE11_referencedColumns(metadata: EntityMetadata[]): Referenced
   return fixups;
 }
 
+/** A CHECK constraint this run repaired — its introspected expression had swallowed trailing DDL text. */
+export interface CheckExpressionFixup {
+  className: string;
+  checkName: string | undefined;
+}
+
+/**
+ * RULE12 (metadata level): repair a CHECK expression that MikroORM's own
+ * SQLite introspection over-captured from a trailing table-level constraint
+ * (Plan 3d Task 0, R10 — `roadtrip_day_boundaries.fraction`).
+ *
+ * `SqliteSchemaHelper#getChecks` (verified directly against
+ * `node_modules/@mikro-orm/sql/dialects/sqlite/SqliteSchemaHelper.js`, not
+ * assumed) extracts a column's inline CHECK with `/ (check \((.*)\))/i`
+ * against that column's own slice of `PRAGMA table_xinfo`'s definition text.
+ * The regex's greedy `.*` runs to the LAST `)` in that slice — correct when
+ * the checked column is followed only by other columns, wrong when it is the
+ * last column before a table-level constraint with its own parens. The
+ * migration (`Migration20200101040100_the_road_trip_day_boundaries_carried_the.ts`)
+ * declares exactly that shape:
+ *
+ *   fraction REAL NOT NULL CHECK (fraction BETWEEN 0 AND 1),
+ *   PRIMARY KEY (trip_id, day_number)
+ *
+ * — so the introspected expression comes back as
+ * `"fraction BETWEEN 0 AND 1),        PRIMARY KEY (trip_id, day_number"`,
+ * not the DDL's `"fraction BETWEEN 0 AND 1"`. This is a third-party
+ * introspection defect (the migration's own DDL is correct, and
+ * `day_number`'s sibling CHECK on the same table — not the last column
+ * before the table constraint — introspects cleanly), so it is repaired
+ * here rather than by touching the migration or hand-editing the entity.
+ *
+ * The fix walks the captured expression tracking parenthesis depth,
+ * starting at 1 (the string has already had its own OUTER, matching
+ * `CHECK (...)` parens stripped by the upstream regex): `(` increments,
+ * `)` decrements. The first time depth returns to 0 is where the check's
+ * OWN expression actually closes — the DDL's CHECK is, by definition,
+ * itself a balanced parenthesised expression, so that is exactly its end;
+ * everything captured after it is the swallowed trailing constraint text,
+ * discarded. An expression whose parens never rebalance to 0 before the
+ * string ends (no parens at all — `day_number >= 1`,
+ * `end_date >= start_date` — or balanced-but-never-closing nested ones) is
+ * left byte-identical: this only fires on the specific over-capture shape,
+ * never on a clean expression.
+ */
+export function RULE12_fixGarbledCheckExpressions(metadata: EntityMetadata[]): CheckExpressionFixup[] {
+  const fixups: CheckExpressionFixup[] = [];
+  for (const meta of metadata) {
+    for (const check of meta.checks) {
+      if (typeof check.expression !== 'string') continue;
+      const expr = check.expression;
+      let depth = 1;
+      let cut = -1;
+      for (let i = 0; i < expr.length; i++) {
+        if (expr[i] === '(') depth++;
+        else if (expr[i] === ')') {
+          depth--;
+          if (depth === 0) {
+            cut = i;
+            break;
+          }
+        }
+      }
+      if (cut === -1) continue; // parens never rebalance to 0 — a clean expression, nothing swallowed
+      const fixed = expr.slice(0, cut).trimEnd();
+      if (fixed === expr) continue;
+      check.expression = fixed;
+      fixups.push({ className: meta.className, checkName: check.name });
+    }
+  }
+  return fixups;
+}
+
 /** A scalar property whose literal default the renderer's own heuristic drops or mis-renders — see below. */
 export interface DefaultFixup {
   className: string;
@@ -973,6 +1046,8 @@ export interface RuleFixups {
   repositoryMarkers: RepositoryTypeMarkerFixup[];
   /** Rule 11's non-PK FK referenced-column fixups. */
   referencedColumns: ReferencedColumnsFixup[];
+  /** Rule 12's garbled-CHECK-expression repairs. */
+  checkExpressions: CheckExpressionFixup[];
 }
 
 /**
@@ -1010,6 +1085,10 @@ export function applyRules(
   // property names — the same names the text pass below must find in the
   // rendered `properties: {...}` block.
   const referencedColumns = RULE11_referencedColumns(metadata);
+  // Independent of every rule above (it only touches `meta.checks`, which
+  // the renderer dumps verbatim — no text pass depends on it, same as
+  // RULE7/RULE9); placed last only by convention (highest rule number).
+  const checkExpressions = RULE12_fixGarbledCheckExpressions(metadata);
   return {
     joinColumns,
     defaults,
@@ -1018,6 +1097,7 @@ export function applyRules(
     retypedScalars: [...retypedByRule1, ...timestamps, ...jsonColumns],
     repositoryMarkers,
     referencedColumns,
+    checkExpressions,
   };
 }
 
@@ -1668,6 +1748,7 @@ export async function generateEntities(): Promise<GenerateResult> {
         retypedScalars: [],
         repositoryMarkers: [],
         referencedColumns: [],
+        checkExpressions: [],
       };
       const rawFiles = await generator.generate({
         entityDefinition: 'defineEntity',
@@ -1704,6 +1785,7 @@ export async function generateEntities(): Promise<GenerateResult> {
           retypedScalars: fixups.retypedScalars.filter((f) => f.className === className),
           repositoryMarkers: fixups.repositoryMarkers.filter((f) => f.className === className),
           referencedColumns: fixups.referencedColumns.filter((f) => f.className === className),
+          checkExpressions: fixups.checkExpressions.filter((f) => f.className === className),
         };
         files.set(`${className}.entity.ts`, applyTextPasses(raw, relevantFixups));
       }

@@ -23,7 +23,7 @@ import type { RealtimeService } from '../../../src/nest/realtime/realtime.servic
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { AirtrailSyncService } from '../../../src/nest/integrations/airtrail-sync.service';
 import type { ReservationsService } from '../../../src/nest/reservations/reservations.service';
-import type { ReservationsReadRepository } from '../../../src/nest/reservations/reservations-read.repository';
+import type { ReservationsReadService } from '../../../src/nest/reservations/reservations-read.service';
 import type { AirtrailClient } from '../../../src/nest/integrations/airtrail.client';
 import type { AirtrailService } from '../../../src/nest/integrations/airtrail.service';
 
@@ -61,7 +61,7 @@ function makeServices(): { link: AirtrailLinkService; sync: AirtrailSyncService 
     db,
     { broadcast: vi.fn() } as unknown as RealtimeService,
     { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService,
-    { getReservationWithJoins } as unknown as ReservationsReadRepository,
+    { getReservationWithJoins } as unknown as ReservationsReadService,
     client,
     airtrail,
   );

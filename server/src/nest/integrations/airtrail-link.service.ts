@@ -3,7 +3,7 @@ import { ADDON_IDS } from '../../addons';
 import { DatabaseService } from '../database/database.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AddonsService } from '../addons/addons.service';
-import { ReservationsReadRepository } from '../reservations/reservations-read.repository';
+import { ReservationsReadService } from '../reservations/reservations-read.service';
 import { logError } from '../audit/audit-log.logger';
 import { AirtrailAuthError, type AirtrailCreds, type AirtrailFlightRaw } from './airtrail.client';
 import { AirtrailClient } from './airtrail.client';
@@ -15,7 +15,7 @@ import { buildSavePayload } from './airtrail-sync.helpers';
  * The AirTrail link lifecycle — the enablement gate, the detach policy, the
  * multi-leg guard (#1535) and the TREK → AirTrail write-back (#1240) — split
  * out of AirtrailSyncService so ReservationsModule can inject it: it reads
- * reservations through the leaf ReservationsReadRepository, never through
+ * reservations through the leaf ReservationsReadService, never through
  * ReservationsService, so AirtrailCoreModule stays off the
  * ReservationsModule → AirtrailModule → ReservationsModule loop that used to
  * force airtrail.bridge. The pull half stays in AirtrailSyncService, which
@@ -28,7 +28,7 @@ export class AirtrailLinkService {
     private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
     private readonly addons: AddonsService,
-    private readonly reads: ReservationsReadRepository,
+    private readonly reads: ReservationsReadService,
     private readonly client: AirtrailClient,
     private readonly airtrail: AirtrailService,
   ) {}

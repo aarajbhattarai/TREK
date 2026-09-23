@@ -14,7 +14,7 @@ import { PluginOAuthService } from '../../src/nest/plugins/oauth/plugin-oauth.se
 import { BudgetService } from '../../src/nest/budget/budget.service';
 import { ExchangeRatesService } from '../../src/nest/budget/exchange-rates.service';
 import { ReservationsService } from '../../src/nest/reservations/reservations.service';
-import { ReservationsReadRepository } from '../../src/nest/reservations/reservations-read.repository';
+import { ReservationsReadService } from '../../src/nest/reservations/reservations-read.service';
 import { TagsService } from '../../src/nest/tags/tags.service';
 import { CategoriesService } from '../../src/nest/categories/categories.service';
 import { TodoService } from '../../src/nest/todo/todo.service';
@@ -149,7 +149,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   await createTestTripsRepo(dbs.connection),
   );
   // After accommodations: a hotel booking writes the stay's day stop through it.
-  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadRepository(dbs), accommodations, await createTestUnitOfWork(dbs.connection));
+  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(dbs), accommodations, await createTestUnitOfWork(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection), (await sharedTestOrm(dbs.connection)).em);
   const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
   const guards = new PluginGuards(dbs, permissions, addons);

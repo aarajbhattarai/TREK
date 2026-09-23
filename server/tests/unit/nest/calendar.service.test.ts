@@ -49,7 +49,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { ReservationsService } from '../../../src/nest/reservations/reservations.service';
-import { ReservationsReadRepository } from '../../../src/nest/reservations/reservations-read.repository';
+import { ReservationsReadService } from '../../../src/nest/reservations/reservations-read.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { CalendarService, foldICS } from '../../../src/nest/calendar/calendar.service';
@@ -69,7 +69,7 @@ beforeAll(async () => {
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
   svc = new CalendarService(
   dbs(),
-  new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection)),
+  new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(dbs()), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection)),
 );
 });
 

@@ -302,7 +302,7 @@ finer-grained module instead:
 - `reservations.controller.ts` → `airtrail.bridge`: the pull genuinely needs
   ReservationsService, so `AirtrailModule` keeps it — but the write-back push
   only needs the hydrated reservation READ. That read became
-  `ReservationsReadRepository` (leaf, the trek_photos pattern), the link
+  `ReservationsReadService` (leaf, the trek_photos pattern), the link
   lifecycle + push became `AirtrailLinkService` in `AirtrailCoreModule`, and
   the controller injects it. `airtrail.bridge` is deleted, and
   `notifications.instance.ts` — whose last consumer it was — died with it.

@@ -82,6 +82,7 @@ import { ReminderJobsService } from '../../src/nest/notifications/reminder-jobs.
 import { DocSyncJob } from '../../src/nest/doc-sync/doc-sync.job';
 import { AirtrailSyncJob } from '../../src/nest/integrations/airtrail-sync.job';
 import { DawarichSyncJob } from '../../src/nest/integrations/dawarich-sync.job';
+import { AirportsService } from '../../src/nest/airports/airports.service';
 
 describe('Every onApplicationBootstrap boot sweep runs inside a request context', () => {
   let app: INestApplication;
@@ -95,7 +96,7 @@ describe('Every onApplicationBootstrap boot sweep runs inside a request context'
     testDb.close();
   });
 
-  it('BOOT-SWEEP-001: the seven jobs\' REAL onApplicationBootstrap, driven through the real production-wired CronRegistrarService, each routes through runOnBoot (structurally asserted), and journey-thumbs — the one sweep that reaches a repository today — never logs cannotUseGlobalContext / "global EntityManager"', async () => {
+  it('BOOT-SWEEP-001: the seven jobs\' plus AirportsService\'s REAL onApplicationBootstrap, driven through the real production-wired CronRegistrarService, each routes through runOnBoot (structurally asserted), and journey-thumbs — the one sweep that reaches a repository today — never logs cannotUseGlobalContext / "global EntityManager"', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const registrar = app.get(CronRegistrarService);
     const isEnabledSpy = vi.spyOn(registrar, 'isEnabled').mockReturnValue(true);
@@ -121,6 +122,13 @@ describe('Every onApplicationBootstrap boot sweep runs inside a request context'
       await app.get(DocSyncJob).onApplicationBootstrap();
       await app.get(AirtrailSyncJob).onApplicationBootstrap();
       await app.get(DawarichSyncJob).onApplicationBootstrap();
+      // Plan 3d Task 0: `AirportsService` is a service, not a `*.job.ts`
+      // provider (it has no `register()`/cron tick of its own — no
+      // `isEnabled()` gate either, inventory §12), so it sits outside the
+      // seven-job loop above; its `onApplicationBootstrap` still routes its
+      // raw-SQL flight-endpoint backfill through the same `runOnBoot` choke
+      // point and belongs in this ratchet's name list.
+      await app.get(AirportsService).onApplicationBootstrap();
 
       await Promise.all(collected);
       // Settle any pending microtasks/macrotasks a fire-and-forget boot call left
@@ -139,6 +147,7 @@ describe('Every onApplicationBootstrap boot sweep runs inside a request context'
       // by name, regardless of whether its sweep body happens to touch a
       // repository yet.
       expect(runOnBootSpy.mock.calls.map((c) => c[0]).sort()).toEqual([
+        'airports-flight-endpoints-boot',
         'airtrail-sync-boot',
         'dawarich-sync-boot',
         'docsync-boot',

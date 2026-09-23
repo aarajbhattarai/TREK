@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ReservationsReadRepository } from './reservations-read.repository';
+import { ReservationsReadService } from './reservations-read.service';
 
 /**
  * A leaf on purpose (the trip-membership precedent): AirtrailCoreModule needs
@@ -7,7 +7,7 @@ import { ReservationsReadRepository } from './reservations-read.repository';
  * in — which would re-close the cycle that airtrail.bridge used to dodge.
  */
 @Module({
-  providers: [ReservationsReadRepository],
-  exports: [ReservationsReadRepository],
+  providers: [ReservationsReadService],
+  exports: [ReservationsReadService],
 })
 export class ReservationsReadModule {}

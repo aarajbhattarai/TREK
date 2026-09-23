@@ -17,9 +17,21 @@ export function toTraveler(r: { user_id: number; username: string; avatar: strin
  * ReservationsModule → AirtrailCoreModule → ReservationsModule — the cycle
  * that used to force airtrail.bridge. ReservationsService injects this and
  * delegates, so there is exactly one copy of each query.
+ *
+ * Renamed from `ReservationsReadRepository` (Plan 3d Task 0, R11 — inventory
+ * §18.3): this is a plain Nest `@Injectable` over `DatabaseService.prepare`,
+ * not a MikroORM repository extending `TrekRepository`, so it must not carry
+ * the `Repository` suffix — that name is reserved for the ORM layer's "one
+ * repository per entity" convention (D4). Its three statements (RR1-RR3)
+ * still convert to `ReservationsRepository`/`ReservationEndpointsRepository`/
+ * `ReservationTravelersRepository` methods in a later Plan 3d task (per §18.3
+ * option (a), which then deletes this class and turns
+ * `ReservationsReadModule` into a plain `MikroOrmModule.forFeature([...])`
+ * leaf, the `TripMembershipModule` precedent) — Task 0 converts no SQL site,
+ * so only the rename happens here, with zero behaviour change.
  */
 @Injectable()
-export class ReservationsReadRepository {
+export class ReservationsReadService {
   constructor(private readonly db: DatabaseService) {}
 
   async getReservationWithJoins(id: string | number): Promise<ReservationRow | undefined> {

@@ -50,7 +50,7 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation, createBudgetItem, createPlace, createDay, createDayAccommodation, createDayAssignment, addTripMember } from '../../helpers/factories';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { ReservationsService } from '../../../src/nest/reservations/reservations.service';
-import { ReservationsReadRepository } from '../../../src/nest/reservations/reservations-read.repository';
+import { ReservationsReadService } from '../../../src/nest/reservations/reservations-read.service';
 import type { BudgetService } from '../../../src/nest/budget/budget.service';
 // Was reservations.bridge, deleted along with the other three that had no
 // consumer outside the container. The cases below kept their assertions and
@@ -80,7 +80,7 @@ import { createTestUnitOfWork, createTestDatabaseService } from '../../helpers/t
 let svc: ReservationsService;
 beforeAll(async () => {
   const dbs = await createTestDatabaseService(testDb);
-  svc = new ReservationsService(dbs, permissionsStub, budget as unknown as BudgetService, new RealtimeService(), notificationsStub(notif.send), new ReservationsReadRepository(dbs), await makeAccommodationsService(testDb), await createTestUnitOfWork(testDb));
+  svc = new ReservationsService(dbs, permissionsStub, budget as unknown as BudgetService, new RealtimeService(), notificationsStub(notif.send), new ReservationsReadService(dbs), await makeAccommodationsService(testDb), await createTestUnitOfWork(testDb));
 });
 
 beforeAll(() => { createTables(testDb); runMigrations(testDb); });

@@ -63,7 +63,7 @@ import { TodoService } from '../../../src/nest/todo/todo.service';
 import { PackingService } from '../../../src/nest/packing/packing.service';
 import { FilesService } from '../../../src/nest/files/files.service';
 import { ReservationsService } from '../../../src/nest/reservations/reservations.service';
-import { ReservationsReadRepository } from '../../../src/nest/reservations/reservations-read.repository';
+import { ReservationsReadService } from '../../../src/nest/reservations/reservations-read.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { CollabService } from '../../../src/nest/collab/collab.service';
@@ -178,7 +178,7 @@ beforeAll(async () => {
 );
   svc = new TripsService(
   dbs(),
-  new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
+  new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
   daysSvc,
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
   budgetSvc,
@@ -193,7 +193,7 @@ beforeAll(async () => {
   readModelSvc = new TripReadModelService(
   await createTestTripsRepo(dbs().connection), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
   new PackingService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
-  new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
+  new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
   new CollabService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection)),
   placesSvc,
   new TodoService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection)),

@@ -18,7 +18,7 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { ReservationsService } from '../../../src/nest/reservations/reservations.service';
-import { ReservationsReadRepository } from '../../../src/nest/reservations/reservations-read.repository';
+import { ReservationsReadService } from '../../../src/nest/reservations/reservations-read.service';
 import type { AirtrailClient } from '../../../src/nest/integrations/airtrail.client';
 import type { AirtrailService } from '../../../src/nest/integrations/airtrail.service';
 import { notificationsStub } from '../../helpers/notifications';
@@ -44,7 +44,7 @@ async function makeImportService(): Promise<AirtrailImportService> {
       new BudgetService(dbs(), permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs().connection)),
       realtime,
       notificationsStub(),
-      new ReservationsReadRepository(dbs()),
+      new ReservationsReadService(dbs()),
       await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
     ),
     { listFlights } as unknown as AirtrailClient,

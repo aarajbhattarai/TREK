@@ -38,7 +38,7 @@ import { PlacesMcp } from '../../src/nest/places/places.mcp';
 import { PlacesService } from '../../src/nest/places/places.service';
 import { ReservationsMcp } from '../../src/nest/reservations/reservations.mcp';
 import { ReservationsService } from '../../src/nest/reservations/reservations.service';
-import { ReservationsReadRepository } from '../../src/nest/reservations/reservations-read.repository';
+import { ReservationsReadService } from '../../src/nest/reservations/reservations-read.service';
 import { TagsMcp } from '../../src/nest/tags/tags.mcp';
 import { TagsService } from '../../src/nest/tags/tags.service';
 import { SettingsService } from '../../src/nest/settings/settings.service';
@@ -227,7 +227,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   await createTestTripsRepo(dbService.connection),
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
-  const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadRepository(dbService), accommodationsService, await createTestUnitOfWork(dbService.connection));
+  const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadService(dbService), accommodationsService, await createTestUnitOfWork(dbService.connection));
   const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), usersRepo);
   const tripsService = new TripsService(
     dbService,

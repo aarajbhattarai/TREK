@@ -10,6 +10,7 @@ import { createTestOrm } from '../../helpers/test-orm';
 import {
   assertFilesGenerated,
   BOOLEAN_COLUMNS,
+  CheckExpressionFixup,
   JoinColumnFixup,
   JsonColumnFixup,
   KNOWN_DIFFS,
@@ -29,6 +30,7 @@ import {
   RULE9_addImplicitUniqueConstraints,
   RULE10_repositoryTypeMarker,
   RULE11_referencedColumns,
+  RULE12_fixGarbledCheckExpressions,
   RULE_normalizeLiteralDefaults,
   applyTextPasses,
   checkEntities,
@@ -493,6 +495,59 @@ describe('RULE11_referencedColumns', () => {
   });
 });
 
+describe('RULE12_fixGarbledCheckExpressions', () => {
+  it('RULE12-001: the real roadtrip_day_boundaries.fraction over-capture is trimmed to the DDL\'s own CHECK expression', () => {
+    const meta = fixtureMeta('RoadtripDayBoundaries', 'roadtrip_day_boundaries', []);
+    meta.checks = [
+      {
+        name: 'roadtrip_day_boundaries_fraction_check',
+        expression: 'fraction BETWEEN 0 AND 1),        PRIMARY KEY (trip_id, day_number',
+      },
+    ];
+    const fixups = RULE12_fixGarbledCheckExpressions([meta]);
+    expect(meta.checks[0].expression).toBe('fraction BETWEEN 0 AND 1');
+    expect(fixups).toEqual<CheckExpressionFixup[]>([{ className: 'RoadtripDayBoundaries', checkName: 'roadtrip_day_boundaries_fraction_check' }]);
+  });
+
+  it('RULE12-002: a clean expression with no parens at all (day_number >= 1) is left byte-identical, no fixup', () => {
+    const meta = fixtureMeta('RoadtripDayBoundaries', 'roadtrip_day_boundaries', []);
+    meta.checks = [{ name: 'roadtrip_day_boundaries_day_number_check', expression: 'day_number >= 1' }];
+    const fixups = RULE12_fixGarbledCheckExpressions([meta]);
+    expect(meta.checks[0].expression).toBe('day_number >= 1');
+    expect(fixups).toEqual([]);
+  });
+
+  it('RULE12-003: a clean expression whose own nested parens never fully rebalance to 0 (an IN-list) is left byte-identical, no fixup', () => {
+    const meta = fixtureMeta('SchoolHolidayPeriods', 'school_holiday_periods', []);
+    meta.checks = [{ name: 'sh_status_check', expression: "status IN ('confirmed', 'tentative')" }];
+    const fixups = RULE12_fixGarbledCheckExpressions([meta]);
+    expect(meta.checks[0].expression).toBe("status IN ('confirmed', 'tentative')");
+    expect(fixups).toEqual([]);
+  });
+
+  it('RULE12-004: a table-level expression with no trailing garbage (end_date >= start_date) is left byte-identical, no fixup', () => {
+    const meta = fixtureMeta('SchoolHolidayPeriods', 'school_holiday_periods', []);
+    meta.checks = [{ name: 'school_holiday_periods_end_date_check', expression: 'end_date >= start_date' }];
+    const fixups = RULE12_fixGarbledCheckExpressions([meta]);
+    expect(meta.checks[0].expression).toBe('end_date >= start_date');
+    expect(fixups).toEqual([]);
+  });
+
+  it('RULE12-005: a non-string expression (Raw / callback) is skipped, never thrown on', () => {
+    const meta = fixtureMeta('X', 'x', []);
+    const callback = () => 'whatever';
+    meta.checks = [{ name: 'x_check', expression: callback as unknown as string }];
+    expect(() => RULE12_fixGarbledCheckExpressions([meta])).not.toThrow();
+    expect(meta.checks[0].expression).toBe(callback);
+  });
+
+  it('RULE12-006: a table with no checks at all is a no-op', () => {
+    const meta = fixtureMeta('X', 'x', []);
+    const fixups = RULE12_fixGarbledCheckExpressions([meta]);
+    expect(fixups).toEqual([]);
+  });
+});
+
 describe('RULE9_addImplicitUniqueConstraints', () => {
   it('RULE9-001: a table with a matching implicit-unique entry gets a uniques: block referencing the columns as properties — a plain (non-FK) column keeps its own name', () => {
     const userId = fixtureProp({ name: 'user_id', primary: false });
@@ -923,6 +978,7 @@ describe('applyTextPasses', () => {
       retypedScalars: [],
       repositoryMarkers: [{ className: 'X', repositoryClassName: 'XRepository' }],
       referencedColumns: [{ className: 'X', propName: 'countryRef', referencedColumnNames: ['code'] }],
+      checkExpressions: [],
     });
     expect(out).toContain(".joinColumn('country')");
     expect(out).toContain(".referencedColumnNames('code')");
