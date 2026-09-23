@@ -13,6 +13,7 @@ import {
   castIntegerKysely,
   coalesce,
   coalesceParam,
+  collateNoCase,
   columnIncrementedBy,
   columnRef,
   concat,
@@ -26,9 +27,11 @@ import {
   lower,
   lowerParam,
   lowerTrim,
+  lowerTrimParam,
   maxOf,
   minOf,
   nowMinusDays,
+  nowMinusHours,
   startsWithIsoDate,
   startsWithIsoDateKysely,
   substring,
@@ -880,5 +883,106 @@ describe('sql-functions (sqlite)', () => {
       'update "users" set "username" = case when "username" is null then ? else ? || substr("created_at", ?) end where "id" = ?',
     );
     expect(compiled.parameters).toEqual(['2026-09-21', '2026-09-21', 11, 1]);
+  });
+
+  // Plan 3f Task 0 (R9) — no consumer yet: Task 2 (collateNoCase), Task 4
+  // (nowMinusHours) and Task 1 (lowerTrimParam) wire these in as each
+  // converts the statement that needs them. Pinned here so each task imports
+  // a tested helper instead of writing one inline.
+
+  it('SQLF-060: collateNoCase renders <col> COLLATE NOCASE, and as a filter key selects the same rows as the legacy value-side spelling (name = ? COLLATE NOCASE)', async () => {
+    const { user: mixed } = createUser(testDb, { username: 'MixedCase' });
+    const { user: other } = createUser(testDb, { username: 'SomethingElse' });
+    const platform = t.em.getPlatform();
+
+    const typed = await t.em.find(Users, { [collateNoCase(platform, 'username')]: 'mixedcase' });
+    expect(typed.map((r) => r.id)).toEqual([mixed.id]);
+
+    const legacy = testDb
+      .prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE')
+      .all('mixedcase') as { id: number }[];
+    expect(typed.map((r) => r.id)).toEqual(legacy.map((r) => r.id));
+
+    const none = await t.em.find(Users, { [collateNoCase(platform, 'username')]: 'nobody-has-this-name' });
+    expect(none).toEqual([]);
+    expect(other.id).toBeDefined(); // seeded so the fixture has more than one row
+  });
+
+  it("SQLF-061: COLLATE NOCASE folds the same 26 ASCII letters LOWER() does, and does NOT diverge from LOWER() on SQLF-014's own non-ASCII fixtures — verified directly, not assumed", () => {
+    const cases: Array<[string, string]> = [
+      ['JOSÉ@x.com', 'josé@x.com'],
+      ['ÄNNA@x.com', 'änna@x.com'],
+      ['ΣIGMA@x.com', 'σigma@x.com'],
+      ['İSTANBUL@x.com', 'i̇stanbul@x.com'],
+      ['ASCII@x.com', 'ascii@x.com'],
+    ];
+    for (const [upper, lower_] of cases) {
+      const collateMatch = testDb.prepare('SELECT (? = ? COLLATE NOCASE) as m').get(upper, lower_) as { m: number };
+      const lowerMatch = testDb.prepare('SELECT (LOWER(?) = LOWER(?)) as m').get(upper, lower_) as { m: number };
+      expect(collateMatch.m).toBe(lowerMatch.m);
+    }
+    // The ASCII case is the one pair both engines actually fold to equal;
+    // every non-ASCII pair above is left unfolded by BOTH engines (neither
+    // recognises the Unicode case mapping), which is exactly why they agree
+    // rather than diverge — this is genuinely the "no divergence found"
+    // branch R9 anticipates, not a skipped check.
+    const asciiCollate = testDb.prepare('SELECT (? = ? COLLATE NOCASE) as m').get('ASCII@x.com', 'ascii@x.com') as { m: number };
+    expect(asciiCollate.m).toBe(1);
+    const nonAsciiCollate = testDb.prepare('SELECT (? = ? COLLATE NOCASE) as m').get('JOSÉ@x.com', 'josé@x.com') as { m: number };
+    expect(nonAsciiCollate.m).toBe(0);
+  });
+
+  it('SQLF-062: an unknown platform fails closed for collateNoCase', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => collateNoCase(foreign, 'u.name')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it("SQLF-063: nowMinusHours renders datetime('now', '-N hours'), matching a JS-computed time within a few seconds' tolerance", async () => {
+    const row = testDb.prepare(`SELECT ${nowMinusHours(t.em.getPlatform(), 20).sql} as d`).get() as { d: string };
+    const got = new Date(`${row.d.replace(' ', 'T')}Z`).getTime();
+    const expected = Date.now() - 20 * 60 * 60 * 1000;
+    expect(Math.abs(got - expected)).toBeLessThan(10_000);
+  });
+
+  it('SQLF-063b: nowMinusHours(0) is "now", not one hour back', async () => {
+    const row = testDb.prepare(`SELECT ${nowMinusHours(t.em.getPlatform(), 0).sql} as d`).get() as { d: string };
+    const got = new Date(`${row.d.replace(' ', 'T')}Z`).getTime();
+    expect(Math.abs(got - Date.now())).toBeLessThan(10_000);
+  });
+
+  it('SQLF-064: nowMinusHours rejects a non-integer or negative hour count', () => {
+    expect(() => nowMinusHours(t.em.getPlatform(), 1.5)).toThrow(/non-negative integer hour count/);
+    expect(() => nowMinusHours(t.em.getPlatform(), -1)).toThrow(/non-negative integer hour count/);
+    expect(() => nowMinusHours(t.em.getPlatform(), Number.NaN)).toThrow(/non-negative integer hour count/);
+  });
+
+  it('SQLF-065: an unknown platform fails closed for nowMinusHours', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => nowMinusHours(foreign, 1)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it('SQLF-066: lowerTrimParam pairs with lowerTrim to fold BOTH sides in SQLite (the AT31 dedup shape), and a JS-lowered+trimmed bind does NOT match — the mutation-proof for mixing engines', async () => {
+    const { user } = createUser(testDb, { username: '  JOSÉ  ' });
+    const platform = t.em.getPlatform();
+
+    const exact = await t.em.findOne(Users, { [lowerTrim(platform, 'username')]: lowerTrimParam(platform, '  josÉ  ') });
+    expect(exact?.id).toBe(user.id);
+
+    // A JS-lowered+trimmed value-side bind (mixing engines, program rule 18)
+    // must NOT match: SQLite's LOWER() leaves 'É' untouched, so the stored,
+    // SQL-folded spelling is 'josÉ', not the JS-folded 'josé'.
+    const jsLowered = await t.em.findOne(Users, { [lowerTrim(platform, 'username')]: '  josé  '.trim().toLowerCase() });
+    expect(jsLowered).toBeNull();
+
+    const none = await t.em.findOne(Users, { [lowerTrim(platform, 'username')]: lowerTrimParam(platform, 'nobody') });
+    expect(none).toBeNull();
+  });
+
+  it('SQLF-067: an unknown platform fails closed for lowerTrimParam', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => lowerTrimParam(foreign, 'x')).toThrow(/no implementation for platform FakePlatform/);
   });
 });

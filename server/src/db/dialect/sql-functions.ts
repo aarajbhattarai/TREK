@@ -629,3 +629,83 @@ export function castIntegerKysely<DB, TB extends keyof DB>(
   return unsupported(platform);
 }
 
+// ---------------------------------------------------------------------------
+// Plan 3f Task 0 (R9) — no consumer yet: Task 2 (`collateNoCase`, SH9's
+// `school-holidays.service.ts#checkName` duplicate-name guard) and Task 4
+// (`nowMinusHours`, RJ4's `reminder-jobs.service.ts#todoTick`
+// `datetime('now', '-20 hours')`) wire these in when each converts the
+// statement that needs them. `lowerTrimParam` (AT31's value side, atlas's
+// bucket-list dedup) is Task 1's. Added here, with their own SQLF-0xx tests
+// pinning the SQLite text against a raw statement on seeded rows, so each
+// task imports a tested helper instead of writing one inline.
+// ---------------------------------------------------------------------------
+
+/**
+ * A case-insensitive column reference via SQLite's `NOCASE` collating
+ * sequence, for use as a filter's object key — the same `{ [collateNoCase(
+ * platform, 'name')]: value }` shape `lower()` documents, rendering `WHERE
+ * name COLLATE NOCASE = <value-side>`. The legacy statement this replaces
+ * (`school-holidays.service.ts:50`, SH9) spells the COLLATE on the VALUE
+ * side instead (`name = ? COLLATE NOCASE`) — textually different, but SQLite
+ * resolves a binary comparison's collating sequence from the FIRST operand
+ * that carries an explicit `COLLATE`, scanning left to right, so `col
+ * COLLATE NOCASE = ?` and `col = ? COLLATE NOCASE` select the same collation
+ * (NOCASE) for the whole comparison either way — verified directly
+ * (SQLF-060: both forms select the identical row set on a mixed-case
+ * fixture), not assumed from the operator's documented precedence alone.
+ *
+ * **Not the same helper as `lower()`, and not reusable in its place.**
+ * SQLite's built-in `NOCASE` collation is documented to fold ONLY the 26
+ * ASCII letters, exactly like `LOWER()`'s own ASCII-only fold (program rule
+ * 18) — verified directly against `better-sqlite3` (SQLF-061): on every
+ * non-ASCII fixture this file's own `LOWER()` test (SQLF-014) already
+ * carries, `x = y COLLATE NOCASE` and `LOWER(x) = LOWER(y)` agree, letter for
+ * letter — neither engine folds a non-ASCII case pair. So `collateNoCase`
+ * does NOT diverge from `lower()` on any input constructed here; it is a
+ * NEW helper anyway (per R9's own instruction) because the two are
+ * textually different SQL constructs matching two textually different
+ * legacy statements (`COLLATE NOCASE` vs `LOWER(...)`), and because a
+ * `COLLATE`-based comparison lets SQLite use an index on the un-wrapped
+ * column in a way `LOWER(col) = ?` cannot — a real, if not row-visible,
+ * difference between the two shapes.
+ */
+export function collateNoCase(platform: Platform, ref: string): RawQueryFragment & symbol {
+  if (platform instanceof SqlitePlatform) return raw(`${column(ref)} COLLATE NOCASE`);
+  return unsupported(platform);
+}
+
+/**
+ * `datetime('now', '-N hours')` — the hour-granularity sibling of
+ * `nowMinusDays()` above, for `reminder-jobs.service.ts#todoTick`'s
+ * `datetime('now', '-20 hours')` (RJ4) — 20 hours is not expressible as
+ * `nowMinusDays` with a fractional day. Same validation shape as
+ * `nowMinusDays` (a non-negative integer, spelled directly into the
+ * fragment rather than bound — MikroORM's raw fragments do not accept a
+ * placeholder inside a SQLite date/time function's modifier argument, the
+ * same reasoning `nowMinusDays`'s own docstring gives).
+ */
+export function nowMinusHours(platform: Platform, hours: number): RawQueryFragment {
+  if (!Number.isInteger(hours) || hours < 0) {
+    throw new Error(`sql-functions: nowMinusHours needs a non-negative integer hour count, got ${hours}`);
+  }
+  if (platform instanceof SqlitePlatform) return raw(`datetime('now', '-${hours} hours')`);
+  return unsupported(platform);
+}
+
+/**
+ * The value-side twin of `lowerTrim()`: `LOWER(TRIM(?))` bound with the RAW,
+ * untransformed value — confirmed genuinely missing by reading this file's
+ * full export list before adding it (R9), not assumed from the inventory's
+ * own flag. Pairs with `lowerTrim()` as a filter KEY for the composed
+ * `LOWER(TRIM(<column>)) = LOWER(TRIM(?))` shape
+ * `atlas.service.ts:876-877`'s AT31 needs (`lower(trim(name)) =
+ * lower(trim(?))`), the same "bind the raw value, let SQL apply the SAME
+ * transform to both sides" reasoning `lowerParam()`'s own docstring gives —
+ * do NOT pre-trim/pre-lower the value in JS before calling this (program
+ * rule 18: mixing engines is the bug this pairing exists to avoid).
+ */
+export function lowerTrimParam(platform: Platform, value: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw('LOWER(TRIM(?))', [value]);
+  return unsupported(platform);
+}
+
