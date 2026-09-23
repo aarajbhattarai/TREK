@@ -1,4 +1,4 @@
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { SettingsService } from '../settings/settings.service';
 import { DayBoundariesService } from './day-boundaries.service';
 import { RoadtripPreferencesService } from './roadtrip-preferences.service';
@@ -6,6 +6,12 @@ import { RoadtripRouterService } from './roadtrip-router.service';
 import { RoadtripService } from './roadtrip.service';
 import { Injectable, HttpException } from '@nestjs/common';
 import { type RoadtripPreferences } from '@trek/shared';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
 import {
   assembleRoadtrip,
   foldRouteRun,
@@ -25,66 +31,28 @@ import {
   standsAsDay,
 } from '@trek/shared/roadtrip';
 
-interface StoredDay {
-  id: number;
-  day_number: number;
-  date: string | null;
-  title: string | null;
-  default_transport_mode: string | null;
-}
-interface VisitRow {
-  /** The booking this stop stands for on its check-in day, when there is one. */
-  stay_id: number | null;
-  check_in: string | null;
-  /** The drive does not read these two (#2357): they are the booking as get_roadtrip_context reports it. */
-  check_out: string | null;
-  checkout_day: number | null;
-  id: number;
-  day_id: number;
-  place_id: number;
-  name: string;
-  lat: number | null;
-  lng: number | null;
-  time: string | null;
-  end_time: string | null;
-  duration_minutes: number | null;
-  end_day: number;
-  leg_transport_mode: string | null;
-  incoming_leg_transport_mode: string | null;
-  stop_type: string | null;
-  fill_percent: number | null;
-}
 const stopKey = (s: RoadtripStop) =>
   `${s.lat.toFixed(5)},${s.lng.toFixed(5)},${s.legMode ?? ''},${s.incomingLegMode ?? ''}`;
 
 @Injectable()
 export class RoadtripPlanService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly settings: SettingsService,
     private readonly preferences: RoadtripPreferencesService,
     private readonly router: RoadtripRouterService,
     private readonly roadtrip: RoadtripService,
     private readonly boundaries: DayBoundariesService,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
   ) {}
 
   async context(tripId: number, userId: number) {
-    if (!(await this.db.canAccessTrip(tripId, userId))) throw new HttpException({ error: 'Trip not found' }, 404);
-    const days = this.db.all<StoredDay>(
-      'SELECT id, day_number, date, title, default_transport_mode FROM days WHERE trip_id = ? ORDER BY day_number',
-      tripId,
-    );
-    const visits = this.db.all<VisitRow>(
-      `SELECT a.id, a.day_id, a.place_id, p.name, p.lat, p.lng,
-      COALESCE(a.assignment_time, p.place_time) AS time, COALESCE(a.assignment_end_time, p.end_time) AS end_time,
-      p.duration_minutes, a.end_day,
-      a.leg_transport_mode, a.incoming_leg_transport_mode, p.stop_type, p.fill_percent, stay.id AS stay_id, stay.check_in, stay.check_out, checkout.day_number AS checkout_day
-      FROM day_assignments a JOIN days d ON d.id = a.day_id JOIN places p ON p.id = a.place_id
-      LEFT JOIN day_accommodations stay ON stay.id = (SELECT id FROM day_accommodations WHERE place_id = p.id AND start_day_id = d.id ORDER BY id LIMIT 1)
-      LEFT JOIN days checkout ON checkout.id = stay.end_day_id
-      WHERE d.trip_id = ? ORDER BY d.day_number, a.order_index, a.created_at`,
-      tripId,
-    );
+    if (!(await this.tripsRepo.findAccessible(tripId, userId))) throw new HttpException({ error: 'Trip not found' }, 404);
+    // RPL1 — `DaysRepository.listPlanDays`.
+    const days = await this.daysRepo.listPlanDays(tripId);
+    // RPL2 — `DayAssignmentsRepository.listRoadtripVisits`.
+    const visits = await this.dayAssignmentsRepo.listRoadtripVisits(tripId);
     return {
       days,
       visits,

@@ -118,7 +118,9 @@ import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
-  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
+  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo, createTestRoadtripDayTracksRepo,
+  createTestReservationsRepo,
+  createTestReservationEndpointsRepo,
 } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
@@ -185,6 +187,8 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestDayAssignmentsRepo(dbService.connection),
     await createTestDayNotesRepo(dbService.connection),
     await createTestTripsRepo(dbService.connection),
+    await createTestReservationsRepo(dbService.connection),
+    await createTestReservationEndpointsRepo(dbService.connection),
   );
   const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection));
   const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection));
@@ -208,6 +212,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestDaysRepo(dbService.connection),
     await createTestPlacesRepo(dbService.connection),
     await createTestTripMembersRepo(dbService.connection),
+    await createTestRoadtripViasRepo(dbService.connection),
   );
   const accommodationsService = new AccommodationsService(dbService, permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection));
   // Built after it: deleting a place cancels the nights booked at it through this one.
@@ -276,7 +281,20 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new ReservationsMcp(reservationsService, daysService, budgetService, authService, assignmentsService, guards),
       new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService), authService, guards),
       new DaysMcp(daysService, authService, guards),
-      new RoadtripMcp(new RoadtripService(dbService, realtimeService, await createTestUnitOfWork(dbService.connection)), dbService, guards, authService, addonsService),
+      new RoadtripMcp(
+        new RoadtripService(
+          realtimeService,
+          await createTestUnitOfWork(dbService.connection),
+          await createTestDaysRepo(dbService.connection),
+          await createTestPlacesRepo(dbService.connection),
+          await createTestRoadtripViasRepo(dbService.connection),
+          await createTestRoadtripDayTracksRepo(dbService.connection),
+        ),
+        await createTestTripsRepo(dbService.connection),
+        guards,
+        authService,
+        addonsService,
+      ),
       new FilesMcp(new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em), authService, guards),
       new AccommodationsMcp(accommodationsService, dbService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { chronoOrder, type RoadtripVia, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
-import { isEmptyReanchoring, reanchorByStopOrder, type AnchoredVia } from '@trek/shared/roadtrip';
+import { isEmptyReanchoring, reanchorByStopOrder } from '@trek/shared/roadtrip';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -21,6 +21,8 @@ import { Places } from '../../db/entities/Places.entity';
 import type { PlacesRepository } from '../../db/repositories/Places.repository';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
 import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
+import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
+import type { RoadtripViasRepository } from '../../db/repositories/RoadtripVias.repository';
 
 type Trip = TripAccess;
 
@@ -64,8 +66,12 @@ function sortMinutes(time: string | null): number | null {
  * The day-assignment/participant SQL now lives in `DayAssignmentsRepository`/
  * `AssignmentParticipantsRepository` (Plan 3c Task 3, consuming Task 2's
  * `findWithPlaceAndCategory`/`listForDay` projection unchanged for AS1/AS3);
- * AS20–AS23 (`roadtrip_vias`) stay raw on `DatabaseService`, `// ASn — Plan
- * 3d` marked — that table belongs to Plan 3d. AS5 (`placeExists`) called
+ * AS20–AS23 (`roadtrip_vias`) now live in `RoadtripViasRepository` (Plan 3d
+ * Task 1) — AS20/AS21/AS22 convert inside `updateTime`'s existing
+ * transaction (legacy order, R7's non-transactional class does not apply
+ * here since these three already ran inside a transaction), and AS23
+ * (`listDayVias`) is retired in favour of the repository's own `listForDay`
+ * (RT2's one copy). AS5 (`placeExists`) called
  * `PlacesRepository.existsInTrip` through Task 4's follow-up, once that file
  * was free (it moved off an inlined `qb()` read this class carried for one
  * session while `Places.repository.ts` was another task's exclusive file).
@@ -100,6 +106,7 @@ export class AssignmentsService {
     @InjectRepository(Days) private readonly daysRepo: DaysRepository,
     @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
     @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
+    @InjectRepository(RoadtripVias) private readonly roadtripViasRepo: RoadtripViasRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -374,7 +381,10 @@ export class AssignmentsService {
       return await this.sortDayByTime(stored.day_id);
     });
 
-    const vias = sorted?.viasMoved ? { dayId: sorted.dayId, vias: await this.listDayVias(sorted.dayId) } : null;
+    // AS23 — `RoadtripViasRepository.listForDay`, the one copy of this projection
+    // (RT2/AC16); the "deliberate duplicate" the legacy docstring warned against
+    // dedupe-ing is gone now that a repository is the one place to inject it from.
+    const vias = sorted?.viasMoved ? { dayId: sorted.dayId, vias: await this.roadtripViasRepo.listForDay(sorted.dayId) } : null;
 
     return {
       assignment: await this.getAssignmentWithPlace(idNum),
@@ -438,36 +448,19 @@ export class AssignmentsService {
     // is right for a stop the sort made last and wrong for one that was last already.
     const lastAt = previousIds.length - 1;
     const seam = previousIds[lastAt] === nextIds[lastAt] ? lastAt : null;
-    // AS20 — Plan 3d (`roadtrip_vias`)
-    const vias = this.dbs.all<AnchoredVia>('SELECT id, after_order_index, lat, lng FROM roadtrip_vias WHERE day_id = ?', dayId)
+    // AS20 — `RoadtripViasRepository.listForReanchor`.
+    const vias = (await this.roadtripViasRepo.listForReanchor(dayId))
       .filter(via => via.after_order_index !== seam);
     const plan = reanchorByStopOrder(vias, previousIds, nextIds);
     for (const viaId of plan.remove) {
-      // AS21 — Plan 3d
-      this.dbs.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', viaId, dayId);
+      // AS21 — `RoadtripViasRepository.deleteInDay` (= RT19).
+      await this.roadtripViasRepo.deleteInDay(viaId, dayId);
     }
     for (const via of plan.vias) {
-      // AS22 — Plan 3d
-      this.dbs.run('UPDATE roadtrip_vias SET after_order_index = ? WHERE id = ? AND day_id = ?', via.after_order_index, via.id, dayId);
+      // AS22 — `RoadtripViasRepository.setAnchor` (= RT20).
+      await this.roadtripViasRepo.setAnchor(via.id, dayId, via.after_order_index);
     }
     return !isEmptyReanchoring(plan);
-  }
-
-  /**
-   * The day's vias in the shape the road trip routes broadcast them. RoadtripService
-   * has this query too, but its module imports this one, so it cannot be injected here.
-   *
-   * AS23 — Plan 3d (`roadtrip_vias`): a deliberate duplicate of RoadtripService's
-   * own query, per the legacy docstring's own note — do not dedupe.
-   */
-  private async listDayVias(dayId: number): Promise<RoadtripVia[]> {
-    return this.dbs.all<RoadtripVia>(
-      `SELECT id, day_id, after_order_index, sequence, lat, lng, created_at
-         FROM roadtrip_vias
-        WHERE day_id = ?
-        ORDER BY after_order_index, sequence, id`,
-      dayId,
-    );
   }
 
   /** AS24 — `DayAssignmentsRepository.setEndDay`. */

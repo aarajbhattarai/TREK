@@ -2,7 +2,18 @@ import { RoadtripSearchService } from '../../src/nest/roadtrip/roadtrip-search.s
 import { GoogleRouteService } from '../../src/nest/roadtrip/google-route.service';
 import { ChargingService } from '../../src/nest/roadtrip/charging.service';
 /**
- * Road trip module e2e — the real guard chain against a temp SQLite db.
+ * Road trip module e2e — the real guard chain against a real migrated-and-
+ * seeded temp SQLite db (`createSnapshotTestDb()`, Plan 3d Task 1 — this used
+ * to hand-roll ten CREATE TABLEs, a second hand-maintained schema copy that
+ * omitted `day_assignments`/`day_accommodations`/most `users`/`trips`/
+ * `places` columns and even LEFT JOINed the inverse 1:1 `roadtrip_day_tracks`
+ * relation `Days` carries — the exact "e2e suites build their schema from
+ * hand-written partial DDL" risk the plan's inventory §15c flagged, and the
+ * same class of failure `days.e2e.test.ts`'s own conversion, Plan 3c Task 2,
+ * fixed for that file). Every service in this module now runs its real SQL
+ * through repositories (DI-injected, no service mock) against the real
+ * request-scoped `EntityManager` `createTestMikroOrmModule` wires in; only
+ * the permission check and the WebSocket broadcast stay mocked.
  *
  * The unit test next door pins the handler bodies. What only a booted container
  * can show is the thing the controller's own comment calls load-bearing: that
@@ -21,7 +32,7 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { RoadtripModule } from '../../src/nest/roadtrip/roadtrip.module';
 import { RoadtripHazardsService } from '../../src/nest/roadtrip/roadtrip-hazards.service';
-import { seedUser, sessionCookie } from './harness';
+import { sessionCookie } from './harness';
 import { Test } from '@nestjs/testing';
 
 import cookieParser from 'cookie-parser';
@@ -31,63 +42,21 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockIns
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 import { createTestMikroOrmModule } from '../helpers/test-orm';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  tmp.exec('PRAGMA foreign_keys = ON');
-  tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0,
-    avatar TEXT);`);
-  tmp.exec('CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, end_date TEXT, currency TEXT);');
-  tmp.exec(
-    'CREATE TABLE roadtrip_preferences (trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE, key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY(trip_id, key));',
-  );
-  tmp.exec('CREATE TABLE trip_members (trip_id INTEGER NOT NULL, user_id INTEGER NOT NULL);');
-  tmp.exec(`CREATE TABLE days (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
-    day_number INTEGER, date TEXT, title TEXT, notes TEXT);`);
-  tmp.exec(`CREATE TABLE places (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, name TEXT,
-    lat REAL, lng REAL, route_geometry TEXT, stop_type TEXT, fill_percent INTEGER);`);
-  tmp.exec(`CREATE TABLE roadtrip_vias (id INTEGER PRIMARY KEY AUTOINCREMENT,
-    day_id INTEGER NOT NULL REFERENCES days(id) ON DELETE CASCADE,
-    after_order_index INTEGER NOT NULL, sequence INTEGER NOT NULL DEFAULT 0,
-    lat REAL NOT NULL, lng REAL NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE roadtrip_day_tracks (
-    day_id INTEGER PRIMARY KEY REFERENCES days(id) ON DELETE CASCADE,
-    place_id INTEGER NOT NULL REFERENCES places(id) ON DELETE CASCADE, stray_km REAL);`);
-  // AddonsService reads this; StorageRegistryService reads app_settings at init.
-  tmp.exec(`CREATE TABLE addons (id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0,
-    name TEXT, description TEXT, category TEXT, sort_order INTEGER DEFAULT 0);`);
-  tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
-  return { db: tmp };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-vi.mock('../../src/db/database', () => ({
-  db,
-  canAccessTrip: (tripId: number | string, userId: number) =>
-    db
-      .prepare(
-        `
-      SELECT t.id, t.user_id FROM trips t
-      LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
-      WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)
-    `,
-      )
-      .get(userId, tripId, userId),
-  isOwner: () => false,
-  getPlaceWithTags: () => null,
-  closeDb: () => {},
-  reinitialize: () => {},
-}));
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn() }));
+
+import { db } from '../../src/db/database';
 
 const ADDON_ID = 'roadtrip';
 
 function setAddon(enabled: boolean): void {
-  db.prepare(
-    'INSERT INTO addons (id, enabled) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET enabled = excluded.enabled',
-  ).run(ADDON_ID, enabled ? 1 : 0);
+  // The seeder (`AddonSeeder`, run once as part of `createSnapshotTestDb()`'s
+  // migration pass) already inserted this row, disabled — a plain UPDATE,
+  // not an upsert, matching every other addon-toggling e2e in this file set.
+  db.prepare('UPDATE addons SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, ADDON_ID);
 }
 
 describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
@@ -108,8 +77,12 @@ describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
   }
 
   beforeAll(async () => {
-    seedUser(db as never, { id: 1 });
-    seedUser(db as never, { id: 2, email: 'other@example.test' });
+    // harness.ts's seedUser() omits password_hash, which the real migrated
+    // schema requires NOT NULL (days.e2e.test.ts/assignments.e2e.test.ts's
+    // own precedent) — raw inserts here instead, matching the SeededUser
+    // shape id/role/password_version=0 that sessionCookie() needs.
+    db.prepare("INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (1, 'e2e-user', 'e2e@example.test', 'x', 'user', 0)").run();
+    db.prepare("INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (2, 'other', 'other@example.test', 'x', 'user', 0)").run();
     db.prepare('INSERT INTO trips (id, user_id, title) VALUES (5, 1, ?)').run('Norway');
     db.prepare('INSERT INTO trips (id, user_id, title) VALUES (6, 2, ?)').run('Somebody else');
     db.prepare('INSERT INTO days (id, trip_id, day_number) VALUES (3, 5, 1)').run();

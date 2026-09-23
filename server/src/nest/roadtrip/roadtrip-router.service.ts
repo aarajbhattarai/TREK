@@ -108,7 +108,8 @@ export class RoadtripRouterService {
       // R1.4: a `flatMap` callback cannot await the now-async profile read, so the
       // fan-out runs as an explicit loop — same providers, same order.
       for (const id of this.hooks.providersOf('routeProvider')) {
-        for (const profile of await declaredProfiles(this.db.connection, id)) plugin.push(`plugin:${id}/${profile}`);
+        // RRT1 — `plugins` is Plan 3j's table; stays a raw hand-off of the connection.
+        for (const profile of await declaredProfiles(this.db.connection, id)) plugin.push(`plugin:${id}/${profile}`); // Plan 3j
       }
     }
     return ['driving', 'walking', 'cycling', ...plugin];
@@ -175,7 +176,7 @@ export class RoadtripRouterService {
         points.length > 30 ||
         !pluginsEnabled() ||
         !this.hooks.providersOf('routeProvider').includes(id) ||
-        !(await declaredProfiles(this.db.connection, id)).includes(name)
+        !(await declaredProfiles(this.db.connection, id)).includes(name) // RRT2 — Plan 3j
       )
         throw new Error('Routing plugin is unavailable or has too many waypoints');
       const raw = await this.hooks.route(id, { tripId, dayId, profile: name, waypoints: points }, userId);

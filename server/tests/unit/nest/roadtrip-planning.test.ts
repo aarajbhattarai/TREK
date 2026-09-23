@@ -35,13 +35,13 @@ function setup() {
   const realtime = { broadcast: vi.fn() };
   const tripSettings = new Map<number, Record<string, unknown>>([[10, { ...settings }]]);
   const preferenceDb = {
-    all: (_sql: string, tripId: number) =>
+    listForTrip: (tripId: number) =>
       Object.entries(tripSettings.get(tripId) ?? {}).map(([key, value]) => ({ key, value: JSON.stringify(value) })),
-    run: vi.fn((_sql: string, tripId: number, key: string, value: string) =>
+    upsertValue: vi.fn((tripId: number, key: string, value: string) =>
       tripSettings.set(tripId, { ...tripSettings.get(tripId), [key]: JSON.parse(value) }),
     ),
   };
-  const preferences = new RoadtripPreferencesService(preferenceDb as never, realtime as never, uowStub);
+  const preferences = new RoadtripPreferencesService(realtime as never, uowStub, preferenceDb as never);
   const days = [{ id: 1, day_number: 1, title: null, date: '2026-09-11', default_transport_mode: 'driving' }];
   const visits = [1, 2, 3].map((id) => ({
     id,
@@ -58,10 +58,9 @@ function setup() {
     stop_type: null,
     fill_percent: null,
   }));
-  const db = {
-    canAccessTrip: vi.fn(async () => true),
-    all: vi.fn((sql: string) => (sql.includes('FROM day_assignments') ? visits : days)),
-  };
+  const tripsRepo = { findAccessible: vi.fn(async () => true) };
+  const daysRepo = { listPlanDays: vi.fn(async () => days) };
+  const dayAssignmentsRepo = { listRoadtripVisits: vi.fn(async () => visits) };
   const router = {
     profiles: () => ['driving'],
     route: vi.fn(async (_user: number, _trip: number, _day: number, points: { lat: number; lng: number }[]) => ({
@@ -87,14 +86,16 @@ function setup() {
   const roadtrip = { listForTrip: vi.fn(() => []), tracksForTrip: vi.fn(() => []) };
   const boundaries = { list: vi.fn(() => []) };
   const plans = new RoadtripPlanService(
-    db as never,
     store as never,
     preferences,
     router as never,
     roadtrip as never,
     boundaries as never,
+    tripsRepo as never,
+    daysRepo as never,
+    dayAssignmentsRepo as never,
   );
-  return { preferenceDb, preferences, store, realtime, db, plans, router, visits, days, boundaries };
+  return { preferenceDb, preferences, store, realtime, tripsRepo, daysRepo, dayAssignmentsRepo, plans, router, visits, days, boundaries };
 }
 
 describe('roadtrip preferences', () => {
@@ -106,7 +107,7 @@ describe('roadtrip preferences', () => {
   it('validates the complete window before an atomic write and broadcasts to every member of its trip', async () => {
     const s = setup();
     await expect(s.preferences.update(10, { roadtrip_day_end: '06:00', roadtrip_range_km: 200 })).rejects.toThrow();
-    expect(s.preferenceDb.run).not.toHaveBeenCalled();
+    expect(s.preferenceDb.upsertValue).not.toHaveBeenCalled();
     await s.preferences.update(10, { roadtrip_day_start: '06:00', roadtrip_day_end: '09:00' });
     // The fourth argument is the socket that saved, so the tab that made the
     // change is left out of its own echo. Undefined here: no header was sent.
@@ -133,12 +134,12 @@ describe('roadtrip preferences', () => {
       s.preferences,
       { isDemoUser: () => true } as never,
       {} as never,
-      s.db as never,
+      s.tripsRepo as never,
       {} as never,
     );
-    s.preferenceDb.run.mockClear();
+    s.preferenceDb.upsertValue.mockClear();
     await mcp.update({ tripId: 10, settings: { roadtrip_range_km: 300 } }, ctx);
-    expect(s.preferenceDb.run).not.toHaveBeenCalled();
+    expect(s.preferenceDb.upsertValue).not.toHaveBeenCalled();
   });
   it('tells the assistant why a window was refused instead of the exception class name', async () => {
     // The service refuses an inverted window with the `{ error }` body the route
@@ -148,7 +149,7 @@ describe('roadtrip preferences', () => {
       s.preferences,
       { isDemoUser: () => false } as never,
       {} as never,
-      s.db as never,
+      s.tripsRepo as never,
       { hasTripPermission: () => true } as never,
     );
     const res = await mcp.update({ tripId: 10, settings: { roadtrip_day_end: '06:00' } }, ctx);
@@ -173,13 +174,14 @@ describe('browser-independent roadtrip calculation', () => {
     const s = setup();
     await s.plans.calculate(10, 5, { roadtrip_day_end: '20:00' });
     expect((await s.preferences.read(10)).roadtrip_day_end).toBe('10:00');
-    expect(s.preferenceDb.run).not.toHaveBeenCalled();
+    expect(s.preferenceDb.upsertValue).not.toHaveBeenCalled();
   });
   it('checks trip access before reading or routing', async () => {
     const s = setup();
-    s.db.canAccessTrip.mockResolvedValue(false);
+    s.tripsRepo.findAccessible.mockResolvedValue(false);
     await expect(s.plans.calculate(20, 5)).rejects.toThrow();
-    expect(s.db.all).not.toHaveBeenCalled();
+    expect(s.daysRepo.listPlanDays).not.toHaveBeenCalled();
+    expect(s.dayAssignmentsRepo.listRoadtripVisits).not.toHaveBeenCalled();
     expect(s.router.route).not.toHaveBeenCalled();
   });
   it('tells the assistant why a read, a calculation or a corridor search was refused', async () => {
@@ -189,11 +191,11 @@ describe('browser-independent roadtrip calculation', () => {
     const s = setup();
     const mcp = new RoadtripPlanningMcp(s.plans, {} as never, {} as never);
     const reason = (res: { content: { text: string }[]; isError?: boolean }) => [res.isError, res.content[0].text];
-    s.db.canAccessTrip.mockResolvedValue(false);
+    s.tripsRepo.findAccessible.mockResolvedValue(false);
     expect(reason(await mcp.context({ tripId: 20 }, ctx))).toEqual([true, 'Trip not found']);
     expect(reason(await mcp.calculate({ tripId: 20, includeGeometry: false }, ctx))).toEqual([true, 'Trip not found']);
     expect(reason(await mcp.corridor({ tripId: 20, dayNumber: 1, category: 'fuel', widthKm: 5, offset: 0 } as never, ctx))).toEqual([true, 'Trip not found']);
-    s.db.canAccessTrip.mockResolvedValue(true);
+    s.tripsRepo.findAccessible.mockResolvedValue(true);
     const window = await mcp.calculate({ tripId: 10, includeGeometry: false, settings: { roadtrip_day_start: '18:00', roadtrip_day_end: '08:00' } }, ctx);
     expect(reason(window)).toEqual([true, 'Day end must be later than day start.']);
     expect(s.router.route).not.toHaveBeenCalled();
@@ -281,7 +283,7 @@ describe('Roadtrip MCP registration and search', () => {
     const addons = { isAddonEnabled: vi.fn(() => true) };
     const registry = createTestRegistry(
       [
-        new RoadtripPreferencesMcp(s.preferences, {} as never, addons as never, s.db as never, {} as never),
+        new RoadtripPreferencesMcp(s.preferences, {} as never, addons as never, s.tripsRepo as never, {} as never),
         new RoadtripPlanningMcp(s.plans, {} as never, addons as never),
       ],
       { accessPolicy: trekMcpAccessPolicy, validateAccess: trekMcpValidateAccess },
@@ -352,7 +354,7 @@ describe('Roadtrip MCP registration and search', () => {
     const guards = { hasTripPermission: vi.fn(() => false) };
     const mcp = new RoadtripMcp(
       service as never,
-      { canAccessTrip: () => true } as never,
+      { findAccessible: () => true } as never,
       guards as never,
       { isDemoUser: () => false } as never,
       {} as never,
@@ -374,9 +376,9 @@ describe('Roadtrip MCP registration and search', () => {
 describe('MCP trip preferences authorization', () => {
   it('reads shared preferences and refuses inaccessible trips', async () => {
     const s = setup();
-    const tool = new RoadtripPreferencesMcp(s.preferences, { isDemoUser: () => false } as never, {} as never, s.db as never, { hasTripPermission: () => true } as never);
+    const tool = new RoadtripPreferencesMcp(s.preferences, { isDemoUser: () => false } as never, {} as never, s.tripsRepo as never, { hasTripPermission: () => true } as never);
     expect(JSON.stringify(await tool.read({ tripId: 10 }, ctx))).toContain('100');
-    s.db.canAccessTrip.mockResolvedValue(false);
+    s.tripsRepo.findAccessible.mockResolvedValue(false);
     expect((await tool.read({ tripId: 10 }, ctx)).isError).toBe(true);
     expect((await tool.update({ tripId: 10, settings: {} }, ctx)).isError).toBe(true);
   });
@@ -384,7 +386,7 @@ describe('MCP trip preferences authorization', () => {
     const s = setup();
     const auth = { isDemoUser: vi.fn(() => true) };
     const guards = { hasTripPermission: vi.fn(() => false) };
-    const tool = new RoadtripPreferencesMcp(s.preferences, auth as never, {} as never, s.db as never, guards as never);
+    const tool = new RoadtripPreferencesMcp(s.preferences, auth as never, {} as never, s.tripsRepo as never, guards as never);
     expect((await tool.update({ tripId: 10, settings: {} }, ctx)).isError).toBe(true);
     auth.isDemoUser.mockReturnValue(false);
     expect((await tool.update({ tripId: 10, settings: {} }, ctx)).isError).toBe(true);

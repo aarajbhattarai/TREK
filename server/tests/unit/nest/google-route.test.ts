@@ -12,12 +12,21 @@ const routeTestDb = new Database(':memory:');
 
 async function setup() {
   const maps = { geocodeQuery: vi.fn(), reverseGeocode: vi.fn().mockResolvedValue({ name: null, address: null }) };
-  const db = { canAccessTrip: vi.fn(async () => ({ user_id: 7 })), get: () => ({ role: 'user' }) };
+  const tripsRepo = { findAccessible: vi.fn(async () => ({ user_id: 7 })) };
+  const usersRepo = { getRole: vi.fn(async () => 'user') };
   const places = { create: vi.fn((_trip: string, stop: { name: string }) => ({ id: stop.name })), broadcast: vi.fn() };
   const assignments = { dayExists: vi.fn(() => true), createAssignment: vi.fn((dayId: number, placeId: string) => ({ dayId, placeId })), broadcast: vi.fn(), reconcile: vi.fn() };
   const permissions = { checkPermission: vi.fn(() => true) };
-  const service = new GoogleRouteService(maps as never, db as never, places as never, assignments as never, permissions as never, await createTestUnitOfWork(routeTestDb));
-  return { service, maps, db, places, assignments, permissions };
+  const service = new GoogleRouteService(
+    maps as never,
+    places as never,
+    assignments as never,
+    permissions as never,
+    await createTestUnitOfWork(routeTestDb),
+    tripsRepo as never,
+    usersRepo as never,
+  );
+  return { service, maps, tripsRepo, usersRepo, places, assignments, permissions };
 }
 
 const input = { dayId: 3, stops: [{ name: 'Munich', lat: 48, lng: 11 }, { name: 'Rome', lat: 41, lng: 12 }] };
@@ -67,8 +76,8 @@ describe('Google route import', () => {
   });
 
   it('checks membership, both editing permissions and the target day before writing', async () => {
-    const { service, db, permissions, assignments, places } = await setup();
-    db.canAccessTrip.mockResolvedValueOnce(null as never);
+    const { service, tripsRepo, permissions, assignments, places } = await setup();
+    tripsRepo.findAccessible.mockResolvedValueOnce(undefined as never);
     await expect(service.import(1, 7, input)).rejects.toThrow();
     permissions.checkPermission.mockReturnValueOnce(false);
     await expect(service.import(1, 7, input)).rejects.toThrow();

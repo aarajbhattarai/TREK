@@ -58,7 +58,7 @@ import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repos
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
   createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
-  createTestTripMembersRepo, createTestDatabaseService,
+  createTestTripMembersRepo, createTestDatabaseService, createTestRoadtripViasRepo,
 } from '../../helpers/test-uow';
 
 let svc: AssignmentsService;
@@ -84,6 +84,7 @@ beforeAll(async () => {
     await createTestDaysRepo(dbs.connection),
     await createTestPlacesRepo(dbs.connection),
     await createTestTripMembersRepo(dbs.connection),
+    await createTestRoadtripViasRepo(dbs.connection),
   );
 });
 

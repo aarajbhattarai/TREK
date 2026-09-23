@@ -42,11 +42,11 @@ describe('Open charging data', () => {
     expect(matchChargingLocation([station], 48, 11, 'Test')).toEqual(station);
   });
   it('checks trip/place scope and ignores non-charging places', async () => {
-    const get = vi.fn().mockReturnValueOnce(null).mockReturnValueOnce({ name: 'Hotel', lat: 48, lng: 11, stop_type: 'hotel' });
-    const service = new ChargingService({ get } as never);
+    const findChargingProbe = vi.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce({ name: 'Hotel', lat: 48, lng: 11, stop_type: 'hotel' });
+    const service = new ChargingService({ findChargingProbe } as never);
     await expect(service.read(1, 2)).rejects.toThrow();
     expect((await service.read(1, 2)).status).toBe('unknown');
-    expect(get).toHaveBeenCalledWith(expect.stringContaining('trip_id = ?'), 2, 1);
+    expect(findChargingProbe).toHaveBeenCalledWith(2, 1);
   });
   it('coalesces station requests and preserves availability if tariffs fail', async () => {
     const fetcher = vi.fn(async (url: string) => {
@@ -55,7 +55,7 @@ describe('Open charging data', () => {
       return new Response('', { status: 503 });
     });
     vi.stubGlobal('fetch', fetcher);
-    const service = new ChargingService({ get: () => ({ name: 'Test', lat: 48, lng: 11, stop_type: 'charging' }) } as never);
+    const service = new ChargingService({ findChargingProbe: async () => ({ name: 'Test', lat: 48, lng: 11, stop_type: 'charging' }) } as never);
     const [first, second] = await Promise.all([service.read(1, 2), service.read(1, 2)]);
     expect(first).toEqual(second);
     expect(first.status).toBe('ok');
@@ -94,7 +94,7 @@ describe('Open charging data before the stop exists', () => {
   it('answers for a coordinate and lets the saved stop reuse that answer', async () => {
     const fetcher = answers({ items: [tariff], total_count: 1 });
     vi.stubGlobal('fetch', fetcher);
-    const service = new ChargingService({ get: () => ({ name: 'Test', lat: 48, lng: 11, stop_type: 'charging' }) } as never);
+    const service = new ChargingService({ findChargingProbe: async () => ({ name: 'Test', lat: 48, lng: 11, stop_type: 'charging' }) } as never);
 
     const ahead = await service.lookup(48, 11, 'Test');
     expect(ahead.status).toBe('ok');
@@ -114,35 +114,35 @@ describe('Open charging data before the stop exists', () => {
       if (url.includes('/sources')) return new Response(JSON.stringify({ items: [source] }));
       return new Response(JSON.stringify({ items: [station, { ...station, id: 'other', operator: { name: 'Other' } }], total_count: 2 }));
     }));
-    const info = await new ChargingService({ get: () => null } as never).lookup(48, 11, 'Charging');
+    const info = await new ChargingService({ findChargingProbe: async () => undefined } as never).lookup(48, 11, 'Charging');
     expect(info.status).toBe('ambiguous');
     expect(info.available).toBeNull();
   });
 
   it('turns an unreachable source into an empty answer, not a failed request', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 503 })));
-    const info = await new ChargingService({ get: () => null } as never).lookup(48, 11, 'Test');
+    const info = await new ChargingService({ findChargingProbe: async () => undefined } as never).lookup(48, 11, 'Test');
     expect(info).toEqual({ ...empty('unavailable'), checkedAt: info.checkedAt });
   });
 
   it('does not go to the database for a station that is not in it', async () => {
     vi.stubGlobal('fetch', answers({ items: [], total_count: 0 }));
-    const get = vi.fn();
-    await new ChargingService({ get } as never).lookup(48, 11, 'Test');
-    expect(get).not.toHaveBeenCalled();
+    const findChargingProbe = vi.fn();
+    await new ChargingService({ findChargingProbe } as never).lookup(48, 11, 'Test');
+    expect(findChargingProbe).not.toHaveBeenCalled();
   });
 
   it('serves the route and the MCP tool from one contract and one access check', async () => {
     const charging = { read: vi.fn(), lookup: vi.fn(async () => empty('unknown')) };
-    const db = { canAccessTrip: vi.fn(async () => false) };
-    const tool = new ChargingMcp(charging as never, db as never, {} as never);
+    const tripsRepo = { findAccessible: vi.fn(async () => false) };
+    const tool = new ChargingMcp(charging as never, tripsRepo as never, {} as never);
     const input = { lat: 48.1, lng: 11.5, name: 'Ladepark Nord' };
 
     // A trip the caller cannot reach is refused before anything is fetched, exactly as
     // TripAccessGuard refuses it on the route.
     expect((await tool.lookup({ tripId: 3, ...input }, { userId: 5 } as never)).isError).toBe(true);
     expect(charging.lookup).not.toHaveBeenCalled();
-    db.canAccessTrip.mockResolvedValue(true);
+    tripsRepo.findAccessible.mockResolvedValue(true);
     await tool.lookup({ tripId: 3, ...input }, { userId: 5 } as never);
     await new ChargingLookupController(charging as never).lookup(input as unknown as ChargingLookupDto);
 

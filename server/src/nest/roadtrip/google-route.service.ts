@@ -1,20 +1,26 @@
 import { HttpException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { GoogleRouteImport, GoogleRoutePreview } from '@trek/shared';
 import { MapsService, GOOGLE_SHORT_HOSTS, isGoogleMapsHost } from '../maps/maps.service';
 import { isDirectionsUrl, parseDirectionsUrl, MAX_DIR_WAYPOINTS } from '../places/maps-dir.helpers';
 import { safeFetchFollow } from '../../utils/ssrfGuard';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { PlacesService } from '../places/places.service';
 import { AssignmentsService } from '../assignments/assignments.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 
 @Injectable()
 export class GoogleRouteService {
-  constructor(private readonly maps: MapsService, private readonly db: DatabaseService,
+  constructor(private readonly maps: MapsService,
     private readonly places: PlacesService, private readonly assignments: AssignmentsService,
     private readonly permissions: PermissionsService,
-    private readonly uow: UnitOfWork) {}
+    private readonly uow: UnitOfWork,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository) {}
 
   async preview(raw: string): Promise<GoogleRoutePreview> {
     let url = new URL(raw);
@@ -56,9 +62,11 @@ export class GoogleRouteService {
   }
 
   async import(tripId: number, userId: number, input: GoogleRouteImport, socketId?: string) {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    // GR0 — `TripsRepository.findAccessible` (keeps the row: `access.user_id` feeds the permission check below).
+    const access = await this.tripsRepo.findAccessible(tripId, userId);
     if (!access) throw new HttpException({ error: 'Trip not found' }, 404);
-    const role = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId)?.role ?? 'user';
+    // GR1 — `UsersRepository.getRole`.
+    const role = (await this.usersRepo.getRole(userId)) ?? 'user';
     // `every` cannot await the permission check, so the same all-of test runs as
     // an explicit loop — same actions, same order, same short-circuit.
     for (const action of ['place_edit', 'day_edit']) {

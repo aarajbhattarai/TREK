@@ -31,6 +31,15 @@ export interface DayIdAndNumberRow {
   day_number: number;
 }
 
+/** RPL1's projection: `SELECT id, day_number, date, title, default_transport_mode FROM days WHERE trip_id = ? ORDER BY day_number`. */
+export interface PlanDayRow {
+  id: number;
+  day_number: number;
+  date: string | null;
+  title: string | null;
+  default_transport_mode: string | null;
+}
+
 export class DaysRepository extends TrekRepository<Days> {
   /** `SELECT * FROM days WHERE trip_id = ? ORDER BY day_number ASC` */
   async listByTrip(trip_id: number): Promise<DayRow[]> {
@@ -208,6 +217,25 @@ export class DaysRepository extends TrekRepository<Days> {
       .limit(1)
       .execute<DayIdAndNumberRow | undefined>('get', false);
     return row ?? undefined;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 1 (`RoadtripPlanService`) — additive, per this task's own
+  // file-ownership rule ("all additive methods on Days/Places/DayAssignments
+  // repositories").
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RPL1 (`roadtrip-plan.service.ts::context`) — `SELECT id, day_number,
+   * date, title, default_transport_mode FROM days WHERE trip_id = ? ORDER BY
+   * day_number`.
+   */
+  async listPlanDays(trip_id: number): Promise<PlanDayRow[]> {
+    return await this.qb('d')
+      .select(['d.id', 'd.day_number', 'd.date', 'd.title', 'd.default_transport_mode'])
+      .where({ trip: trip_id })
+      .orderBy({ day_number: 'asc' })
+      .execute<PlanDayRow[]>('all', false);
   }
 
   // ---------------------------------------------------------------------------

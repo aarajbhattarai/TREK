@@ -1,82 +1,125 @@
-import Database from 'better-sqlite3';
-import { afterEach, expect, it, vi } from 'vitest';
+/**
+ * `DayBoundariesService`/`DayBoundariesController`/`DayBoundariesMcp` (Plan
+ * 3d Task 1). Rewritten off the hand-DDL `DatabaseService`-shaped facade
+ * (§15a/§15c test risk 2) onto real rows through `DayAssignmentsRepository`/
+ * `RoadtripDayBoundariesRepository` — the real schema, not a 4-column
+ * hand-written subset.
+ */
+import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { HttpException } from '@nestjs/common';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { resetTestDb } from '../../helpers/test-db';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { createDay, createDayAssignment, createPlace, createTrip, createUser } from '../../helpers/factories';
 import { DayBoundariesService } from '../../../src/nest/roadtrip/day-boundaries.service';
 import { DayBoundariesController } from '../../../src/nest/roadtrip/day-boundaries.controller';
 import { DayBoundariesMcp } from '../../../src/nest/roadtrip/day-boundaries.mcp';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import { DayAssignments } from '../../../src/db/entities/DayAssignments.entity';
+import { RoadtripDayBoundaries } from '../../../src/db/entities/RoadtripDayBoundaries.entity';
 import type { McpContext } from '../../../src/nest-mcp';
 
-const open: Database.Database[] = [];
-afterEach(() => open.splice(0).forEach(db => db.close()));
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+beforeAll(async () => { t = await createTestOrm(testDb); });
+beforeEach(() => { resetTestDb(testDb); t.clear(); });
+afterAll(async () => { await t.close(); testDb.close(); });
+
 function setup() {
-  const raw = new Database(':memory:');
-  open.push(raw);
-  raw.pragma('foreign_keys = ON');
-  raw.exec(`CREATE TABLE days (id INTEGER PRIMARY KEY, trip_id INTEGER);
-    CREATE TABLE day_assignments (id INTEGER PRIMARY KEY, day_id INTEGER REFERENCES days(id) ON DELETE CASCADE);
-    CREATE TABLE roadtrip_day_boundaries (trip_id INTEGER, day_number INTEGER, from_assignment_id INTEGER REFERENCES day_assignments(id) ON DELETE CASCADE,
-      to_assignment_id INTEGER REFERENCES day_assignments(id) ON DELETE CASCADE, fraction REAL, PRIMARY KEY(trip_id, day_number));
-    INSERT INTO days VALUES (1, 10), (2, 20);
-    INSERT INTO day_assignments VALUES (11, 1), (12, 1), (21, 2);`);
-  const db = {
-    get: (sql: string, ...params: unknown[]) => raw.prepare(sql).get(...params),
-    all: (sql: string, ...params: unknown[]) => raw.prepare(sql).all(...params),
-    run: (sql: string, ...params: unknown[]) => raw.prepare(sql).run(...params),
-    canAccessTrip: vi.fn(async () => true),
-  };
-  const service = new DayBoundariesService(db as unknown as DatabaseService);
+  const { user } = createUser(testDb);
+  const tripA = createTrip(testDb, user.id);
+  const tripB = createTrip(testDb, user.id);
+  const dayA = createDay(testDb, tripA.id);
+  const dayB = createDay(testDb, tripB.id);
+  const placeA = createPlace(testDb, tripA.id);
+  const placeB = createPlace(testDb, tripB.id);
+  const from = createDayAssignment(testDb, dayA.id, placeA.id);
+  const to = createDayAssignment(testDb, dayA.id, placeA.id);
+  const foreign = createDayAssignment(testDb, dayB.id, placeB.id);
+
+  const dayAssignmentsRepo = t.repo(DayAssignments);
+  const boundariesRepo = t.repo(RoadtripDayBoundaries);
+  const service = new DayBoundariesService(dayAssignmentsRepo, boundariesRepo);
   const realtime = { broadcast: vi.fn() };
   const auth = { isDemoUser: vi.fn(() => false) };
   const guards = { hasTripPermission: vi.fn(() => true) };
-  const mcp = new DayBoundariesMcp(service, db as unknown as DatabaseService, auth as never, guards as never, realtime as never, {} as never);
-  return { raw, service, controller: new DayBoundariesController(service, realtime as never), mcp, db, auth, guards, realtime };
+  const tripsRepo = { findAccessible: vi.fn(async () => ({ id: tripA.id, user_id: user.id })) };
+  const mcp = new DayBoundariesMcp(service, tripsRepo as never, auth as never, guards as never, realtime as never, {} as never);
+  return {
+    service,
+    controller: new DayBoundariesController(service, realtime as never),
+    mcp,
+    tripsRepo,
+    auth,
+    guards,
+    realtime,
+    tripA,
+    tripB,
+    fromId: from.id,
+    toId: to.id,
+    foreignId: foreign.id,
+  };
 }
-const boundary = { day_number: 1, from_assignment_id: 11, to_assignment_id: 12, fraction: 0.4 };
 
 it('replaces one day only, persists place snapping and cascades deleted visits', async () => {
-  const { service, raw } = setup();
-  await service.save(10, boundary);
-  await service.save(10, { ...boundary, day_number: 2, fraction: 0.8 });
-  expect(await service.save(10, { ...boundary, to_assignment_id: null })).toEqual([
+  const { service, tripA, tripB, fromId, toId } = setup();
+  const boundary = { day_number: 1, from_assignment_id: fromId, to_assignment_id: toId, fraction: 0.4 };
+  await service.save(tripA.id, boundary);
+  await service.save(tripA.id, { ...boundary, day_number: 2, fraction: 0.8 });
+  expect(await service.save(tripA.id, { ...boundary, to_assignment_id: null })).toEqual([
     { ...boundary, to_assignment_id: null, fraction: 1 }, { ...boundary, day_number: 2, fraction: 0.8 },
   ]);
-  expect(await service.list(20)).toEqual([]);
-  await service.remove(20, 1);
-  expect(await service.list(10)).toHaveLength(2);
-  raw.prepare('DELETE FROM day_assignments WHERE id = 12').run();
-  expect(await service.list(10)).toEqual([{ ...boundary, to_assignment_id: null, fraction: 1 }]);
+  expect(await service.list(tripB.id)).toEqual([]);
+  await service.remove(tripB.id, 1);
+  expect(await service.list(tripA.id)).toHaveLength(2);
+  testDb.prepare('DELETE FROM day_assignments WHERE id = ?').run(toId);
+  expect(await service.list(tripA.id)).toEqual([{ ...boundary, to_assignment_id: null, fraction: 1 }]);
 });
 
-it('rejects either endpoint from a different trip without writing', async () => {
-  const { service } = setup();
-  await expect(service.save(10, { ...boundary, from_assignment_id: 21 })).rejects.toThrow(HttpException);
-  await expect(service.save(10, { ...boundary, to_assignment_id: 21 })).rejects.toThrow(HttpException);
-  expect(await service.list(10)).toEqual([]);
+it('rejects either endpoint from a different trip without writing (RB2)', async () => {
+  const { service, tripA, fromId, foreignId } = setup();
+  const boundary = { day_number: 1, from_assignment_id: fromId, to_assignment_id: foreignId, fraction: 0.4 };
+  await expect(service.save(tripA.id, { ...boundary, from_assignment_id: foreignId })).rejects.toThrow(HttpException);
+  await expect(service.save(tripA.id, boundary)).rejects.toThrow(HttpException);
+  expect(await service.list(tripA.id)).toEqual([]);
+});
+
+it('RB2 (`belongs`): a foreign `to_assignment_id` is refused with the exact legacy message', async () => {
+  // The async-closure-truthiness-guards ratchet
+  // (`tests/integration/async-closure-truthiness-guards.test.ts`, RB2-001)
+  // drives the real route end to end and is mutation-proved there (Task 0's
+  // report: dropping the `await` on `belongs` turns a 404 into a 200). This
+  // unit case pins the exact error string at the service boundary.
+  const { service, tripA, fromId, foreignId } = setup();
+  await expect(
+    service.save(tripA.id, { day_number: 1, from_assignment_id: fromId, to_assignment_id: foreignId, fraction: 0.4 }),
+  ).rejects.toMatchObject({ response: { error: 'Stop not found' }, status: 404 });
 });
 
 it('REST changes broadcast the complete state and exclude the saving socket', async () => {
-  const { controller, realtime } = setup();
-  await controller.save('10', boundary, 'self');
-  expect(realtime.broadcast).toHaveBeenCalledWith('10', 'roadtripBoundary:changed', { boundaries: [boundary] }, 'self');
-  expect(await controller.remove('10', 1)).toEqual({ boundaries: [] });
+  const { controller, realtime, tripA, fromId, toId } = setup();
+  const boundary = { day_number: 1, from_assignment_id: fromId, to_assignment_id: toId, fraction: 0.4 };
+  await controller.save(String(tripA.id), boundary, 'self');
+  expect(realtime.broadcast).toHaveBeenCalledWith(String(tripA.id), 'roadtripBoundary:changed', { boundaries: [boundary] }, 'self');
+  expect(await controller.remove(String(tripA.id), 1)).toEqual({ boundaries: [] });
 });
 
 it('MCP checks demo, trip access and edit permission before saving', async () => {
-  const s = setup(), ctx = { userId: 1 } as McpContext;
-  const request = { tripId: 10, dayNumber: 1, boundary };
+  const s = setup();
+  const ctx = { userId: 1 } as McpContext;
+  const boundary = { day_number: 1, from_assignment_id: s.fromId, to_assignment_id: s.toId, fraction: 0.4 };
+  const request = { tripId: s.tripA.id, dayNumber: 1, boundary };
   s.auth.isDemoUser.mockReturnValue(true);
   await s.mcp.save(request, ctx);
   s.auth.isDemoUser.mockReturnValue(false);
-  s.db.canAccessTrip.mockResolvedValue(false);
+  s.tripsRepo.findAccessible.mockResolvedValue(undefined);
   await s.mcp.save(request, ctx);
-  s.db.canAccessTrip.mockResolvedValue(true);
+  s.tripsRepo.findAccessible.mockResolvedValue({ id: s.tripA.id, user_id: 1 });
   s.guards.hasTripPermission.mockReturnValue(false);
   await s.mcp.save(request, ctx);
-  expect(await s.service.list(10)).toEqual([]);
+  expect(await s.service.list(s.tripA.id)).toEqual([]);
   s.guards.hasTripPermission.mockReturnValue(true);
   await s.mcp.save(request, ctx);
-  expect(await s.service.list(10)).toEqual([boundary]);
+  expect(await s.service.list(s.tripA.id)).toEqual([boundary]);
   await s.mcp.save({ ...request, boundary: null }, ctx);
-  expect(await s.service.list(10)).toEqual([]);
+  expect(await s.service.list(s.tripA.id)).toEqual([]);
 });

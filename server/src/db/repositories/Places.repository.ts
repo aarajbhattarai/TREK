@@ -832,4 +832,37 @@ export class PlacesRepository extends TrekRepository<Places> {
       fill_percent: input.fill_percent,
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 1 (`RoadtripService`/`ChargingService`) — additive, per this
+  // task's own file-ownership rule ("all additive methods on Days/Places/
+  // DayAssignments repositories").
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RT13 (`RoadtripService.trackExists`) — `SELECT id FROM places WHERE id =
+   * ? AND trip_id = ? AND route_geometry IS NOT NULL AND route_geometry !=
+   * ''`. Two `.andWhere()` calls (rule 23 — typed conditions, not an inline
+   * SQL string) rather than one `$and` array: the two operators (`$ne: null`
+   * for `IS NOT NULL`, `$ne: ''` for `!= ''`) target the SAME property, so a
+   * single filter object literal cannot carry both keys.
+   */
+  async isTrackInTrip(id: number, trip_id: number): Promise<boolean> {
+    const row = await this.qb('p')
+      .select(['p.id'])
+      .where({ id, trip: trip_id })
+      .andWhere({ route_geometry: { $ne: null } })
+      .andWhere({ route_geometry: { $ne: '' } })
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /** CH1 (`ChargingService.read`) — `SELECT name, lat, lng, stop_type FROM places WHERE id = ? AND trip_id = ?`. */
+  async findChargingProbe(id: number, trip_id: number): Promise<{ name: string; lat: number | null; lng: number | null; stop_type: string | null } | undefined> {
+    const row = await this.qb('p')
+      .select(['p.name', 'p.lat', 'p.lng', 'p.stop_type'])
+      .where({ id, trip: trip_id })
+      .execute<{ name: string; lat: number | null; lng: number | null; stop_type: string | null } | undefined>('get', false);
+    return row ?? undefined;
+  }
 }

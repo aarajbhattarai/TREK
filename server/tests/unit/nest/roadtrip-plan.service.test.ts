@@ -6,11 +6,10 @@
  * column the statement never selects would go unnoticed there. These run the statement.
  */
 import { db } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RoadtripPlanService } from '../../../src/nest/roadtrip/roadtrip-plan.service';
 import { createDay, createDayAssignment, createPlace, createTrip, createUser } from '../../helpers/factories';
 import { resetTestDb } from '../../helpers/test-db';
-import { sharedTestOrm } from '../../helpers/test-uow';
+import { createTestTripsRepo, createTestDaysRepo, createTestDayAssignmentsRepo } from '../../helpers/test-uow';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -51,12 +50,14 @@ async function setup() {
   });
   db.prepare("UPDATE day_assignments SET assignment_time = '09:00' WHERE id = ?").run(visits[0].id);
   const plans = new RoadtripPlanService(
-    new DatabaseService(db, (await sharedTestOrm(db)).em),
     { getUserSettings: () => ({}) } as never,
     { read: () => ({}) } as never,
     hourlyRouter() as never,
     { listForTrip: () => [], tracksForTrip: () => [] } as never,
     { list: () => [] } as never,
+    await createTestTripsRepo(db),
+    await createTestDaysRepo(db),
+    await createTestDayAssignmentsRepo(db),
   );
   return { user, trip, visits, plans };
 }

@@ -10,6 +10,7 @@ import { AssignmentParticipants } from '../../db/entities/AssignmentParticipants
 import { Days } from '../../db/entities/Days.entity';
 import { Places } from '../../db/entities/Places.entity';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
+import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
 
 /**
  * The assignments SERVICE, split from the controller/MCP/RPC surfaces (the
@@ -21,13 +22,14 @@ import { TripMembers } from '../../db/entities/TripMembers.entity';
  * none of the four service imports reaches the days or places domains.
  *
  * `MikroOrmModule.forFeature([DayAssignments, AssignmentParticipants, Days,
- * Places, TripMembers])` registers `DayAssignmentsRepository`/
+ * Places, TripMembers, RoadtripVias])` registers `DayAssignmentsRepository`/
  * `AssignmentParticipantsRepository`/`DaysRepository`/`PlacesRepository`/
- * `TripMembersRepository` for `AssignmentsService`'s `@InjectRepository`
- * constructor params (Plan 3c Task 3) — the entity classes only, not the
- * `DaysModule`/`PlacesModule` modules themselves, so the loop this module's
- * docstring already avoids stays avoided (`DaysModule`'s own precedent for
- * pulling in `Trips` the same way).
+ * `TripMembersRepository`/`RoadtripViasRepository` for `AssignmentsService`'s
+ * `@InjectRepository` constructor params (Plan 3c Task 3; `RoadtripVias`
+ * added by Plan 3d Task 1 for AS20–AS23) — the entity classes only, not the
+ * `DaysModule`/`PlacesModule`/`RoadtripModule` modules themselves, so the
+ * loop this module's docstring already avoids stays avoided (`DaysModule`'s
+ * own precedent for pulling in `Trips` the same way).
  */
 @Module({
   imports: [
@@ -35,7 +37,7 @@ import { TripMembers } from '../../db/entities/TripMembers.entity';
     QueryHelpersModule,
     JourneyDomainModule,
     RealtimeModule,
-    MikroOrmModule.forFeature([DayAssignments, AssignmentParticipants, Days, Places, TripMembers]),
+    MikroOrmModule.forFeature([DayAssignments, AssignmentParticipants, Days, Places, TripMembers, RoadtripVias]),
   ],
   providers: [AssignmentsService],
   exports: [AssignmentsService],

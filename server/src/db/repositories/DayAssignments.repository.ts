@@ -147,6 +147,78 @@ interface AssignmentTimeSortKyselyDB {
   };
 }
 
+/**
+ * RPL2's row, exactly as `RoadtripPlanService.context`'s old local `VisitRow`
+ * interface declared it — the stay the visit stands for on its check-in day
+ * (never `a.accommodation_id`, see the method docstring), and the checkout
+ * day's `day_number`, both `null` for a visit with no linked stay.
+ */
+export interface RoadtripVisitRow {
+  id: number;
+  day_id: number;
+  place_id: number;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  time: string | null;
+  end_time: string | null;
+  duration_minutes: number | null;
+  end_day: number;
+  leg_transport_mode: string | null;
+  incoming_leg_transport_mode: string | null;
+  stop_type: string | null;
+  fill_percent: number | null;
+  stay_id: number | null;
+  check_in: string | null;
+  check_out: string | null;
+  checkout_day: number | null;
+}
+
+/**
+ * `day_assignments`/`days`/`places`/`day_accommodations`'s shape for RPL2
+ * (`listRoadtripVisits`), the same Kysely-typed-DB-interface shape
+ * `AssignmentTimeSortKyselyDB` above uses. `days` is joined twice under two
+ * aliases (`d`, `checkout`) — both resolve against this one `days` entry.
+ */
+interface RoadtripVisitsKyselyDB {
+  day_assignments: {
+    id: number;
+    day_id: number;
+    place_id: number;
+    order_index: number | null;
+    created_at: string | null;
+    assignment_time: string | null;
+    assignment_end_time: string | null;
+    end_day: number;
+    leg_transport_mode: string | null;
+    incoming_leg_transport_mode: string | null;
+  };
+  days: {
+    id: number;
+    trip_id: number;
+    day_number: number;
+  };
+  places: {
+    id: number;
+    name: string;
+    lat: number | null;
+    lng: number | null;
+    place_time: string | null;
+    end_time: string | null;
+    duration_minutes: number | null;
+    stop_type: string | null;
+    fill_percent: number | null;
+  };
+  day_accommodations: {
+    id: number;
+    place_id: number;
+    start_day_id: number;
+    end_day_id: number | null;
+    check_in: string | null;
+    check_out: string | null;
+  };
+}
+
 export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
   /** The DY1/DY3/AS1/AS3 projection's SELECT list, shared by all three query shapes below. */
   private assignmentWithPlaceSelect(platform: Platform) {
@@ -623,5 +695,89 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
    */
   async setAccommodation(id: number, accommodation_id: number): Promise<void> {
     await this.nativeUpdate({ id }, { accommodation_id });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 1 (`RoadtripPlanService`) — additive, per this task's own
+  // file-ownership rule ("all additive methods on Days/Places/DayAssignments
+  // repositories").
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RPL2 (`roadtrip-plan.service.ts::context`'s `visits` read) — the
+   * cluster's most dialect-specific SELECT (inventory §17b):
+   *
+   * ```sql
+   * SELECT a.id, a.day_id, a.place_id, p.name, p.lat, p.lng,
+   *   COALESCE(a.assignment_time, p.place_time) AS time,
+   *   COALESCE(a.assignment_end_time, p.end_time) AS end_time,
+   *   p.duration_minutes, a.end_day,
+   *   a.leg_transport_mode, a.incoming_leg_transport_mode, p.stop_type, p.fill_percent,
+   *   stay.id AS stay_id, stay.check_in, stay.check_out, checkout.day_number AS checkout_day
+   * FROM day_assignments a
+   * JOIN days d ON d.id = a.day_id
+   * JOIN places p ON p.id = a.place_id
+   * LEFT JOIN day_accommodations stay
+   *   ON stay.id = (SELECT id FROM day_accommodations WHERE place_id = p.id AND start_day_id = d.id ORDER BY id LIMIT 1)
+   * LEFT JOIN days checkout ON checkout.id = stay.end_day_id
+   * WHERE d.trip_id = ?
+   * ORDER BY d.day_number, a.order_index, a.created_at
+   * ```
+   *
+   * A correlated scalar subquery INSIDE a `LEFT JOIN … ON` clause — no
+   * QueryBuilder shape expresses this (§17b), and no MikroORM relation
+   * connects a place+check-in-day pair to its `day_accommodations` row (the
+   * stay is matched by `place_id`+`start_day_id`, not by
+   * `a.accommodation_id` — deliberately: the inventory's own RPL2 note),
+   * so this is `this.kysely()` from the start, same escape-hatch order as
+   * `reanchorToDay`/`effectiveStart`/`listForTimeSort` above. `days` is
+   * joined twice under two different aliases (`d`, `checkout`) — ordinary
+   * Kysely self-join aliasing, no separate interface entry needed since both
+   * resolve against the same `days` table shape.
+   */
+  async listRoadtripVisits(trip_id: number): Promise<RoadtripVisitRow[]> {
+    const rows = await this.kysely<RoadtripVisitsKyselyDB>()
+      .selectFrom('day_assignments as a')
+      .innerJoin('days as d', 'd.id', 'a.day_id')
+      .innerJoin('places as p', 'p.id', 'a.place_id')
+      .leftJoin('day_accommodations as stay', (join) =>
+        join.on('stay.id', '=', (eb) =>
+          eb
+            .selectFrom('day_accommodations as da2')
+            .select('da2.id')
+            .whereRef('da2.place_id', '=', 'p.id')
+            .whereRef('da2.start_day_id', '=', 'd.id')
+            .orderBy('da2.id', 'asc')
+            .limit(1),
+        ),
+      )
+      .leftJoin('days as checkout', 'checkout.id', 'stay.end_day_id')
+      .select((eb) => [
+        'a.id as id',
+        'a.day_id as day_id',
+        'a.place_id as place_id',
+        'p.name as name',
+        'p.lat as lat',
+        'p.lng as lng',
+        eb.fn.coalesce('a.assignment_time', 'p.place_time').as('time'),
+        eb.fn.coalesce('a.assignment_end_time', 'p.end_time').as('end_time'),
+        'p.duration_minutes as duration_minutes',
+        'a.end_day as end_day',
+        'a.leg_transport_mode as leg_transport_mode',
+        'a.incoming_leg_transport_mode as incoming_leg_transport_mode',
+        'p.stop_type as stop_type',
+        'p.fill_percent as fill_percent',
+        'stay.id as stay_id',
+        'stay.check_in as check_in',
+        'stay.check_out as check_out',
+        'checkout.day_number as checkout_day',
+      ])
+      .where('d.trip_id', '=', trip_id)
+      .orderBy('d.day_number', 'asc')
+      .orderBy('a.order_index', 'asc')
+      .orderBy('a.created_at', 'asc')
+      .$castTo<RoadtripVisitRow>()
+      .execute();
+    return rows;
   }
 }

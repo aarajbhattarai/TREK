@@ -2,7 +2,9 @@ import { z } from 'zod';
 import { MAX_TRIP_DAYS, roadtripDayBoundarySchema, type RoadtripDayBoundary } from '@trek/shared';
 import { McpController, Tool, TOOL_ANNOTATIONS_READONLY, TOOL_ANNOTATIONS_WRITE, ok, type McpContext } from '../../nest-mcp';
 import { demoDenied, noAccess, permissionDenied } from '../../mcp/tools/_shared';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { AuthService } from '../auth/auth.service';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -18,7 +20,7 @@ const when = addonGate(ADDON_IDS.ROADTRIP);
 export class DayBoundariesMcp {
   constructor(
     private readonly boundaries: DayBoundariesService,
-    private readonly db: DatabaseService,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
     private readonly auth: AuthService,
     private readonly guards: McpToolGuardsService,
     private readonly realtime: RealtimeService,
@@ -31,7 +33,7 @@ export class DayBoundariesMcp {
     annotations: TOOL_ANNOTATIONS_READONLY, access: { group: 'trips', mode: 'read' }, when,
   })
   async list({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    if (!(await this.tripsRepo.findAccessible(tripId, ctx.userId))) return noAccess();
     return ok({ boundaries: await this.boundaries.list(tripId) });
   }
 
@@ -43,7 +45,7 @@ export class DayBoundariesMcp {
   })
   async save({ tripId, dayNumber, boundary }: { tripId: number; dayNumber: number; boundary: RoadtripDayBoundary | null }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    if (!(await this.tripsRepo.findAccessible(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     // A stop from another trip is refused by the service, with the reason.
     return answeringRefusals(async () => {

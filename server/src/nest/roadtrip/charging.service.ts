@@ -1,9 +1,11 @@
 import { HttpException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { ChargingInfo } from '@trek/shared';
 import { z } from 'zod';
-import { DatabaseService } from '../database/database.service';
 import { readCappedJson } from '../../utils/cappedFetch';
 import { chargingLocation, chargingSource, chargingTariff, matchChargingLocation, normalizeCharging, type ChargingSource, type ChargingTariff } from './charging.helpers';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
 
 /** The shape of "we cannot say", exported so nothing has to restate its thirteen fields. */
 export const empty = (status: ChargingInfo['status']): ChargingInfo => ({ checkedAt: new Date().toISOString(), status, station: null, source: null, sourceUrl: null, license: null, updatedAt: null, stale: false, available: null, total: 0, unknown: 0, tariffs: [], pricesUnavailable: false });
@@ -18,9 +20,10 @@ export class ChargingService {
   private cached = new Map<string, { expires: number; value: Promise<ChargingInfo> }>();
   private sources?: { expires: number; value: Promise<ChargingSource[]> };
   private tariffs = new Map<string, { expires: number; value: Promise<ChargingTariff[]> }>();
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@InjectRepository(Places) private readonly placesRepo: PlacesRepository) {}
+  /** CH1 — `PlacesRepository.findChargingProbe` (trip-scoped). */
   async read(tripId: number, placeId: number) {
-    const place = this.db.get<{ name: string; lat: number | null; lng: number | null; stop_type: string }>('SELECT name, lat, lng, stop_type FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+    const place = await this.placesRepo.findChargingProbe(placeId, tripId);
     if (!place) throw new HttpException({ error: 'Place not found' }, 404);
     if (place.stop_type !== 'charging' || place.lat == null || place.lng == null) return empty('unknown');
     return this.lookup(place.lat, place.lng, place.name);

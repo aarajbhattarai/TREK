@@ -30,14 +30,36 @@ import { RoadtripService } from './roadtrip.service';
 import { RoadtripSearchService } from './roadtrip-search.service';
 import { RoadtripSearchController } from './roadtrip-search.controller';
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { RoadtripHazardsController } from './roadtrip-hazards.controller';
 import { RoadtripHazardsService } from './roadtrip-hazards.service';
 import { RoadtripHazardsMcp } from './roadtrip-hazards.mcp';
+import { Trips } from '../../db/entities/Trips.entity';
+import { Days } from '../../db/entities/Days.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { Users } from '../../db/entities/Users.entity';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
+import { RoadtripDayTracks } from '../../db/entities/RoadtripDayTracks.entity';
+import { RoadtripPreferences } from '../../db/entities/RoadtripPreferences.entity';
+import { RoadtripDayBoundaries } from '../../db/entities/RoadtripDayBoundaries.entity';
 
 /** Road trip domain (#1797): the points a drive is routed through. Registered in AppModule. */
 @Module({
   // McpShared brings the tool guards, Auth the demo check, Permissions the trip guard,
   // Addons the enabled-check the MCP tools gate on (the controller has @RequireAddon).
+  //
+  // `MikroOrmModule.forFeature(...)` (Plan 3d Task 1) registers every
+  // repository this module's own providers `@InjectRepository` — a
+  // `forFeature` registration only reaches providers declared in ITS OWN
+  // `providers` array (`AssignmentsDomainModule`'s docstring), so the four
+  // new roadtrip repositories plus `Trips`/`Days`/`Places`/`Users`/
+  // `DayAssignments` (read through `TripsRepository.findAccessible`,
+  // `DaysRepository.existsInTrip`/`listPlanDays`, `PlacesRepository
+  // .isTrackInTrip`/`findChargingProbe`, `UsersRepository.getRole`,
+  // `DayAssignmentsRepository.findInTrip`/`listRoadtripVisits`) all need
+  // their own entry here, even though `PlacesModule`/`AssignmentsModule`
+  // already register some of the same entities for THEIR OWN providers.
   imports: [
     McpSharedModule,
     PermissionsModule,
@@ -47,6 +69,7 @@ import { RoadtripHazardsMcp } from './roadtrip-hazards.mcp';
     SettingsModule,
     PluginsRuntimeModule,
     MapsModule, PlacesModule, AssignmentsModule,
+    MikroOrmModule.forFeature([Trips, Days, Places, Users, DayAssignments, RoadtripVias, RoadtripDayTracks, RoadtripPreferences, RoadtripDayBoundaries]),
   ],
   controllers: [ChargingController, ChargingLookupController, GoogleRouteController, RoadtripSearchController, RoadtripPreferencesController, RoadtripController, DayBoundariesController, RoadtripHazardsController],
   providers: [ChargingMcp, ChargingService, GoogleRouteService, GoogleRouteMcp,

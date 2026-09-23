@@ -76,7 +76,9 @@ import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo, sharedTestOrm,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
-  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
+  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo,
+  createTestReservationsRepo,
+  createTestReservationEndpointsRepo,
 } from './test-uow';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
@@ -117,6 +119,8 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestDayNotesRepo(dbs.connection),
     await createTestTripsRepo(dbs.connection),
+    await createTestReservationsRepo(dbs.connection),
+    await createTestReservationEndpointsRepo(dbs.connection),
   );
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbs.connection), await createTestPlacesRepo(dbs.connection));
   const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
@@ -131,6 +135,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestDaysRepo(dbs.connection),
     await createTestPlacesRepo(dbs.connection),
     await createTestTripMembersRepo(dbs.connection),
+    await createTestRoadtripViasRepo(dbs.connection),
   );
   const membership = new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection));
   const notifications = await makeNotificationsService(dbs, realtime);

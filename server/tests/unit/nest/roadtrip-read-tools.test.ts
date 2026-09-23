@@ -9,14 +9,14 @@ import { DayBoundariesMcp } from '../../../src/nest/roadtrip/day-boundaries.mcp'
 const ctx = { userId: 5 } as McpContext;
 describe('roadtrip read tools', () => {
   it('checks trip access before querying charging and hazards', async () => {
-    const db = { canAccessTrip: vi.fn(async () => false) };
+    const tripsRepo = { findAccessible: vi.fn(async () => false) };
     const source = { read: vi.fn(async () => ({ sources: ['public'] })) };
-    const charging = new ChargingMcp(source as never, db as never, {} as never);
-    const hazards = new RoadtripHazardsMcp(source as never, db as never, {} as never);
+    const charging = new ChargingMcp(source as never, tripsRepo as never, {} as never);
+    const hazards = new RoadtripHazardsMcp(source as never, tripsRepo as never, {} as never);
     expect((await charging.read({ tripId: 10, placeId: 2 }, ctx)).isError).toBe(true);
     expect((await hazards.read({ tripId: 10 }, ctx)).isError).toBe(true);
     expect(source.read).not.toHaveBeenCalled();
-    db.canAccessTrip.mockResolvedValue(true);
+    tripsRepo.findAccessible.mockResolvedValue(true);
     expect(JSON.stringify(await charging.read({ tripId: 10, placeId: 2 }, ctx))).toContain('public');
     expect(source.read).toHaveBeenCalledWith(10, 2);
     expect(JSON.stringify(await hazards.read({ tripId: 10 }, ctx))).toContain('public');
@@ -51,8 +51,8 @@ describe('roadtrip read tools', () => {
     const refuse = (error: string, status: number) => () => { throw new HttpException({ error }, status); };
     const text = (res: { content: { text: string }[]; isError?: boolean }) => [res.isError, res.content[0].text];
 
-    const db = { canAccessTrip: vi.fn(async () => true) };
-    const charging = new ChargingMcp({ read: refuse('Place not found', 404) } as never, db as never, {} as never);
+    const tripsRepo = { findAccessible: vi.fn(async () => true) };
+    const charging = new ChargingMcp({ read: refuse('Place not found', 404) } as never, tripsRepo as never, {} as never);
     expect(text(await charging.read({ tripId: 10, placeId: 2 }, ctx))).toEqual([true, 'Place not found']);
 
     const auth = { isDemoUser: vi.fn(async () => false) };
@@ -63,7 +63,7 @@ describe('roadtrip read tools', () => {
 
     const realtime = { broadcast: vi.fn() };
     const guards = { hasTripPermission: vi.fn(() => true) };
-    const boundaries = new DayBoundariesMcp({ save: refuse('Stop not found', 404) } as never, db as never, auth as never, guards as never, realtime as never, {} as never);
+    const boundaries = new DayBoundariesMcp({ save: refuse('Stop not found', 404) } as never, tripsRepo as never, auth as never, guards as never, realtime as never, {} as never);
     const boundary = { day_number: 1, from_assignment_id: 11, to_assignment_id: 12, fraction: 0.4 };
     expect(text(await boundaries.save({ tripId: 10, dayNumber: 1, boundary }, ctx))).toEqual([true, 'Stop not found']);
     expect(realtime.broadcast).not.toHaveBeenCalled();
@@ -71,11 +71,11 @@ describe('roadtrip read tools', () => {
 
   it('does not expose manual boundaries to nonmembers', async () => {
     const boundaries = { list: vi.fn(() => [{ day_number: 1 }]) };
-    const db = { canAccessTrip: vi.fn(async () => false) };
-    const tool = new DayBoundariesMcp(boundaries as never, db as never, {} as never, {} as never, {} as never, {} as never);
+    const tripsRepo = { findAccessible: vi.fn(async () => false) };
+    const tool = new DayBoundariesMcp(boundaries as never, tripsRepo as never, {} as never, {} as never, {} as never, {} as never);
     expect((await tool.list({ tripId: 10 }, ctx)).isError).toBe(true);
     expect(boundaries.list).not.toHaveBeenCalled();
-    db.canAccessTrip.mockResolvedValue(true);
+    tripsRepo.findAccessible.mockResolvedValue(true);
     expect(JSON.stringify(await tool.list({ tripId: 10 }, ctx))).toContain('day_number');
     expect(boundaries.list).toHaveBeenCalledWith(10);
   });

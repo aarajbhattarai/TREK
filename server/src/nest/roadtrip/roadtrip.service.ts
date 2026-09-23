@@ -1,8 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { RoadtripDayTrack, RoadtripVia, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { toRowId } from '../common/row-id';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
+import type { RoadtripViasRepository } from '../../db/repositories/RoadtripVias.repository';
+import { RoadtripDayTracks } from '../../db/entities/RoadtripDayTracks.entity';
+import type { RoadtripDayTracksRepository } from '../../db/repositories/RoadtripDayTracks.repository';
 
 /**
  * Via points: the places a day's drive is made to pass through without stopping.
@@ -11,13 +20,22 @@ import { UnitOfWork } from '../database/unit-of-work';
  * number in the chain, an arrival time and a line in the itinerary. A via only bends the
  * route. Modelling one as a place would put a numbered stop in the middle of the day for
  * a spot nobody stops at, and it would show up in the PDF, the map pins and the schedule.
+ *
+ * `roadtrip_vias`/`roadtrip_day_tracks` through `RoadtripViasRepository`/
+ * `RoadtripDayTracksRepository` (Plan 3d Task 1); RT1 (`dayExists`) and RT13
+ * (`trackExists`) delegate to `DaysRepository.existsInTrip`/
+ * `PlacesRepository.isTrackInTrip`, the same trip-scoping gates the 3c
+ * repositories already expose.
  */
 @Injectable()
 export class RoadtripService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(RoadtripVias) private readonly viasRepo: RoadtripViasRepository,
+    @InjectRepository(RoadtripDayTracks) private readonly tracksRepo: RoadtripDayTracksRepository,
   ) {}
 
   /**
@@ -35,55 +53,60 @@ export class RoadtripService {
     this.realtime.broadcast(tripId, event, payload, socketId);
   }
 
-  /** The day exists and belongs to this trip. 404 material, checked before every write. */
+  /**
+   * The gate every write below parses `dayId` through ONCE (rule 21), before
+   * it reaches a repository write — never a bare `Number(dayId)`.
+   *
+   * Load-bearing, not decorative (Task 0 review carry, RT8): `dayId` feeding
+   * `RoadtripDayTracksRepository.upsertTrack` is that table's PRIMARY KEY
+   * column (`roadtrip_day_tracks.day_id`, a single-column INTEGER PK, unlike
+   * `roadtrip_vias.id`'s own separate autoincrement PK) — SQLite accepts
+   * `INSERT … VALUES (NULL, …)` on an INTEGER PRIMARY KEY column and
+   * silently assigns the next free rowid instead of refusing, so a
+   * `Number(dayId)` that resolved to `NaN`/`undefined` would not throw, it
+   * would silently write to WHATEVER day that rowid happens to be — possibly
+   * another trip's. Every caller of `create`/`createMany` reaches them only
+   * after the controller/MCP's own `dayExists` gate already proved `dayId`
+   * belongs to this trip (a raw-bind affinity check, R7), so this second
+   * parse is defence in depth, not the primary guard — but it is what turns
+   * "cannot happen" into "cannot happen even if the first gate is bypassed
+   * or wrong", and it is what stops `NaN`/`null` from ever reaching the
+   * upsert at all.
+   */
+  private requireDayId(dayId: string | number): number {
+    const parsed = toRowId(dayId);
+    if (parsed === null) throw new HttpException({ error: 'Day not found' }, 404);
+    return parsed;
+  }
+
+  /** The day exists and belongs to this trip. 404 material, checked before every write. RT1 → `DaysRepository.existsInTrip` (raw-bind, the same affinity seam the legacy statement used). */
   async dayExists(dayId: string | number, tripId: string | number): Promise<boolean> {
-    return !!this.db.get<{ id: number }>(
-      'SELECT id FROM days WHERE id = ? AND trip_id = ?',
-      dayId,
-      tripId,
-    );
+    return await this.daysRepo.existsInTrip(dayId, tripId);
   }
 
   async listForDay(dayId: string | number): Promise<RoadtripVia[]> {
-    return this.db.all<RoadtripVia>(
-      `SELECT id, day_id, after_order_index, sequence, lat, lng, created_at
-         FROM roadtrip_vias
-        WHERE day_id = ?
-        ORDER BY after_order_index, sequence, id`,
-      dayId,
-    );
+    return await this.viasRepo.listForDay(Number(dayId));
   }
 
   /** Every via of a trip, so the client can route all days without one request per day. */
   async listForTrip(tripId: string | number): Promise<RoadtripVia[]> {
-    return this.db.all<RoadtripVia>(
-      `SELECT v.id, v.day_id, v.after_order_index, v.sequence, v.lat, v.lng, v.created_at
-         FROM roadtrip_vias v
-         JOIN days d ON d.id = v.day_id
-        WHERE d.trip_id = ?
-        ORDER BY v.day_id, v.after_order_index, v.sequence, v.id`,
-      tripId,
-    );
+    return await this.viasRepo.listForTrip(Number(tripId));
   }
 
   async create(dayId: string | number, input: { after_order_index: number; lat: number; lng: number; sequence?: number }): Promise<RoadtripVia> {
+    const dayIdNum = this.requireDayId(dayId);
     // Appended after whatever already follows that stop, unless the caller says where.
-    const sequence = input.sequence ?? (
-      this.db.get<{ next: number }>(
-        'SELECT COALESCE(MAX(sequence) + 1, 0) AS next FROM roadtrip_vias WHERE day_id = ? AND after_order_index = ?',
-        dayId,
-        input.after_order_index,
-      )?.next ?? 0
-    );
-    const result = this.db.run(
-      'INSERT INTO roadtrip_vias (day_id, after_order_index, sequence, lat, lng) VALUES (?, ?, ?, ?, ?)',
-      dayId,
-      input.after_order_index,
+    // RT4 (`nextSequence`) then RT5 (`insertVia`), un-transacted (R7 — pin, don't fix):
+    // two concurrent adds on one leg can read the same next sequence.
+    const sequence = input.sequence ?? (await this.viasRepo.nextSequence(dayIdNum, input.after_order_index));
+    const id = await this.viasRepo.insertVia({
+      day_id: dayIdNum,
+      after_order_index: input.after_order_index,
       sequence,
-      input.lat,
-      input.lng,
-    );
-    return (await this.byId(Number(result.lastInsertRowid)))!;
+      lat: input.lat,
+      lng: input.lng,
+    });
+    return (await this.viasRepo.findById(id))!;
   }
 
   /**
@@ -104,22 +127,17 @@ export class RoadtripService {
       track?: { place_id: number; stray_km?: number | null } | null;
     },
   ): Promise<RoadtripVia[]> {
+    const dayIdNum = this.requireDayId(dayId);
     return await this.uow.transactional(async () => {
       // Inside the same transaction as the chain it describes. A day that says it follows
       // a road whose vias never landed is worse than a day that says nothing.
       if (input.track === null) {
-        this.db.run('DELETE FROM roadtrip_day_tracks WHERE day_id = ?', dayId);
+        await this.tracksRepo.deleteForDay(dayIdNum);
       } else if (input.track) {
-        this.db.run(
-          `INSERT INTO roadtrip_day_tracks (day_id, place_id, stray_km) VALUES (?, ?, ?)
-             ON CONFLICT(day_id) DO UPDATE SET place_id = excluded.place_id, stray_km = excluded.stray_km`,
-          dayId,
-          input.track.place_id,
-          input.track.stray_km ?? null,
-        );
+        await this.tracksRepo.upsertTrack(dayIdNum, input.track.place_id, input.track.stray_km ?? null);
       }
       for (const leg of input.replace_legs ?? []) {
-        this.db.run('DELETE FROM roadtrip_vias WHERE day_id = ? AND after_order_index = ?', dayId, leg);
+        await this.viasRepo.deleteLeg(dayIdNum, leg);
       }
       // Per leg, because sequence only orders the vias that follow the same stop. Read
       // once up front rather than per insert: the loop is inside the transaction, and a
@@ -128,23 +146,12 @@ export class RoadtripService {
       for (const via of input.vias) {
         let seq = nextSeq.get(via.after_order_index);
         if (seq === undefined) {
-          seq = this.db.get<{ next: number }>(
-            'SELECT COALESCE(MAX(sequence) + 1, 0) AS next FROM roadtrip_vias WHERE day_id = ? AND after_order_index = ?',
-            dayId,
-            via.after_order_index,
-          )?.next ?? 0;
+          seq = await this.viasRepo.nextSequence(dayIdNum, via.after_order_index);
         }
-        this.db.run(
-          'INSERT INTO roadtrip_vias (day_id, after_order_index, sequence, lat, lng) VALUES (?, ?, ?, ?, ?)',
-          dayId,
-          via.after_order_index,
-          seq,
-          via.lat,
-          via.lng,
-        );
+        await this.viasRepo.insertVia({ day_id: dayIdNum, after_order_index: via.after_order_index, sequence: seq, lat: via.lat, lng: via.lng });
         nextSeq.set(via.after_order_index, seq + 1);
       }
-      return this.listForDay(dayId);
+      return await this.viasRepo.listForDay(dayIdNum);
     });
   }
 
@@ -155,23 +162,12 @@ export class RoadtripService {
    * second route for a handful of rows would be a second round trip for nothing.
    */
   async tracksForTrip(tripId: string | number): Promise<RoadtripDayTrack[]> {
-    return this.db.all<RoadtripDayTrack>(
-      `SELECT t.day_id, t.place_id, t.stray_km
-         FROM roadtrip_day_tracks t
-         JOIN days d ON d.id = t.day_id
-        WHERE d.trip_id = ?
-        ORDER BY t.day_id`,
-      tripId,
-    );
+    return await this.tracksRepo.listForTrip(Number(tripId));
   }
 
-  /** Whether a place is on this trip, and is a track rather than an ordinary place. */
+  /** Whether a place is on this trip, and is a track rather than an ordinary place. RT13 → `PlacesRepository.isTrackInTrip`. */
   async trackExists(placeId: number, tripId: string | number): Promise<boolean> {
-    return !!this.db.get<{ id: number }>(
-      "SELECT id FROM places WHERE id = ? AND trip_id = ? AND route_geometry IS NOT NULL AND route_geometry != ''",
-      placeId,
-      tripId,
-    );
+    return await this.placesRepo.isTrackInTrip(placeId, Number(tripId));
   }
 
   /** Moving a via is the whole edit; where it sits in the chain does not change. */
@@ -182,28 +178,26 @@ export class RoadtripService {
     lng: number,
     afterOrderIndex?: number,
   ): Promise<RoadtripVia | null> {
-    const existing = this.db.get<{ id: number }>(
-      'SELECT id FROM roadtrip_vias WHERE id = ? AND day_id = ?',
-      id,
-      dayId,
-    );
-    if (!existing) return null;
+    const idNum = toRowId(id);
+    const dayIdNum = toRowId(dayId);
+    if (idNum === null || dayIdNum === null) return null;
+    // RT14 → RT15/RT16, un-transacted (R7 — pin, don't fix): the scoping check and the
+    // write that follows are two statements, not one.
+    const exists = await this.viasRepo.existsInDay(idNum, dayIdNum);
+    if (!exists) return null;
     // The anchor moves with the point when the caller worked out a new one. It is not a
     // property of the via but of where the via sits along the drive, so dragging one past
     // a stop changes which leg it belongs to — and leaving it behind is what made the
     // route run out to the point and back instead of bending through it.
+    //
+    // RT15/RT16 keep the legacy's own scoping (`WHERE id = ?`, no `AND day_id`) — pinned,
+    // not fixed, per R7: the check above is what guards these writes.
     if (afterOrderIndex === undefined) {
-      this.db.run('UPDATE roadtrip_vias SET lat = ?, lng = ? WHERE id = ?', lat, lng, id);
+      await this.viasRepo.moveCoordinates(idNum, lat, lng);
     } else {
-      this.db.run(
-        'UPDATE roadtrip_vias SET lat = ?, lng = ?, after_order_index = ? WHERE id = ?',
-        lat,
-        lng,
-        afterOrderIndex,
-        id,
-      );
+      await this.viasRepo.moveCoordinatesAndAnchor(idNum, lat, lng, afterOrderIndex);
     }
-    return this.byId(Number(id));
+    return await this.viasRepo.findById(idNum);
   }
 
   /**
@@ -222,29 +216,18 @@ export class RoadtripService {
     dayId: string | number,
     input: { vias: { id: number; after_order_index: number }[]; remove?: number[] },
   ): Promise<RoadtripVia[]> {
+    const dayIdNum = this.requireDayId(dayId);
     return await this.uow.transactional(async () => {
       // Read before writing: the OLD anchor is what says which of two merged
       // legs came first, and after the updates that information is gone.
-      const before = new Map(
-        this.db
-          .all<{ id: number; after_order_index: number; sequence: number }>(
-            'SELECT id, after_order_index, sequence FROM roadtrip_vias WHERE day_id = ?',
-            dayId,
-          )
-          .map((v) => [v.id, v]),
-      );
+      const before = new Map((await this.viasRepo.listAnchors(dayIdNum)).map((v) => [v.id, v]));
 
       for (const id of input.remove ?? []) {
-        this.db.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', id, dayId);
+        await this.viasRepo.deleteInDay(id, dayIdNum);
         before.delete(id);
       }
       for (const via of input.vias) {
-        this.db.run(
-          'UPDATE roadtrip_vias SET after_order_index = ? WHERE id = ? AND day_id = ?',
-          via.after_order_index,
-          via.id,
-          dayId,
-        );
+        await this.viasRepo.setAnchor(via.id, dayIdNum, via.after_order_index);
       }
 
       // Renumber, because `sequence` is allocated per leg and starts at 0 in
@@ -259,10 +242,7 @@ export class RoadtripService {
       // leg belong ahead of the ones from the leg that merged into it. Old
       // sequence orders within a leg, and the id settles the rest so the result
       // never depends on row order.
-      const rows = this.db.all<{ id: number; after_order_index: number }>(
-        'SELECT id, after_order_index FROM roadtrip_vias WHERE day_id = ?',
-        dayId,
-      );
+      const rows = await this.viasRepo.listLegs(dayIdNum);
       const byLeg = new Map<number, { id: number }[]>();
       for (const row of rows) {
         const list = byLeg.get(row.after_order_index) ?? [];
@@ -279,24 +259,20 @@ export class RoadtripService {
             a.id - b.id
           );
         });
-        list.forEach((row, index) => {
-          this.db.run('UPDATE roadtrip_vias SET sequence = ? WHERE id = ? AND day_id = ?', index, row.id, dayId);
-        });
+        for (const [index, row] of list.entries()) {
+          await this.viasRepo.setSequence(row.id, dayIdNum, index);
+        }
       }
 
-      return this.listForDay(dayId);
+      return await this.viasRepo.listForDay(dayIdNum);
     });
   }
 
   async remove(id: string | number, dayId: string | number): Promise<boolean> {
-    const result = this.db.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', id, dayId);
-    return result.changes > 0;
-  }
-
-  private async byId(id: number): Promise<RoadtripVia | null> {
-    return this.db.get<RoadtripVia>(
-      'SELECT id, day_id, after_order_index, sequence, lat, lng, created_at FROM roadtrip_vias WHERE id = ?',
-      id,
-    ) ?? null;
+    const idNum = toRowId(id);
+    const dayIdNum = toRowId(dayId);
+    if (idNum === null || dayIdNum === null) return false;
+    const deleted = await this.viasRepo.deleteInDayCounted(idNum, dayIdNum);
+    return deleted > 0;
   }
 }

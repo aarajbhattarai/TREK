@@ -47,6 +47,24 @@ import { GooglePlacePhotoMeta } from '../../src/db/entities/GooglePlacePhotoMeta
 import type { GooglePlacePhotoMetaRepository } from '../../src/db/repositories/GooglePlacePhotoMeta.repository';
 import { PlaceDetailsCache } from '../../src/db/entities/PlaceDetailsCache.entity';
 import type { PlaceDetailsCacheRepository } from '../../src/db/repositories/PlaceDetailsCache.repository';
+import { Reservations } from '../../src/db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../src/db/repositories/Reservations.repository';
+import { ReservationEndpoints } from '../../src/db/entities/ReservationEndpoints.entity';
+import type { ReservationEndpointsRepository } from '../../src/db/repositories/ReservationEndpoints.repository';
+import { ReservationTravelers } from '../../src/db/entities/ReservationTravelers.entity';
+import type { ReservationTravelersRepository } from '../../src/db/repositories/ReservationTravelers.repository';
+import { ReservationDayPositions } from '../../src/db/entities/ReservationDayPositions.entity';
+import type { ReservationDayPositionsRepository } from '../../src/db/repositories/ReservationDayPositions.repository';
+import { DayAccommodations } from '../../src/db/entities/DayAccommodations.entity';
+import type { DayAccommodationsRepository } from '../../src/db/repositories/DayAccommodations.repository';
+import { RoadtripVias } from '../../src/db/entities/RoadtripVias.entity';
+import type { RoadtripViasRepository } from '../../src/db/repositories/RoadtripVias.repository';
+import { RoadtripDayTracks } from '../../src/db/entities/RoadtripDayTracks.entity';
+import type { RoadtripDayTracksRepository } from '../../src/db/repositories/RoadtripDayTracks.repository';
+import { RoadtripPreferences } from '../../src/db/entities/RoadtripPreferences.entity';
+import type { RoadtripPreferencesRepository } from '../../src/db/repositories/RoadtripPreferences.repository';
+import { RoadtripDayBoundaries } from '../../src/db/entities/RoadtripDayBoundaries.entity';
+import type { RoadtripDayBoundariesRepository } from '../../src/db/repositories/RoadtripDayBoundaries.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -457,5 +475,114 @@ export function createTestPlaceDetailsCacheRepo(db: Database.Database): Promise<
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(PlaceDetailsCache));
   placeDetailsCacheRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3d Task 2 (`ReservationsService`/`DaysService`'s DY14–DY18/DY23 onto
+// `ReservationsRepository`/`ReservationEndpointsRepository`/
+// `ReservationTravelersRepository`/`ReservationDayPositionsRepository`/
+// `DayAccommodationsRepository`) — appended at the end per the task's own
+// file-ownership rule (append only). Same memoisation-per-handle pattern as
+// every helper above.
+// ---------------------------------------------------------------------------
+
+const reservationsRepoPerHandle = new WeakMap<Database.Database, Promise<ReservationsRepository>>();
+const reservationEndpointsRepoPerHandle = new WeakMap<Database.Database, Promise<ReservationEndpointsRepository>>();
+const reservationTravelersRepoPerHandle = new WeakMap<Database.Database, Promise<ReservationTravelersRepository>>();
+const reservationDayPositionsRepoPerHandle = new WeakMap<Database.Database, Promise<ReservationDayPositionsRepository>>();
+const dayAccommodationsRepoPerHandle = new WeakMap<Database.Database, Promise<DayAccommodationsRepository>>();
+
+/** The `ReservationsRepository` a hand-constructed `ReservationsService`/`DaysService` needs. */
+export function createTestReservationsRepo(db: Database.Database): Promise<ReservationsRepository> {
+  const existing = reservationsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Reservations));
+  reservationsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `ReservationEndpointsRepository` a hand-constructed `ReservationsService`/`DaysService` needs. */
+export function createTestReservationEndpointsRepo(db: Database.Database): Promise<ReservationEndpointsRepository> {
+  const existing = reservationEndpointsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(ReservationEndpoints));
+  reservationEndpointsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `ReservationTravelersRepository` a hand-constructed `ReservationsService` needs. */
+export function createTestReservationTravelersRepo(db: Database.Database): Promise<ReservationTravelersRepository> {
+  const existing = reservationTravelersRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(ReservationTravelers));
+  reservationTravelersRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `ReservationDayPositionsRepository` a hand-constructed `ReservationsService` needs. */
+export function createTestReservationDayPositionsRepo(db: Database.Database): Promise<ReservationDayPositionsRepository> {
+  const existing = reservationDayPositionsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(ReservationDayPositions));
+  reservationDayPositionsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `DayAccommodationsRepository` a hand-constructed `ReservationsService` needs. */
+export function createTestDayAccommodationsRepo(db: Database.Database): Promise<DayAccommodationsRepository> {
+  const existing = dayAccommodationsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(DayAccommodations));
+  dayAccommodationsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3d Task 1 (`RoadtripService`/`RoadtripPlanService`/
+// `RoadtripPreferencesService`/`DayBoundariesService`/`ChargingService`/
+// `GoogleRouteService`, `AssignmentsService`'s AS20–AS23) — appended at the
+// end per this task's own file-ownership rule (append only). Same
+// memoisation-per-handle pattern as every helper above.
+// ---------------------------------------------------------------------------
+
+const roadtripViasRepoPerHandle = new WeakMap<Database.Database, Promise<RoadtripViasRepository>>();
+const roadtripDayTracksRepoPerHandle = new WeakMap<Database.Database, Promise<RoadtripDayTracksRepository>>();
+const roadtripPreferencesRepoPerHandle = new WeakMap<Database.Database, Promise<RoadtripPreferencesRepository>>();
+const roadtripDayBoundariesRepoPerHandle = new WeakMap<Database.Database, Promise<RoadtripDayBoundariesRepository>>();
+
+/** The `RoadtripViasRepository` a hand-constructed `RoadtripService`/`AssignmentsService` needs. */
+export function createTestRoadtripViasRepo(db: Database.Database): Promise<RoadtripViasRepository> {
+  const existing = roadtripViasRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(RoadtripVias));
+  roadtripViasRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `RoadtripDayTracksRepository` a hand-constructed `RoadtripService` needs. */
+export function createTestRoadtripDayTracksRepo(db: Database.Database): Promise<RoadtripDayTracksRepository> {
+  const existing = roadtripDayTracksRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(RoadtripDayTracks));
+  roadtripDayTracksRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `RoadtripPreferencesRepository` a hand-constructed `RoadtripPreferencesService` needs. */
+export function createTestRoadtripPreferencesRepo(db: Database.Database): Promise<RoadtripPreferencesRepository> {
+  const existing = roadtripPreferencesRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(RoadtripPreferences));
+  roadtripPreferencesRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `RoadtripDayBoundariesRepository` a hand-constructed `DayBoundariesService` needs. */
+export function createTestRoadtripDayBoundariesRepo(db: Database.Database): Promise<RoadtripDayBoundariesRepository> {
+  const existing = roadtripDayBoundariesRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(RoadtripDayBoundaries));
+  roadtripDayBoundariesRepoPerHandle.set(db, pending);
   return pending;
 }

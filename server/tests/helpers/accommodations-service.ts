@@ -10,7 +10,7 @@ import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.reposito
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
   createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
-  createTestTripMembersRepo, sharedTestOrm,
+  createTestTripMembersRepo, createTestRoadtripViasRepo, sharedTestOrm,
 } from './test-uow';
 
 /**
@@ -50,6 +50,7 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
     await createTestDaysRepo(dbs.connection),
     await createTestPlacesRepo(dbs.connection),
     await createTestTripMembersRepo(dbs.connection),
+    await createTestRoadtripViasRepo(dbs.connection),
   );
   return new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
 }
