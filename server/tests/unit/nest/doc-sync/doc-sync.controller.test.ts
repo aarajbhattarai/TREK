@@ -60,7 +60,6 @@ vi.mock('../../../../src/utils/ssrfGuard', async (importOriginal) => ({
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
 import { createTrip, createUser } from '../../../helpers/factories';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import { DocSyncController } from '../../../../src/nest/doc-sync/doc-sync.controller';
 import { DocSyncConfigService } from '../../../../src/nest/doc-sync/doc-sync-config.service';
 import { DocumentProviderRegistry } from '../../../../src/nest/doc-sync/document-provider.registry';
@@ -78,7 +77,14 @@ import type {
   DocsyncLinkDto,
 } from '../../../../src/nest/doc-sync/doc-sync.dto';
 import type { User } from '../../../../src/types';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
+import { createTestUnitOfWork, createTestTripsRepo } from '../../../helpers/test-uow';
+import {
+  createTestDocumentConnectionsRepo,
+  createTestDocumentProviderFieldsRepo,
+  createTestDocumentProvidersRepo,
+  createTestDocumentSyncItemsRepo,
+  createTestTripDocumentLinksRepo,
+} from '../../../helpers/doc-sync-repos';
 
 const CAPS = {
   push: 'webhook-self-registered' as const,
@@ -121,10 +127,30 @@ const sync = {
   isSwitchedOff: vi.fn((_link: LinkRow) => false),
   status: vi.fn(() => ({ links: [], items: {} })),
   resolveConflict: vi.fn(async () => true),
+  // R2 (DSCTRL4/DSCTRL5, moved off the controller onto DocSyncService) — a
+  // real read against this file's own testDb, not a stub: "the document
+  // list" describe block below is testing the join/trip-scoping SHAPE this
+  // method now owns, and a canned return would only restate the assertion.
+  itemsForTrip: vi.fn((tripId: number, state?: string) =>
+    state
+      ? testDb
+          .prepare(
+            `SELECT i.*, f.original_name AS file_name FROM document_sync_items i
+               LEFT JOIN trip_files f ON f.id = i.file_id
+              WHERE i.trip_id = ? AND i.state = ? ORDER BY i.id DESC LIMIT 500`,
+          )
+          .all(tripId, state)
+      : testDb
+          .prepare(
+            `SELECT i.*, f.original_name AS file_name FROM document_sync_items i
+               LEFT JOIN trip_files f ON f.id = i.file_id
+              WHERE i.trip_id = ? ORDER BY i.id DESC LIMIT 500`,
+          )
+          .all(tripId),
+  ),
 };
 
 const registry = new DocumentProviderRegistry([paperless, nextcloud] as unknown as DocumentProvider[]);
-const dbs = new DatabaseService(testDb);
 const realtime = { broadcast: vi.fn() };
 // Built in beforeAll: DocSyncConfigService now takes a UnitOfWork, and
 // createTestUnitOfWork is async — module-scope construction cannot await it.
@@ -184,8 +210,17 @@ let otherTripId: number;
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
-  controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, dbs, realtime as unknown as RealtimeService);
+  config = new DocSyncConfigService(
+    await createTestTripsRepo(testDb),
+    await createTestDocumentProvidersRepo(testDb),
+    await createTestDocumentProviderFieldsRepo(testDb),
+    await createTestDocumentConnectionsRepo(testDb),
+    await createTestTripDocumentLinksRepo(testDb),
+    await createTestDocumentSyncItemsRepo(testDb),
+    registry,
+    await createTestUnitOfWork(testDb),
+  );
+  controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, realtime as unknown as RealtimeService);
   const o = createUser(testDb, { username: 'owner', email: 'owner@test.local' }).user;
   const m = createUser(testDb, { username: 'member', email: 'member@test.local' }).user;
   const a = createUser(testDb, { username: 'admin', email: 'admin@test.local', role: 'admin' }).user;

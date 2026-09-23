@@ -139,4 +139,37 @@ export class FileLinksRepository extends TrekRepository<FileLinks> {
       .where('fl.file_id', '=', file_id)
       .execute();
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 5 (doc-sync) — cross-domain additive method, flagged per the
+  // task brief (DS16 is cross-domain).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * DS16 (`DocSyncService.pull`, inside `uow.transactional`, the "gone"
+   * branch) — `INSERT OR IGNORE INTO file_links (file_id, reservation_id,
+   * assignment_id, place_id, budget_item_id) SELECT ?, reservation_id,
+   * assignment_id, place_id, budget_item_id FROM file_links WHERE file_id =
+   * ?` — a genuine `INSERT ... SELECT`, copying every link the SUPERSEDED
+   * file held onto the new file that replaces it (a provider edit that
+   * bumped the version), so the booking/place/budget attachment follows the
+   * new revision. `INSERT OR IGNORE` because the new file may already hold
+   * one of the same links (an earlier partial run) — `ON CONFLICT DO
+   * NOTHING` targetless, same reasoning as {@link insertIgnore}'s own
+   * docstring (four independent partial-unique indexes, only one of which
+   * any given copied row happens to touch).
+   */
+  async copySelectIgnore(newFileId: number, fromFileId: number): Promise<void> {
+    await this.kysely<FileLinksWriteKyselyDB>()
+      .insertInto('file_links')
+      .columns(['file_id', 'reservation_id', 'assignment_id', 'place_id', 'budget_item_id'])
+      .expression((eb) =>
+        eb
+          .selectFrom('file_links')
+          .select([eb.val(newFileId).as('file_id'), 'reservation_id', 'assignment_id', 'place_id', 'budget_item_id'])
+          .where('file_id', '=', fromFileId),
+      )
+      .onConflict((oc) => oc.doNothing())
+      .execute();
+  }
 }

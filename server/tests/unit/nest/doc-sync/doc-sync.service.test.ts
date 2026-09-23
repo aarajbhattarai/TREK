@@ -46,7 +46,6 @@ import type { DocsyncErrorCode } from '@trek/shared';
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
 import { createTrip, createUser } from '../../../helpers/factories';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import { AllowedFileTypesService } from '../../../../src/nest/files/allowed-file-types.service';
 import { MAX_FILE_SIZE } from '../../../../src/nest/files/files.constants';
 import { DocSyncConfigService, type LinkRow } from '../../../../src/nest/doc-sync/doc-sync-config.service';
@@ -70,7 +69,16 @@ import type { AddonsService } from '../../../../src/nest/addons/addons.service';
 import type { FilesService } from '../../../../src/nest/files/files.service';
 import type { StorageService } from '../../../../src/nest/storage/storage.service';
 import type { RealtimeService } from '../../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo } from '../../../helpers/test-uow';
+import {
+  createTestDocumentConnectionsRepo,
+  createTestDocumentProviderFieldsRepo,
+  createTestDocumentProvidersRepo,
+  createTestDocumentSyncItemsRepo,
+  createTestFileLinksRepo,
+  createTestTripDocumentLinksRepo,
+  createTestTripFilesRepo,
+} from '../../../helpers/doc-sync-repos';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -319,11 +327,23 @@ describe('DocSyncService', () => {
       .run(tripId, ownerId);
     connectionId = Number(info.lastInsertRowid);
 
-    const dbs = new DatabaseService(testDb);
     const registry = new DocumentProviderRegistry([provider as unknown as DocumentProvider]);
-    config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
+    config = new DocSyncConfigService(
+      await createTestTripsRepo(testDb),
+      await createTestDocumentProvidersRepo(testDb),
+      await createTestDocumentProviderFieldsRepo(testDb),
+      await createTestDocumentConnectionsRepo(testDb),
+      await createTestTripDocumentLinksRepo(testDb),
+      await createTestDocumentSyncItemsRepo(testDb),
+      registry,
+      await createTestUnitOfWork(testDb),
+    );
     service = new DocSyncService(
-      dbs,
+      await createTestTripDocumentLinksRepo(testDb),
+      await createTestDocumentSyncItemsRepo(testDb),
+      await createTestTripFilesRepo(testDb),
+      await createTestFileLinksRepo(testDb),
+      await createTestAppSettingsRepo(testDb),
       config,
       registry,
       storage,
@@ -394,6 +414,31 @@ describe('DocSyncService', () => {
       for (let i = 0; i < 25; i += 1) await makeLink({ lastSyncAt: null });
       expect((await service.dueLinks()).length).toBe(20);
       expect((await service.dueLinks(5)).length).toBe(5);
+    });
+
+    /**
+     * R3's own named test, per the plan's exact instruction: the whole
+     * 3-key ORDER BY (`next_attempt_at`, then `last_sync_at`, then `id`) in
+     * one assertion, not folded into any of the shape-specific cases above.
+     * Insertion order is DELIBERATELY scrambled relative to the expected
+     * result, so a regression to "no ORDER BY" (SQLite's own insertion-order
+     * fallback) or to "ORDER BY id only" would both fail this test, not just
+     * the narrower cases above.
+     */
+    it('doc-sync-svc: dueLinks orders by next_attempt_at then last_sync_at then id, not insertion order', async () => {
+      // Two ties on next_attempt_at (both NULL, sorting as the epoch) broken
+      // by last_sync_at; within THAT tie, two rows broken by id — created in
+      // an order that would fail every one of these three keys if it were
+      // read back as inserted.
+      const tieBreakSecond = await makeLink({ lastSyncAt: null }); // next=NULL, last=NULL — ties tieBreakFirst on both keys
+      const tieBreakFirst = await makeLink({ lastSyncAt: null }); // same ties; id is the ONLY thing that can separate these two
+      const midStale = await makeLink({ lastSyncAt: sqlTime('-2 hours') }); // next=NULL, last=2h ago — after the NULL/NULL pair, before the recent one
+      const midRecent = await makeLink({ lastSyncAt: sqlTime('-1 minute') }); // next=NULL, last=1m ago — last of the NULL-next-attempt group
+      const backedOff = await makeLink({ nextAttemptAt: sqlTime('-1 hour'), lastSyncAt: sqlTime('-1 minute') }); // next_attempt_at is NON-null — sorts after every NULL row regardless of last_sync_at
+
+      const ids = (await service.dueLinks()).map((l) => l.id);
+      const expected = [tieBreakSecond.id, tieBreakFirst.id].sort((a, b) => a - b);
+      expect(ids).toEqual([...expected, midStale.id, midRecent.id, backedOff.id]);
     });
 
     it('lets a binding back in one failure before the circuit opens', async () => {

@@ -22,7 +22,6 @@ import { RequireAddon } from '../addons/require-addon.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TripAccessGuard } from '../permissions/trip-access.guard';
-import { DatabaseService } from '../database/database.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { docFailed } from './document-provider';
 import { DocSyncConfigService, type LinkRow } from './doc-sync-config.service';
@@ -70,7 +69,6 @@ export class DocSyncController {
     private readonly config: DocSyncConfigService,
     private readonly sync: DocSyncService,
     private readonly registry: DocumentProviderRegistry,
-    private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
   ) {}
 
@@ -97,33 +95,27 @@ export class DocSyncController {
    *
    * The 403 still says "owner": an admin never sees it, and to everybody who
    * does, the owner is the person to ask.
+   *
+   * R2 (Plan 3h Task 5): the trip-owner lookup itself (DSCTRL1, raw SQL
+   * directly in this controller — the architecture deviation the whole
+   * program's gather flagged) now lives on `DocSyncConfigService
+   * .assertCanManage`; this stays a thin delegation so every one of this
+   * controller's existing call sites (string `tripId`) is unchanged.
    */
   private async assertCanManage(tripId: string, user: User): Promise<void> {
-    if (user.role === 'admin') return;
-    const trip = this.db.get<{ user_id: number }>('SELECT user_id FROM trips WHERE id = ?', tripId);
-    if (!trip) throw new HttpException('Trip not found', 404);
-    if (Number(trip.user_id) !== Number(user.id)) {
-      throw new HttpException('Only the trip owner can change document sync', 403);
-    }
+    await this.config.assertCanManage(Number(tripId), user);
   }
 
   // ── Providers and status ───────────────────────────────────────────────────
 
-  /** Which providers this instance has switched on, with their form fields. */
+  /**
+   * Which providers this instance has switched on, with their form fields.
+   * R2: the raw catalog read (DSCTRL2) and its `available`/`fields`
+   * composition now live on `DocSyncConfigService.providersCatalog`.
+   */
   @Get('providers')
   async providers() {
-    const rows = this.db.connection
-      .prepare('SELECT id, name, description, icon FROM document_providers WHERE enabled = 1 ORDER BY sort_order')
-      .all() as Array<{ id: string; name: string; description: string | null; icon: string }>;
-    return await Promise.all(
-      rows.map(async (p) => ({
-        ...p,
-        // A provider row with no registered adapter would render a form that
-        // cannot work, so it is reported rather than hidden.
-        available: !!this.registry.get(p.id),
-        fields: (await this.config.providerFields(p.id)).map((f) => ({ ...f, secret: f.secret === 1, required: f.required === 1 })),
-      })),
-    );
+    return this.config.providersCatalog();
   }
 
   @Get('status')
@@ -317,9 +309,7 @@ export class DocSyncController {
             `link ${res.data.id}: ${conn.provider_id} refused the webhook subscription (${hook.error.code}${hook.error.detail ? `: ${hook.error.detail}` : ''}), polling carries it`,
           );
         } else {
-          this.db.connection
-            .prepare('UPDATE trip_document_links SET webhook_subscription_id = ? WHERE id = ?')
-            .run(hook.data.subscriptionId, res.data.id);
+          await this.config.setWebhookSubscriptionId(res.data.id, hook.data.subscriptionId);
         }
       }
     }
@@ -397,24 +387,15 @@ export class DocSyncController {
 
   // ── Documents and conflicts ────────────────────────────────────────────────
 
+  /**
+   * R2: DSCTRL4/DSCTRL5's two near-duplicate listing statements now live on
+   * `DocSyncService.itemsForTrip`, kept as two distinct repository methods
+   * (state-filtered vs unfiltered) — never unified with `issues()`'s own
+   * `LIMIT 200` fixed-state-list read.
+   */
   @Get('items')
   async items(@Param('tripId') tripId: string, @Query('state') state?: string) {
-    const rows = state
-      ? this.db.connection
-          .prepare(
-            `SELECT i.*, f.original_name AS file_name FROM document_sync_items i
-               LEFT JOIN trip_files f ON f.id = i.file_id
-              WHERE i.trip_id = ? AND i.state = ? ORDER BY i.id DESC LIMIT 500`,
-          )
-          .all(Number(tripId), state)
-      : this.db.connection
-          .prepare(
-            `SELECT i.*, f.original_name AS file_name FROM document_sync_items i
-               LEFT JOIN trip_files f ON f.id = i.file_id
-              WHERE i.trip_id = ? ORDER BY i.id DESC LIMIT 500`,
-          )
-          .all(Number(tripId));
-    return rows;
+    return this.sync.itemsForTrip(Number(tripId), state);
   }
 
   @Post('items/:itemId/resolve')

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AddonsModule } from '../addons/addons.module';
 import { AuthModule } from '../auth/auth.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
@@ -9,6 +10,15 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { SchedulingModule } from '../scheduling/scheduling.module';
 import { StorageModule } from '../storage/storage.module';
+import { DocumentConnections } from '../../db/entities/DocumentConnections.entity';
+import { DocumentProviders } from '../../db/entities/DocumentProviders.entity';
+import { DocumentProviderFields } from '../../db/entities/DocumentProviderFields.entity';
+import { TripDocumentLinks } from '../../db/entities/TripDocumentLinks.entity';
+import { DocumentSyncItems } from '../../db/entities/DocumentSyncItems.entity';
+import { TripFiles } from '../../db/entities/TripFiles.entity';
+import { FileLinks } from '../../db/entities/FileLinks.entity';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 import { DocSyncConfigService } from './doc-sync-config.service';
 import { DocSyncController } from './doc-sync.controller';
 import { DocSyncWebhookController } from './doc-sync-webhook.controller';
@@ -39,6 +49,16 @@ import { WebdavClient } from './providers/webdav.client';
  * separate ids because the admin toggles, the credential fields and the scope
  * concept differ (a folder with an `oc:fileid` versus a space with a
  * `driveId`), but the protocol underneath is the same and so is the code.
+ *
+ * `MikroOrmModule.forFeature` registers every entity this domain's
+ * `@InjectRepository` constructors need (Plan 3h Task 5) — the five
+ * doc-sync-owned tables (`DocumentConnections`/`DocumentProviders`/
+ * `DocumentProviderFields`/`TripDocumentLinks`/`DocumentSyncItems`) plus the
+ * three it reads/writes additive methods on (`TripFiles`/`FileLinks`, 3e —
+ * DS4/DS15/DS16/DS19/DS29/DS32/DS36's cross-domain statements;
+ * `AppSettings`, 3a — the job's self-throttle and the webhook's kill
+ * switch) and `Trips` (3c — `DocSyncConfigService.assertCanManage`'s
+ * trip-owner check, R2).
  */
 @Module({
   imports: [
@@ -52,6 +72,17 @@ import { WebdavClient } from './providers/webdav.client';
     AddonsModule,
     AuthModule,
     McpSharedModule,
+    MikroOrmModule.forFeature([
+      DocumentConnections,
+      DocumentProviders,
+      DocumentProviderFields,
+      TripDocumentLinks,
+      DocumentSyncItems,
+      TripFiles,
+      FileLinks,
+      AppSettings,
+      Trips,
+    ]),
   ],
   controllers: [DocSyncController, DocSyncWebhookController],
   providers: [

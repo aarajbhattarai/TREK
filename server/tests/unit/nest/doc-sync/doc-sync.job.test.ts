@@ -33,7 +33,7 @@ import { DocSyncService } from '../../../../src/nest/doc-sync/doc-sync.service';
 import { DocumentProviderRegistry } from '../../../../src/nest/doc-sync/document-provider.registry';
 import type { DocumentProvider } from '../../../../src/nest/doc-sync/document-provider';
 import type { AddonsService } from '../../../../src/nest/addons/addons.service';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
+import type { AppSettingsRepository } from '../../../../src/db/repositories/AppSettings.repository';
 import type { CronRegistrarService } from '../../../../src/nest/scheduling/cron-registrar.service';
 import { AllowedFileTypesService } from '../../../../src/nest/files/allowed-file-types.service';
 import type { FilesService } from '../../../../src/nest/files/files.service';
@@ -42,7 +42,16 @@ import type { RealtimeService } from '../../../../src/nest/realtime/realtime.ser
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
 import { createTrip, createUser } from '../../../helpers/factories';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo } from '../../../helpers/test-uow';
+import {
+  createTestDocumentConnectionsRepo,
+  createTestDocumentProviderFieldsRepo,
+  createTestDocumentProvidersRepo,
+  createTestDocumentSyncItemsRepo,
+  createTestFileLinksRepo,
+  createTestTripDocumentLinksRepo,
+  createTestTripFilesRepo,
+} from '../../../helpers/doc-sync-repos';
 
 const link = (id: number): LinkRow => ({ id, provider_id: 'paperless' } as LinkRow);
 
@@ -65,13 +74,11 @@ function makeJob(over: Partial<Setup> = {}) {
   if (setup.interval !== undefined) settings.set(SETTING_POLL_INTERVAL, setup.interval);
   if (setup.killSwitch !== undefined) settings.set(SETTING_SYNC_ENABLED, setup.killSwitch);
 
-  // Shaped like the real `get<T>(sql, ...params)` so the stub cannot drift from
-  // the signature the job calls, and so a case can tell the two keys apart.
-  const db = {
-    get: vi.fn((_sql: string, key?: unknown) => {
-      const value = settings.get(String(key));
-      return value === undefined ? undefined : { value };
-    }),
+  // Shaped like the real `AppSettingsRepository.getValue(key): Promise<string
+  // | null>` so the stub cannot drift from the signature the job calls, and
+  // so a case can tell the two keys apart.
+  const appSettings = {
+    getValue: vi.fn(async (key: string) => settings.get(key) ?? null),
   };
 
   let onTick: (() => void | Promise<void>) | undefined;
@@ -99,13 +106,13 @@ function makeJob(over: Partial<Setup> = {}) {
   const addons = { isAddonEnabled: vi.fn(() => setup.addonOn) };
 
   const job = new DocSyncJob(
-    db as unknown as DatabaseService,
+    appSettings as unknown as AppSettingsRepository,
     sync as unknown as DocSyncService,
     config as unknown as DocSyncConfigService,
     addons as unknown as AddonsService,
     registrar as unknown as CronRegistrarService,
   );
-  return { job, db, registrar, sync, config, addons, takeTick: () => onTick };
+  return { job, appSettings, registrar, sync, config, addons, takeTick: () => onTick };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -114,10 +121,10 @@ describe('DocSyncJob bootstrap', () => {
   it('schedules nothing, reads nothing and logs nothing while the registrar is off', async () => {
     // The test gate. A job that registered past it would have every suite boot
     // start polling whatever document store sits in the fixture database.
-    const { job, registrar, db } = makeJob({ registrarEnabled: false });
+    const { job, registrar, appSettings } = makeJob({ registrarEnabled: false });
     await job.onApplicationBootstrap();
     expect(registrar.register).not.toHaveBeenCalled();
-    expect(db.get).not.toHaveBeenCalled();
+    expect(appSettings.getValue).not.toHaveBeenCalled();
     expect(log.logInfo).not.toHaveBeenCalled();
   });
 
@@ -134,9 +141,9 @@ describe('DocSyncJob bootstrap', () => {
   });
 
   it('reads the interval from its own app_settings key', async () => {
-    const { job, db } = makeJob({ interval: '600' });
+    const { job, appSettings } = makeJob({ interval: '600' });
     await job.onApplicationBootstrap();
-    expect(db.get).toHaveBeenCalledWith('SELECT value FROM app_settings WHERE key = ?', SETTING_POLL_INTERVAL);
+    expect(appSettings.getValue).toHaveBeenCalledWith(SETTING_POLL_INTERVAL);
   });
 
   it('hands the registrar the tick itself, so a fired cron reaches the sync', async () => {
@@ -165,12 +172,12 @@ describe('DocSyncJob bootstrap', () => {
 
 describe('DocSyncJob tick', () => {
   it('does nothing at all while the documents addon is off', async () => {
-    const { job, sync, config, db } = makeJob({ addonOn: false, links: [link(1)] });
+    const { job, sync, config, appSettings } = makeJob({ addonOn: false, links: [link(1)] });
     await job.tick();
     expect(sync.dueLinks).not.toHaveBeenCalled();
     expect(sync.syncLink).not.toHaveBeenCalled();
     expect(config.markOrphanedLinks).not.toHaveBeenCalled();
-    expect(db.get).not.toHaveBeenCalled();
+    expect(appSettings.getValue).not.toHaveBeenCalled();
   });
 
   it('asks the addon gate again on every tick, so switching it on needs no restart', async () => {
@@ -186,9 +193,9 @@ describe('DocSyncJob tick', () => {
   });
 
   it('stops the run on the kill switch, without touching the bindings', async () => {
-    const { job, sync, config, db } = makeJob({ killSwitch: 'false', links: [link(1)] });
+    const { job, sync, config, appSettings } = makeJob({ killSwitch: 'false', links: [link(1)] });
     await job.tick();
-    expect(db.get).toHaveBeenCalledWith('SELECT value FROM app_settings WHERE key = ?', SETTING_SYNC_ENABLED);
+    expect(appSettings.getValue).toHaveBeenCalledWith(SETTING_SYNC_ENABLED);
     expect(config.markOrphanedLinks).not.toHaveBeenCalled();
     expect(sync.dueLinks).not.toHaveBeenCalled();
   });
@@ -206,10 +213,10 @@ describe('DocSyncJob tick', () => {
   });
 
   it('re-reads the kill switch per tick instead of remembering the first answer', async () => {
-    const { job, db } = makeJob({ links: [link(1)] });
+    const { job, appSettings } = makeJob({ links: [link(1)] });
     await job.tick();
     await job.tick();
-    const killSwitchReads = db.get.mock.calls.filter((c) => c[1] === SETTING_SYNC_ENABLED).length;
+    const killSwitchReads = appSettings.getValue.mock.calls.filter((c) => c[0] === SETTING_SYNC_ENABLED).length;
     expect(killSwitchReads).toBe(2);
   });
 
@@ -367,18 +374,15 @@ describe('DocSyncJob due-ness', () => {
 
   it('takes a changed setting without a restart, which is the whole point', async () => {
     const settings = new Map<string, string>([[SETTING_POLL_INTERVAL, '3600']]);
-    const db = {
-      get: vi.fn((_sql: string, key?: unknown) => {
-        const value = settings.get(String(key));
-        return value === undefined ? undefined : { value };
-      }),
+    const appSettings = {
+      getValue: vi.fn(async (key: string) => settings.get(key) ?? null),
     };
     const sync = {
       dueLinks: vi.fn(() => [link(1)]),
       syncLink: vi.fn(async () => RUN),
     };
     const job = new DocSyncJob(
-      db as unknown as DatabaseService,
+      appSettings as unknown as AppSettingsRepository,
       sync as unknown as DocSyncService,
       { markOrphanedLinks: vi.fn(() => 0) } as unknown as DocSyncConfigService,
       { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService,
@@ -414,7 +418,6 @@ describe('DocSyncJob due-ness', () => {
  */
 describe('DocSyncJob and a provider switched off in the admin panel', () => {
   const testDb = new Database(':memory:');
-  const dbs = new DatabaseService(testDb);
   let paperlessLink: number;
   let nextcloudLink: number;
 
@@ -437,25 +440,42 @@ describe('DocSyncJob and a provider switched off in the admin panel', () => {
   // cannot await it.
   let config: DocSyncConfigService;
   let service: DocSyncService;
+  let appSettingsRepo: AppSettingsRepository;
   const registrar = { isEnabled: () => false } as unknown as CronRegistrarService;
   /** A job of its own per pass, so the interval never decides whether a tick runs. */
-  const tick = () => new DocSyncJob(dbs, service, config, addons, registrar).tick();
+  const tick = () => new DocSyncJob(appSettingsRepo, service, config, addons, registrar).tick();
 
   const switchProvider = (id: string, on: boolean) =>
     testDb.prepare('UPDATE document_providers SET enabled = ? WHERE id = ?').run(on ? 1 : 0, id);
   const linkRow = (id: number) => testDb.prepare('SELECT * FROM trip_document_links WHERE id = ?').get(id);
 
   beforeAll(async () => {
-    config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
+    createTables(testDb);
+    runMigrations(testDb);
+    appSettingsRepo = await createTestAppSettingsRepo(testDb);
+    config = new DocSyncConfigService(
+      await createTestTripsRepo(testDb),
+      await createTestDocumentProvidersRepo(testDb),
+      await createTestDocumentProviderFieldsRepo(testDb),
+      await createTestDocumentConnectionsRepo(testDb),
+      await createTestTripDocumentLinksRepo(testDb),
+      await createTestDocumentSyncItemsRepo(testDb),
+      registry,
+      await createTestUnitOfWork(testDb),
+    );
     service = new DocSyncService(
-      dbs, config, registry,
-      {} as StorageService, {} as FilesService, new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)),
+      await createTestTripDocumentLinksRepo(testDb),
+      await createTestDocumentSyncItemsRepo(testDb),
+      await createTestTripFilesRepo(testDb),
+      await createTestFileLinksRepo(testDb),
+      appSettingsRepo,
+      config,
+      registry,
+      {} as StorageService, {} as FilesService, new AllowedFileTypesService(appSettingsRepo),
       { broadcast: vi.fn() } as unknown as RealtimeService,
       addons,
       await createTestUnitOfWork(testDb),
     );
-    createTables(testDb);
-    runMigrations(testDb);
     const ownerId = createUser(testDb, { username: 'owner', email: 'owner@docsync-job.test' }).user.id;
     const tripId = createTrip(testDb, ownerId, { title: 'Japan' }).id;
     const bind = (providerId: string) => {

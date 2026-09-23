@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import crypto from 'crypto';
 import type { Request } from 'express';
 
@@ -16,7 +16,8 @@ vi.mock('../../../../src/db/database', () => ({
 import { DocSyncWebhookController } from '../../../../src/nest/doc-sync/doc-sync-webhook.controller';
 import type { DocSyncConfigService, LinkRow } from '../../../../src/nest/doc-sync/doc-sync-config.service';
 import type { DocSyncService } from '../../../../src/nest/doc-sync/doc-sync.service';
-import type { DatabaseService } from '../../../../src/nest/database/database.service';
+import { createSnapshotTestDb } from '../../../helpers/db-mock';
+import { createTestOrm } from '../../../helpers/test-orm';
 
 /**
  * The webhook endpoint, with both services stubbed.
@@ -64,6 +65,9 @@ const link = (over: Partial<LinkRow> = {}): LinkRow => ({
   last_sync_error: null,
   failure_count: 0,
   next_attempt_at: null,
+  created_by: 1,
+  created_at: '2026-09-01 08:00:00',
+  updated_at: '2026-09-01 08:00:00',
   ...over,
 });
 
@@ -75,26 +79,35 @@ const config = {
   webhookSecret: vi.fn(() => SECRET),
 };
 
-const settings = new Map<string, string>();
-const db = {
-  get: vi.fn((_sql: string, key?: unknown) => {
-    const value = settings.get(String(key));
-    return value === undefined ? undefined : { value };
-  }),
-};
-
 const sync = {
   syncLink: vi.fn(async (_link: LinkRow) => ({ state: 'ok', pulled: 0, pushed: 0, conflicts: 0, missing: 0 })),
   // The Documents addon and the binding's provider, as one answer. What goes
   // into it is the service's business and tested there.
   isSwitchedOff: vi.fn((_link: LinkRow) => false),
+  // DSWH1 (R2 — moved off this controller onto DocSyncService.isSyncEnabled):
+  // the instance-wide kill switch, the same rule the job's own tick obeys.
+  isSyncEnabled: vi.fn(() => true),
 };
 
-const controller = new DocSyncWebhookController(
-  config as unknown as DocSyncConfigService,
-  sync as unknown as DocSyncService,
-  db as unknown as DatabaseService,
-);
+// R9's withRequestContext wrap needs a real MikroORM EntityManager to fork
+// (RequestContext.create calls em.fork(...)) — a bare `{ em: {} }` double
+// cannot satisfy that, so this file draws the same shared test ORM
+// `StorageHealthNotifierService`'s own unit test uses for the identical
+// reason (its class docstring: "these hand-built doubles pass the shared
+// test ORM instead"). Nothing in this file's own assertions touches SQLite
+// (`config`/`sync` are still full mocks), so no `createTables`/migrations
+// beyond what `createSnapshotTestDb`'s cached snapshot already carries.
+const testDb = createSnapshotTestDb();
+let controller: DocSyncWebhookController;
+
+beforeAll(async () => {
+  const t = await createTestOrm(testDb);
+  controller = new DocSyncWebhookController(config as unknown as DocSyncConfigService, sync as unknown as DocSyncService, t.orm);
+});
+
+afterAll(() => {
+  testDb.close();
+});
 
 /** Only what the handler reads: headers, the parsed body, and the raw bytes. */
 function makeReq(headers: Record<string, string> = {}, opts: { body?: unknown; rawBody?: Buffer | undefined } = {}): Request {
@@ -123,8 +136,8 @@ function papraReq(payload: string, signature: string, sent = payload): Request {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
-  settings.clear();
   sync.isSwitchedOff.mockReturnValue(false);
+  sync.isSyncEnabled.mockReturnValue(true);
   config.getLinkByToken.mockImplementation((token: string) => (token === 'tok-live' ? link() : undefined));
   config.getLink.mockImplementation((id: number) => (id === 4 ? link() : undefined));
   config.webhookSecret.mockReturnValue(SECRET);
@@ -404,7 +417,7 @@ describe('the admin switches', () => {
   });
 
   it('does nothing while the kill switch is set', async () => {
-    settings.set('docsync_sync_enabled', 'false');
+    sync.isSyncEnabled.mockReturnValue(false);
     await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     await settle();
     expect(sync.syncLink).not.toHaveBeenCalled();

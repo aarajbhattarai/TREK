@@ -197,6 +197,69 @@ export class TripFilesRepository extends TrekRepository<TripFiles> {
     await this.nativeDelete({ id });
   }
 
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 5 (doc-sync) — cross-domain additive methods, flagged per the
+  // task brief (DS4/DS15/DS16/DS19/DS29/DS32/DS36 are cross-domain). DS15
+  // reuses the existing {@link setStarred} above; these four are new.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * DS4/DS32 (`DocSyncService.applyAction` 'rename_local', `resolveConflict`
+   * keep='provider' rename) — `UPDATE trip_files SET original_name = ?
+   * WHERE id = ?`, the identical statement shape at both legacy call sites
+   * — one method, not two.
+   */
+  async renameOriginalName(id: number, original_name: string): Promise<void> {
+    await this.nativeUpdate({ id }, { original_name });
+  }
+
+  /**
+   * DS29 (`DocSyncService.resolveConflict`'s local-name read) — `SELECT
+   * original_name FROM trip_files WHERE id = ?`. Kysely, per this class's
+   * own docstring (a bare QB/`fields:` read risks silently dropping one of
+   * this entity's six `persist(false)` mirror columns — irrelevant to this
+   * one-column projection, but every other read in this file stays on
+   * Kysely for the same reason, so this one does too).
+   */
+  async findOriginalName(id: number): Promise<string | undefined> {
+    const row = await this.kysely<TripFilesKyselyDB>().selectFrom('trip_files').select('original_name').where('id', '=', id).executeTakeFirst();
+    return row?.original_name;
+  }
+
+  /**
+   * DS19 (`DocSyncService.loadLocalDocuments`) — `SELECT f.id,
+   * f.original_name, f.file_size, f.mime_type, f.deleted_at FROM trip_files
+   * f WHERE f.trip_id = ? AND f.message_id IS NULL AND f.note_id IS NULL`.
+   * Excludes chat and note attachments — a binding mirrors the trip's
+   * PAPERWORK, not its conversation.
+   */
+  async listSyncableForTrip(trip_id: number): Promise<Array<{ id: number; original_name: string; file_size: number | null; mime_type: string | null; deleted_at: string | null }>> {
+    return await this.kysely<TripFilesKyselyDB>()
+      .selectFrom('trip_files')
+      .select(['id', 'original_name', 'file_size', 'mime_type', 'deleted_at'])
+      .where('trip_id', '=', trip_id)
+      .where('message_id', 'is', null)
+      .where('note_id', 'is', null)
+      .execute();
+  }
+
+  /**
+   * DS36 (`DocSyncService.status`'s holdings count) — `SELECT COUNT(*) AS n
+   * FROM trip_files WHERE trip_id = ? AND deleted_at IS NULL AND message_id
+   * IS NULL AND note_id IS NULL`.
+   */
+  async countActiveDocuments(trip_id: number): Promise<number> {
+    const row = await this.kysely<TripFilesKyselyDB>()
+      .selectFrom('trip_files')
+      .select((eb) => eb.fn.countAll<number>().as('n'))
+      .where('trip_id', '=', trip_id)
+      .where('deleted_at', 'is', null)
+      .where('message_id', 'is', null)
+      .where('note_id', 'is', null)
+      .executeTakeFirstOrThrow();
+    return row.n;
+  }
+
   /**
    * FL23 (`FilesService.emptyTrash`'s bulk delete) — `DELETE FROM trip_files
    * WHERE id IN (dynamic)`, only for the ids whose storage delete already

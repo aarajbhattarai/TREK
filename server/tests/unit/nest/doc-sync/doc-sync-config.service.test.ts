@@ -56,7 +56,6 @@ import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTrip, createUser } from '../../../helpers/factories';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import {
   DocSyncConfigService,
   type ConnectionRow,
@@ -67,7 +66,14 @@ import type { DocumentProviderRegistry } from '../../../../src/nest/doc-sync/doc
 // off, so the boolean discriminant stops discriminating. The domain's own
 // predicate is what every call site uses instead.
 import { docFailed } from '../../../../src/nest/doc-sync/document-provider';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
+import { createTestUnitOfWork, createTestTripsRepo } from '../../../helpers/test-uow';
+import {
+  createTestDocumentConnectionsRepo,
+  createTestDocumentProviderFieldsRepo,
+  createTestDocumentProvidersRepo,
+  createTestDocumentSyncItemsRepo,
+  createTestTripDocumentLinksRepo,
+} from '../../../helpers/doc-sync-repos';
 
 let svc: DocSyncConfigService;
 
@@ -120,7 +126,16 @@ async function storedSecret(connectionId: number): Promise<string | undefined> {
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new DocSyncConfigService(new DatabaseService(testDb), {} as DocumentProviderRegistry, await createTestUnitOfWork(testDb));
+  svc = new DocSyncConfigService(
+    await createTestTripsRepo(testDb),
+    await createTestDocumentProvidersRepo(testDb),
+    await createTestDocumentProviderFieldsRepo(testDb),
+    await createTestDocumentConnectionsRepo(testDb),
+    await createTestTripDocumentLinksRepo(testDb),
+    await createTestDocumentSyncItemsRepo(testDb),
+    {} as DocumentProviderRegistry,
+    await createTestUnitOfWork(testDb),
+  );
 });
 
 beforeEach(() => {
@@ -725,6 +740,44 @@ describe('markOrphanedLinks', () => {
     expect(await svc.markOrphanedLinks()).toBe(1);
     expect((await svc.getLink(orphan.id))?.last_sync_state).toBe('orphaned');
     expect(await svc.getLink(kept.id)).toMatchObject({ last_sync_state: 'never', sync_enabled: 1 });
+  });
+
+  /**
+   * DSC20/DSC21's shared predicate (`DocumentConnectionsRepository
+   * .listOrphanedIds`) — the single-link check (`isOrphaned`, which
+   * delegates to the private `ownerLeft`) and the bulk sweep
+   * (`markOrphanedLinks`) must agree on every case, since both now draw
+   * from the SAME repository method rather than two independent
+   * re-implementations of the `NOT IN (... UNION ...)` subquery. Three
+   * cases in one test: an owner still on the trip via `trip_members`, an
+   * owner on it only via `trips.user_id` (no membership row), and an owner
+   * genuinely gone.
+   */
+  it('the single-link check and the bulk sweep agree on every case: owner via trip_members, owner via trips.user_id, owner genuinely gone', async () => {
+    // A connection is keyed per (trip_id, provider_id) — `upsertConnection`
+    // treats a second `connect()` call for a provider this trip already
+    // has as an EDIT of that same row, not a new connection. Three
+    // independent connections therefore need three distinct providers.
+    const viaMembership = await bind(MEMBER, 'paperless');
+    const viaTripOwner = await bind(OWNER, 'nextcloud');
+    // A stranger who was never on the trip at all — indistinguishable from
+    // "genuinely gone" to the shared predicate, which only asks "is the
+    // owner currently IN the membership set", never why they are not.
+    const strangerId = createUser(testDb, { username: 'stranger-doc-sync', email: 'stranger-doc-sync@test.local' }).user.id;
+    const goneConn = await connect(
+      { providerId: 'synologydrive', credentials: { username: 'anna', password: 'nas-pw' }, baseUrl: 'https://nas.example.com:5001' },
+      strangerId,
+    );
+    const goneLink = await link(goneConn.id, { scopeKey: 'scope:gone' });
+
+    expect(await svc.isOrphaned(await svc.getLink(viaMembership.id) as LinkRow)).toBe(false);
+    expect(await svc.isOrphaned(await svc.getLink(viaTripOwner.id) as LinkRow)).toBe(false);
+    expect(await svc.isOrphaned(await svc.getLink(goneLink.id) as LinkRow)).toBe(true);
+
+    expect(await svc.markOrphanedLinks()).toBe(1);
+    expect((await svc.getLink(viaMembership.id))?.last_sync_state).toBe('never');
+    expect((await svc.getLink(viaTripOwner.id))?.last_sync_state).toBe('never');
+    expect((await svc.getLink(goneLink.id))?.last_sync_state).toBe('orphaned');
   });
 
   it('counts nothing on a second sweep, so the job stays quiet after the first one', async () => {

@@ -1,6 +1,6 @@
 import { raw, type Platform, type RawQueryFragment } from '@mikro-orm/core';
 import { SqlitePlatform } from '@mikro-orm/sql';
-import type { Expression, ExpressionBuilder, ExpressionWrapper, ReferenceExpression, SqlBool, StringReference } from 'kysely';
+import { sql, type Expression, type ExpressionBuilder, type ExpressionWrapper, type RawBuilder, type ReferenceExpression, type SqlBool, type StringReference } from 'kysely';
 
 /**
  * The only place a repository may spell a database function.
@@ -227,6 +227,30 @@ export function coalesce(platform: Platform, ref: string, fallbackRef: string): 
  */
 export function coalesceParam(platform: Platform, ref: string, value: string | number | null): RawQueryFragment & symbol {
   if (platform instanceof SqlitePlatform) return raw(`COALESCE(${column(ref)}, ?)`, [value]);
+  return unsupported(platform);
+}
+
+/**
+ * `COALESCE(?, <col>)` — the MIRROR-IMAGE value-side shape of
+ * {@link coalesceParam} above: the bound value goes FIRST, the column is
+ * the fallback. NOT interchangeable with `coalesceParam` — that one keeps
+ * the EXISTING column unless it is NULL (`places.service.ts`'s own legacy
+ * shape); this one prefers the NEW value unless IT is null, keeping the
+ * existing column only then. `doc-sync.service.ts`'s DS23/DS24
+ * (`upsertItem`'s `file_id=COALESCE(?,file_id)`,
+ * `remote_id=COALESCE(?,remote_id)`, … eight columns, both the plain
+ * `nativeUpdate` and the Kysely `ON CONFLICT` forms) is the shape this
+ * exists for — confirmed genuinely the opposite direction from
+ * `coalesceParam`'s own doc'd precedent by reading the legacy SQL text
+ * literally, not assumed from the function name alone (a same-named
+ * "coalesce" helper reused in the wrong direction silently drops every
+ * incoming update — verified directly against a live row: a `recordAttempt`
+ * call passing a genuinely new `remote_version`/`content_sha256` left both
+ * columns exactly as they were before, since `coalesceParam`'s `COALESCE(col,
+ * ?)` always preferred the non-null existing value).
+ */
+export function coalesceOverride(platform: Platform, value: string | number | null, ref: string): RawQueryFragment & symbol {
+  if (platform instanceof SqlitePlatform) return raw(`COALESCE(?, ${column(ref)})`, [value]);
   return unsupported(platform);
 }
 
@@ -868,6 +892,63 @@ export function nowPlusSecondsKysely<DB, TB extends keyof DB>(
   if (platform instanceof SqlitePlatform) {
     return eb.fn<string>('datetime', [eb.val('now'), eb.val(`+${seconds} seconds`)]);
   }
+  return unsupported(platform);
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3h Task 5 (doc-sync) — `FOUND_AGAIN` (`doc-sync.service.ts:53-54`), the
+// module-level SQL-text CASE constant reused by four legacy UPDATEs (DS2
+// `relocate`, DS3 `rename_remote`, DS5 `rename_local`, DS12 `touch`). Unlike
+// every other CASE in this file's DS2-DS12 neighbourhood — whose WHEN
+// condition binds a value already known in JS at the call site (a boolean
+// flag, a state string), so the whole CASE collapses to a plain JS ternary
+// deciding which field to include in a `nativeUpdate` call — this one
+// compares the ROW'S OWN CURRENT `state`/`file_id` columns, which are not
+// knowable until the UPDATE executes. That is genuinely SQL-level, and the
+// four call sites share one method (`DocumentSyncItemsRepository`'s private
+// `foundAgain` builder) rather than four independent re-derivations, per the
+// task's own instruction to keep `FOUND_AGAIN` "a reusable typed CASE
+// expression ... consumed by all four".
+// ---------------------------------------------------------------------------
+
+/**
+ * `CASE WHEN <stateRef> = 'remote_missing' AND <fileIdRef> IS NOT NULL THEN
+ * 'synced' ELSE <stateRef> END` — doc-sync's `FOUND_AGAIN` clause, for the
+ * `state` column of an UPDATE `document_sync_items` SET list. Only a copy
+ * that is BOTH on record as missing AND still paired to a file recovers this
+ * way; every other state (`error`, `conflict`, a row with no file at all)
+ * passes through unchanged. `remote_missing_at` is cleared unconditionally
+ * by the SAME UPDATE's own `remote_missing_at = NULL` (a plain value, not
+ * part of this fragment — the caller sets it alongside).
+ */
+export function foundAgainState(platform: Platform, stateRef: string, fileIdRef: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) {
+    return raw(
+      `CASE WHEN ${column(stateRef)} = 'remote_missing' AND ${column(fileIdRef)} IS NOT NULL THEN 'synced' ELSE ${column(stateRef)} END`,
+    );
+  }
+  return unsupported(platform);
+}
+
+/**
+ * The Kysely-expression twin of {@link currentTimestamp}: the bare
+ * `CURRENT_TIMESTAMP` keyword, for a value position inside a hand-typed
+ * Kysely statement (DS24's `ON CONFLICT ... DO UPDATE SET last_seen_at =
+ * CURRENT_TIMESTAMP` — R3's partial-index upsert). Verified directly against
+ * `better-sqlite3` that SQLite accepts the bare keyword (`SELECT
+ * CURRENT_TIMESTAMP`) but rejects it called as a function
+ * (`SELECT CURRENT_TIMESTAMP()` → `near "(": syntax error`), so
+ * `eb.fn('current_timestamp', [])` — every other helper in this file's
+ * usual Kysely shape — is not an option here; the whole point of a keyword
+ * literal is that it takes no parentheses. This is this file's one
+ * Kysely-side use of the `sql` template tag — confined here, the sanctioned
+ * escape hatch this file already is for every raw-SQL spelling in the
+ * codebase (the MikroORM helpers above use `raw()` for the identical
+ * reason), never inline in a repository (the TRAP list's "Kysely `sql`
+ * banned under repositories" is about repository FILES, not this one).
+ */
+export function currentTimestampKysely(platform: Platform): RawBuilder<string> {
+  if (platform instanceof SqlitePlatform) return sql<string>`CURRENT_TIMESTAMP`;
   return unsupported(platform);
 }
 

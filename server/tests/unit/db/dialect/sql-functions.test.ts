@@ -12,6 +12,7 @@ import {
   castInteger,
   castIntegerKysely,
   coalesce,
+  coalesceOverride,
   coalesceParam,
   collateNoCase,
   columnIncrementedBy,
@@ -21,9 +22,11 @@ import {
   countAll,
   countAllRef,
   currentTimestamp,
+  currentTimestampKysely,
   dateAdd,
   dateOf,
   dayDistance,
+  foundAgainState,
   lower,
   lowerParam,
   lowerTrim,
@@ -335,6 +338,42 @@ describe('sql-functions (sqlite)', () => {
       .execute('run');
     t.clear();
     expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(user.id) as { display_name: string }).display_name).toBe('Fallback Name');
+  });
+
+  // Plan 3h Task 5 (doc-sync, DS23/DS24) — `coalesceOverride`, the
+  // mirror-image value-side shape `COALESCE(?, col)`: the caller's NEW
+  // value wins unless it is null, unlike `coalesceParam`'s `COALESCE(col,
+  // ?)` above (existing column wins unless IT is null). Confirmed
+  // genuinely the opposite direction by a live round-trip, not assumed from
+  // the two functions' similar names.
+  it('SQLF-090: coalesceOverride(value, ref) writes COALESCE(?, col) — a non-null new value overwrites the existing column', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Old Name', user.id);
+    const platform = t.em.getPlatform();
+    await t.em.createQueryBuilder(Users, 'u')
+      .update({ display_name: coalesceOverride(platform, 'New Name', 'display_name') })
+      .where({ id: user.id })
+      .execute('run');
+    t.clear();
+    expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(user.id) as { display_name: string }).display_name).toBe('New Name');
+  });
+
+  it('SQLF-091: coalesceOverride(null, ref) leaves the existing column untouched — a null new value never clobbers what is stored', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Keep Me', user.id);
+    const platform = t.em.getPlatform();
+    await t.em.createQueryBuilder(Users, 'u')
+      .update({ display_name: coalesceOverride(platform, null, 'display_name') })
+      .where({ id: user.id })
+      .execute('run');
+    t.clear();
+    expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(user.id) as { display_name: string }).display_name).toBe('Keep Me');
+  });
+
+  it('SQLF-092: an unknown platform fails closed for coalesceOverride', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => coalesceOverride(foreign, 'x', 'u.a')).toThrow(/no implementation for platform FakePlatform/);
   });
 
   it('SQLF-021: absDifference is usable as a filter key, matching ABS(col - ?) <= tolerance', async () => {
@@ -1123,6 +1162,79 @@ describe('sql-functions (sqlite)', () => {
     const foreign = new FakePlatform();
     const eb = expressionBuilder<UsersKyselyDB, 'users'>();
     expect(() => nowPlusSecondsKysely(foreign, eb, 1)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3h Task 5 (doc-sync) — `foundAgainState`, the typed rebuild of
+  // `doc-sync.service.ts`'s module-level `FOUND_AGAIN` SQL-text constant
+  // (DS2/DS3/DS5/DS12's shared SET clause). A scratch temp table stands in
+  // for `document_sync_items` here — the CASE only ever reads the two
+  // columns it names, so a two-column probe table exercises its logic
+  // exactly, without a trip/connection/link FK chain this file has no other
+  // reason to build.
+  describe('foundAgainState (doc-sync FOUND_AGAIN)', () => {
+    beforeEach(() => {
+      testDb.exec('DROP TABLE IF EXISTS found_again_probe');
+      testDb.exec('CREATE TEMP TABLE found_again_probe (id INTEGER PRIMARY KEY, state TEXT NOT NULL, file_id INTEGER)');
+    });
+
+    function apply(state: string, fileId: number | null): string {
+      const platform = t.em.getPlatform();
+      testDb.prepare('DELETE FROM found_again_probe WHERE id = 1').run();
+      testDb.prepare('INSERT INTO found_again_probe (id, state, file_id) VALUES (1, ?, ?)').run(state, fileId);
+      testDb.prepare(`UPDATE found_again_probe SET state = ${foundAgainState(platform, 'state', 'file_id').sql} WHERE id = 1`).run();
+      return (testDb.prepare('SELECT state FROM found_again_probe WHERE id = 1').get() as { state: string }).state;
+    }
+
+    it("SQLF-083: recovers a row on record as missing once its file is paired again, matching the legacy FOUND_AGAIN text (state='remote_missing' AND file_id IS NOT NULL -> 'synced')", () => {
+      expect(apply('remote_missing', 42)).toBe('synced');
+    });
+
+    it('SQLF-084: leaves a row on record as missing alone while it has no paired file (a rename/move under a path-as-id provider, not yet re-matched)', () => {
+      expect(apply('remote_missing', null)).toBe('remote_missing');
+    });
+
+    it('SQLF-085: leaves every other state untouched — error is never silently cleared by FOUND_AGAIN', () => {
+      for (const state of ['error', 'conflict', 'synced', 'pending', 'local_deleted']) {
+        expect(apply(state, 7)).toBe(state);
+      }
+    });
+
+    it('SQLF-086: an unknown platform fails closed for foundAgainState', () => {
+      class FakePlatform extends Platform {}
+      const foreign = new FakePlatform();
+      expect(() => foundAgainState(foreign, 'state', 'file_id')).toThrow(/no implementation for platform FakePlatform/);
+    });
+  });
+
+  // Plan 3h Task 5 (doc-sync, R3) — `currentTimestampKysely`, DS24's
+  // `last_seen_at = CURRENT_TIMESTAMP` inside the partial-index `ON
+  // CONFLICT ... DO UPDATE`.
+  describe('currentTimestampKysely', () => {
+    it('SQLF-087: compiles to the bare CURRENT_TIMESTAMP keyword with no parameters, matching currentTimestamp\'s own raw text and a real row\'s clock value', async () => {
+      const platform = t.em.getPlatform();
+      const compiled = t.em
+        .getKysely<UsersKyselyDB>()
+        .selectFrom('users')
+        .select(() => [currentTimestampKysely(platform).as('d')])
+        .compile();
+      expect(compiled.sql).toBe('select CURRENT_TIMESTAMP as "d" from "users"');
+      expect(compiled.parameters).toEqual([]);
+
+      createUser(testDb);
+      const got = testDb.prepare(compiled.sql).get(...compiled.parameters) as { d: string };
+      const raw = testDb.prepare(`SELECT ${currentTimestamp(platform).sql} as d`).get() as { d: string };
+      expect(Math.abs(new Date(`${got.d.replace(' ', 'T')}Z`).getTime() - new Date(`${raw.d.replace(' ', 'T')}Z`).getTime())).toBeLessThan(10_000);
+    });
+
+    it('SQLF-088: current_timestamp() called as a function is rejected by SQLite — proving the bare-keyword shape is load-bearing, not a style choice', () => {
+      expect(() => testDb.prepare('SELECT current_timestamp() as d').get()).toThrow(/syntax error/);
+    });
+
+    it('SQLF-089: an unknown platform fails closed for currentTimestampKysely', () => {
+      class FakePlatform extends Platform {}
+      const foreign = new FakePlatform();
+      expect(() => currentTimestampKysely(foreign)).toThrow(/no implementation for platform FakePlatform/);
+    });
   });
 });
 

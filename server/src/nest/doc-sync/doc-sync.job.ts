@@ -1,8 +1,10 @@
 import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { logError, logInfo } from '../audit/audit-log.logger';
 import { ADDON_IDS } from '../../addons';
 import { AddonsService } from '../addons/addons.service';
-import { DatabaseService } from '../database/database.service';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 import { DocSyncConfigService } from './doc-sync-config.service';
 import { DocSyncService } from './doc-sync.service';
@@ -40,7 +42,7 @@ import {
 @Injectable()
 export class DocSyncJob implements OnApplicationBootstrap {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly sync: DocSyncService,
     private readonly config: DocSyncConfigService,
     private readonly addons: AddonsService,
@@ -52,9 +54,8 @@ export class DocSyncJob implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
-    // Through runOnBoot (task-6-review-parity.md C1: raw SQL today, but the
-    // wrap belongs at the entrypoint so it stays safe if this dependency
-    // graph goes repository-backed later).
+    // Through runOnBoot (task-6-review-parity.md C1: repository-backed as of
+    // Plan 3h Task 5 — the wrap stays at the entrypoint regardless).
     await this.registrar.runOnBoot('docsync-boot', async () => {
       logInfo(`Document sync: polling every ${await this.intervalSeconds()}s`);
     });
@@ -79,7 +80,7 @@ export class DocSyncJob implements OnApplicationBootstrap {
   }
 
   private async intervalSeconds(): Promise<number> {
-    const raw = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', SETTING_POLL_INTERVAL)?.value;
+    const raw = (await this.appSettings.getValue(SETTING_POLL_INTERVAL)) ?? undefined;
     const parsed = Number.parseInt(raw || '', 10);
     if (!Number.isFinite(parsed)) return DEFAULT_POLL_INTERVAL_SECONDS;
     return Math.min(MAX_POLL_INTERVAL_SECONDS, Math.max(MIN_POLL_INTERVAL_SECONDS, parsed));
@@ -88,7 +89,7 @@ export class DocSyncJob implements OnApplicationBootstrap {
   async tick(): Promise<void> {
     try {
       if (!(await this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS))) return;
-      const killSwitch = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', SETTING_SYNC_ENABLED)?.value;
+      const killSwitch = (await this.appSettings.getValue(SETTING_SYNC_ENABLED)) ?? undefined;
       // Unrecognised values mean ON here because the setting is absent by
       // default; only an explicit 'false' stops the sync.
       if (killSwitch === 'false') return;

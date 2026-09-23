@@ -1,9 +1,10 @@
 import { Controller, HttpCode, OnModuleDestroy, Param, Post, Req } from '@nestjs/common';
+import { MikroORM } from '@mikro-orm/core';
 import type { Request } from 'express';
 import crypto from 'crypto';
 import { Public } from '../auth/public.decorator';
-import { DatabaseService } from '../database/database.service';
-import { SETTING_SYNC_ENABLED, WEBHOOK_NUDGE_DEBOUNCE_SECONDS } from './doc-sync.constants';
+import { withRequestContext } from '../database/request-context';
+import { WEBHOOK_NUDGE_DEBOUNCE_SECONDS } from './doc-sync.constants';
 import { DocSyncConfigService, type LinkRow } from './doc-sync-config.service';
 import { DocSyncService } from './doc-sync.service';
 import { logError } from '../audit/audit-log.logger';
@@ -42,7 +43,7 @@ export class DocSyncWebhookController implements OnModuleDestroy {
   constructor(
     private readonly config: DocSyncConfigService,
     private readonly sync: DocSyncService,
-    private readonly db: DatabaseService,
+    private readonly orm: MikroORM,
   ) {}
 
   /**
@@ -54,15 +55,13 @@ export class DocSyncWebhookController implements OnModuleDestroy {
    * addon off would have watched it carry on. Checked when the timer fires as
    * well as on arrival, so a switch thrown during the debounce window still
    * takes effect.
+   *
+   * DSWH1 (R2 — moved off this controller): the kill-switch read now lives
+   * on `DocSyncService.isSyncEnabled`, the same rule the job obeys.
    */
   private async syncIsOn(link: LinkRow): Promise<boolean> {
     if ((await this.sync.isSwitchedOff(link))) return false;
-    const killSwitch = this.db.get<{ value: string }>(
-      'SELECT value FROM app_settings WHERE key = ?', SETTING_SYNC_ENABLED,
-    )?.value;
-    // Unrecognised values mean ON: the setting is absent by default, and only an
-    // explicit 'false' stops the sync. Same rule as the job.
-    return killSwitch !== 'false';
+    return this.sync.isSyncEnabled();
   }
 
   onModuleDestroy(): void {
@@ -106,6 +105,18 @@ export class DocSyncWebhookController implements OnModuleDestroy {
    * because the provider is usually still writing the rest. The link is looked
    * up again when the timer fires, so a binding switched off or deleted in the
    * meantime does not get one last run out of a stale row.
+   *
+   * R9 (Plan 3h Task 5): the timer body forks its OWN fresh request context
+   * via `withRequestContext` — the same shape
+   * `StorageHealthNotifierService`'s listener (Plan 3f Task 4, R3) uses. This
+   * `nudge()` handler already returned its `{received:true}` response before
+   * this timer fires (`WEBHOOK_NUDGE_DEBOUNCE_SECONDS` later), so whatever
+   * request-scoped `EntityManager` fork the original HTTP request forked is
+   * long gone by the time this body runs — insurance, per 3f's own
+   * measurement that `AsyncLocalStorage` survives a detached chain intact in
+   * this codebase today, not a fix for an observed failure (the pre-conversion
+   * code had no `EntityManager` to lose in the first place: raw
+   * `better-sqlite3` calls have no request-scoping concept at all).
    */
   private schedule(linkId: number, reload: () => ReturnType<DocSyncConfigService['getLink']>, isRetry = false): void {
     if (this.pending.has(linkId)) return;
@@ -113,7 +124,7 @@ export class DocSyncWebhookController implements OnModuleDestroy {
     // helper and its rejection is observed here rather than left unhandled
     // (recipe R1.5).
     const timer = setTimeout(() => {
-      void (async () => {
+      void withRequestContext(this.orm, async () => {
         this.pending.delete(linkId);
         const fresh = await reload();
         if (!fresh || fresh.sync_enabled !== 1) return;
@@ -124,7 +135,7 @@ export class DocSyncWebhookController implements OnModuleDestroy {
         // again once rather than waiting out a whole poll interval: once, and
         // only for `busy`, so this cannot become a loop.
         if (res?.state === 'busy' && !isRetry) this.schedule(linkId, reload, true);
-      })().catch((err: unknown) => {
+      }).catch((err: unknown) => {
         logError(`Document sync webhook nudge failed for link ${linkId}: ${err instanceof Error ? err.message : String(err)}`);
       });
     }, WEBHOOK_NUDGE_DEBOUNCE_SECONDS * 1000);
