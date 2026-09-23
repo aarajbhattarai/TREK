@@ -4,6 +4,7 @@ import { MikroORM } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { withRequestContext } from '../database/request-context';
+import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 import { logError } from '../audit/audit-log.logger';
 import { pluginsEnabled } from './kill-switch';
 import { setPluginEventSink } from '../../plugin-event-sink';
@@ -46,6 +47,19 @@ import type { PluginActionDescriptor, PluginActionResult, PluginActionScope } fr
 // with a real multi-label suffix. Rejects a bare `*`, a whole-TLD wildcard, a scheme and
 // any embedded space — the string is interpolated into the egress guard and the CSP.
 const EGRESS_HOST_RE = /^(\*\.[a-z0-9-]+(\.[a-z0-9-]+)+|[a-z0-9-]+(\.[a-z0-9-]+)*)$/i;
+
+// Plan 3j Task 0 (R-scheduler): the persistent per-plugin scheduler sweep + the GDPR
+// erasure drain used to run on a bare, unregistered `setInterval` — no
+// `CronRegistrarService` registration, no request context, no test-mode no-op. Six-field
+// (seconds-resolution) cron expression: every :00 and :30 of every minute, the nearest
+// exact equivalent to the legacy `setInterval(fn, 30_000)` cadence the `cron` package's
+// `CronJob` supports (confirmed: it parses an optional leading seconds field). The one
+// observable difference: the legacy interval fired 30s after PROCESS START and then
+// every 30s from there (a rolling cadence); this fires at wall-clock :00/:30 boundaries
+// (an absolute cadence) — still exactly once every 30 seconds, never coarser, just no
+// longer phase-locked to boot time. See task-0-report.md for the full "For the user" note.
+const PLUGIN_SCHEDULER_SWEEP_NAME = 'plugin-scheduler-sweep';
+const PLUGIN_SCHEDULER_SWEEP_CRON = '*/30 * * * * *';
 
 
 /**
@@ -169,8 +183,6 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   // author's source auto-reloads. Empty unless dev-link is used.
   private readonly linkWatchers = new Map<string, fs.FSWatcher>();
 
-  // Sweeps plugin_scheduled_tasks for due callbacks and fires them on active plugins.
-  private schedulerSweep: ReturnType<typeof setInterval> | null = null;
   // Coalesces overlapping erasure drains (the sweep and enqueue both trigger one).
   private drainInFlight: Promise<void> | null = null;
 
@@ -211,6 +223,17 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // does needs this, the same lesson `CronRegistrarService` already learned
     // (task-2-fix-report.md's "Concerns").
     @Optional() private readonly orm?: MikroORM,
+    // Plan 3j Task 0 (R-scheduler): the one path this codebase schedules a cron through
+    // (server/CLAUDE.md). `@Optional()` for the same reason `uow`/`orm` are — the wide
+    // hand-construction surface this class has across the test suite (plugin-host.ts,
+    // boot-registry-order.test.ts, settings-isolation.test.ts, plugin-runtime.boot-no-
+    // orm.test.ts) never passes a 9th positional arg; a hand-built instance without one
+    // simply never registers the sweep (no log — mirrors how an absent `hostFactory`/
+    // `registry` produces no boot-time log either, only a failure at first use, and
+    // registering nothing is exactly what happens today too whenever a test never lets
+    // the 30s interval actually fire). Nest always injects the real one in production
+    // (PluginsRuntimeModule imports SchedulingModule).
+    @Optional() private readonly registrar?: CronRegistrarService,
   ) {}
 
   private get db() {
@@ -258,8 +281,28 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // boot must NEVER block app init, even in a context without plugin tables
     // (e.g. a slimmed-down test app that only imports AdminModule).
     try {
-      await discoverPlugins(this.db);
-      const installed = await this.installedDepRows();
+      // Plan 3j Task 0 (R-scheduler, inventory §8): `discoverPlugins` + this dependency-
+      // order read are raw better-sqlite3 today and need no request context to run
+      // correctly, but the MOMENT either becomes a repository call (Task 2/3) this
+      // window needs one — landing the wrap now, ahead of that conversion, is the whole
+      // point of doing this in Task 0. Wrapped ONLY when an ORM is available: the
+      // no-ORM branch below still needs `order` computed (from THESE two reads) to name
+      // the skipped plugins in its own log line, so running them unwrapped when `this.
+      // orm` is absent preserves that already-tested behavior exactly (RT-BOOT-NOORM-001/
+      // 002) rather than gating discovery itself on the ORM's presence — a broader
+      // restructure (option (b): wrap the WHOLE onApplicationBootstrap body in one call,
+      // matching CronRegistrarService.runOnBoot's shape) was considered and rejected for
+      // this reason; see task-0-report.md.
+      let installed: Map<string, PluginDepRow>;
+      if (this.orm) {
+        installed = await withRequestContext(this.orm, async () => {
+          await discoverPlugins(this.db);
+          return this.installedDepRows();
+        });
+      } else {
+        await discoverPlugins(this.db);
+        installed = await this.installedDepRows();
+      }
       const enabledIds = [...installed.values()].filter((r) => r.enabled).map((r) => r.id);
       let order: string[];
       try {
@@ -302,16 +345,22 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     }
     // Fire due scheduled tasks (persistent, userless) on a coarse tick — the
     // scheduler is minute-granularity by contract, so 30s precision is plenty and
-    // cheap. Unref'd so it never holds the process open.
-    this.schedulerSweep = setInterval(() => {
+    // cheap. Plan 3j Task 0 (R-scheduler): registered through CronRegistrarService
+    // instead of a bare setInterval, so this tick gets the registrar's own
+    // withRequestContext wrap (wrappedTick) for free — the SAME choke point every
+    // other domain's cron already gets — and its test-mode no-op (register() is a
+    // no-op under NODE_ENV=test, isEnabled() false). No bespoke wrapping code needed
+    // here: PR4–PR10 stay raw better-sqlite3 for now (Task 2 converts their bodies on
+    // top of this landed registration) and their calling shape below is byte-for-byte
+    // what the old setInterval callback ran.
+    this.registrar?.register(PLUGIN_SCHEDULER_SWEEP_NAME, PLUGIN_SCHEDULER_SWEEP_CRON, () => {
       // R1.5: a timer callback cannot await. Both helpers already swallow their own
       // errors (each body is wrapped in try/catch); the .catch below is defense-in-
       // depth against a future regression, same shape as the pruneErrorLog call in
       // the onLog hook above.
       void this.fireDueScheduled().catch(() => { /* fireDueScheduled already handles its own errors — this is a backstop */ });
       void this.drainUserErasures();
-    }, 30_000);
-    this.schedulerSweep.unref?.();
+    });
   }
 
   /** Fire every scheduled task that is due on an ACTIVE plugin; re-arm recurring
@@ -497,7 +546,13 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     setPluginEventSink(null);
     setUserDeletedSink(null);
     setStagedRestoreApplier(null);
-    if (this.schedulerSweep) { clearInterval(this.schedulerSweep); this.schedulerSweep = null; }
+    // Plan 3j Task 0: the registrar now owns the sweep's timer lifecycle
+    // (CronRegistrarService.onApplicationShutdown unregisters every job it holds
+    // regardless), but this explicit unregister keeps a module-level teardown
+    // symmetric with the setup above rather than relying solely on a LATER Nest
+    // shutdown hook — a no-op both when no registrar was ever provided and when
+    // nothing was ever registered (e.g. plugins disabled).
+    this.registrar?.unregister(PLUGIN_SCHEDULER_SWEEP_NAME);
     for (const w of this.linkWatchers.values()) {
       try { w.close(); } catch { /* ignore */ }
     }

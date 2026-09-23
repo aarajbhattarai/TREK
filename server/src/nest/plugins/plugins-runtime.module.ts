@@ -37,6 +37,7 @@ import { AtlasModule } from '../atlas/atlas.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TripMembershipModule } from '../trip-membership/trip-membership.module';
 import { JournalRpcModule } from '../journey/journal-rpc.module';
+import { SchedulingModule } from '../scheduling/scheduling.module';
 
 /**
  * The plugin execution half (#plugins, M1/M2): the process supervisor, the
@@ -62,6 +63,12 @@ import { JournalRpcModule } from '../journey/journal-rpc.module';
     // module: the domains would then have to import this one back and close a cycle.
     PluginGuardsModule,
     PluginOAuthModule,
+    // Plan 3j Task 0 (R-scheduler): PluginRuntimeService now registers its persistent
+    // scheduler sweep + GDPR erasure drain through CronRegistrarService, which lives
+    // in a deliberately non-@Global module (server/CLAUDE.md: the one cron path) — so
+    // it must be imported explicitly here, same as every other job-owning module
+    // (place-shadow.module.ts is the precedent).
+    SchedulingModule,
     WeatherModule, TagsModule, CategoriesModule, BudgetModule, ReservationsModule,
     TodoModule, PackingModule, DaysModule, DayNotesModule, AccommodationsModule, AssignmentsModule, LlmParseModule,
     FilesModule, CollabModule, VacayModule, TripsModule, PlacesModule,
