@@ -461,6 +461,14 @@ describe('Task 6 review items — rollback and concurrency', () => {
     const rejected = results.filter((r) => r.status === 'rejected');
     expect(fulfilled.length).toBe(1);
     expect(rejected.length).toBe(1);
+    // L-1 (Task 9 fix round 2): pin the loser's actual reason too, not just
+    // the 1/1 split — measured 3/3 under real concurrency: TM6 races past
+    // TM5's own `exists` check and the loser rejects on the table's own
+    // UNIQUE(trip_id, user_id) constraint, never the app-level 'User already
+    // has access' the TM5-catches-it branch above describes as possible.
+    // Without this the test stayed green against a mutation that serializes
+    // `addMember` (forcing the TM5-catch branch instead) — not load-bearing.
+    expect((rejected[0] as PromiseRejectedResult).reason.message).toMatch(/UNIQUE constraint failed: trip_members/);
     const count = testDb.prepare('SELECT COUNT(*) as n FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id) as { n: number };
     expect(count.n).toBe(1);
   });

@@ -103,45 +103,63 @@ describe('transaction yield (rule 24)', () => {
     expect(order.indexOf('queued:resolve')).toBeGreaterThan(order.indexOf('holder:commit'));
   });
 
-  it('B — a raw DatabaseService statement issued while a transaction is open runs INSIDE it (a dirty read of the uncommitted write), then reverts when the holder rolls back', async () => {
+  it('B — a raw DatabaseService read AND write, issued from a SECOND, unrelated request while a transaction is open, run INSIDE it (a dirty read of the uncommitted write; the raw write is gone once the holder rolls back) — L-3, Task 9 fix round 2', async () => {
     const { user } = createUser(testDb);
-    const trip = createTrip(testDb, user.id, { end_date: '2026-01-01' });
+    const trip = createTrip(testDb, user.id, { title: 'Original Title', end_date: '2026-01-01' });
 
     let dirtyRead: string | null | undefined;
     const HOLD_MS = 40;
 
+    // Request 1 (the holder): opens a transaction, writes, holds it open
+    // across a real `await`, then forces a rollback.
     const holder = withRequestContext(t.orm, async () => {
       await expect(
         uow.transactional(async () => {
           await trips.setEndDate(trip.id, '2099-12-31');
-          // The write is now inside the open, uncommitted transaction. A raw
-          // statement issued from a DIFFERENT concurrent "request" — no
-          // request-context fork, no `uow.transactional` of its own — shares
-          // the one better-sqlite3 connection directly and is NOT behind
-          // Kysely's mutex, so it runs synchronously, right now, still
-          // inside this open transaction.
-          const row = dbs.get<{ end_date: string | null }>('SELECT end_date FROM trips WHERE id = ?', trip.id);
-          dirtyRead = row?.end_date;
           await sleep(HOLD_MS);
-          // Force a rollback: the write above must not survive.
+          // Force a rollback: the write above, and anything the second
+          // request below lands inside this transaction, must not survive.
           throw new Error('forced rollback (rule 24 probe)');
         }),
       ).rejects.toThrow('forced rollback');
     });
 
+    // Give the holder a tick to actually open its transaction and perform
+    // its write before the second, UNRELATED request starts — the queued
+    // statement/raw statement below must provably run while the first is
+    // still open, not race to start first itself (same pattern as probe A).
+    await sleep(5);
+
+    // Request 2: a fully separate concurrent request, through its OWN
+    // forked `withRequestContext` — not a call from inside the holder's own
+    // body (L-3: that would only prove a request can dirty-read its own
+    // uncommitted write, not the cross-request hazard rule 24 names). It
+    // issues a raw `DatabaseService` READ and a raw `DatabaseService` WRITE.
+    // Neither is behind Kysely's `ConnectionMutex` (probe A), so both share
+    // the one better-sqlite3 connection directly and run INSIDE the
+    // holder's still-open, uncommitted transaction.
+    await withRequestContext(t.orm, async () => {
+      const row = dbs.get<{ end_date: string | null }>('SELECT end_date FROM trips WHERE id = ?', trip.id);
+      dirtyRead = row?.end_date;
+      dbs.run('UPDATE trips SET title = ? WHERE id = ?', 'DIRTY-WRITE-MARKER', trip.id);
+    });
+
     await holder;
 
-    // The raw read saw the uncommitted value — a dirty read, proving the raw
-    // path is NOT queued behind the transaction the way an ORM/Kysely
-    // statement is (probe A above).
+    // The second request's raw read saw the holder's uncommitted write — a
+    // genuine cross-request dirty read, proving the raw path is NOT queued
+    // behind the transaction the way an ORM/Kysely statement is (probe A).
     expect(dirtyRead).toBe('2099-12-31');
-    // After the holder rolled back, the row reverts — the dirty read never
-    // should have been trusted, which is exactly why rule 24 keeps every
-    // transactional body DB-only: a raw statement issued mid-transaction by
-    // ANOTHER request would otherwise report success on a write that this
-    // rollback just erased.
-    const after = testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(trip.id) as { end_date: string | null };
+    // …and the second request's own raw UPDATE, though it returned with no
+    // error and no queueing (an apparent "success"), was made INSIDE the
+    // holder's transaction — it is silently erased the moment the holder
+    // rolls back. This is exactly the hazard rule 24 keeps out of
+    // production code: a raw statement issued mid-transaction by ANOTHER
+    // request would otherwise report success on a write this rollback just
+    // undid.
+    const after = testDb.prepare('SELECT end_date, title FROM trips WHERE id = ?').get(trip.id) as { end_date: string | null; title: string };
     expect(after.end_date).toBe('2026-01-01');
+    expect(after.title).toBe('Original Title');
   });
 
   it('I — a second, unrelated transaction opened while the first is still open does not error (no nested-BEGIN exception); it queues and commits its own write once the first settles', async () => {

@@ -582,7 +582,7 @@ describe('A-H2 — DaysService trip id parsed once, threaded to every survivor (
     expect(row.title).toBe('Original');
   });
 
-  it('POST /days by the hex-spelled trip id (append, no position) 500s the legacy-shaped miss and writes no day', async () => {
+  it('POST /days by the hex-spelled trip id (append, no position) answers the guard\'s own 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2 — was a manufactured 500)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Trip' });
     const hexTripId = '0x' + trip.id.toString(16);
@@ -592,13 +592,13 @@ describe('A-H2 — DaysService trip id parsed once, threaded to every survivor (
       .post(`/api/trips/${hexTripId}/days`)
       .set('Cookie', authCookie(user.id))
       .send({});
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'Internal server error' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
     const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
     expect(after).toBe(before);
   });
 
-  it('POST /days {position} (insert) by the hex-spelled trip id 500s the legacy-shaped miss and writes no day', async () => {
+  it('POST /days {position} (insert) by the hex-spelled trip id answers the guard\'s own 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2 — was a manufactured 500)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-09-01', end_date: '2026-09-02' });
     const hexTripId = '0x' + trip.id.toString(16);
@@ -608,8 +608,136 @@ describe('A-H2 — DaysService trip id parsed once, threaded to every survivor (
       .post(`/api/trips/${hexTripId}/days`)
       .set('Cookie', authCookie(user.id))
       .send({ position: 1 });
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'Internal server error' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days (append, no position) by trip id "N.0" answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip' });
+    const shapedTripId = `${trip.id}.0`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({});
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days {position} (insert) by trip id "N.0" answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-09-01', end_date: '2026-09-02' });
+    const shapedTripId = `${trip.id}.0`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({ position: 1 });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days (append, no position) by trip id "N%20" (trailing space) answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip' });
+    const shapedTripId = `${trip.id}%20`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({});
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days {position} (insert) by trip id "N%20" (trailing space) answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-09-01', end_date: '2026-09-02' });
+    const shapedTripId = `${trip.id}%20`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({ position: 1 });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days (append, no position) by trip id "%2BN" (leading plus) answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip' });
+    const shapedTripId = `%2B${trip.id}`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({});
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days {position} (insert) by trip id "%2BN" (leading plus) answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-09-01', end_date: '2026-09-02' });
+    const shapedTripId = `%2B${trip.id}`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({ position: 1 });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days (append, no position) by trip id "Ne0" (exponent form) answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip' });
+    const shapedTripId = `${trip.id}e0`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({});
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days {position} (insert) by trip id "Ne0" (exponent form) answers 404 "Trip not found" and writes no day (M-1 narrowing, Task 9 fix round 2)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-09-01', end_date: '2026-09-02' });
+    const shapedTripId = `${trip.id}e0`;
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${shapedTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({ position: 1 });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
     const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
     expect(after).toBe(before);
   });
@@ -646,10 +774,10 @@ describe('A-H2 — DaysService trip id parsed once, threaded to every survivor (
     expect(resAfter.reservation_time).toBe('2026-06-01T19:00:00');
   });
 
-  it('PUT /days/reorder with the REAL numeric trip id still works and can still be legitimately rejected for inverting a stay (unchanged, base 400)', async () => {
+  it('PUT /days/reorder with the REAL numeric trip id still works and can still be legitimately rejected for inverting a stay (unchanged, base 400) — L-5: zero days rows changed, not only the stay', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-06-01', end_date: '2026-06-03' });
-    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
+    const days = testDb.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number; day_number: number; date: string }[];
     const [d1, d2, d3] = days;
     const place = createPlace(testDb, trip.id, { name: 'Hotel' });
     const stay = createDayAccommodation(testDb, trip.id, place.id, d1.id, d3.id);
@@ -662,5 +790,8 @@ describe('A-H2 — DaysService trip id parsed once, threaded to every survivor (
     expect(res.body).toEqual({ error: 'This move would make an accommodation end before it starts.' });
     const stayAfter = testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(stay.id) as { start_day_id: number; end_day_id: number };
     expect(stayAfter).toEqual({ start_day_id: d1.id, end_day_id: d3.id });
+    // L-5: the rollback holds on every day row, not only the stay — zero rows changed.
+    const daysAfter = testDb.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number; day_number: number; date: string }[];
+    expect(daysAfter).toEqual(days);
   });
 });

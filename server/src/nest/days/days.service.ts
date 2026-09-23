@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -91,9 +91,16 @@ export class DayReorderError extends Error {}
  * entry point now parses ONCE with `toRowId(tripId)` and threads that same
  * value into every survivor and read; a `toRowId` miss answers the entry
  * point's own legacy-shaped not-found (`list` → `{ days: [] }`, `getDay` →
- * `undefined`, `reorder`/`insert`/`create` → `DayReorderError`, uncaught by
- * `create`'s route into the legacy 500) rather than let the guard's wider
- * `Number()` grant reach a downstream raw bind that disagrees with it.
+ * `undefined`, `reorder`/`insert` → `DayReorderError`, caught by the
+ * controller's `reorder` handler into the legacy 400) rather than let the
+ * guard's wider `Number()` grant reach a downstream raw bind that disagrees
+ * with it. `create`/`insert` answer the SAME 404 `TripAccessGuard` itself
+ * would have given a non-numeric id (Task 9 fix round 2, M-1): the guard's
+ * bare `Number(tripId)` authorises shapes like `18.0`/`18 `/`+18`/`18e0`
+ * that `toRowId` refuses, and the legacy raw INSERT stored those through
+ * SQLite affinity (201), so a plain `Error` here was a fresh regression —
+ * a manufactured 500 for an id the gate itself authorised, not a legacy-
+ * parity miss (the same class of defect ruled in `PlacesService`, A-M1).
  */
 @Injectable()
 export class DaysService {
@@ -240,13 +247,18 @@ export class DaysService {
   }
 
   async create(tripId: string | number, date?: string, notes?: string) {
-    // Rule 21 / H2: `toRowId`, not `Number()`. Uncaught by the controller's
-    // `create` handler, so a miss becomes the legacy 500 (the raw INSERT's FK
-    // violation on a hex/decimal-spelled trip id) — status-level parity, not
-    // a manufactured miss, since `create` never had an existence gate to
-    // answer instead (same documented exception `PlacesService.create` uses).
+    // Rule 21 / M-1 (Task 9 fix round 2): `toRowId`, not `Number()`. A miss
+    // here answers the SAME 404 `TripAccessGuard` gives a non-numeric id
+    // (`trip-access.guard.ts`'s own body) — for a hex-spelled id (`0x12`)
+    // that is legacy-shaped parity (the raw INSERT's FK violation was a
+    // 500, but the guard itself never let a hex id past); for a
+    // non-canonical-but-numeric id the guard's looser `Number()` DOES
+    // authorise (`18.0`, `18 `, `+18`, `18e0`), a plain `Error` used to
+    // become a manufactured 500 the legacy affinity bind never produced
+    // (it stored those through affinity and answered 201) — the same class
+    // of defect `PlacesService.create` was fixed for (A-M1).
     const tripIdNum = toRowId(tripId);
-    if (tripIdNum === null) throw new Error('Trip id is not a real row.');
+    if (tripIdNum === null) throw new HttpException({ error: 'Trip not found' }, 404);
     // DY5: `DaysRepository.maxDayNumber` already folds the no-rows case to 0
     // (`?? 0`); the `|| 0` here is the legacy expression kept verbatim so a
     // stored 0 still becomes 1 — the same outcome either fold produces, but
@@ -535,15 +547,16 @@ export class DaysService {
    * shifted days have their dates re-stamped (same rules as reorder).
    */
   async insert(tripId: string | number, position?: number) {
-    // Rule 21 / H2: `toRowId`, not `Number()` — see `reorder`'s comment above
-    // and the class docstring. `insert` shares `create`'s controller route
-    // (no `DayReorderError` catch on that path — `reorder` is the only
-    // handler that has one), so a plain `Error` here becomes the SAME
-    // legacy-shaped 500 `create`'s own miss does (the FK violation on the
-    // raw route string this never executes), rather than the renumber-then-
-    // skip-the-invariant split H2 found.
+    // Rule 21 / M-1 (Task 9 fix round 2): `toRowId`, not `Number()` — see
+    // `reorder`'s comment above and the class docstring. `insert` answers
+    // the SAME 404 `create` does (see its comment): `TripAccessGuard`'s own
+    // body, for the ids the guard's looser `Number()` seam authorises but
+    // `toRowId` refuses. A plain `Error` used to become a manufactured 500
+    // for `18.0`/`18 `/`+18`/`18e0` — ids the legacy raw INSERT stored
+    // through affinity and answered 201 for — rather than the renumber-
+    // then-skip-the-invariant split H2 found for hex ids.
     const tripIdNum = toRowId(tripId);
-    if (tripIdNum === null) throw new Error('Trip id is not a real row.');
+    if (tripIdNum === null) throw new HttpException({ error: 'Trip not found' }, 404);
     const rows: DayOrderRow[] = await this.daysRepo.listOrderedForReorder(tripIdNum);
     const n = rows.length;
     const pos = Math.min(Math.max(position ?? n + 1, 1), n + 1);
