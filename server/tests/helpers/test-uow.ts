@@ -71,6 +71,10 @@ import { CollectionMembers } from '../../src/db/entities/CollectionMembers.entit
 import type { CollectionMembersRepository } from '../../src/db/repositories/CollectionMembers.repository';
 import { CollectionLabels } from '../../src/db/entities/CollectionLabels.entity';
 import type { CollectionLabelsRepository } from '../../src/db/repositories/CollectionLabels.repository';
+import { CollectionPlaces } from '../../src/db/entities/CollectionPlaces.entity';
+import type { CollectionPlacesRepository } from '../../src/db/repositories/CollectionPlaces.repository';
+import { CollectionPlaceRatings } from '../../src/db/entities/CollectionPlaceRatings.entity';
+import type { CollectionPlaceRatingsRepository } from '../../src/db/repositories/CollectionPlaceRatings.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -628,5 +632,32 @@ export function createTestCollectionLabelsRepo(db: Database.Database): Promise<C
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(CollectionLabels));
   collectionLabelsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3h Task 2 (collections part B) — `CollectionPlacesRepository`/
+// `CollectionPlaceRatingsRepository` a hand-constructed `CollectionsService`
+// needs. Same memoisation-per-handle pattern as every helper above.
+// ---------------------------------------------------------------------------
+
+const collectionPlacesRepoPerHandle = new WeakMap<Database.Database, Promise<CollectionPlacesRepository>>();
+const collectionPlaceRatingsRepoPerHandle = new WeakMap<Database.Database, Promise<CollectionPlaceRatingsRepository>>();
+
+/** The `CollectionPlacesRepository` a hand-constructed `CollectionsService` needs. */
+export function createTestCollectionPlacesRepo(db: Database.Database): Promise<CollectionPlacesRepository> {
+  const existing = collectionPlacesRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(CollectionPlaces));
+  collectionPlacesRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `CollectionPlaceRatingsRepository` a hand-constructed `CollectionsService` needs. */
+export function createTestCollectionPlaceRatingsRepo(db: Database.Database): Promise<CollectionPlaceRatingsRepository> {
+  const existing = collectionPlaceRatingsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(CollectionPlaceRatings));
+  collectionPlaceRatingsRepoPerHandle.set(db, pending);
   return pending;
 }

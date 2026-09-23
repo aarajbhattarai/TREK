@@ -47,7 +47,7 @@ import fs from 'fs';
 import path from 'path';
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
-import { createUser, createTrip, createPlace, createCategory, createTag, addTripMember } from '../../helpers/factories';
+import { createUser, createTrip, createPlace, createCategory, createTag, addTripMember, createDay, createDayAssignment } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
@@ -56,12 +56,21 @@ import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-pho
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { notificationsStub } from '../../helpers/notifications';
 import {
-  createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
+  createTestUnitOfWork, createTestAppSettingsRepo, createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
   createTestCollectionsRepo, createTestCollectionMembersRepo, createTestCollectionLabelsRepo, createTestCategoriesRepo,
+  createTestCollectionPlacesRepo, createTestCollectionPlaceRatingsRepo, createTestTripsRepo, createTestTripMembersRepo,
+  createTestPlaceRatingsRepo, createTestTagsRepo, createTestUsersRepo,
 } from '../../helpers/test-uow';
 
 const storageFx = makeStorageFixture('');
 let svc: CollectionsService;
+// R6's two-layer-order proof (savePlace/copyToTrip) needs a distinguishable
+// spy on the TRIP-access call — captured here so the tests below can assert
+// on call order/count, not just the final HTTP status (the brief's own
+// warning: a reversed check order still refuses in the end, via a different
+// path, so an ordinary pass/fail test would not catch a regression).
+let tripsRepoForSpy: Awaited<ReturnType<typeof createTestTripsRepo>>;
+let permissionsForSpy: PermissionsService;
 // The real cache: these cases assert what removeIfUnreferenced actually does
 // about collection_places (#1081), so a stub would assert nothing.
 // Plan 3c Task 1: built inside the async `beforeAll` below now — the
@@ -73,18 +82,22 @@ const removeIfUnreferenced = (id: string) => photoCache.removeIfUnreferenced(id)
 // test (`atlas.service.test.ts`/`journey-domain.service.test.ts` precedent) — real
 // repositories resolved off `sharedTestOrm(testDb)` (via `createTestXRepo` helpers,
 // `allowGlobalContext: true` by default, `test-orm.ts`'s own docstring), no
-// `withRequestContext` wrapper needed or added anywhere in this file. `db` (the raw
-// `DatabaseService`) stays a constructor param and is still exercised directly:
-// Part B's methods (saved places CRUD, copy-to-trip, labels-assignment, invites —
-// Task 2's own, unconverted by this task) still issue raw `this.db.prepare(...)`
-// calls the describe blocks below covering them exercise unchanged.
+// `withRequestContext` wrapper needed or added anywhere in this file. Plan 3h Task 2
+// (part B) finished the conversion: `DatabaseService` is GONE from the constructor
+// entirely (savePlace onward was its last use) — the trip/place/tag/user
+// repositories below are Task 2's own additions.
 beforeAll(async () => {
+  tripsRepoForSpy = await createTestTripsRepo(testDb);
+  permissionsForSpy = new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb));
   svc = new CollectionsService(
-    await createTestDatabaseService(testDb),
-    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
+    permissionsForSpy,
     new RealtimeService(), notificationsStub(notifSend), storageFx.storage, await createTestUnitOfWork(testDb),
     await createTestCollectionsRepo(testDb), await createTestCollectionMembersRepo(testDb),
     await createTestCollectionLabelsRepo(testDb), await createTestCategoriesRepo(testDb),
+    await createTestCollectionPlacesRepo(testDb), await createTestCollectionPlaceRatingsRepo(testDb),
+    tripsRepoForSpy, await createTestTripMembersRepo(testDb),
+    await createTestPlacesRepo(testDb), await createTestPlaceRatingsRepo(testDb),
+    await createTestTagsRepo(testDb), await createTestUsersRepo(testDb),
   );
   photoCache = new PlacePhotoCacheService(
     new DatabaseService(testDb),
@@ -1652,5 +1665,120 @@ describe('Plan 3h Task 1 — repository conversion parity', () => {
     expect(targets).toEqual(expect.arrayContaining([accepted.id, pending.id]));
     expect(memberCountAtBroadcastTime.every((n) => n === 0)).toBe(true);
     expect(memberCountAtBroadcastTime.length).toBeGreaterThan(0);
+  });
+});
+
+// ── Plan 3h Task 2 (collections part B) — R6's two-layer order + CL45/CL69 parity ──
+
+describe('Plan 3h Task 2 — R6 two-layer authorization order', () => {
+  it('COLLECTIONS-SVC-210: savePlace refuses on the collection-edit gate BEFORE the trip-access check ever runs', async () => {
+    const owner = createUser(testDb).user;
+    const attacker = createUser(testDb).user;
+    // The attacker has NO role on this list at all (not owner, not a member).
+    const col = await svc.createCollection(owner.id, { name: 'No access' });
+    // A trip/place the ATTACKER genuinely CAN access — if the check order
+    // were reversed (trip-access first), this call would sail straight past
+    // the trip-access check and only be refused later, if at all. The spy is
+    // the brief's own warning made concrete: the final status alone (404,
+    // same as a "trip not found" 404) would not distinguish the two orders —
+    // only proof that the trip-access call never fired does.
+    const attackerTrip = createTrip(testDb, attacker.id);
+    const attackerPlace = createPlace(testDb, attackerTrip.id, { name: 'Mine' });
+
+    const spy = vi.spyOn(tripsRepoForSpy, 'findAccessible');
+    spy.mockClear();
+    try {
+      await svc.savePlace(attacker.id, {
+        collection_id: col.id, name: 'x', source_trip_id: attackerTrip.id, source_place_id: attackerPlace.id,
+      });
+      expect.unreachable('savePlace should have refused');
+    } catch (e) {
+      expect((e as { status: number }).status).toBe(404);
+      expect((e as Error).message).toBe('Collection not found');
+    }
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('COLLECTIONS-SVC-211: copyToTrip checks trip access BEFORE the place_edit permission check — the OPPOSITE order from savePlace', async () => {
+    const owner = createUser(testDb).user;
+    const col = await svc.createCollection(owner.id, { name: 'Copy order' });
+    const cp = (await svc.savePlace(owner.id, { collection_id: col.id, name: 'Somewhere' })).place!;
+    const strangerTrip = createTrip(testDb, createUser(testDb).user.id); // owner has no access to this trip
+
+    const spy = vi.spyOn(permissionsForSpy, 'checkPermission');
+    spy.mockClear();
+    try {
+      await svc.copyToTrip(owner.id, { trip_id: strangerTrip.id, place_ids: [cp.id] });
+      expect.unreachable('copyToTrip should have refused');
+    } catch (e) {
+      expect((e as { status: number }).status).toBe(404);
+      expect((e as Error).message).toBe('Trip not found');
+    }
+    // The permission check is the SECOND layer for this method — never
+    // reached when the first layer (trip access) already refused.
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('COLLECTIONS-SVC-212: copyToTrip into a trip the caller cannot access writes NOTHING into places (CL64/65/66 cross-tenant guard)', async () => {
+    const owner = createUser(testDb).user;
+    const col = await svc.createCollection(owner.id, { name: 'Guard proof' });
+    // The caller can see this collection place perfectly well (they own the
+    // list it lives on) — the guard that matters is the TARGET TRIP, not the
+    // source collection.
+    const cp = (await svc.savePlace(owner.id, { collection_id: col.id, name: 'Guarded' })).place!;
+    const strangerOwner = createUser(testDb).user;
+    const strangerTrip = createTrip(testDb, strangerOwner.id); // owner (the caller) is not on this trip
+
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(strangerTrip.id) as { n: number }).n;
+    await expect(svc.copyToTrip(owner.id, { trip_id: strangerTrip.id, place_ids: [cp.id] })).rejects.toThrow();
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(strangerTrip.id) as { n: number }).n;
+    expect(after).toBe(before); // no places row (CL64), and therefore no place_tags/place_ratings rows either
+  });
+});
+
+describe('Plan 3h Task 2 — CL45/CL69 full-key parity', () => {
+  it('COLLECTIONS-SVC-213: importablePlaces resolves the EARLIEST day for a place assigned to several days (CL45)', async () => {
+    const owner = createUser(testDb).user;
+    const col = await svc.createCollection(owner.id, { name: 'Import parity' });
+    const trip = createTrip(testDb, owner.id);
+    const place = createPlace(testDb, trip.id, { name: 'Multi-day spot' });
+    // Created (and assigned) LATER day first, earlier day second — the
+    // correlated MIN(day_number)/ORDER BY ... LIMIT 1 subqueries must not
+    // accidentally resolve to insertion order or assignment order.
+    const day2 = createDay(testDb, trip.id, { day_number: 2, date: '2024-06-02' });
+    const day1 = createDay(testDb, trip.id, { day_number: 1, date: '2024-06-01' });
+    createDayAssignment(testDb, day2.id, place.id);
+    createDayAssignment(testDb, day1.id, place.id);
+
+    const { places } = await svc.importablePlaces(owner.id, col.id, trip.id);
+    expect(places).toHaveLength(1);
+    expect(places[0].place_id).toBe(place.id);
+    expect(places[0].day_number).toBe(1); // MIN(day_number), not the first assignment written
+    expect(places[0].date).toBe('2024-06-01'); // the SAME earliest day's own date, not day2's
+    expect(places[0].scheduled).toBe(true);
+    expect(places[0].already_in_list).toBe(false);
+  });
+
+  it('COLLECTIONS-SVC-214: findMembership matches BOTH a provider-id-only place and a coordinate-tolerance-only place in the same OR (CL69, rule 23)', async () => {
+    const owner = createUser(testDb).user;
+    const colA = await svc.createCollection(owner.id, { name: 'Provider match' });
+    const colB = await svc.createCollection(owner.id, { name: 'Coord match' });
+    // Matches ONLY by google_place_id — its own coordinates are far from the query's.
+    const byProvider = (await svc.savePlace(owner.id, {
+      collection_id: colA.id, name: 'Provider Place', google_place_id: 'gp-parity-123', lat: 10, lng: 10,
+    })).place!;
+    // Matches ONLY by coordinate tolerance — no provider id of its own at all.
+    const byCoords = (await svc.savePlace(owner.id, {
+      collection_id: colB.id, name: 'Coord Place', lat: 48.8566, lng: 2.3522,
+    })).place!;
+
+    const result = await svc.findMembership(owner.id, { google_place_id: 'gp-parity-123', lat: 48.8566, lng: 2.3522 });
+    expect(result.saved).toBe(true);
+    const placeIds = result.lists.map(l => l.place_id).sort((a, b) => a - b);
+    // Neither branch of the typed OR dropped the other's match: a narrowed
+    // condition set would return only one of these two rows.
+    expect(placeIds).toEqual([byProvider.id, byCoords.id].sort((a, b) => a - b));
   });
 });

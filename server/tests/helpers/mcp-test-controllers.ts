@@ -132,6 +132,7 @@ import {
   createTestDayAccommodationsRepo,
   createTestUsersRepo,
   createTestCollectionsRepo, createTestCollectionMembersRepo, createTestCollectionLabelsRepo,
+  createTestCollectionPlacesRepo, createTestCollectionPlaceRatingsRepo,
 } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from './files-repos';
@@ -436,12 +437,21 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new PlacesMcp(placesService, mapsService, await createTestTripsRepo(dbService.connection), authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(
         new CollectionsService(
-          dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, await createTestUnitOfWork(dbService.connection),
+          permissionsService, realtimeService, notificationsStub(), generalStorage, await createTestUnitOfWork(dbService.connection),
           // Plan 3h Task 1 — the constructor-ripple fix: collections part A's
           // own repositories, first cut, plus the already-DONE
           // `CategoriesRepository` (CL21 reuse).
           await createTestCollectionsRepo(dbService.connection), await createTestCollectionMembersRepo(dbService.connection),
           await createTestCollectionLabelsRepo(dbService.connection), await createTestCategoriesRepo(dbService.connection),
+          // Plan 3h Task 2 — part B's own repositories: `DatabaseService`
+          // dropped entirely (this service's LAST use of it — savePlace
+          // onward is now 100% off `this.db`), the trip/place/tag/user
+          // repositories AP1-AP6's `TripsRepository.findAccessible` calls
+          // and the cross-domain writes need, injected directly.
+          await createTestCollectionPlacesRepo(dbService.connection), await createTestCollectionPlaceRatingsRepo(dbService.connection),
+          await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection),
+          await createTestPlacesRepo(dbService.connection), await createTestPlaceRatingsRepo(dbService.connection),
+          await createTestTagsRepo(dbService.connection), usersRepo,
         ),
         // Plan 3h Task 1 — `CollectionsMcp`'s own constructor-ripple fix:
         // `DatabaseService` dropped (CL89's only use), `UsersRepository`

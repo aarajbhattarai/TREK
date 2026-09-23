@@ -77,6 +77,7 @@ import { makeStorageFixture } from './storage-fixture';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo, sharedTestOrm,
   createTestCollectionsRepo, createTestCollectionMembersRepo, createTestCollectionLabelsRepo,
+  createTestCollectionPlacesRepo, createTestCollectionPlaceRatingsRepo,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo,
@@ -204,12 +205,20 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestPlacesRepo(dbs.connection),
   );
   const collections = new CollectionsService(
-    dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection),
+    permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection),
     // Plan 3h Task 1 — the constructor-ripple fix: collections part A's own
     // repositories, first cut (`CollectionMembersRepository` extended by
     // Task 2), plus the already-DONE `CategoriesRepository` (CL21 reuse).
     await createTestCollectionsRepo(dbs.connection), await createTestCollectionMembersRepo(dbs.connection),
     await createTestCollectionLabelsRepo(dbs.connection), await createTestCategoriesRepo(dbs.connection),
+    // Plan 3h Task 2 — part B's own repositories: `DatabaseService` dropped
+    // entirely (this service's last use of it), the trip/place/tag/user
+    // repositories AP1-AP6's `TripsRepository.findAccessible` calls and the
+    // cross-domain writes need, injected directly.
+    await createTestCollectionPlacesRepo(dbs.connection), await createTestCollectionPlaceRatingsRepo(dbs.connection),
+    await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection),
+    await createTestTagsRepo(dbs.connection), usersRepo,
   );
   const atlas = new AtlasService(
     await createTestBucketListRepo(dbs.connection), await createTestHiddenCountriesRepo(dbs.connection),

@@ -73,4 +73,39 @@ export class PlaceRatingsRepository extends TrekRepository<PlaceRatings> {
   async deleteRating(place_id: number, user_id: number): Promise<void> {
     await this.nativeDelete({ place: place_id, user: user_id });
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 2 (`CollectionsService`) — additive, cross-domain. Flagged in
+  // the task's own report: these touch `place_ratings`, a 3c-owned table,
+  // from the collections cluster's own save/copy surface (#1435 vote carry).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * CL40 (`copyTripRatings`) — `SELECT user_id, rating FROM place_ratings
+   * WHERE place_id=?`. `user_id` is a `persist(false)` relation mirror with
+   * no active join in this statement — Kysely, the program-wide "bare
+   * mirror column silently dropped, with or without a join" trap (3d/3e
+   * ledgers; `listForPlaces`'s own docstring above documents the joined
+   * variant of the same finding).
+   */
+  async listVotesForPlace(place_id: number): Promise<{ user_id: number; rating: number }[]> {
+    return await this.kysely<{ place_ratings: { place_id: number; user_id: number; rating: number } }>()
+      .selectFrom('place_ratings')
+      .select(['user_id', 'rating'])
+      .where('place_id', '=', place_id)
+      .execute();
+  }
+
+  /**
+   * CL66 (`copyToTrip`, PREPARED/looped, TX) — `INSERT OR IGNORE INTO
+   * place_ratings (place_id, user_id, rating) VALUES (?, ?, ?)`. Distinct
+   * from {@link upsertRating}'s `DO UPDATE` shape — a trip member's
+   * existing vote on the destination place (unlikely on a freshly copied
+   * row, but not impossible if the place already existed) is left alone,
+   * `onConflictAction: 'ignore'` on the same `['place', 'user']` composite
+   * unique {@link upsertRating} documents.
+   */
+  async insertIgnore(place_id: number, user_id: number, rating: number): Promise<void> {
+    await this.upsert({ place: place_id, user: user_id, rating }, { onConflictFields: ['place', 'user'], onConflictAction: 'ignore' });
+  }
 }

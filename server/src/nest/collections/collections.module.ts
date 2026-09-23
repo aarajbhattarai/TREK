@@ -3,8 +3,15 @@ import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Collections } from '../../db/entities/Collections.entity';
 import { CollectionMembers } from '../../db/entities/CollectionMembers.entity';
 import { CollectionLabels } from '../../db/entities/CollectionLabels.entity';
+import { CollectionPlaces } from '../../db/entities/CollectionPlaces.entity';
+import { CollectionPlaceRatings } from '../../db/entities/CollectionPlaceRatings.entity';
 import { Categories } from '../../db/entities/Categories.entity';
 import { Users } from '../../db/entities/Users.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { PlaceRatings } from '../../db/entities/PlaceRatings.entity';
+import { Tags } from '../../db/entities/Tags.entity';
 import { CollectionsController } from './collections.controller';
 import { CollectionsService } from './collections.service';
 import { CollectionsRpc } from './collections.rpc';
@@ -42,7 +49,10 @@ import { MAX_COVER_SIZE } from './collections.controller';
     }),
     StorageModule,
     NotificationsModule, AddonsModule, PermissionsModule, AuthModule, AppConfigModule, PluginGuardsModule,
-    MikroOrmModule.forFeature([Collections, CollectionMembers, CollectionLabels, Categories, Users])],
+    MikroOrmModule.forFeature([
+      Collections, CollectionMembers, CollectionLabels, CollectionPlaces, CollectionPlaceRatings,
+      Categories, Users, Trips, TripMembers, Places, PlaceRatings, Tags,
+    ])],
   controllers: [CollectionsController],
   providers: [CollectionsService, CollectionsMcp, CollectionsRpc],
   exports: [CollectionsService],

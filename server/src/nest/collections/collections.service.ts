@@ -1,7 +1,6 @@
 import path from 'path';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { reclaimPlaceImage } from '../places/place-image';
@@ -15,6 +14,22 @@ import { CollectionLabelsRepository } from '../../db/repositories/CollectionLabe
 import { Categories } from '../../db/entities/Categories.entity';
 import type { CategoriesRepository } from '../../db/repositories/Categories.repository';
 import { resolveCollectionRole, type CollectionRole } from '../../db/repositories/_shared/collection-role';
+import { CollectionPlaces } from '../../db/entities/CollectionPlaces.entity';
+import { CollectionPlacesRepository, type CollectionPlaceCopyRow } from '../../db/repositories/CollectionPlaces.repository';
+import { CollectionPlaceRatings } from '../../db/entities/CollectionPlaceRatings.entity';
+import { CollectionPlaceRatingsRepository } from '../../db/repositories/CollectionPlaceRatings.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { PlaceRatings } from '../../db/entities/PlaceRatings.entity';
+import type { PlaceRatingsRepository } from '../../db/repositories/PlaceRatings.repository';
+import { Tags } from '../../db/entities/Tags.entity';
+import type { TagsRepository } from '../../db/repositories/Tags.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import {
   COORD_DEDUP_TOLERANCE,
   externalIdsOf,
@@ -109,7 +124,6 @@ const MAX_LABELS_PER_COLLECTION = 50;
 @Injectable()
 export class CollectionsService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
@@ -119,6 +133,19 @@ export class CollectionsService {
     @InjectRepository(CollectionMembers) private readonly members: CollectionMembersRepository,
     @InjectRepository(CollectionLabels) private readonly labels: CollectionLabelsRepository,
     @InjectRepository(Categories) private readonly categories: CategoriesRepository,
+    // Plan 3h Task 2 (part B) — savePlace onward. `collectionPlaces`/
+    // `collectionPlaceRatings` own this service's own two remaining tables;
+    // `trips`/`tripMembers`/`tripPlaces`/`tripPlaceRatings`/`tags`/`users`
+    // are 3b/3c's, injected directly (AP1-AP6 each become a
+    // `TripsRepository.findAccessible` call, replacing `this.db.canAccessTrip`).
+    @InjectRepository(CollectionPlaces) private readonly collectionPlaces: CollectionPlacesRepository,
+    @InjectRepository(CollectionPlaceRatings) private readonly collectionPlaceRatings: CollectionPlaceRatingsRepository,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
+    @InjectRepository(TripMembers) private readonly tripMembers: TripMembersRepository,
+    @InjectRepository(Places) private readonly tripPlaces: PlacesRepository,
+    @InjectRepository(PlaceRatings) private readonly tripPlaceRatings: PlaceRatingsRepository,
+    @InjectRepository(Tags) private readonly tags: TagsRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
   ) {}
 
   /**
@@ -687,19 +714,16 @@ export class CollectionsService {
     if (!tagIds || tagIds.length === 0) return;
     const unique = [...new Set(tagIds)];
     const eligible = await this.collectionMemberIds(await this.collectionIdOfPlace(collectionPlaceId));
-    const owned = this.db.all<{ id: number; user_id: number }>(
-      `SELECT id, user_id FROM tags WHERE id IN (${unique.map(() => '?').join(',')})`,
-      ...unique,
-    );
-    const stmt = this.db.prepare('INSERT OR IGNORE INTO collection_place_tags (collection_place_id, tag_id) VALUES (?, ?)');
-    for (const t of owned) if (eligible.has(t.user_id)) stmt.run(collectionPlaceId, t.id);
+    const owned = await this.tags.findByIds(unique);
+    const eligibleTagIds = owned.filter(t => eligible.has(t.user_id)).map(t => t.id);
+    await this.collectionPlaces.attachTags(collectionPlaceId, eligibleTagIds);
   }
 
   /** Owner + accepted members — the users whose votes may live in this list. */
   private async collectionMemberIds(collectionId: number): Promise<Set<number>> {
     const ids = new Set<number>([await this.ownerOf(collectionId)]);
-    const rows = this.db.all<{ user_id: number }>("SELECT user_id FROM collection_members WHERE collection_id = ? AND status = 'accepted'", collectionId);
-    rows.forEach(r => ids.add(r.user_id));
+    const accepted = await this.members.acceptedUserIds(collectionId);
+    accepted.forEach(id => ids.add(id));
     return ids;
   }
 
@@ -710,10 +734,9 @@ export class CollectionsService {
    */
   private async copyTripRatings(sourcePlaceId: number, collectionPlaceId: number, collectionId: number): Promise<void> {
     const eligible = await this.collectionMemberIds(collectionId);
-    const rows = this.db.all<{ user_id: number; rating: number }>('SELECT user_id, rating FROM place_ratings WHERE place_id = ?', sourcePlaceId);
-    const ins = this.db.prepare('INSERT OR IGNORE INTO collection_place_ratings (collection_place_id, user_id, rating) VALUES (?, ?, ?)');
+    const rows = await this.tripPlaceRatings.listVotesForPlace(sourcePlaceId);
     for (const r of rows) {
-      if (eligible.has(r.user_id)) ins.run(collectionPlaceId, r.user_id, r.rating);
+      if (eligible.has(r.user_id)) await this.collectionPlaceRatings.insertIgnoreRating(collectionPlaceId, r.user_id, r.rating);
     }
   }
 
@@ -732,33 +755,28 @@ export class CollectionsService {
     // Insert + tags + ratings-copy are one logical write — atomic since the
     // post-fold quirk pass (the relocation carried them un-transacted).
     const placeId = await this.uow.transactional(async () => {
-      const result = this.db.run(`
-    INSERT INTO collection_places (
-      collection_id, owner_id, saved_by, name, description, lat, lng, address,
-      category_id, price, currency, notes, image_url, google_place_id, google_ftid,
-      osm_id, website, phone, status, source_trip_id, source_place_id, links
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `,
-        body.collection_id, ownerId, userId,
-        body.name, body.description ?? null, body.lat ?? null, body.lng ?? null, body.address ?? null,
-        body.category_id ?? null, body.price ?? null, body.currency ?? null, body.notes ?? null,
-        body.image_url ?? null, body.google_place_id ?? null, body.google_ftid ?? null,
-        body.osm_id ?? null, body.website ?? null, body.phone ?? null,
-        body.status ?? 'idea', body.source_trip_id ?? null, body.source_place_id ?? null,
-        serializeLinks(body.links),
-      );
+      const id = await this.collectionPlaces.insertSavedPlace({
+        collection_id: body.collection_id, owner_id: ownerId, saved_by: userId,
+        name: body.name, description: body.description ?? null, lat: body.lat ?? null, lng: body.lng ?? null, address: body.address ?? null,
+        category_id: body.category_id ?? null, price: body.price ?? null, currency: body.currency ?? null, notes: body.notes ?? null,
+        image_url: body.image_url ?? null, google_place_id: body.google_place_id ?? null, google_ftid: body.google_ftid ?? null,
+        osm_id: body.osm_id ?? null, website: body.website ?? null, phone: body.phone ?? null,
+        status: body.status ?? 'idea', source_trip_id: body.source_trip_id ?? null, source_place_id: body.source_place_id ?? null,
+        links: serializeLinks(body.links),
+      });
 
-      const id = Number(result.lastInsertRowid);
       await this.attachTags(id, body.tag_ids);
       // Carry trip ratings ONLY when the caller can actually see the source place.
       // source_place_id/source_trip_id are raw client input, so verify trip access +
       // that the place lives in that trip before reading place_ratings — otherwise a
       // member could harvest co-members' votes on places in trips they cannot access
-      // (mirrors the canAccessTrip gate in saveFromTripPlace).
+      // (mirrors the canAccessTrip gate in saveFromTripPlace). R6's two-layer order:
+      // assertCanEdit (this method's own entry guard, above) ran FIRST; the trip-access
+      // check (AP1) runs SECOND, here, inside the write path — never reversed.
       if (
         body.source_place_id && body.source_trip_id &&
-        (await this.db.canAccessTrip(body.source_trip_id, userId)) &&
-        this.db.get('SELECT 1 FROM places WHERE id = ? AND trip_id = ?', body.source_place_id, body.source_trip_id)
+        (await this.trips.findAccessible(body.source_trip_id, userId)) &&
+        (await this.tripPlaces.existsInTrip(body.source_place_id, body.source_trip_id))
       ) {
         await this.copyTripRatings(body.source_place_id, id, body.collection_id);
       }
@@ -772,28 +790,28 @@ export class CollectionsService {
     userId: number, collectionId: number, tripId: number, placeId: number, force?: boolean, socketId?: string,
   ): Promise<CollectionSaveResult> {
     await this.assertCanEdit(userId, collectionId);
-    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
+    if (!(await this.trips.findAccessible(tripId, userId))) httpError(404, 'Trip not found');
 
-    const place = this.db.get<Record<string, unknown>>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+    const place = await this.tripPlaces.findInTrip(placeId, tripId);
     if (!place) httpError(404, 'Place not found');
 
     return this.savePlace(userId, {
       collection_id: collectionId,
-      name: place.name as string,
-      description: (place.description as string | null) ?? null,
-      lat: (place.lat as number | null) ?? null,
-      lng: (place.lng as number | null) ?? null,
-      address: (place.address as string | null) ?? null,
-      category_id: (place.category_id as number | null) ?? null,
-      price: (place.price as number | null) ?? null,
-      currency: (place.currency as string | null) ?? null,
-      notes: (place.notes as string | null) ?? null,
-      image_url: (place.image_url as string | null) ?? null,
-      google_place_id: (place.google_place_id as string | null) ?? null,
-      google_ftid: (place.google_ftid as string | null) ?? null,
-      osm_id: (place.osm_id as string | null) ?? null,
-      website: (place.website as string | null) ?? null,
-      phone: (place.phone as string | null) ?? null,
+      name: place.name,
+      description: place.description ?? null,
+      lat: place.lat ?? null,
+      lng: place.lng ?? null,
+      address: place.address ?? null,
+      category_id: place.category_id ?? null,
+      price: place.price ?? null,
+      currency: place.currency ?? null,
+      notes: place.notes ?? null,
+      image_url: place.image_url ?? null,
+      google_place_id: place.google_place_id ?? null,
+      google_ftid: place.google_ftid ?? null,
+      osm_id: place.osm_id ?? null,
+      website: place.website ?? null,
+      phone: place.phone ?? null,
       source_trip_id: tripId,
       source_place_id: placeId,
       force,
@@ -810,28 +828,11 @@ export class CollectionsService {
    *  what this import exists for, so the dialog pre-selects them. */
   async importablePlaces(userId: number, collectionId: number, tripId: number): Promise<CollectionImportablesResponse> {
     await this.assertCanEdit(userId, collectionId);
-    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
+    if (!(await this.trips.findAccessible(tripId, userId))) httpError(404, 'Trip not found');
 
     // One row per place: a place can sit on several days, so the day columns resolve to the
     // earliest one rather than multiplying the place out across its assignments.
-    const rows = this.db.all<{
-      place_id: number; name: string; address: string | null; lat: number | null; lng: number | null;
-      category_id: number | null; image_url: string | null; day_number: number | null; date: string | null;
-      google_place_id: string | null; google_ftid: string | null; osm_id: string | null;
-    }>(`
-      SELECT p.id AS place_id, p.name, p.address, p.lat, p.lng, p.category_id, p.image_url,
-             p.google_place_id, p.google_ftid, p.osm_id,
-             (SELECT MIN(d.day_number) FROM day_assignments da
-                JOIN days d ON d.id = da.day_id
-               WHERE da.place_id = p.id AND d.trip_id = p.trip_id) AS day_number,
-             (SELECT d.date FROM day_assignments da
-                JOIN days d ON d.id = da.day_id
-               WHERE da.place_id = p.id AND d.trip_id = p.trip_id
-               ORDER BY d.day_number ASC LIMIT 1) AS date
-        FROM places p
-       WHERE p.trip_id = ?
-       ORDER BY p.name COLLATE NOCASE
-    `, tripId);
+    const rows = await this.tripPlaces.listImportable(tripId);
 
     const places: CollectionImportablesResponse['places'] = [];
     for (const r of rows) {
@@ -853,48 +854,45 @@ export class CollectionsService {
     userId: number, collectionId: number, tripId: number, placeIds: number[], force?: boolean, socketId?: string,
   ): Promise<{ copied: number; skipped: { id: number; name: string }[] }> {
     await this.assertCanEdit(userId, collectionId);
-    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
+    if (!(await this.trips.findAccessible(tripId, userId))) httpError(404, 'Trip not found');
 
     const ownerId = await this.ownerOf(collectionId);
-    const insert = this.db.prepare(`
-    INSERT INTO collection_places (
-      collection_id, owner_id, saved_by, name, description, lat, lng, address,
-      category_id, price, currency, notes, image_url, google_place_id, google_ftid,
-      osm_id, website, phone, status, source_trip_id, source_place_id, links
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'idea', ?, ?, NULL)
-  `);
     let copied = 0;
     const skipped: { id: number; name: string }[] = [];
     // The whole batch is one logical write — atomic since the post-fold quirk pass.
     await this.uow.transactional(async () => {
       for (const placeId of placeIds) {
-        const p = this.db.get<Record<string, unknown>>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+        const p = await this.tripPlaces.findInTrip(placeId, tripId);
         if (!p) continue;
-        const name = p.name as string;
-        const lat = (p.lat as number | null) ?? null;
-        const lng = (p.lng as number | null) ?? null;
+        const name = p.name;
+        const lat = p.lat ?? null;
+        const lng = p.lng ?? null;
         // The provider ids go with it: they are already carried into the insert
         // below, so leaving them out here would recognise less than the row that
         // gets written knows about.
         const candidate = {
           name, lat, lng,
-          google_place_id: (p.google_place_id as string | null) ?? null,
-          google_ftid: (p.google_ftid as string | null) ?? null,
-          osm_id: (p.osm_id as string | null) ?? null,
+          google_place_id: p.google_place_id ?? null,
+          google_ftid: p.google_ftid ?? null,
+          osm_id: p.osm_id ?? null,
         };
         if (!force && await this.findDuplicateCollectionPlace(collectionId, candidate)) {
           skipped.push({ id: placeId, name });
           continue;
         }
-        const res = insert.run(
-          collectionId, ownerId, userId,
-          name, (p.description as string | null) ?? null, lat, lng, (p.address as string | null) ?? null,
-          (p.category_id as number | null) ?? null, (p.price as number | null) ?? null, (p.currency as string | null) ?? null, (p.notes as string | null) ?? null,
-          (p.image_url as string | null) ?? null, (p.google_place_id as string | null) ?? null, (p.google_ftid as string | null) ?? null,
-          (p.osm_id as string | null) ?? null, (p.website as string | null) ?? null, (p.phone as string | null) ?? null,
-          tripId, placeId,
-        );
-        await this.copyTripRatings(placeId, Number(res.lastInsertRowid), collectionId);
+        // Same 22-column insert shape as `savePlace` (CL42), with `status`/`links`
+        // hardcoded ('idea'/null) exactly the way the legacy statement bound them
+        // as literals rather than placeholders — see `insertSavedPlace`'s own
+        // docstring for why this is the SAME method, not a second insert shape.
+        const newId = await this.collectionPlaces.insertSavedPlace({
+          collection_id: collectionId, owner_id: ownerId, saved_by: userId,
+          name, description: p.description ?? null, lat, lng, address: p.address ?? null,
+          category_id: p.category_id ?? null, price: p.price ?? null, currency: p.currency ?? null, notes: p.notes ?? null,
+          image_url: p.image_url ?? null, google_place_id: p.google_place_id ?? null, google_ftid: p.google_ftid ?? null,
+          osm_id: p.osm_id ?? null, website: p.website ?? null, phone: p.phone ?? null,
+          status: 'idea', source_trip_id: tripId, source_place_id: placeId, links: null,
+        });
+        await this.copyTripRatings(placeId, newId, collectionId);
         copied++;
       }
     });
@@ -908,48 +906,41 @@ export class CollectionsService {
 
     // Capture the previous thumbnail so a replaced/cleared custom upload (#1136)
     // can be reclaimed once nothing references it any more.
-    const prevImage = body.image_url !== undefined
-      ? this.db.get<{ image_url: string | null }>('SELECT image_url FROM collection_places WHERE id = ?', placeId)?.image_url ?? null
-      : null;
+    const prevImage = body.image_url !== undefined ? (await this.collectionPlaces.imageUrl(placeId)) ?? null : null;
 
-    const updates: string[] = [];
-    const params: (string | number | null)[] = [];
-    if (body.name !== undefined) { updates.push('name = ?'); params.push(body.name); }
-    if (body.description !== undefined) { updates.push('description = ?'); params.push(body.description ?? null); }
-    if (body.notes !== undefined) { updates.push('notes = ?'); params.push(body.notes ?? null); }
-    if (body.lat !== undefined) { updates.push('lat = ?'); params.push(body.lat ?? null); }
-    if (body.lng !== undefined) { updates.push('lng = ?'); params.push(body.lng ?? null); }
-    if (body.address !== undefined) { updates.push('address = ?'); params.push(body.address ?? null); }
-    if (body.status !== undefined) { updates.push('status = ?'); params.push(body.status); }
-    if (body.category_id !== undefined) { updates.push('category_id = ?'); params.push(body.category_id ?? null); }
-    if (body.image_url !== undefined) { updates.push('image_url = ?'); params.push(body.image_url ?? null); }
-    if (body.links !== undefined) { updates.push('links = ?'); params.push(serializeLinks(body.links)); }
+    const write: Parameters<CollectionPlacesRepository['updateFields']>[1] = {};
+    if (body.name !== undefined) write.name = body.name;
+    if (body.description !== undefined) write.description = body.description ?? null;
+    if (body.notes !== undefined) write.notes = body.notes ?? null;
+    if (body.lat !== undefined) write.lat = body.lat ?? null;
+    if (body.lng !== undefined) write.lng = body.lng ?? null;
+    if (body.address !== undefined) write.address = body.address ?? null;
+    if (body.status !== undefined) write.status = body.status;
+    if (body.category_id !== undefined) write.category_id = body.category_id ?? null;
+    if (body.image_url !== undefined) write.image_url = body.image_url ?? null;
+    if (body.links !== undefined) write.links = serializeLinks(body.links);
 
     let movedTo: number | null = null;
     if (body.collection_id !== undefined && body.collection_id !== currentCollection) {
       await this.assertCanEdit(userId, body.collection_id);
-      updates.push('collection_id = ?'); params.push(body.collection_id);
-      updates.push('owner_id = ?'); params.push(await this.ownerOf(body.collection_id));
+      write.collection_id = body.collection_id;
+      write.owner_id = await this.ownerOf(body.collection_id);
       movedTo = body.collection_id;
     }
 
     // Field update + tag rewrite + label rewrite are one logical write — atomic
     // since the post-fold quirk pass.
     await this.uow.transactional(async () => {
-      if (updates.length > 0) {
-        updates.push("updated_at = CURRENT_TIMESTAMP");
-        params.push(placeId);
-        this.db.run(`UPDATE collection_places SET ${updates.join(', ')} WHERE id = ?`, ...params);
-      }
+      await this.collectionPlaces.updateFields(placeId, write);
 
       if (body.tag_ids !== undefined) {
-        this.db.run('DELETE FROM collection_place_tags WHERE collection_place_id = ?', placeId);
+        await this.collectionPlaces.deleteTags(placeId);
         await this.attachTags(placeId, body.tag_ids);
       }
 
       // Labels are collection-scoped: a move invalidates the source list's labels;
       // a provided label_ids set replaces them against the (target) collection.
-      if (movedTo) this.db.run('DELETE FROM collection_place_labels WHERE collection_place_id = ?', placeId);
+      if (movedTo) await this.collectionPlaces.deleteLabelAssignments(placeId);
       if (body.label_ids !== undefined) await this.setPlaceLabels(placeId, movedTo ?? currentCollection, body.label_ids);
     });
 
@@ -965,7 +956,7 @@ export class CollectionsService {
   async setStatus(userId: number, placeId: number, status: CollectionStatus, socketId?: string): Promise<CollectionPlace> {
     const collectionId = await this.collectionIdOfPlace(placeId);
     await this.assertCanEdit(userId, collectionId);
-    this.db.run("UPDATE collection_places SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", status, placeId);
+    await this.collectionPlaces.setStatus(placeId, status);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
   }
@@ -979,12 +970,9 @@ export class CollectionsService {
     const collectionId = await this.collectionIdOfPlace(placeId);
     await this.assertAccess(userId, collectionId);
     if (rating === null) {
-      this.db.run('DELETE FROM collection_place_ratings WHERE collection_place_id = ? AND user_id = ?', placeId, userId);
+      await this.collectionPlaceRatings.deleteRating(placeId, userId);
     } else {
-      this.db.run(`
-      INSERT INTO collection_place_ratings (collection_place_id, user_id, rating) VALUES (?, ?, ?)
-      ON CONFLICT(collection_place_id, user_id) DO UPDATE SET rating = excluded.rating
-    `, placeId, userId, rating);
+      await this.collectionPlaceRatings.upsertRating(placeId, userId, rating);
     }
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
@@ -993,8 +981,8 @@ export class CollectionsService {
   async deletePlace(userId: number, placeId: number, socketId?: string): Promise<void> {
     const collectionId = await this.collectionIdOfPlace(placeId);
     await this.assertCanDelete(userId, collectionId);
-    const image = this.db.get<{ image_url: string | null }>('SELECT image_url FROM collection_places WHERE id = ?', placeId)?.image_url ?? null;
-    this.db.run('DELETE FROM collection_places WHERE id = ?', placeId); // CASCADE drops tags. NO photo-cache reclaim.
+    const image = (await this.collectionPlaces.imageUrl(placeId)) ?? null;
+    await this.collectionPlaces.deleteById(placeId); // CASCADE drops tags. NO photo-cache reclaim.
     await reclaimPlaceImage(this.storage, image);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
   }
@@ -1010,12 +998,12 @@ export class CollectionsService {
     for (const id of ids) {
       const collectionId = await this.collectionIdOfPlace(id);
       await this.assertCanDelete(userId, collectionId);
-      images.push(this.db.get<{ image_url: string | null }>('SELECT image_url FROM collection_places WHERE id = ?', id)?.image_url ?? null);
+      images.push((await this.collectionPlaces.imageUrl(id)) ?? null);
       touched.add(collectionId);
     }
     await this.uow.transactional(async () => {
       for (const id of ids) {
-        this.db.run('DELETE FROM collection_places WHERE id = ?', id);
+        await this.collectionPlaces.deleteById(id);
         deleted.push(id);
       }
     });
@@ -1042,11 +1030,7 @@ export class CollectionsService {
     let updated = 0;
     await this.uow.transactional(async () => {
       for (const id of ids) {
-        const res = this.db.run(
-          "UPDATE collection_places SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status IS NOT ?",
-          status, id, status,
-        );
-        updated += res.changes;
+        updated += await this.collectionPlaces.setStatusIfChanged(id, status);
       }
     });
     if (updated > 0) for (const cid of touched) await this.notifyCollectionUsers(cid, socketId, 'collections:updated');
@@ -1070,14 +1054,9 @@ export class CollectionsService {
     status: CollectionStatus,
     socketId?: string,
   ): Promise<{ updated: number; places: number }> {
-    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
+    if (!(await this.trips.findAccessible(tripId, userId))) httpError(404, 'Trip not found');
 
-    const sources = placeIds.length
-      ? this.db.all<{ id: number; name: string; lat: number | null; lng: number | null; google_place_id: string | null; google_ftid: string | null; osm_id: string | null }>(`
-        SELECT id, name, lat, lng, google_place_id, google_ftid, osm_id
-        FROM places WHERE trip_id = ? AND id IN (${placeIds.map(() => '?').join(',')})
-      `, tripId, ...placeIds)
-      : [];
+    const sources = placeIds.length ? await this.tripPlaces.listByTripAndIds(tripId, placeIds) : [];
     if (sources.length === 0) return { updated: 0, places: 0 };
 
     const editable: number[] = [];
@@ -1113,27 +1092,15 @@ export class CollectionsService {
     tripId: number,
     place: { id: number; lat: number | null; lng: number | null; google_place_id: string | null; google_ftid: string | null; osm_id: string | null },
   ): Promise<Array<{ id: number }>> {
-    const conditions: string[] = ['(cp.source_trip_id = ? AND cp.source_place_id = ?)'];
-    const params: (string | number)[] = [...collectionIds, tripId, place.id];
-    if (place.google_place_id) { conditions.push('cp.google_place_id = ?'); params.push(place.google_place_id); }
-    if (place.google_ftid) { conditions.push('cp.google_ftid = ?'); params.push(place.google_ftid); }
-    if (place.osm_id) { conditions.push('cp.osm_id = ?'); params.push(place.osm_id); }
-    if (place.lat != null && place.lng != null) {
-      conditions.push('(cp.lat IS NOT NULL AND cp.lng IS NOT NULL AND abs(cp.lat - ?) <= ? AND abs(cp.lng - ?) <= ?)');
-      params.push(place.lat, COORD_DEDUP_TOLERANCE, place.lng, COORD_DEDUP_TOLERANCE);
-    }
-    return this.db.all<{ id: number }>(`
-      SELECT cp.id FROM collection_places cp
-      WHERE cp.collection_id IN (${collectionIds.map(() => '?').join(',')}) AND (${conditions.join(' OR ')})
-    `, ...params);
+    return this.collectionPlaces.matchingByTripSource(collectionIds, tripId, place, COORD_DEDUP_TOLERANCE);
   }
 
   /** Set (or clear) a saved place's custom thumbnail, reclaiming the previous upload. */
   async setPlaceImage(userId: number, placeId: number, imageUrl: string | null, socketId?: string): Promise<CollectionPlace> {
     const collectionId = await this.collectionIdOfPlace(placeId);
     await this.assertCanEdit(userId, collectionId);
-    const prev = this.db.get<{ image_url: string | null }>('SELECT image_url FROM collection_places WHERE id = ?', placeId)?.image_url ?? null;
-    this.db.run('UPDATE collection_places SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', imageUrl, placeId);
+    const prev = (await this.collectionPlaces.imageUrl(placeId)) ?? null;
+    await this.collectionPlaces.setImageUrl(placeId, imageUrl);
     if (prev !== imageUrl) await reclaimPlaceImage(this.storage, prev);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
@@ -1144,9 +1111,12 @@ export class CollectionsService {
   // -------------------------------------------------------------------------
 
   async copyToTrip(userId: number, body: CollectionCopyToTripRequest): Promise<{ copied: number; skipped: { id: number; name: string }[] }> {
-    const trip = await this.db.canAccessTrip(body.trip_id, userId);
+    // R6's OPPOSITE order from `savePlace`: trip access (AP6, this method's own
+    // entry guard) FIRST, then the `place_edit` permission check SECOND — each
+    // method preserves its OWN legacy order independently, never forced to match.
+    const trip = await this.trips.findAccessible(body.trip_id, userId);
     if (!trip) httpError(404, 'Trip not found');
-    const role = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId)?.role ?? 'user';
+    const role = (await this.users.getRole(userId)) ?? 'user';
     if (!(await this.permissions.checkPermission('place_edit', role, trip.user_id, userId, trip.user_id !== userId))) {
       httpError(403, 'Not allowed to edit this trip');
     }
@@ -1155,21 +1125,14 @@ export class CollectionsService {
     // so copying never surfaces a collection member with no tie to the trip.
     // Symmetric with copyTripRatings' collection-member filter (#1435).
     const tripMemberIds = new Set<number>([trip.user_id]);
-    for (const r of this.db.all<{ user_id: number }>('SELECT user_id FROM trip_members WHERE trip_id = ?', body.trip_id)) {
-      tripMemberIds.add(r.user_id);
+    for (const memberId of await this.tripMembers.listUserIdsByTrip(body.trip_id)) {
+      tripMemberIds.add(memberId);
     }
 
     // Visibility on every SOURCE place — no cross-user exfiltration via copy.
-    const sources: Array<{ id: number; name: string; description: string | null; lat: number | null; lng: number | null;
-      address: string | null; category_id: number | null; price: number | null; currency: string | null;
-      notes: string | null; image_url: string | null; google_place_id: string | null; google_ftid: string | null;
-      osm_id: string | null; website: string | null; phone: string | null; collection_id: number }> = [];
+    const sources: CollectionPlaceCopyRow[] = [];
     for (const pid of body.place_ids) {
-      const row = this.db.get<(typeof sources)[number]>(`
-      SELECT id, collection_id, name, description, lat, lng, address, category_id, price, currency,
-             notes, image_url, google_place_id, google_ftid, osm_id, website, phone
-      FROM collection_places WHERE id = ?
-    `, pid);
+      const row = await this.collectionPlaces.findForCopy(pid);
       if (!row) httpError(404, 'Place not found');
       await this.assertAccess(userId, row.collection_id);
       sources.push(row);
@@ -1177,24 +1140,13 @@ export class CollectionsService {
 
     // Trip dedup set — same helpers the importers use, so a place renamed in the
     // trip is still recognised by its provider id when it is copied again (#1550).
-    const existing = this.db.all<{
-      name: string | null; lat: number | null; lng: number | null;
-      google_place_id: string | null; google_ftid: string | null; osm_id: string | null;
-    }>('SELECT name, lat, lng, google_place_id, google_ftid, osm_id FROM places WHERE trip_id = ?', body.trip_id);
+    const existing = await this.tripPlaces.dedupCandidatesForTrip(body.trip_id);
     const dedup: DedupSet = { names: new Set(), coords: [], externalIds: new Set() };
     for (const r of existing) {
       for (const id of externalIdsOf(r)) dedup.externalIds.add(id);
       if (r.name) dedup.names.add(r.name.trim().toLowerCase());
       else if (r.lat != null && r.lng != null) dedup.coords.push({ lat: r.lat, lng: r.lng });
     }
-
-    const insertPlace = this.db.prepare(`
-    INSERT INTO places (trip_id, name, description, lat, lng, address, category_id, price,
-      currency, notes, image_url, google_place_id, google_ftid, website, phone, osm_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-    const insertTag = this.db.prepare('INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)');
-    const insertRating = this.db.prepare('INSERT OR IGNORE INTO place_ratings (place_id, user_id, rating) VALUES (?, ?, ?)');
 
     let copied = 0;
     const skipped: { id: number; name: string }[] = [];
@@ -1208,18 +1160,22 @@ export class CollectionsService {
           skipped.push({ id: s.id, name: s.name });
           continue;
         }
-        const res = insertPlace.run(
-          body.trip_id, s.name, s.description, s.lat, s.lng, s.address, s.category_id, s.price,
-          s.currency, s.notes, s.image_url, s.google_place_id, s.google_ftid, s.website, s.phone, s.osm_id,
-        );
-        const newPlaceId = Number(res.lastInsertRowid);
-        const tagIds = this.db.all<{ tag_id: number }>('SELECT tag_id FROM collection_place_tags WHERE collection_place_id = ?', s.id);
-        for (const t of tagIds) insertTag.run(newPlaceId, t.tag_id);
+        // CL64 — cross-domain WRITE into 3c's `places`, gated by the trip-access +
+        // permission checks above (the cross-tenant guard: a caller who can see
+        // the collection place but not the target trip never reaches this write).
+        const newPlaceId = await this.tripPlaces.insertFromCollectionPlace({
+          trip_id: body.trip_id, name: s.name, description: s.description, lat: s.lat, lng: s.lng,
+          address: s.address, category_id: s.category_id, price: s.price, currency: s.currency,
+          notes: s.notes, image_url: s.image_url, google_place_id: s.google_place_id, google_ftid: s.google_ftid,
+          website: s.website, phone: s.phone, osm_id: s.osm_id,
+        });
+        const tagIds = await this.collectionPlaces.tagIdsFor(s.id);
+        await this.tags.insertIgnore(newPlaceId, tagIds);
         // Ratings travel into the trip too (#1435), but only for trip members — a
         // collection voter who isn't on the trip stays out of it. Trip members keep
         // voting there; nothing is mirrored back.
-        const votes = this.db.all<{ user_id: number; rating: number }>('SELECT user_id, rating FROM collection_place_ratings WHERE collection_place_id = ?', s.id);
-        for (const v of votes) if (tripMemberIds.has(v.user_id)) insertRating.run(newPlaceId, v.user_id, v.rating);
+        const votes = await this.collectionPlaceRatings.listForPlace(s.id);
+        for (const v of votes) if (tripMemberIds.has(v.user_id)) await this.tripPlaceRatings.insertIgnore(newPlaceId, v.user_id, v.rating);
 
         trackInsertedInDedupSet(s, dedup);
         copied++;
@@ -1238,29 +1194,15 @@ export class CollectionsService {
   ): Promise<CollectionMembership> {
     const ids = await this.accessibleCollectionIds(userId);
     if (ids.length === 0) return { saved: false, lists: [] };
-    const placeholders = ids.map(() => '?').join(',');
 
-    const conditions: string[] = [];
-    const params: (string | number)[] = [...ids];
-    if (query.google_place_id) { conditions.push('cp.google_place_id = ?'); params.push(query.google_place_id); }
-    if (query.google_ftid) { conditions.push('cp.google_ftid = ?'); params.push(query.google_ftid); }
     // Coordinate proximity is the location signal. A bare NAME match is deliberately
     // NOT a condition on its own — "Starbucks" (or any repeated name) would otherwise
     // false-positive the inspector's "already saved" bookmark. When coords are given
     // the name still effectively matches via the same-location row below; without an
     // id or coords there is nothing strong enough to claim it's the same place.
-    if (query.lat != null && query.lng != null) {
-      conditions.push('(cp.lat IS NOT NULL AND cp.lng IS NOT NULL AND abs(cp.lat - ?) <= ? AND abs(cp.lng - ?) <= ?)');
-      params.push(query.lat, COORD_DEDUP_TOLERANCE, query.lng, COORD_DEDUP_TOLERANCE);
-    }
-    if (conditions.length === 0) return { saved: false, lists: [] };
-
-    const rows = this.db.all<{ place_id: number; collection_id: number; name: string; status: CollectionStatus }>(`
-    SELECT cp.id AS place_id, cp.collection_id, c.name, cp.status
-    FROM collection_places cp
-    JOIN collections c ON c.id = cp.collection_id
-    WHERE cp.collection_id IN (${placeholders}) AND (${conditions.join(' OR ')})
-  `, ...params);
+    // RULE 23: `searchMembership` builds this OR as typed Kysely expressions, never
+    // a string-built WHERE — `query.name` plays no part in the SQL either way.
+    const rows = await this.collectionPlaces.searchMembership(ids, query, COORD_DEDUP_TOLERANCE);
 
     const lists: CollectionMembership['lists'] = [];
     for (const r of rows) {
@@ -1269,7 +1211,7 @@ export class CollectionsService {
         collection_id: r.collection_id,
         name: r.name,
         place_id: r.place_id,
-        status: r.status ?? 'idea',
+        status: (r.status as CollectionStatus) ?? 'idea',
         can_edit: role !== null && role !== 'viewer',
       });
     }
@@ -1285,11 +1227,11 @@ export class CollectionsService {
     excludeSid: string | undefined,
     event: 'collections:updated' | 'collections:accepted' | 'collections:declined' | 'collections:left' = 'collections:updated',
   ): Promise<void> {
-    const owner = this.db.get<{ owner_id: number }>('SELECT owner_id FROM collections WHERE id = ?', collectionId);
-    if (!owner) return;
-    const userIds = [owner.owner_id];
-    const members = this.db.all<{ user_id: number }>("SELECT user_id FROM collection_members WHERE collection_id = ? AND status = 'accepted'", collectionId);
-    members.forEach(m => userIds.push(m.user_id));
+    const ownerId = await this.collectionsRepo.ownerId(collectionId);
+    if (ownerId === undefined) return;
+    const userIds = [ownerId];
+    const members = await this.members.acceptedUserIds(collectionId);
+    members.forEach(id => userIds.push(id));
     userIds.forEach(id => this.realtime.broadcastToUser(id, { type: event, collectionId }, excludeSid));
   }
 
@@ -1300,59 +1242,53 @@ export class CollectionsService {
   // -------------------------------------------------------------------------
 
   private async collectionIdOfLabel(labelId: number): Promise<number> {
-    const row = this.db.get<{ collection_id: number }>('SELECT collection_id FROM collection_labels WHERE id = ?', labelId);
-    if (!row) httpError(404, 'Label not found');
-    return row.collection_id;
+    const collectionId = await this.labels.collectionIdOf(labelId);
+    if (collectionId === undefined) httpError(404, 'Label not found');
+    return collectionId;
   }
 
   private async getLabelById(labelId: number): Promise<CollectionLabel> {
-    return this.db.get<CollectionLabel>('SELECT id, collection_id, name, color, sort_order FROM collection_labels WHERE id = ?', labelId) as CollectionLabel;
+    return (await this.labels.findById(labelId)) as CollectionLabel;
   }
 
   /** Replace a place's label assignments, keeping only labels of `collectionId`. */
   private async setPlaceLabels(placeId: number, collectionId: number, labelIds: number[]): Promise<void> {
-    this.db.run('DELETE FROM collection_place_labels WHERE collection_place_id = ?', placeId);
+    await this.collectionPlaces.deleteLabelAssignments(placeId);
     if (labelIds.length === 0) return;
     const valid = new Set((await this.loadLabelsByCollection(collectionId)).map(l => l.id));
-    const stmt = this.db.prepare('INSERT OR IGNORE INTO collection_place_labels (collection_place_id, label_id) VALUES (?, ?)');
-    for (const id of labelIds) if (valid.has(id)) stmt.run(placeId, id);
+    for (const id of labelIds) if (valid.has(id)) await this.collectionsRepo.assignPlaceLabel(placeId, id);
   }
 
   async createLabel(userId: number, collectionId: number, name: string, color?: string, socketId?: string): Promise<CollectionLabel> {
     await this.assertCanEdit(userId, collectionId);
     const trimmed = name.trim();
     if (!trimmed) httpError(400, 'Label name is required');
-    const count = this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM collection_labels WHERE collection_id = ?', collectionId)!.n;
+    const count = await this.labels.countByCollection(collectionId);
     if (count >= MAX_LABELS_PER_COLLECTION) httpError(400, `A list can have at most ${MAX_LABELS_PER_COLLECTION} labels`);
-    if (this.db.get('SELECT 1 FROM collection_labels WHERE collection_id = ? AND lower(name) = lower(?)', collectionId, trimmed)) {
+    if (await this.labels.nameExists(collectionId, trimmed)) {
       httpError(409, 'A label with this name already exists');
     }
-    const nextSort = this.db.get<{ m: number }>('SELECT COALESCE(MAX(sort_order), -1) AS m FROM collection_labels WHERE collection_id = ?', collectionId)!.m + 1;
-    const res = this.db.run('INSERT INTO collection_labels (collection_id, name, color, sort_order) VALUES (?, ?, ?, ?)',
-      collectionId, trimmed, color ?? '#6366f1', nextSort);
+    const nextSort = (await this.labels.maxSortOrder(collectionId)) + 1;
+    const newId = await this.labels.insertLabel({ collection_id: collectionId, name: trimmed, color: color ?? '#6366f1', sort_order: nextSort });
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
-    return this.getLabelById(Number(res.lastInsertRowid));
+    return this.getLabelById(newId);
   }
 
   async updateLabel(userId: number, labelId: number, body: { name?: string; color?: string; sort_order?: number }, socketId?: string): Promise<CollectionLabel> {
     const collectionId = await this.collectionIdOfLabel(labelId);
     await this.assertCanEdit(userId, collectionId);
-    const updates: string[] = [];
-    const params: (string | number)[] = [];
+    const write: Parameters<CollectionLabelsRepository['updateFields']>[1] = {};
     if (body.name !== undefined) {
       const trimmed = body.name.trim();
       if (!trimmed) httpError(400, 'Label name is required');
-      if (this.db.get('SELECT 1 FROM collection_labels WHERE collection_id = ? AND lower(name) = lower(?) AND id != ?', collectionId, trimmed, labelId)) {
+      if (await this.labels.nameExistsExcluding(collectionId, trimmed, labelId)) {
         httpError(409, 'A label with this name already exists');
       }
-      updates.push('name = ?'); params.push(trimmed);
+      write.name = trimmed;
     }
-    if (body.color !== undefined) { updates.push('color = ?'); params.push(body.color); }
-    if (body.sort_order !== undefined) { updates.push('sort_order = ?'); params.push(body.sort_order); }
-    if (updates.length > 0) {
-      params.push(labelId);
-      this.db.run(`UPDATE collection_labels SET ${updates.join(', ')} WHERE id = ?`, ...params);
-    }
+    if (body.color !== undefined) write.color = body.color;
+    if (body.sort_order !== undefined) write.sort_order = body.sort_order;
+    await this.labels.updateFields(labelId, write);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getLabelById(labelId);
   }
@@ -1360,7 +1296,7 @@ export class CollectionsService {
   async deleteLabel(userId: number, labelId: number, socketId?: string): Promise<void> {
     const collectionId = await this.collectionIdOfLabel(labelId);
     await this.assertCanEdit(userId, collectionId);
-    this.db.run('DELETE FROM collection_labels WHERE id = ?', labelId); // CASCADE clears place assignments
+    await this.labels.deleteById(labelId); // CASCADE clears place assignments
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
   }
 
@@ -1388,11 +1324,9 @@ export class CollectionsService {
         const applicable = labelIds.filter(id => valid.has(id));
         if (applicable.length === 0) continue;
         if (remove) {
-          const del = this.db.prepare('DELETE FROM collection_place_labels WHERE collection_place_id = ? AND label_id = ?');
-          for (const pid of pids) for (const lid of applicable) changed += del.run(pid, lid).changes;
+          for (const pid of pids) for (const lid of applicable) changed += await this.collectionPlaces.unassignLabel(pid, lid);
         } else {
-          const ins = this.db.prepare('INSERT OR IGNORE INTO collection_place_labels (collection_place_id, label_id) VALUES (?, ?)');
-          for (const pid of pids) for (const lid of applicable) changed += ins.run(pid, lid).changes;
+          for (const pid of pids) for (const lid of applicable) changed += await this.collectionPlaces.assignLabel(pid, lid);
         }
         notified.push(cid);
       }
@@ -1412,16 +1346,16 @@ export class CollectionsService {
     if (!(await this.isOwner(inviterId, collectionId))) return { error: 'Not allowed', status: 403 };
     if (targetUserId === inviterId) return { error: 'Cannot invite yourself', status: 400 };
 
-    const targetUser = this.db.get('SELECT id, username FROM users WHERE id = ?', targetUserId);
+    const targetUser = await this.users.findIdUsername(targetUserId);
     if (!targetUser) return { error: 'User not found', status: 404 };
 
-    const existing = this.db.get<{ id: number; status: string }>('SELECT id, status FROM collection_members WHERE collection_id = ? AND user_id = ?', collectionId, targetUserId);
+    const existing = await this.members.findByCollectionAndUser(collectionId, targetUserId);
     if (existing) {
       if (existing.status === 'accepted') return { error: 'Already a member', status: 400 };
       if (existing.status === 'pending') return { error: 'Invite already pending', status: 400 };
     }
 
-    this.db.run("INSERT INTO collection_members (collection_id, user_id, status, role) VALUES (?, ?, 'pending', ?)", collectionId, targetUserId, role);
+    await this.members.insertInvite(collectionId, targetUserId, role);
 
     this.realtime.broadcastToUser(targetUserId, { type: 'collections:invite', from: { id: inviterId, username: inviterUsername }, collectionId });
 
@@ -1435,27 +1369,27 @@ export class CollectionsService {
   }
 
   async acceptInvite(userId: number, collectionId: number, socketId: string | undefined): Promise<{ error?: string; status?: number }> {
-    const invite = this.db.get<{ id: number }>("SELECT id FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'pending'", collectionId, userId);
-    if (!invite) return { error: 'No pending invite', status: 404 };
-    this.db.run("UPDATE collection_members SET status = 'accepted' WHERE id = ?", invite.id);
+    const inviteId = await this.members.findPendingInvite(collectionId, userId);
+    if (inviteId === undefined) return { error: 'No pending invite', status: 404 };
+    await this.members.accept(inviteId);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:accepted');
     return {};
   }
 
   async declineInvite(userId: number, collectionId: number, socketId: string | undefined): Promise<void> {
-    this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'pending'", collectionId, userId);
+    await this.members.deletePending(collectionId, userId);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:declined');
   }
 
   async cancelInvite(collectionId: number, ownerId: number, targetUserId: number): Promise<void> {
     if (!(await this.isOwner(ownerId, collectionId))) httpError(403, 'Not allowed');
-    this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'pending'", collectionId, targetUserId);
+    await this.members.deletePending(collectionId, targetUserId);
     this.realtime.broadcastToUser(targetUserId, { type: 'collections:cancelled', collectionId });
   }
 
   async leaveCollection(userId: number, collectionId: number, socketId: string | undefined): Promise<void> {
     if (await this.isOwner(userId, collectionId)) httpError(400, 'Owner cannot leave; delete the list');
-    this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'accepted'", collectionId, userId);
+    await this.members.deleteAccepted(collectionId, userId);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:left');
   }
 
@@ -1463,8 +1397,8 @@ export class CollectionsService {
   async removeMember(ownerId: number, collectionId: number, targetUserId: number): Promise<void> {
     if (!(await this.isOwner(ownerId, collectionId))) httpError(403, 'Not allowed');
     if (targetUserId === ownerId) httpError(400, 'Owner cannot be removed');
-    const res = this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'accepted'", collectionId, targetUserId);
-    if (res.changes === 0) httpError(404, 'Member not found');
+    const changed = await this.members.deleteAccepted(collectionId, targetUserId);
+    if (changed === 0) httpError(404, 'Member not found');
     await this.notifyCollectionUsers(collectionId, undefined, 'collections:left'); // refresh remaining members
     this.realtime.broadcastToUser(targetUserId, { type: 'collections:removed', collectionId }); // bounce the removed user
   }
@@ -1472,25 +1406,19 @@ export class CollectionsService {
   /** Owner changes an accepted member's permission role (viewer/editor/admin). */
   async setMemberRole(ownerId: number, collectionId: number, targetUserId: number, role: 'viewer' | 'editor' | 'admin'): Promise<void> {
     if (!(await this.isOwner(ownerId, collectionId))) httpError(403, 'Not allowed');
-    const res = this.db.run("UPDATE collection_members SET role = ? WHERE collection_id = ? AND user_id = ? AND status = 'accepted'", role, collectionId, targetUserId);
-    if (res.changes === 0) httpError(404, 'Member not found');
+    const changed = await this.members.setRole(collectionId, targetUserId, role);
+    if (changed === 0) httpError(404, 'Member not found');
     await this.notifyCollectionUsers(collectionId, undefined, 'collections:updated'); // re-gate the member live
     this.realtime.broadcastToUser(targetUserId, { type: 'collections:updated', collectionId });
   }
 
   async availableUsers(ownerId: number, collectionId: number): Promise<{ id: number; username: string }[]> {
-    return this.db.all<{ id: number; username: string }>(`
-    SELECT u.id, u.username FROM users u
-    WHERE u.id != ?
-      AND u.id NOT IN (SELECT user_id FROM collection_members WHERE collection_id = ?)
-      AND u.is_guest = 0
-    ORDER BY u.username
-  `, ownerId, collectionId);
+    return this.members.availableUsers(ownerId, collectionId);
   }
 
   async findMembershipForUser(userId: number, collectionId: number): Promise<{ is_member: boolean; is_owner: boolean; status: string | null }> {
     if (await this.isOwner(userId, collectionId)) return { is_member: true, is_owner: true, status: 'accepted' };
-    const row = this.db.get<{ status: string }>('SELECT status FROM collection_members WHERE collection_id = ? AND user_id = ?', collectionId, userId);
-    return { is_member: row?.status === 'accepted', is_owner: false, status: row?.status ?? null };
+    const status = await this.members.statusFor(collectionId, userId);
+    return { is_member: status === 'accepted', is_owner: false, status: status ?? null };
   }
 }
