@@ -1,10 +1,20 @@
 import path from 'path';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { reclaimPlaceImage } from '../places/place-image';
 import { StorageService } from '../storage/storage.service';
+import { Collections } from '../../db/entities/Collections.entity';
+import { CollectionsRepository, type CollectionPlaceRow } from '../../db/repositories/Collections.repository';
+import { CollectionMembers } from '../../db/entities/CollectionMembers.entity';
+import { CollectionMembersRepository } from '../../db/repositories/CollectionMembers.repository';
+import { CollectionLabels } from '../../db/entities/CollectionLabels.entity';
+import { CollectionLabelsRepository } from '../../db/repositories/CollectionLabels.repository';
+import { Categories } from '../../db/entities/Categories.entity';
+import type { CategoriesRepository } from '../../db/repositories/Categories.repository';
+import { resolveCollectionRole, type CollectionRole } from '../../db/repositories/_shared/collection-role';
 import {
   COORD_DEDUP_TOLERANCE,
   externalIdsOf,
@@ -78,13 +88,12 @@ function httpError(status: number, message: string): never {
   throw err;
 }
 
-export type EffectiveRole = 'owner' | 'admin' | 'editor' | 'viewer' | null;
+/** Re-exported under this service's historical name — the underlying type
+ *  now lives in `_shared/collection-role.ts` (R6), the ONE shared predicate
+ *  `isVisible`/`isOwner`/`roleOf` all resolve through. */
+export type EffectiveRole = CollectionRole;
 
-interface PlaceRow extends CollectionPlace {
-  category_name?: string | null;
-  category_color?: string | null;
-  category_icon?: string | null;
-}
+type PlaceRow = CollectionPlaceRow;
 
 const MAX_LABELS_PER_COLLECTION = 50;
 
@@ -106,6 +115,10 @@ export class CollectionsService {
     private readonly notifications: NotificationsService,
     private readonly storage: StorageService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Collections) private readonly collectionsRepo: CollectionsRepository,
+    @InjectRepository(CollectionMembers) private readonly members: CollectionMembersRepository,
+    @InjectRepository(CollectionLabels) private readonly labels: CollectionLabelsRepository,
+    @InjectRepository(Categories) private readonly categories: CategoriesRepository,
   ) {}
 
   /**
@@ -129,22 +142,12 @@ export class CollectionsService {
   // -------------------------------------------------------------------------
 
   async accessibleCollectionIds(userId: number): Promise<number[]> {
-    const rows = this.db.all<{ id: number }>(`
-    SELECT id FROM collections WHERE owner_id = ?
-    UNION
-    SELECT collection_id FROM collection_members WHERE user_id = ? AND status = 'accepted'
-  `, userId, userId);
-    return rows.map(r => r.id);
+    return this.collectionsRepo.accessibleCollectionIds(userId);
   }
 
+  /** R6 — CL2/CL3/CL4 collapse onto the ONE shared predicate in `_shared/collection-role.ts`. */
   private async isVisible(userId: number, collectionId: number): Promise<boolean> {
-    const row = this.db.get(`
-    SELECT 1 FROM collections WHERE id = ? AND owner_id = ?
-    UNION
-    SELECT 1 FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'accepted'
-    LIMIT 1
-  `, collectionId, userId, collectionId, userId);
-    return !!row;
+    return (await resolveCollectionRole(this.collectionsRepo, this.members, collectionId, userId)) !== null;
   }
 
   async assertAccess(userId: number, collectionId: number): Promise<void> {
@@ -152,20 +155,13 @@ export class CollectionsService {
   }
 
   async isOwner(userId: number, collectionId: number): Promise<boolean> {
-    const row = this.db.get('SELECT 1 FROM collections WHERE id = ? AND owner_id = ?', collectionId, userId);
-    return !!row;
+    return (await resolveCollectionRole(this.collectionsRepo, this.members, collectionId, userId)) === 'owner';
   }
 
   /** The viewer's effective permission on a list: owner (full), or their accepted
    *  member role, or null when they have no access. */
   async roleOf(userId: number, collectionId: number): Promise<EffectiveRole> {
-    if (await this.isOwner(userId, collectionId)) return 'owner';
-    const row = this.db.get<{ role: string }>(
-      "SELECT role FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'accepted'",
-      collectionId, userId,
-    );
-    if (!row) return null;
-    return row.role === 'admin' || row.role === 'viewer' ? row.role : 'editor';
+    return resolveCollectionRole(this.collectionsRepo, this.members, collectionId, userId);
   }
 
   /** Add/edit a place — owner, admin or editor. 404 hides lists you can't see,
@@ -184,9 +180,9 @@ export class CollectionsService {
   }
 
   private async ownerOf(collectionId: number): Promise<number> {
-    const row = this.db.get<{ owner_id: number }>('SELECT owner_id FROM collections WHERE id = ?', collectionId);
-    if (!row) httpError(404, 'Collection not found');
-    return row.owner_id;
+    const ownerId = await this.collectionsRepo.ownerId(collectionId);
+    if (ownerId === undefined) httpError(404, 'Collection not found');
+    return ownerId;
   }
 
   // -------------------------------------------------------------------------
@@ -195,14 +191,7 @@ export class CollectionsService {
 
   private async loadTagsByCollectionPlaceIds(placeIds: number[]): Promise<Record<number, { id: number; name: string; color: string }[]>> {
     const out: Record<number, { id: number; name: string; color: string }[]> = {};
-    if (placeIds.length === 0) return out;
-    const placeholders = placeIds.map(() => '?').join(',');
-    const rows = this.db.all<{ pid: number; id: number; name: string; color: string }>(`
-    SELECT cpt.collection_place_id AS pid, t.id, t.name, t.color
-    FROM collection_place_tags cpt
-    JOIN tags t ON t.id = cpt.tag_id
-    WHERE cpt.collection_place_id IN (${placeholders})
-  `, ...placeIds);
+    const rows = await this.collectionsRepo.loadTagsByPlaceIds(placeIds);
     for (const r of rows) {
       if (!out[r.pid]) out[r.pid] = [];
       out[r.pid].push({ id: r.id, name: r.name, color: r.color });
@@ -212,21 +201,13 @@ export class CollectionsService {
 
   /** A list's own label definitions, in display order. */
   private async loadLabelsByCollection(collectionId: number): Promise<CollectionLabel[]> {
-    return this.db.all<CollectionLabel>(
-      'SELECT id, collection_id, name, color, sort_order FROM collection_labels WHERE collection_id = ? ORDER BY sort_order, id',
-      collectionId,
-    );
+    return this.labels.listByCollection(collectionId);
   }
 
   /** Assigned label ids per place, batched (mirrors loadTagsByCollectionPlaceIds). */
   private async loadLabelIdsByPlaceIds(placeIds: number[]): Promise<Record<number, number[]>> {
     const out: Record<number, number[]> = {};
-    if (placeIds.length === 0) return out;
-    const placeholders = placeIds.map(() => '?').join(',');
-    const rows = this.db.all<{ pid: number; label_id: number }>(
-      `SELECT collection_place_id AS pid, label_id FROM collection_place_labels WHERE collection_place_id IN (${placeholders})`,
-      ...placeIds,
-    );
+    const rows = await this.collectionsRepo.loadLabelIdsByPlaceIds(placeIds);
     for (const r of rows) {
       if (!out[r.pid]) out[r.pid] = [];
       out[r.pid].push(r.label_id);
@@ -237,14 +218,7 @@ export class CollectionsService {
   /** Per-voter rating rows (#1435), batched (mirrors loadTagsByCollectionPlaceIds). */
   private async loadRatingsByCollectionPlaceIds(placeIds: number[]): Promise<Record<number, { user_id: number; username: string; avatar: string | null; rating: number }[]>> {
     const out: Record<number, { user_id: number; username: string; avatar: string | null; rating: number }[]> = {};
-    if (placeIds.length === 0) return out;
-    const rows = this.db.all<{ pid: number; user_id: number; username: string; avatar: string | null; rating: number }>(`
-    SELECT cpr.collection_place_id AS pid, cpr.user_id, u.username, u.avatar, cpr.rating
-    FROM collection_place_ratings cpr
-    JOIN users u ON u.id = cpr.user_id
-    WHERE cpr.collection_place_id IN (${placeIds.map(() => '?').join(',')})
-    ORDER BY cpr.created_at
-  `, ...placeIds);
+    const rows = await this.collectionsRepo.loadRatingsByPlaceIds(placeIds);
     for (const { pid, ...rest } of rows) {
       if (!out[pid]) out[pid] = [];
       out[pid].push(rest);
@@ -276,45 +250,31 @@ export class CollectionsService {
   }
 
   private async getPlaceById(placeId: number): Promise<CollectionPlace> {
-    const row = this.db.get<PlaceRow>(`
-    SELECT cp.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon
-    FROM collection_places cp
-    LEFT JOIN categories c ON cp.category_id = c.id
-    WHERE cp.id = ?
-  `, placeId);
+    const row = await this.collectionsRepo.findPlaceRowById(placeId);
     if (!row) httpError(404, 'Place not found');
     return (await this.hydratePlaces([row]))[0];
   }
 
   private async collectionIdOfPlace(placeId: number): Promise<number> {
-    const row = this.db.get<{ collection_id: number }>('SELECT collection_id FROM collection_places WHERE id = ?', placeId);
-    if (!row) httpError(404, 'Place not found');
-    return row.collection_id;
+    const collectionId = await this.collectionsRepo.collectionIdOfPlace(placeId);
+    if (collectionId === undefined) httpError(404, 'Place not found');
+    return collectionId;
   }
 
   private async buildMembers(collectionId: number): Promise<CollectionMember[]> {
-    const owner = this.db.get<Omit<CollectionMember, 'status' | 'is_owner'>>(`
-    SELECT u.id AS user_id, u.username, u.email, u.avatar
-    FROM collections col JOIN users u ON u.id = col.owner_id
-    WHERE col.id = ?
-  `, collectionId);
-    const members = this.db.all<Omit<CollectionMember, 'is_owner'>>(`
-    SELECT u.id AS user_id, u.username, u.email, u.avatar, cm.status, cm.role
-    FROM collection_members cm JOIN users u ON u.id = cm.user_id
-    WHERE cm.collection_id = ?
-    ORDER BY u.username
-  `, collectionId);
+    const owner = await this.members.ownerRow(collectionId);
+    const memberRows = await this.members.memberRows(collectionId);
     const result: CollectionMember[] = [];
     if (owner) result.push({ ...owner, status: 'accepted', role: 'admin', is_owner: true });
-    for (const m of members) result.push({ ...m, is_owner: false });
+    for (const m of memberRows) result.push({ ...m, is_owner: false } as CollectionMember);
     return result;
   }
 
   private async getCollectionRow(id: number): Promise<Collection> {
-    const col = this.db.get<Collection & { links?: unknown }>('SELECT * FROM collections WHERE id = ?', id);
+    const col = await this.collectionsRepo.findRow(id);
     if (!col) httpError(404, 'Collection not found');
-    const placeCount = this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM collection_places WHERE collection_id = ?', id)!.n;
-    return { ...col, links: parseLinks(col.links), place_count: placeCount, members: await this.buildMembers(id) };
+    const placeCount = await this.collectionsRepo.placeCount(id);
+    return { ...col, links: parseLinks(col.links), place_count: placeCount, members: await this.buildMembers(id) } as Collection;
   }
 
   // -------------------------------------------------------------------------
@@ -330,13 +290,7 @@ export class CollectionsService {
       })))
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
 
-    const incomingInvites = this.db.all<{ collection_id: number; name: string; from_id: number; from_username: string }>(`
-    SELECT cm.collection_id, c.name, u.id AS from_id, u.username AS from_username
-    FROM collection_members cm
-    JOIN collections c ON c.id = cm.collection_id
-    JOIN users u ON u.id = c.owner_id
-    WHERE cm.user_id = ? AND cm.status = 'pending'
-  `, userId)
+    const incomingInvites = (await this.members.pendingInvitesForUser(userId))
       .map(r => ({ collection_id: r.collection_id, name: r.name, from: { id: r.from_id, username: r.from_username } }));
 
     return { collections, incomingInvites };
@@ -345,13 +299,7 @@ export class CollectionsService {
   async getCollection(userId: number, id: number): Promise<CollectionDetailResponse> {
     await this.assertAccess(userId, id);
     const collection = await this.getCollectionRow(id);
-    const rows = this.db.all<PlaceRow>(`
-    SELECT cp.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon
-    FROM collection_places cp
-    LEFT JOIN categories c ON cp.category_id = c.id
-    WHERE cp.collection_id = ?
-    ORDER BY cp.sort_order, cp.created_at
-  `, id);
+    const rows = await this.collectionsRepo.listPlaceRows(id);
     return {
       collection: { ...collection, is_owner: collection.owner_id === userId, labels: await this.loadLabelsByCollection(id) },
       places: await this.hydratePlaces(rows),
@@ -381,13 +329,7 @@ export class CollectionsService {
     const labels = await this.loadLabelsByCollection(id);
     const labelNameById = new Map(labels.map(l => [l.id, l.name]));
 
-    const rows = this.db.all<PlaceRow>(`
-    SELECT cp.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon
-    FROM collection_places cp
-    LEFT JOIN categories c ON cp.category_id = c.id
-    WHERE cp.collection_id = ?
-    ORDER BY cp.sort_order, cp.created_at
-  `, id);
+    const rows = await this.collectionsRepo.listPlaceRows(id);
     const labelIdsByPlace = await this.loadLabelIdsByPlaceIds(rows.map(r => r.id));
 
     const places: CollectionFilePlace[] = rows.map(row => ({
@@ -407,7 +349,7 @@ export class CollectionsService {
       google_place_id: row.google_place_id ?? null,
       google_ftid: row.google_ftid ?? null,
       osm_id: row.osm_id ?? null,
-      status: row.status,
+      status: row.status as CollectionStatus,
       links: parseLinks((row as { links?: unknown }).links),
       category: row.category_name ?? null,
       labels: (labelIdsByPlace[row.id] || []).map(lid => labelNameById.get(lid)).filter((n): n is string => !!n),
@@ -530,12 +472,10 @@ export class CollectionsService {
     collectionId: number, labels: CollectionFileLabel[] | undefined,
   ): Promise<{ byName: Map<string, number>; created: number }> {
     const byName = new Map<string, number>();
-    for (const row of this.db.all<{ id: number; name: string }>('SELECT id, name FROM collection_labels WHERE collection_id = ?', collectionId)) {
+    for (const row of await this.labels.idNameByCollection(collectionId)) {
       byName.set(row.name.trim().toLowerCase(), row.id);
     }
-    let sortOrder = this.db.get<{ m: number }>(
-      'SELECT COALESCE(MAX(sort_order), -1) AS m FROM collection_labels WHERE collection_id = ?', collectionId,
-    )!.m + 1;
+    let sortOrder = (await this.labels.maxSortOrder(collectionId)) + 1;
     let created = 0;
     for (const label of (labels ?? []).slice(0, MAX_COLLECTION_FILE_LABELS)) {
       const key = label.name.trim().toLowerCase();
@@ -570,22 +510,11 @@ export class CollectionsService {
     // The palette is instance-wide and read-only here: a file names a category,
     // it does not get to create one.
     const categoryIdByName = new Map<string, number>();
-    for (const c of this.db.all<{ id: number; name: string }>('SELECT id, name FROM categories')) {
+    for (const c of await this.categories.listIdName()) {
       categoryIdByName.set(c.name.trim().toLowerCase(), c.id);
     }
     const ownerId = await this.ownerOf(collectionId);
-    const firstOrder = this.db.get<{ m: number }>(
-      'SELECT COALESCE(MAX(sort_order), -1) AS m FROM collection_places WHERE collection_id = ?', collectionId,
-    )!.m + 1;
-
-    const insertPlace = this.db.prepare(`
-    INSERT INTO collection_places (
-      collection_id, owner_id, saved_by, name, description, lat, lng, address,
-      category_id, price, currency, notes, image_url, google_place_id, google_ftid,
-      osm_id, website, phone, status, links, sort_order
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-    const assignLabel = this.db.prepare('INSERT OR IGNORE INTO collection_place_labels (collection_place_id, label_id) VALUES (?, ?)');
+    const firstOrder = (await this.collectionsRepo.maxPlaceSortOrder(collectionId)) + 1;
 
     let imported = 0;
     let skipped = 0;
@@ -607,19 +536,18 @@ export class CollectionsService {
         duplicates += 1;
         continue;
       }
-      const res = insertPlace.run(
-        collectionId, ownerId, savedBy,
-        place.name, place.description ?? null, place.lat ?? null, place.lng ?? null, place.address ?? null,
-        place.category ? (categoryIdByName.get(place.category.trim().toLowerCase()) ?? null) : null,
-        place.price ?? null, place.currency ?? null, place.notes ?? null,
-        place.image_url ?? null, place.google_place_id ?? null, place.google_ftid ?? null,
-        place.osm_id ?? null, place.website ?? null, place.phone ?? null,
-        place.status ?? 'idea', serializeLinks(place.links), firstOrder + imported,
-      );
-      const placeId = Number(res.lastInsertRowid);
+      const placeId = await this.collectionsRepo.insertFilePlace({
+        collection_id: collectionId, owner_id: ownerId, saved_by: savedBy,
+        name: place.name, description: place.description ?? null, lat: place.lat ?? null, lng: place.lng ?? null, address: place.address ?? null,
+        category_id: place.category ? (categoryIdByName.get(place.category.trim().toLowerCase()) ?? null) : null,
+        price: place.price ?? null, currency: place.currency ?? null, notes: place.notes ?? null,
+        image_url: place.image_url ?? null, google_place_id: place.google_place_id ?? null, google_ftid: place.google_ftid ?? null,
+        osm_id: place.osm_id ?? null, website: place.website ?? null, phone: place.phone ?? null,
+        status: place.status ?? 'idea', links: serializeLinks(place.links), sort_order: firstOrder + imported,
+      });
       for (const labelName of place.labels ?? []) {
         const labelId = labelIdByName.get(labelName.trim().toLowerCase());
-        if (labelId) assignLabel.run(placeId, labelId);
+        if (labelId) await this.collectionsRepo.assignPlaceLabel(placeId, labelId);
       }
       imported += 1;
     }
@@ -633,48 +561,38 @@ export class CollectionsService {
    * import is sent by the caller rather than one per label.
    */
   private async insertImportedLabel(collectionId: number, label: CollectionFileLabel, sortOrder: number): Promise<number> {
-    const res = this.db.run(
-      'INSERT INTO collection_labels (collection_id, name, color, sort_order) VALUES (?, ?, ?, ?)',
-      collectionId, label.name.trim(), label.color ?? '#6366f1', sortOrder,
-    );
-    return Number(res.lastInsertRowid);
+    return this.labels.insertLabel({
+      collection_id: collectionId, name: label.name.trim(), color: label.color ?? '#6366f1', sort_order: sortOrder,
+    });
   }
 
   async createCollection(userId: number, body: CollectionCreateRequest): Promise<Collection> {
-    const max = this.db.get<{ m: number }>('SELECT COALESCE(MAX(sort_order), -1) AS m FROM collections WHERE owner_id = ?', userId)!.m;
-    const result = this.db.run(`
-    INSERT INTO collections (owner_id, name, description, color, icon, cover_image, links, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `,
-      userId,
-      body.name,
-      body.description ?? null,
-      body.color ?? '#6366f1',
-      body.icon ?? 'Bookmark',
-      body.cover_image ?? null,
-      serializeLinks(body.links),
-      max + 1,
-    );
-    const col = await this.getCollectionRow(Number(result.lastInsertRowid));
+    const max = await this.collectionsRepo.maxSortOrder(userId);
+    const id = await this.collectionsRepo.insertCollection({
+      owner_id: userId,
+      name: body.name,
+      description: body.description ?? null,
+      color: body.color ?? '#6366f1',
+      icon: body.icon ?? 'Bookmark',
+      cover_image: body.cover_image ?? null,
+      links: serializeLinks(body.links),
+      sort_order: max + 1,
+    });
+    const col = await this.getCollectionRow(id);
     return { ...col, is_owner: true };
   }
 
   async updateCollection(userId: number, id: number, body: CollectionUpdateRequest, socketId?: string): Promise<Collection> {
     await this.assertCanEdit(userId, id);
-    const updates: string[] = [];
-    const params: (string | number | null)[] = [];
-    if (body.name !== undefined) { updates.push('name = ?'); params.push(body.name); }
-    if (body.description !== undefined) { updates.push('description = ?'); params.push(body.description ?? null); }
-    if (body.color !== undefined) { updates.push('color = ?'); params.push(body.color ?? null); }
-    if (body.icon !== undefined) { updates.push('icon = ?'); params.push(body.icon ?? null); }
-    if (body.cover_image !== undefined) { updates.push('cover_image = ?'); params.push(body.cover_image ?? null); }
-    if (body.links !== undefined) { updates.push('links = ?'); params.push(serializeLinks(body.links)); }
-    if (body.sort_order !== undefined) { updates.push('sort_order = ?'); params.push(body.sort_order); }
-    if (updates.length > 0) {
-      updates.push("updated_at = CURRENT_TIMESTAMP");
-      params.push(id);
-      this.db.run(`UPDATE collections SET ${updates.join(', ')} WHERE id = ?`, ...params);
-    }
+    await this.collectionsRepo.updateFields(id, {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.description !== undefined ? { description: body.description ?? null } : {}),
+      ...(body.color !== undefined ? { color: body.color ?? null } : {}),
+      ...(body.icon !== undefined ? { icon: body.icon ?? null } : {}),
+      ...(body.cover_image !== undefined ? { cover_image: body.cover_image ?? null } : {}),
+      ...(body.links !== undefined ? { links: serializeLinks(body.links) } : {}),
+      ...(body.sort_order !== undefined ? { sort_order: body.sort_order } : {}),
+    });
     await this.notifyCollectionUsers(id, socketId, 'collections:updated');
     const col = await this.getCollectionRow(id);
     return { ...col, is_owner: col.owner_id === userId };
@@ -683,8 +601,8 @@ export class CollectionsService {
   /** Set (or clear) a list's cover image, reclaiming the previous file. */
   async setCollectionCover(userId: number, id: number, coverUrl: string | null, socketId?: string): Promise<Collection> {
     await this.assertCanEdit(userId, id);
-    const prev = this.db.get<{ cover_image: string | null }>('SELECT cover_image FROM collections WHERE id = ?', id)?.cover_image ?? null;
-    this.db.run('UPDATE collections SET cover_image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', coverUrl, id);
+    const prev = (await this.collectionsRepo.coverImage(id)) ?? null;
+    await this.collectionsRepo.setCoverImage(id, coverUrl);
     if (prev && prev !== coverUrl) await this.deleteOldCollectionCover(prev);
     await this.notifyCollectionUsers(id, socketId, 'collections:updated');
     const col = await this.getCollectionRow(id);
@@ -696,10 +614,10 @@ export class CollectionsService {
     if (!(await this.isOwner(userId, id))) httpError(403, 'Only the owner can delete this list');
 
     // Snapshot recipients BEFORE the cascade wipes collection_members.
-    const accepted = this.db.all<{ user_id: number }>("SELECT user_id FROM collection_members WHERE collection_id = ? AND status = 'accepted'", id).map(r => r.user_id);
-    const pending = this.db.all<{ user_id: number }>("SELECT user_id FROM collection_members WHERE collection_id = ? AND status = 'pending'", id).map(r => r.user_id);
+    const accepted = await this.members.acceptedUserIds(id);
+    const pending = await this.members.pendingUserIds(id);
 
-    this.db.run('DELETE FROM collections WHERE id = ?', id); // CASCADE drops members + places + tags
+    await this.collectionsRepo.deleteById(id); // CASCADE drops members + places + tags
 
     [...new Set([...accepted, ...pending])]
       .filter(uid => uid !== userId)
@@ -708,11 +626,12 @@ export class CollectionsService {
 
   async reorderCollections(userId: number, orderedIds: number[]): Promise<void> {
     const visible = new Set(await this.accessibleCollectionIds(userId));
-    const stmt = this.db.prepare('UPDATE collections SET sort_order = ? WHERE id = ?');
     await this.uow.transactional(async () => {
-      orderedIds.forEach((cid, index) => {
-        if (visible.has(cid)) stmt.run(index, cid);
-      });
+      await this.collectionsRepo.setSortOrders(
+        orderedIds
+          .map((cid, index) => ({ id: cid, sortOrder: index }))
+          .filter(({ id }) => visible.has(id)),
+      );
     });
   }
 
@@ -742,24 +661,11 @@ export class CollectionsService {
     for (const strategy of placeMatchStrategies(candidate)) {
       let hit: { id: number; name: string } | undefined;
       if (strategy.by === 'externalId') {
-        hit = this.db.get<{ id: number; name: string }>(`
-      SELECT id, name FROM collection_places
-      WHERE collection_id = ? AND (google_place_id = ? OR google_ftid = ? OR osm_id = ?)
-      ORDER BY id ASC LIMIT 1
-    `, collectionId, strategy.id, strategy.id, strategy.id);
+        hit = await this.collectionsRepo.findDuplicateByExternalId(collectionId, strategy.id);
       } else if (strategy.by === 'name') {
-        hit = this.db.get<{ id: number; name: string }>(`
-      SELECT id, name FROM collection_places
-      WHERE collection_id = ? AND lower(trim(name)) = ?
-      ORDER BY id ASC LIMIT 1
-    `, collectionId, strategy.name);
+        hit = await this.collectionsRepo.findDuplicateByName(collectionId, strategy.name);
       } else {
-        hit = this.db.get<{ id: number; name: string }>(`
-      SELECT id, name FROM collection_places
-      WHERE collection_id = ? AND lat IS NOT NULL AND lng IS NOT NULL
-        AND abs(lat - ?) <= ? AND abs(lng - ?) <= ?
-      ORDER BY id ASC LIMIT 1
-    `, collectionId, strategy.lat, strategy.tolerance, strategy.lng, strategy.tolerance);
+        hit = await this.collectionsRepo.findDuplicateByCoords(collectionId, strategy.lat, strategy.lng, strategy.tolerance);
       }
       if (hit) return hit;
     }

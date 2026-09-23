@@ -1,4 +1,10 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { Collections } from '../../db/entities/Collections.entity';
+import { CollectionMembers } from '../../db/entities/CollectionMembers.entity';
+import { CollectionLabels } from '../../db/entities/CollectionLabels.entity';
+import { Categories } from '../../db/entities/Categories.entity';
+import { Users } from '../../db/entities/Users.entity';
 import { CollectionsController } from './collections.controller';
 import { CollectionsService } from './collections.service';
 import { CollectionsRpc } from './collections.rpc';
@@ -35,7 +41,8 @@ import { MAX_COVER_SIZE } from './collections.controller';
         }),
     }),
     StorageModule,
-    NotificationsModule, AddonsModule, PermissionsModule, AuthModule, AppConfigModule, PluginGuardsModule],
+    NotificationsModule, AddonsModule, PermissionsModule, AuthModule, AppConfigModule, PluginGuardsModule,
+    MikroOrmModule.forFeature([Collections, CollectionMembers, CollectionLabels, Categories, Users])],
   controllers: [CollectionsController],
   providers: [CollectionsService, CollectionsMcp, CollectionsRpc],
   exports: [CollectionsService],

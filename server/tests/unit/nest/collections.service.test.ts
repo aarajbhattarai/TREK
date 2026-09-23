@@ -55,7 +55,10 @@ import { CollectionsService } from '../../../src/nest/collections/collections.se
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo } from '../../helpers/test-uow';
+import {
+  createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
+  createTestCollectionsRepo, createTestCollectionMembersRepo, createTestCollectionLabelsRepo, createTestCategoriesRepo,
+} from '../../helpers/test-uow';
 
 const storageFx = makeStorageFixture('');
 let svc: CollectionsService;
@@ -65,8 +68,24 @@ let svc: CollectionsService;
 // constructor needs two repositories, resolved through `createTestOrm`.
 let photoCache: PlacePhotoCacheService;
 const removeIfUnreferenced = (id: string) => photoCache.removeIfUnreferenced(id);
+// Plan 3h Task 1 (part A, R6's construction pattern): the SAME direct-construction
+// shape every converted service in this program uses for its own hand-built unit
+// test (`atlas.service.test.ts`/`journey-domain.service.test.ts` precedent) — real
+// repositories resolved off `sharedTestOrm(testDb)` (via `createTestXRepo` helpers,
+// `allowGlobalContext: true` by default, `test-orm.ts`'s own docstring), no
+// `withRequestContext` wrapper needed or added anywhere in this file. `db` (the raw
+// `DatabaseService`) stays a constructor param and is still exercised directly:
+// Part B's methods (saved places CRUD, copy-to-trip, labels-assignment, invites —
+// Task 2's own, unconverted by this task) still issue raw `this.db.prepare(...)`
+// calls the describe blocks below covering them exercise unchanged.
 beforeAll(async () => {
-  svc = new CollectionsService(await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(notifSend), storageFx.storage, await createTestUnitOfWork(testDb));
+  svc = new CollectionsService(
+    await createTestDatabaseService(testDb),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
+    new RealtimeService(), notificationsStub(notifSend), storageFx.storage, await createTestUnitOfWork(testDb),
+    await createTestCollectionsRepo(testDb), await createTestCollectionMembersRepo(testDb),
+    await createTestCollectionLabelsRepo(testDb), await createTestCategoriesRepo(testDb),
+  );
   photoCache = new PlacePhotoCacheService(
     new DatabaseService(testDb),
     makeStorageFixture('photos/google/').storage,
@@ -1280,8 +1299,12 @@ describe('exportCollection / importCollection (#2198)', () => {
     const owner = createUser(testDb).user;
     const before = (await svc.listCollections(owner.id)).collections.length;
     const insert = testDb.prepare.bind(testDb);
+    // Plan 3h Task 1: `writeFilePlaces`'s INSERT now goes through Kysely
+    // (`CollectionsRepository.insertFilePlace`), which compiles to lowercase,
+    // double-quoted SQL (`insert into "collection_places" (...)`) — matched
+    // case-insensitively here instead of the legacy literal uppercase text.
     const spy = vi.spyOn(testDb, 'prepare').mockImplementation((sql: string) => {
-      if (sql.includes('INSERT INTO collection_places')) throw new Error('disk is full');
+      if (/insert\s+into\s+"?collection_places"?/i.test(sql)) throw new Error('disk is full');
       return insert(sql);
     });
 
@@ -1429,8 +1452,10 @@ describe('importIntoCollection', () => {
     const col = await svc.createCollection(owner.id, { name: 'Lisbon' });
     await svc.savePlace(owner.id, { collection_id: col.id, name: 'Time Out Market' });
     const real = testDb.prepare.bind(testDb);
+    // Plan 3h Task 1: see COLLECTIONS-SVC-111's own comment — the Kysely-compiled
+    // INSERT is lowercase/double-quoted now, matched case-insensitively.
     const spy = vi.spyOn(testDb, 'prepare').mockImplementation((sql: string) => {
-      if (sql.includes('INSERT INTO collection_places')) throw new Error('disk is full');
+      if (/insert\s+into\s+"?collection_places"?/i.test(sql)) throw new Error('disk is full');
       return real(sql);
     });
 
@@ -1523,5 +1548,109 @@ describe('exportCollectionGpx / readCollectionGpx (#2301)', () => {
 
     expect(testDb.prepare('SELECT COUNT(*) AS n FROM collections').get()).toEqual(before);
     expect((await svc.listCollections(owner.id)).collections).toHaveLength(0);
+  });
+});
+
+// ── Plan 3h Task 1 — repository-conversion parity (CL1-CL36) ────────────────
+//
+// The describe blocks above already exercise every converted method through
+// the service's own public behaviour (createCollection/listCollections/
+// getCollection/updateCollection/reorderCollections/exportCollection/
+// importCollection/deleteCollection), asserting against raw `testDb.prepare`
+// reads the same way a hand-rolled "legacy" comparison would. This block adds
+// the two things the brief calls out explicitly: a full-key `toEqual` parity
+// test on a fully-seeded `getCollectionRow`/`getCollection` read (owner +
+// admin + editor + viewer + a pending invite; places with labels and ratings
+// from more than one voter), and a dedicated ordering proof for
+// `deleteCollection`'s CL33/34 snapshot-before-CL35-cascade shape (R6's own
+// risk note: a reversed order still passes an ordinary status-code test).
+describe('Plan 3h Task 1 — repository conversion parity', () => {
+  it('COLLECTIONS-SVC-200: getCollection is full-key identical to the legacy read model on a fully seeded list', async () => {
+    const owner = createUser(testDb).user;
+    const admin = createUser(testDb).user;
+    const editor = createUser(testDb).user;
+    const viewer = createUser(testDb).user;
+    const pending = createUser(testDb).user;
+    const col = await svc.createCollection(owner.id, { name: 'Full house', description: 'Every role', color: '#111111' });
+    addMember(col.id, admin.id, 'admin');
+    addMember(col.id, editor.id, 'editor');
+    addMember(col.id, viewer.id, 'viewer');
+    await svc.sendInvite(col.id, owner.id, owner.username, owner.email, pending.id);
+
+    const tag = createTag(testDb, owner.id, { name: 'Foodie' });
+    const place = (await svc.savePlace(owner.id, {
+      collection_id: col.id, name: 'Cafe', lat: 1, lng: 2, tag_ids: [tag.id],
+    })).place!;
+    await svc.setRating(owner.id, place.id, 5);
+    await svc.setRating(admin.id, place.id, 3);
+
+    const result = await svc.getCollection(owner.id, col.id);
+
+    // The legacy read model, recomputed independently from raw SQL against
+    // the same seeded rows — the oracle this test proves the repository
+    // conversion against, kept structurally separate from the production
+    // code path it verifies.
+    const colRow = testDb.prepare('SELECT * FROM collections WHERE id = ?').get(col.id) as Record<string, unknown>;
+    const placeCount = (testDb.prepare('SELECT COUNT(*) AS n FROM collection_places WHERE collection_id = ?').get(col.id) as { n: number }).n;
+    const legacyMembers = [
+      { user_id: owner.id, username: owner.username, email: owner.email, avatar: null, status: 'accepted', role: 'admin', is_owner: true },
+      // CL13's own `SELECT ... FROM collection_members cm JOIN users u ...`
+      // has NO status filter — both the accepted admin/editor/viewer AND the
+      // still-`pending` invite come back, ordered by `u.username`.
+      ...[
+        { u: admin, role: 'admin', status: 'accepted' },
+        { u: editor, role: 'editor', status: 'accepted' },
+        { u: viewer, role: 'viewer', status: 'accepted' },
+        { u: pending, role: 'editor', status: 'pending' },
+      ]
+        .sort((a, b) => a.u.username.localeCompare(b.u.username))
+        .map(({ u, role, status }) => ({ user_id: u.id, username: u.username, email: u.email, avatar: null, status, role, is_owner: false })),
+    ];
+    const placeRow = testDb.prepare('SELECT * FROM collection_places WHERE collection_id = ?').get(col.id) as Record<string, unknown>;
+    const ratingRows = testDb
+      .prepare('SELECT cpr.user_id, cpr.rating FROM collection_place_ratings cpr WHERE cpr.collection_place_id = ? ORDER BY cpr.created_at')
+      .all(place.id) as { user_id: number; rating: number }[];
+
+    expect(result.collection).toMatchObject({
+      id: colRow.id, owner_id: colRow.owner_id, name: colRow.name, description: colRow.description,
+      color: colRow.color, is_owner: true, place_count: placeCount,
+    });
+    expect(result.collection.members).toEqual(legacyMembers);
+    expect(result.places).toHaveLength(1);
+    expect(result.places[0]).toMatchObject({
+      id: placeRow.id, collection_id: placeRow.collection_id, name: placeRow.name, lat: placeRow.lat, lng: placeRow.lng,
+      tags: [{ id: tag.id, name: tag.name, color: tag.color }],
+    });
+    expect(result.places[0].ratings).toEqual(ratingRows.map((r) => ({ user_id: r.user_id, rating: r.rating, username: expect.any(String), avatar: null })));
+    expect(result.places[0].rating_avg).toBe((5 + 3) / 2);
+    expect(result.places[0].rating_count).toBe(2);
+  });
+
+  it('COLLECTIONS-SVC-201: deleteCollection snapshots CL33/34 recipients BEFORE CL35 cascades — every legacy recipient is still notified once the rows are gone', async () => {
+    const owner = createUser(testDb).user;
+    const accepted = createUser(testDb).user;
+    const pending = createUser(testDb).user;
+    const col = await svc.createCollection(owner.id, { name: 'Ordering proof' });
+    await svc.sendInvite(col.id, owner.id, owner.username, owner.email, accepted.id);
+    await svc.acceptInvite(accepted.id, col.id, undefined);
+    await svc.sendInvite(col.id, owner.id, owner.username, owner.email, pending.id);
+
+    broadcastToUser.mockClear();
+    // Captured at CALL time, not after `deleteCollection` returns — if the
+    // cascade ran before the snapshot (the reversed, wrong order), this would
+    // already be 0 even for the first broadcast; the proof is that it is
+    // ALWAYS 0, for EVERY broadcast, because the snapshot ran first and the
+    // cascade already happened by the time any broadcast fires.
+    const memberCountAtBroadcastTime: number[] = [];
+    broadcastToUser.mockImplementation(() => {
+      memberCountAtBroadcastTime.push((testDb.prepare('SELECT COUNT(*) AS n FROM collection_members WHERE collection_id = ?').get(col.id) as { n: number }).n);
+    });
+
+    await svc.deleteCollection(owner.id, col.id);
+
+    const targets = broadcastToUser.mock.calls.map((c) => c[0]);
+    expect(targets).toEqual(expect.arrayContaining([accepted.id, pending.id]));
+    expect(memberCountAtBroadcastTime.every((n) => n === 0)).toBe(true);
+    expect(memberCountAtBroadcastTime.length).toBeGreaterThan(0);
   });
 });

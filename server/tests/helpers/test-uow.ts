@@ -65,6 +65,12 @@ import { RoadtripPreferences } from '../../src/db/entities/RoadtripPreferences.e
 import type { RoadtripPreferencesRepository } from '../../src/db/repositories/RoadtripPreferences.repository';
 import { RoadtripDayBoundaries } from '../../src/db/entities/RoadtripDayBoundaries.entity';
 import type { RoadtripDayBoundariesRepository } from '../../src/db/repositories/RoadtripDayBoundaries.repository';
+import { Collections } from '../../src/db/entities/Collections.entity';
+import type { CollectionsRepository } from '../../src/db/repositories/Collections.repository';
+import { CollectionMembers } from '../../src/db/entities/CollectionMembers.entity';
+import type { CollectionMembersRepository } from '../../src/db/repositories/CollectionMembers.repository';
+import { CollectionLabels } from '../../src/db/entities/CollectionLabels.entity';
+import type { CollectionLabelsRepository } from '../../src/db/repositories/CollectionLabels.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -584,5 +590,43 @@ export function createTestRoadtripDayBoundariesRepo(db: Database.Database): Prom
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(RoadtripDayBoundaries));
   roadtripDayBoundariesRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3h Task 1 (collections part A) — `CollectionsRepository`/
+// `CollectionMembersRepository`/`CollectionLabelsRepository` a hand-constructed
+// `CollectionsService` needs. Same memoisation-per-handle pattern as every
+// helper above.
+// ---------------------------------------------------------------------------
+
+const collectionsRepoPerHandle = new WeakMap<Database.Database, Promise<CollectionsRepository>>();
+const collectionMembersRepoPerHandle = new WeakMap<Database.Database, Promise<CollectionMembersRepository>>();
+const collectionLabelsRepoPerHandle = new WeakMap<Database.Database, Promise<CollectionLabelsRepository>>();
+
+/** The `CollectionsRepository` a hand-constructed `CollectionsService` needs. */
+export function createTestCollectionsRepo(db: Database.Database): Promise<CollectionsRepository> {
+  const existing = collectionsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Collections));
+  collectionsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `CollectionMembersRepository` a hand-constructed `CollectionsService` needs. */
+export function createTestCollectionMembersRepo(db: Database.Database): Promise<CollectionMembersRepository> {
+  const existing = collectionMembersRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(CollectionMembers));
+  collectionMembersRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `CollectionLabelsRepository` a hand-constructed `CollectionsService` needs. */
+export function createTestCollectionLabelsRepo(db: Database.Database): Promise<CollectionLabelsRepository> {
+  const existing = collectionLabelsRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(CollectionLabels));
+  collectionLabelsRepoPerHandle.set(db, pending);
   return pending;
 }

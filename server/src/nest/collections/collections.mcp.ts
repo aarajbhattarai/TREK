@@ -5,9 +5,11 @@ import {
   demoDenied, ok,
 } from '../../nest-mcp';
 import { z } from 'zod';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { AuthService } from '../auth/auth.service';
 import { ADDON_IDS } from '../../addons';
-import { DatabaseService } from '../database/database.service';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { CollectionsService } from './collections.service';
 import {
   collectionCreateRequestSchema, collectionUpdateRequestSchema,
@@ -57,7 +59,7 @@ const collectionsAddonOn = addonGate(ADDON_IDS.COLLECTIONS);
 export class CollectionsMcp {
   constructor(
     private readonly collections: CollectionsService,
-    private readonly db: DatabaseService,
+    @InjectRepository(Users) private readonly users: UsersRepository,
     private readonly auth: AuthService,
     readonly addons: AddonsService,
   ) {}
@@ -379,7 +381,7 @@ export class CollectionsMcp {
     // try/catch added with the post-fold quirk pass — the legacy handler was one
     // of two where an unexpected throw escaped to the SDK instead of isError.
     try {
-      const me = this.db.get<{ username: string; email: string }>('SELECT username, email FROM users WHERE id = ?', ctx.userId);
+      const me = await this.users.findUsernameEmail(ctx.userId);
       const res = await this.collections.sendInvite(collection_id, ctx.userId, me?.username ?? '', me?.email ?? '', user_id, role);
       if (res.error) return { content: [{ type: 'text' as const, text: res.error }], isError: true };
       return ok({ success: true });
