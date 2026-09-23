@@ -27,6 +27,7 @@ import type { EntityManager } from '@mikro-orm/core';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import type { RpcRequest, RpcError } from '../../../src/nest/plugins/protocol/envelope';
 import { makeDeps } from '../../helpers/rpc-host-deps';
 import { schemaMessage } from '../../../src/nest/plugins/host/rpc-params';
@@ -65,6 +66,7 @@ function guardsFor() {
       db,
       { checkPermission: vi.fn(() => true) } as unknown as PermissionsService,
       { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService,
+      { getRole: vi.fn(async () => 'user') } as unknown as UsersRepository,
     ),
   };
 }

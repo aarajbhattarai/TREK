@@ -39,7 +39,7 @@ const tripsRegistry = () => {
     canAccessTrip: async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined),
     prepare: () => ({ get: () => ({ id: 1, title: 'Japan' }), all: () => [] }),
   } as unknown as DatabaseService;
-  const guards = new PluginGuards(db, {} as never, {} as never);
+  const guards = new PluginGuards(db, {} as never, {} as never, {} as never);
   // Plan 3c Task 7: trips.getById (RP1) now reads through
   // `EntityManager.getRepository(Trips).findRaw(...)`, not `db.prepare(...)`.
   const em = {

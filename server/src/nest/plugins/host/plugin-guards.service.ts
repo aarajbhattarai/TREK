@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../../database/database.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { AddonsService } from '../../addons/addons.service';
+import { Users } from '../../../db/entities/Users.entity';
+import type { UsersRepository } from '../../../db/repositories/Users.repository';
 import { BadParams, ForbiddenResource } from './rpc-errors';
 import { num } from './rpc-params';
 import type { PluginRpcContext } from './rpc-kit/types';
@@ -23,6 +26,7 @@ export class PluginGuards {
     private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly addons: AddonsService,
+    @InjectRepository(Users) private readonly users: UsersRepository,
   ) {}
 
   /**
@@ -69,9 +73,18 @@ export class PluginGuards {
   async canEditAs(action: string, tripId: number, userId: number): Promise<boolean> {
     const trip = await this.db.canAccessTrip(tripId, userId);
     if (!trip) return false;
-    const user = this.db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role?: string } | undefined;
-    if (!user) return false;
-    return this.permissions.checkPermission(action, user.role ?? 'user', trip.user_id, userId, trip.user_id !== userId);
+    // UsersRepository.getRole (PG3, Plan 3j Task 1) — `SELECT role FROM users
+    // WHERE id = ?`, converted. Its `string | null` return already folds "no
+    // row" and "row with a null role" into one value (the `role` column is
+    // `NOT NULL DEFAULT 'user'`, so the second case cannot occur against the
+    // real schema), so a null role here IS the "row is gone" refusal the
+    // legacy `!user` check made. The `?? 'user'` fallback below is kept
+    // verbatim rather than dropped, even though it is now unreachable code,
+    // so a future change to getRole's contract can't silently resurrect the
+    // old defensive gap.
+    const role = await this.users.getRole(userId);
+    if (role === null) return false;
+    return this.permissions.checkPermission(action, role ?? 'user', trip.user_id, userId, trip.user_id !== userId);
   }
 
   /**
@@ -80,8 +93,13 @@ export class PluginGuards {
    * against yet, which is why the owner id is passed as null.
    */
   async canCreateAs(action: string, userId: number): Promise<boolean> {
-    const user = this.db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role?: string } | undefined;
-    return this.permissions.checkPermission(action, user?.role ?? 'user', null, userId, false);
+    // Same converted read as canEditAs (PG4, identical statement text). No
+    // early refusal here, unchanged from the legacy branch: a vanished row
+    // falls back to role 'user' rather than refusing outright, exactly like
+    // `user?.role ?? 'user'` did — `trip_create`'s 'everybody' default means
+    // that fallback alone is enough to let the call through today.
+    const role = await this.users.getRole(userId);
+    return this.permissions.checkPermission(action, role ?? 'user', null, userId, false);
   }
 
   /**

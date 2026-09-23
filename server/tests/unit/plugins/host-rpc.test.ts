@@ -68,6 +68,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import type { NotificationsService } from '../../../src/nest/notifications/notifications.service';
 import type { LlmConfigResolver } from '../../../src/nest/llm-parse/llm-config.resolver';
 import type { PluginOAuthService } from '../../../src/nest/plugins/oauth/plugin-oauth.service';
@@ -106,7 +107,19 @@ const dbs = new DatabaseService(mockDb);
 vi.spyOn(dbs, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
   Number(tripId) === 1 && (userId === 5 || userId === 6) ? { id: 1, user_id: 5, currency: null } : undefined,
 );
-const guards = new PluginGuards(dbs, permissions, addons);
+// Plan 3j Task 1: PluginGuards' own role lookup (PG3/PG4) now goes through
+// UsersRepository.getRole, not `dbs.prepare(...)`. Same reasoning as the
+// canAccessTrip spy above — a real UsersRepository would need a real
+// MikroORM over this file's hand-trimmed `:memory:` schema (async init, no
+// top-level await here) for no benefit: checkPermission is a blanket stub
+// in this file, so no case depends on which role value flows through it.
+// Stubbed against the exact seeded rows (users.ts INSERTs above) so it stays
+// accurate if a future case ever does start asserting on the role argument.
+const seededRoles: Record<number, string> = { 5: 'trip_owner', 6: 'user', 9: 'user' };
+const usersRepo = {
+  getRole: vi.fn(async (id: number) => seededRoles[id] ?? null),
+} as unknown as UsersRepository;
+const guards = new PluginGuards(dbs, permissions, addons, usersRepo);
 const registry = createTestPluginRegistry([
   new DbRpc(userSettings),
   new MetaRpc(dbs, guards),

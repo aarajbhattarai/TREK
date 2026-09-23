@@ -48,15 +48,18 @@ function build(opts: { file?: Record<string, unknown> | undefined; foreign?: str
   } as unknown as FilesService & Record<string, ReturnType<typeof vi.fn>>;
   const db = {
     canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-    // Still needed by PluginGuards' own role lookup (requireTripEdit) — unrelated to FL28.
-    prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
   } as unknown as DatabaseService;
   // FL28 — `SELECT email FROM users WHERE id = ?`, now `UsersRepository.getEmail`.
-  const usersRepo = { getEmail: vi.fn(async () => 'real@example.test') } as unknown as UsersRepository;
+  // getRole is PluginGuards' own role lookup (PG3/PG4, Plan 3j Task 1), on the
+  // same double — both are UsersRepository methods now.
+  const usersRepo = {
+    getEmail: vi.fn(async () => 'real@example.test'),
+    getRole: vi.fn(async () => 'user'),
+  } as unknown as UsersRepository;
   const permissions = {
     checkPermission: vi.fn((action: string) => (opts.allow ? opts.allow(action) : true)),
   } as unknown as PermissionsService;
-  const guards = new PluginGuards(db, permissions, { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService);
+  const guards = new PluginGuards(db, permissions, { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService, usersRepo);
   const storage = {
     getStream: vi.fn(async () => ({
       stream: Readable.from(Buffer.from('hi')),
@@ -289,13 +292,14 @@ describe('FilesRpc writes', () => {
       const f = build();
       const db = {
         canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
-        // Still needed by PluginGuards' own role lookup — unrelated to FL28.
-        prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
       } as unknown as DatabaseService;
       const guards = new PluginGuards(
         db,
         { checkPermission: vi.fn(() => true) } as unknown as PermissionsService,
         { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService,
+        // PluginGuards' own role lookup — unrelated to FL28's `usersRepo` below,
+        // which is used for the demo-uploader email check.
+        { getRole: vi.fn(async () => 'user') } as unknown as UsersRepository,
       );
       const files = {
         findForeignLinkTarget: vi.fn(() => null),

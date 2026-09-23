@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { PermissionsModule } from '../../permissions/permissions.module';
 import { AddonsModule } from '../../addons/addons.module';
+import { Users } from '../../../db/entities/Users.entity';
 import { PluginGuards } from './plugin-guards.service';
 
 /**
@@ -11,12 +13,17 @@ import { PluginGuards } from './plugin-guards.service';
  * (PluginsModule -> TodoModule -> PluginsModule) and the only way out would be
  * forwardRef. PermissionsModule and AddonsModule are themselves leaves and
  * DatabaseModule is @Global, so this module imports nothing that leads back here.
+ * `MikroOrmModule.forFeature([Users])` (Plan 3j Task 1 — PluginGuards' own
+ * role lookup, PG3/PG4, now goes through UsersRepository) is the same kind of
+ * leaf: it hands out a repository token, not a domain module, so it doesn't
+ * reopen the cycle either — this module is the one that CONSTRUCTS
+ * PluginGuards, so it (not each importer) owns the forFeature list.
  *
  * Same shape and same reason as MailerModule, which broke
  * AuthModule <-> NotificationsModule.
  */
 @Module({
-  imports: [PermissionsModule, AddonsModule],
+  imports: [PermissionsModule, AddonsModule, MikroOrmModule.forFeature([Users])],
   providers: [PluginGuards],
   exports: [PluginGuards],
 })

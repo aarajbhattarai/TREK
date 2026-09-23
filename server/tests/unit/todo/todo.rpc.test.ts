@@ -15,6 +15,7 @@ import type { RealtimeService } from '../../../src/nest/realtime/realtime.servic
 import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import type { RpcRequest, RpcError } from '../../../src/nest/plugins/protocol/envelope';
 import { makeDeps } from '../../helpers/rpc-host-deps';
 
@@ -33,10 +34,10 @@ function build(canEdit = true) {
   const guards = new PluginGuards(
     {
       canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-      prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
     } as unknown as DatabaseService,
     permissions,
     { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService,
+    { getRole: vi.fn(async () => 'user') } as unknown as UsersRepository,
   );
   const rpc = new TodoRpc(todos, realtime, guards);
   const host = (...grants: string[]) =>

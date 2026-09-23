@@ -41,6 +41,7 @@ import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 import { RpcRateLimiter, DEFAULT_RPC_LIMIT } from '../../../src/nest/plugins/host/rate-limit';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import { Users } from '../../../src/db/entities/Users.entity';
 import type { PluginRpcHost } from '../../../src/nest/plugins/host/rpc-host';
 import type { RpcRequest, RpcResponse, RpcError } from '../../../src/nest/plugins/protocol/envelope';
 import type { EntityManager } from '@mikro-orm/core';
@@ -69,7 +70,13 @@ beforeAll(async () => {
   t = await createTestOrm(testDb, { allowGlobalContext: false });
   const dbs = new DatabaseService(testDb);
   permissions = new PermissionsService(t.repo(AppSettings), new UnitOfWork(t.em));
-  guards = new PluginGuards(dbs, permissions, await createTestAddonsService(testDb, dbs));
+  // Plan 3j Task 1: PluginGuards' own role lookup (canCreateAs, PG4) now goes
+  // through UsersRepository.getRole — a REAL repository bound to `t.em`
+  // (allowGlobalContext: false, same as `permissions`' AppSettingsRepository
+  // above), not a stub, because this suite's whole point is proving that
+  // read fails outside withRequestContext and succeeds inside it (D6/C3).
+  // A mocked UsersRepository would defeat that regression coverage.
+  guards = new PluginGuards(dbs, permissions, await createTestAddonsService(testDb, dbs), t.repo(Users));
   userId = createUser(testDb, { role: 'user' }).user.id;
   // An admin has tightened trip_create from its 'everybody' default.
   testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('perm_trip_create', 'admin')").run();
