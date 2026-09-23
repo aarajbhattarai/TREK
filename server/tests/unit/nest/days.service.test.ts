@@ -379,6 +379,22 @@ describe('quirk fixes', () => {
     expect(day.title).toBe('Arrival');
   });
 
+  // Plan 3c Task 2 review (task-2-review.md, L3) — appended per the Task 3
+  // coordinator addendum: DAY-SVC-033/054 pin `notes: ''` → null and
+  // `title: null` → null, but never the asymmetric half — `title: ''` must
+  // NOT clear, since the column uses `??` (only null/undefined clear), not
+  // `||`. A `??` → `||` regression on `title` would otherwise pass every
+  // existing test.
+  it('DAY-SVC-055 — an empty-string title does NOT clear (asymmetric coercion: title uses ?? , not ||)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    let day: Day = createDay(testDb, trip.id);
+    day = await svc.update(day.id, day, { title: 'Arrival' });
+    day = await svc.update(day.id, day, { title: '' });
+    expect(day.title).toBe('');
+    expect(testDb.prepare('SELECT title FROM days WHERE id = ?').get(day.id)).toEqual({ title: '' });
+  });
+
   // Asserted against AccommodationsService, which owns createAccommodation since
   // the days/accommodations split. It read `svc.createAccommodation` until then:
   // that is `undefined`, calling it throws, and `.toThrow()` was satisfied by the

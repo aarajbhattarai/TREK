@@ -1,8 +1,18 @@
 /**
  * Assignments module e2e — exercises both migrated controllers through the real
- * JwtAuthGuard against a temp SQLite db. AssignmentsService runs its real SQL
- * (DI-injected, no service mock); journeyService, the permission check,
- * canAccessTrip and the WebSocket broadcast stay mocked.
+ * JwtAuthGuard against a real migrated-and-seeded temp SQLite db
+ * (createSnapshotTestDb(), Plan 3c Task 3 — this used to hand-roll a dozen
+ * CREATE TABLEs, a second hand-maintained schema copy that (a) omitted
+ * several `day_assignments` columns `insertAssignment`'s own `em.insert()`
+ * RETURNING read-back names (`reservation_status`, `end_day`) and (b), per
+ * the Task 2 review's warning for this exact file, would hit `no such
+ * table` the moment any `find()` on an entity in this domain's graph needs
+ * to resolve a hidden inverse relation this DDL never created — the same
+ * class of failure `days.e2e.test.ts`'s own conversion (Task 2) fixed for
+ * that file. AssignmentsService runs its real SQL (DI-injected, no service
+ * mock); journeyService, the permission check and the WebSocket broadcast
+ * stay mocked. Every `it(...)` body below is unchanged from before this
+ * conversion — only the DB bootstrap changed.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockInstance } from 'vitest';
 import request from 'supertest';
@@ -11,61 +21,16 @@ import type { Server } from 'http';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
-import { seedUser, sessionCookie } from './harness';
+import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  // Only what the un-mocked DI service actually touches: the auth guard reads
-  // users; AssignmentsService's real SQL reads/writes the itinerary tables
-  // (display_name/avatar feed the participants COALESCE projection).
-  tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0,
-    display_name TEXT, avatar TEXT);`);
-  tmp.exec(`CREATE TABLE days (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL);`);
-  tmp.exec(`CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, icon TEXT);`);
-  tmp.exec(`CREATE TABLE places (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, name TEXT,
-    description TEXT, lat REAL, lng REAL, address TEXT, category_id INTEGER, price REAL, currency TEXT,
-    place_time TEXT, end_time TEXT, duration_minutes INTEGER DEFAULT 60, notes TEXT, image_url TEXT,
-    transport_mode TEXT DEFAULT 'walking', google_place_id TEXT, google_ftid TEXT, osm_id TEXT, amap_poi_id TEXT, website TEXT, phone TEXT,
-    stop_type TEXT, fill_percent INTEGER);`);
-  tmp.exec(`CREATE TABLE day_assignments (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
-    place_id INTEGER NOT NULL, order_index INTEGER NOT NULL DEFAULT 0, notes TEXT,
-    assignment_time TEXT, assignment_end_time TEXT, leg_transport_mode TEXT,
-    accommodation_id INTEGER,
-    created_at TEXT DEFAULT (datetime('now')));`);
-  // The auto-sort reads a booked night's hour off its booking, so the table has to be
-  // here even though nothing in this file books one.
-  tmp.exec(`CREATE TABLE day_accommodations (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER,
-    place_id INTEGER, start_day_id INTEGER, end_day_id INTEGER, check_in TEXT, check_in_end TEXT,
-    check_out TEXT, confirmation TEXT, notes TEXT, created_at TEXT DEFAULT (datetime('now')));`);
-  tmp.exec(`CREATE TABLE assignment_participants (assignment_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
-    UNIQUE(assignment_id, user_id));`);
-  // A start that reorders a day re-pins that day's vias in the same transaction, so
-  // the sort reads this table whenever it moves a stop.
-  tmp.exec(`CREATE TABLE roadtrip_vias (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
-    after_order_index INTEGER NOT NULL, sequence INTEGER NOT NULL DEFAULT 0, lat REAL NOT NULL, lng REAL NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, created_at TEXT);`);
-  tmp.exec(`CREATE TABLE place_tags (place_id INTEGER NOT NULL, tag_id INTEGER NOT NULL);`);
-  // TripAccessGuard now reads TripsRepository.findAccessible directly
-  // (Plan 3c Task 0b), a real join against trip_members.
-  tmp.exec('CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, currency TEXT);');
-  tmp.exec('CREATE TABLE trip_members (trip_id INTEGER NOT NULL, user_id INTEGER NOT NULL);');
-  // StorageRegistryService (behind StorageModule, now in this module chain) reads
-  // this at onModuleInit.
-  tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
-  return { db: tmp };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-const { canAccessTrip } = vi.hoisted(() => ({ canAccessTrip: vi.fn() }));
-vi.mock('../../src/db/database', () => ({
-  db, canAccessTrip, isOwner: vi.fn(() => true), getPlaceWithTags: vi.fn(), closeDb: () => {}, reinitialize: () => {},
-}));
 const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
 vi.mock('../../src/websocket', () => ({ broadcast }));
+
+import { db } from '../../src/db/database';
 
 const { reconcileTripSkeletons } = vi.hoisted(() => ({ reconcileTripSkeletons: vi.fn().mockResolvedValue(undefined) }));
 import { JourneyDomainService } from '../../src/nest/journey/journey-domain.service';
@@ -100,14 +65,21 @@ describe('Assignments e2e (real auth guard + temp SQLite)', () => {
   }
 
   beforeAll(async () => {
-    seedUser(db as never, { id: 1 });
-    seedUser(db as never, { id: 2, username: 'peer', email: 'peer@example.test' });
+    // harness.ts's seedUser() omits password_hash, which the real migrated
+    // schema requires NOT NULL (days.e2e.test.ts's own precedent) — raw
+    // inserts here instead, matching the SeededUser shape id/role/
+    // password_version=0 that sessionCookie() needs. `username: 'e2e-user'`
+    // (user 1) matches the harness default so assertion bodies that spell
+    // out the owner's username stay unchanged.
+    db.prepare("INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (1, 'e2e-user', 'e2e@example.test', 'x', 'user', 0)").run();
+    db.prepare("INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (2, 'peer', 'peer@example.test', 'x', 'user', 0)").run();
     // Plan 3c Task 0b: TripAccessGuard reads TripsRepository.findAccessible
-    // directly now, a real query — `canAccessTrip.mockReturnValue(...)` no
-    // longer intercepts it, so trip 5's real row (owned by user 1) is
-    // seeded once here rather than faked per test.
+    // directly now, a real query — trip 5's real row (owned by user 1) is
+    // seeded once here rather than faked per test. `days.day_number` is
+    // `NOT NULL` on the real schema (the old hand-rolled DDL had no such
+    // constraint).
     db.prepare("INSERT INTO trips (id, user_id, title) VALUES (5, 1, 'Trip')").run();
-    db.prepare('INSERT INTO days (id, trip_id) VALUES (3, 5), (4, 5)').run();
+    db.prepare('INSERT INTO days (id, trip_id, day_number) VALUES (3, 5, 1), (4, 5, 2)').run();
     db.prepare('INSERT INTO places (id, trip_id, name) VALUES (2, 5, ?)').run('Louvre');
     app = await build();
     checkPermission = vi.spyOn(app.get(PermissionsService), 'checkPermission');
@@ -300,6 +272,28 @@ describe('Assignments e2e (real auth guard + temp SQLite)', () => {
     });
   });
 
+  it('200 set participants replaces the list (AS28-31, the roster-scoped roundtrip)', async () => {
+    const id = seedAssignment();
+    // user 1 is trip 5's owner — TripMembersRepository.rosterUserIds includes
+    // the owner without a trip_members row (AS28), so this exercises the
+    // replace-all write (AS29 delete + AS30 insertIgnore) without needing a
+    // seeded membership row.
+    const res = await request(server)
+      .put(`/api/trips/5/assignments/${id}/participants`)
+      .set('Cookie', sessionCookie(1))
+      .send({ user_ids: [1, 1] }); // duplicate collapses via AS30's INSERT OR IGNORE
+    expect(res.status).toBe(200);
+    expect(res.body.participants).toEqual([{ user_id: 1, username: 'e2e-user', avatar: null }]);
+    expect(db.prepare('SELECT user_id FROM assignment_participants WHERE assignment_id = ?').all(id)).toEqual([{ user_id: 1 }]);
+
+    const cleared = await request(server)
+      .put(`/api/trips/5/assignments/${id}/participants`)
+      .set('Cookie', sessionCookie(1))
+      .send({ user_ids: [] });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.participants).toEqual([]);
+  });
+
   it('200 participants (access-only)', async () => {
     const id = seedAssignment();
     db.prepare('INSERT INTO assignment_participants (assignment_id, user_id) VALUES (?, 2)').run(id);
@@ -344,7 +338,8 @@ describe('Assignments e2e (real auth guard + temp SQLite)', () => {
       // TripsRepository.findAccessible genuinely refuses it, the same
       // outcome `canAccessTrip.mockImplementation` used to fake.
       db.prepare('INSERT OR IGNORE INTO trips (id, user_id, title) VALUES (?, 2, ?)').run(FOREIGN_TRIP, 'Their trip');
-      db.prepare('INSERT OR IGNORE INTO days (id, trip_id) VALUES (30, ?), (31, ?)').run(FOREIGN_TRIP, FOREIGN_TRIP);
+      // day_number is NOT NULL on the real schema (the old hand-rolled DDL had no such constraint).
+      db.prepare('INSERT OR IGNORE INTO days (id, trip_id, day_number) VALUES (30, ?, 1), (31, ?, 2)').run(FOREIGN_TRIP, FOREIGN_TRIP);
       db.prepare('INSERT OR IGNORE INTO places (id, trip_id, name) VALUES (20, ?, ?)').run(FOREIGN_TRIP, 'Their hotel');
     });
 

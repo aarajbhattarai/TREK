@@ -180,12 +180,50 @@ describe('DaysRepository — Task 2 additions', () => {
   // read populated the same entity type — written column (`notes`) is outside
   // the narrower read's own projection scope, so a stale write-back would
   // revert it if the base class's guarantee ever regressed.
+  //
+  // Task 2 review (task-2-review.md, L1): the original setup read
+  // (`find({})` with no options) went through `TrekRepository`'s OWN
+  // `disableIdentityMap: true` default too, so it never actually populated
+  // the identity map with the managed `day` entity — the test passed
+  // trivially, with nothing stale for `findById` to ever return. `{
+  // disableIdentityMap: false }` on THIS read is what makes the setup real:
+  // the managed entity (pre-write `notes`) is cached first, and `findById`'s
+  // own default must still bypass it. Mutation-proved (Task 3 session): with
+  // `TrekRepository.findOne`'s `disableIdentityMap` default temporarily
+  // flipped to `false`, this test fails (`findById` returns the stale
+  // pre-write `notes`); reverted immediately after.
   it('DAYREPO-018 (D-shape): a notes write after an unrelated identity-map read is visible in findById', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    await t.repo(Days).find({}); // populate the identity map with an unrelated read
+    await t.repo(Days).find({}, { disableIdentityMap: false }); // populate the identity map with the managed `day` entity
     await days.updateNotesAndTitle(day.id, 'Fresh notes', null);
     expect(await days.findById(day.id)).toMatchObject({ notes: 'Fresh notes' });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 3 (`AssignmentsService.dayExists`, AS4) — appended per the
+  // task's own file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  describe('existsInTrip (AS4)', () => {
+    it('DAYREPO-019: true only for the matching day AND trip', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const { user: other } = createUser(testDb);
+      const otherTrip = createTrip(testDb, other.id);
+      const day = createDay(testDb, trip.id);
+      expect(await days.existsInTrip(day.id, trip.id)).toBe(true);
+      expect(await days.existsInTrip(day.id, otherTrip.id)).toBe(false);
+      expect(await days.existsInTrip(999999, trip.id)).toBe(false);
+    });
+
+    it('DAYREPO-020: raw-bind — a string id/trip_id binds unconverted, same as a real number', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const day = createDay(testDb, trip.id);
+      expect(await days.existsInTrip(String(day.id), String(trip.id))).toBe(true);
+      expect(await days.existsInTrip('not-a-number', trip.id)).toBe(false);
+    });
   });
 });

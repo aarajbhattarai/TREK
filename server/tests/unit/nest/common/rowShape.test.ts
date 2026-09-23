@@ -1,15 +1,32 @@
 import { describe, it, expect } from 'vitest';
 
 import { formatAssignmentWithPlace, ratingAggregate } from '../../../../src/nest/common/rowShape';
-import type { AssignmentRow, Tag, Participant } from '../../../../src/types';
+import type { AssignmentWithPlaceRow } from '../../../../src/db/repositories/DayAssignments.repository';
+import type { Tag, Participant } from '../../../../src/types';
 
-function makeRow(overrides: Partial<AssignmentRow> = {}): AssignmentRow {
+/**
+ * Plan 3c Task 2 review (task-2-review.md, "For Task 3" §6.3): `formatAssignmentWithPlace`
+ * is typed on `DayAssignmentsRepository`'s own `AssignmentWithPlaceRow` (the
+ * honestly-nullable projection row, rule 16) rather than the legacy,
+ * narrower `types.ts#AssignmentRow` — this fixture now builds that shape
+ * directly, every field required, none defaulted away by a bare `as` cast.
+ */
+function makeRow(overrides: Partial<AssignmentWithPlaceRow> = {}): AssignmentWithPlaceRow {
   return {
     id: 1,
     day_id: 10,
     place_id: 100,
     order_index: 0,
     notes: 'assignment note',
+    reservation_status: 'none',
+    reservation_notes: null,
+    reservation_datetime: null,
+    assignment_time: null,
+    assignment_end_time: null,
+    end_day: 0,
+    leg_transport_mode: null,
+    incoming_leg_transport_mode: null,
+    accommodation_id: null,
     created_at: '2024-01-01T00:00:00Z',
     place_name: 'Eiffel Tower',
     place_description: 'Famous landmark',
@@ -30,10 +47,14 @@ function makeRow(overrides: Partial<AssignmentRow> = {}): AssignmentRow {
     transport_mode: 'walk',
     google_place_id: 'ChIJLU7jZClu5kcR4PcOOO6p3I0',
     google_ftid: '0x47e66e2c94e34e2d:0x8ddca9ee380ef7e0',
+    osm_id: null,
+    amap_poi_id: null,
     website: 'https://eiffel-tower.com',
     phone: '+33 1 2345 6789',
+    stop_type: null,
+    fill_percent: null,
     ...overrides,
-  } as AssignmentRow;
+  };
 }
 
 const sampleTags: Partial<Tag>[] = [
@@ -79,12 +100,12 @@ describe('formatAssignmentWithPlace', () => {
   });
 
   it('sets place.category to null when category_id is null', () => {
-    const result = formatAssignmentWithPlace(makeRow({ category_id: null as any }), [], []);
+    const result = formatAssignmentWithPlace(makeRow({ category_id: null }), [], []);
     expect(result.place.category).toBeNull();
   });
 
   it('sets place.category to null when category_id is 0 (falsy)', () => {
-    const result = formatAssignmentWithPlace(makeRow({ category_id: 0 as any }), [], []);
+    const result = formatAssignmentWithPlace(makeRow({ category_id: 0 }), [], []);
     expect(result.place.category).toBeNull();
   });
 

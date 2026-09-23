@@ -6,7 +6,7 @@ import { DatabaseService, type TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { formatAssignmentWithPlace } from '../common/rowShape';
-import type { AssignmentRow, User } from '../../types';
+import type { User } from '../../types';
 import { UnitOfWork } from '../database/unit-of-work';
 import { toRowId } from '../common/row-id';
 import { Days } from '../../db/entities/Days.entity';
@@ -193,11 +193,12 @@ export class DaysService {
     const assignmentsByDayId: Record<number, ReturnType<typeof formatAssignmentWithPlace>[]> = {};
     for (const a of allAssignments) {
       if (!assignmentsByDayId[a.day_id]) assignmentsByDayId[a.day_id] = [];
-      // The repository row is honestly nullable per column (rule 16); `AssignmentRow`
-      // (types.ts) narrows some of those to non-null the same way the legacy
-      // `this.db.all<AssignmentRow>(...)` cast already trusted unchecked — same trust
-      // boundary, moved from the raw-SQL generic to this call site.
-      assignmentsByDayId[a.day_id].push(formatAssignmentWithPlace(a as unknown as AssignmentRow, tagsByPlaceId[a.place_id] || [], participantsByAssignment[a.id] || []));
+      // Plan 3c Task 2 review, "For Task 3" §6.3: `formatAssignmentWithPlace`
+      // is now typed on the repository's own `AssignmentWithPlaceRow` (rule
+      // 16's honestly-nullable columns), so no cast is needed here — the
+      // `as unknown as AssignmentRow` this line used to carry moved to
+      // `rowShape.ts`'s parameter type instead, once, for every call site.
+      assignmentsByDayId[a.day_id].push(formatAssignmentWithPlace(a, tagsByPlaceId[a.place_id] || [], participantsByAssignment[a.id] || []));
     }
 
     const allNotes = await this.dayNotesRepo.listByDayIds(dayIds);

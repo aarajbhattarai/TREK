@@ -178,4 +178,25 @@ export class DaysRepository extends TrekRepository<Days> {
       .execute<DayIdAndNumberRow | undefined>('get', false);
     return row ?? undefined;
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 3 (`AssignmentsService`) — appended per the task's own
+  // file-ownership rule ("additive methods on Days/Places repositories if
+  // needed").
+  // ---------------------------------------------------------------------------
+
+  /**
+   * AS4 (`AssignmentsService.dayExists`) — `SELECT id FROM days WHERE id = ?
+   * AND trip_id = ?`. Raw-bind (`number | string`, D4's T5 escape hatch,
+   * `TripsRepository.findAccessible`'s precedent): the legacy guard binds
+   * the route's raw params with no `Number()`/`toRowId` conversion of its
+   * own, so this must accept and bind exactly what it's handed.
+   */
+  async existsInTrip(id: number | string, trip_id: number | string): Promise<boolean> {
+    const row = await this.qb('d')
+      .select(['d.id'])
+      .where('d.id = ? AND d.trip_id = ?', [id, trip_id])
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
 }

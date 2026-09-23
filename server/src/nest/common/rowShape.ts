@@ -1,4 +1,5 @@
-import type { AssignmentRow, Tag, Participant } from '../../types';
+import type { Tag, Participant } from '../../types';
+import type { AssignmentWithPlaceRow } from '../../db/repositories/DayAssignments.repository';
 import type { PlaceRatingRow } from '../query-helpers/query-helpers.service';
 
 /**
@@ -8,8 +9,22 @@ import type { PlaceRatingRow } from '../query-helpers/query-helpers.service';
  * free functions too.
  */
 
-/** Reshape a flat assignment+place DB row into the nested API response shape with embedded place, tags, and participants. */
-export function formatAssignmentWithPlace(a: AssignmentRow, tags: Partial<Tag>[], participants: Participant[]) {
+/**
+ * Reshape a flat assignment+place DB row into the nested API response shape with
+ * embedded place, tags, and participants.
+ *
+ * Typed on `AssignmentWithPlaceRow` (`DayAssignmentsRepository`'s own DY1/DY3/
+ * AS1/AS3 projection row) — Plan 3c Task 2 review, "For Task 3" §6.3: the
+ * legacy `types.ts#AssignmentRow` narrows several columns to non-null that
+ * the physical projection genuinely returns nullable (rule 16), and Task 2
+ * bridged the gap with a documented `as unknown as AssignmentRow` cast at
+ * its one call site rather than widen the type. Every real call site
+ * (`DaysService.list`, `AssignmentsService.getAssignmentWithPlace`/
+ * `listDayAssignments`) passes this same repository row, so typing the
+ * parameter on it directly removes all three casts in one change instead of
+ * adding a fourth.
+ */
+export function formatAssignmentWithPlace(a: AssignmentWithPlaceRow, tags: Partial<Tag>[], participants: Participant[]) {
   return {
     id: a.id,
     day_id: a.day_id,

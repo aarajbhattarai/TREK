@@ -75,6 +75,8 @@ import { makeStorageFixture } from './storage-fixture';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo, sharedTestOrm,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
+  createTestTripMembersRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
+  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
 } from './test-uow';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
@@ -99,7 +101,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const realtime = new RealtimeService();
   const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection));
   const addons = await createTestAddonsService(dbs.connection, dbs);
-  const queryHelpers = new QueryHelpersService(dbs);
+  const queryHelpers = new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection));
   const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
   const packing = new PackingService(dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const files = new FilesService(dbs, permissions, realtime, new EphemeralTokenService(), generalStorage, (await sharedTestOrm(dbs.connection)).em);
@@ -116,14 +118,21 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestDayNotesRepo(dbs.connection),
     await createTestTripsRepo(dbs.connection),
   );
-  const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
+  const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbs.connection), await createTestPlacesRepo(dbs.connection));
   const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
   const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection));
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
   const dayNotes = new DayNotesService(dbs, permissions, realtime);
-  const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection));
-  const membership = new TripMembershipService(dbs);
+  const assignments = new AssignmentsService(
+    dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection),
+    await createTestDayAssignmentsRepo(dbs.connection),
+    await createTestAssignmentParticipantsRepo(dbs.connection),
+    await createTestDaysRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
+    await createTestTripMembersRepo(dbs.connection),
+  );
+  const membership = new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection));
   const notifications = await makeNotificationsService(dbs, realtime);
   const llmConfig = new LlmConfigResolver(new SettingsService(await createTestUnitOfWork(dbs.connection), appSettings, await createTestSettingsRepo(dbs.connection)), dbs, addons);
   const oauth = new PluginOAuthService(dbs);

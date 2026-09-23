@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { chronoOrder, type RoadtripVia, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { isEmptyReanchoring, reanchorByStopOrder, type AnchoredVia } from '@trek/shared/roadtrip';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -6,19 +7,22 @@ import { DatabaseService, type TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { formatAssignmentWithPlace } from '../common/rowShape';
-import type { AssignmentRow, DayAssignment, User, Participant } from '../../types';
+import type { User } from '../../types';
 import { JourneyDomainService } from '../journey/journey-domain.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { toRowId } from '../common/row-id';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import type { DayAssignmentsRepository, DayStopRow } from '../../db/repositories/DayAssignments.repository';
+import { AssignmentParticipants } from '../../db/entities/AssignmentParticipants.entity';
+import type { AssignmentParticipantsRepository } from '../../db/repositories/AssignmentParticipants.repository';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 
 type Trip = TripAccess;
-
-/** One stop of a day as the time sort reads it. */
-interface DayStopRow {
-  id: number;
-  order_index: number;
-  effective_time: string | null;
-  located: number;
-}
 
 /**
  * What saving a time changed besides the stop itself, so each caller can tell the
@@ -56,6 +60,26 @@ function sortMinutes(time: string | null): number | null {
  * QueryHelpersService (shared with the day, share and place services).
  * Every consumer injects this class (assignments.bridge.ts is deleted —
  * PlacesMcp injects it from AssignmentsDomainModule now).
+ *
+ * The day-assignment/participant SQL now lives in `DayAssignmentsRepository`/
+ * `AssignmentParticipantsRepository` (Plan 3c Task 3, consuming Task 2's
+ * `findWithPlaceAndCategory`/`listForDay` projection unchanged for AS1/AS3);
+ * AS20–AS23 (`roadtrip_vias`) stay raw on `DatabaseService`, `// ASn — Plan
+ * 3d` marked — that table belongs to Plan 3d. AS5 (`placeExists`) is the one
+ * exception to "SQL lives in a repository method": `Places.repository.ts`
+ * was another task's exclusive, actively-edited file this session (never
+ * touched here), so the equivalent one-line `qb()` raw-condition read is
+ * inlined below rather than added as a `PlacesRepository` method — flagged
+ * in the task report for a follow-up to move it once that file is free.
+ *
+ * Assignment ids arriving from a route/tool are an **affinity seam** for the
+ * mutation methods (`toRowId(id)!`, program rule 15) — every real call site
+ * only ever reaches a mutation downstream of its own gate check in the same
+ * request (`assignmentExistsInDay`/`getAssignmentForTrip`, both of which
+ * stay on the legacy raw-bind seam themselves, matching `TripsRepository
+ * .findAccessible`'s documented `number | string` pass-through), so the
+ * non-null assertion is dead-code-safe, the same shape `DaysService` already
+ * uses for its own single `getDay` gate.
  */
 @Injectable()
 export class AssignmentsService {
@@ -66,6 +90,11 @@ export class AssignmentsService {
     private readonly queryHelpers: QueryHelpersService,
     private readonly journey: JourneyDomainService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
+    @InjectRepository(AssignmentParticipants) private readonly assignmentParticipantsRepo: AssignmentParticipantsRepository,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -97,19 +126,9 @@ export class AssignmentsService {
    * the moved row back in exactly this shape.
    */
   async getAssignmentWithPlace(assignmentId: number | bigint) {
-    const a = this.dbs.get<AssignmentRow>(`
-      SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
-        p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
-        COALESCE(da.assignment_time, p.place_time) as place_time,
-        COALESCE(da.assignment_end_time, p.end_time) as end_time,
-        p.duration_minutes, p.notes as place_notes,
-        p.image_url, p.transport_mode, p.google_place_id, p.google_ftid, p.osm_id, p.amap_poi_id, p.website, p.phone, p.stop_type, p.fill_percent,
-        c.name as category_name, c.color as category_color, c.icon as category_icon
-      FROM day_assignments da
-      JOIN places p ON da.place_id = p.id
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE da.id = ?
-    `, assignmentId);
+    // AS1 — `DayAssignmentsRepository.findWithPlaceAndCategory`, Task 2's
+    // projection, consumed unchanged.
+    const a = await this.dayAssignmentsRepo.findWithPlaceAndCategory(Number(assignmentId));
 
     if (!a) return null;
 
@@ -117,41 +136,36 @@ export class AssignmentsService {
     // one wire shape regardless of which read path produced it.
     const tags = (await this.queryHelpers.loadTagsByPlaceIds([a.place_id], { compact: true }))[a.place_id] || [];
 
-    const participants = this.dbs.all<Participant>(`
-      SELECT ap.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
-      FROM assignment_participants ap
-      JOIN users u ON ap.user_id = u.id
-      WHERE ap.assignment_id = ?
-    `, a.id);
+    // AS2 — `AssignmentParticipantsRepository.listWithDisplayName`
+    // (COALESCE(display_name, username), unlike QH3's raw username).
+    const participants = await this.assignmentParticipantsRepo.listWithDisplayName(a.id);
 
     // The same shaper the list path uses. It was spelled out here as a third hand-kept
     // copy of the place shape, and the copy silently dropped `stop_type`: the optimistic
     // row the client had drawn as a fuel stop was replaced, a beat later, by this answer
     // without it — so a petrol station turned into an ordinary numbered place while you
     // watched.
+    //
+    // `formatAssignmentWithPlace` is typed on `AssignmentWithPlaceRow` directly
+    // (Plan 3c Task 2 review, "For Task 3" §6.3) — no cast needed here.
     return formatAssignmentWithPlace(a, tags, participants);
   }
 
   async listDayAssignments(dayId: string | number) {
-    const assignments = this.dbs.all<AssignmentRow>(`
-      SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
-        p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
-        COALESCE(da.assignment_time, p.place_time) as place_time,
-        COALESCE(da.assignment_end_time, p.end_time) as end_time,
-        p.duration_minutes, p.notes as place_notes,
-        p.image_url, p.transport_mode, p.google_place_id, p.google_ftid, p.osm_id, p.amap_poi_id, p.website, p.phone, p.stop_type, p.fill_percent,
-        c.name as category_name, c.color as category_color, c.icon as category_icon
-      FROM day_assignments da
-      JOIN places p ON da.place_id = p.id
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE da.day_id = ?
-      ORDER BY da.order_index ASC, da.created_at ASC
-    `, dayId);
+    // AS3 — `DayAssignmentsRepository.listForDay`, Task 2's projection (the
+    // same statement text DY1 uses), consumed unchanged. `toRowId`, not a
+    // bare `Number()` (Task 2 review point 7): the repository takes a real
+    // number and the sole caller (`DayAssignmentsController.list`) already
+    // gates on `dayExists` in the same request.
+    const assignments = await this.dayAssignmentsRepo.listForDay(toRowId(dayId)!);
 
     const placeIds = [...new Set(assignments.map(a => a.place_id))];
     const tagsByPlaceId = await this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
 
     const assignmentIds = assignments.map(a => a.id);
+    // QH3 (`QueryHelpersService.loadParticipantsByAssignmentIds`) — deliberately
+    // WITHOUT the COALESCE `getAssignmentWithPlace`/`getParticipants` apply
+    // (inventory §18.10); unchanged from before this conversion.
     const participantsByAssignment = await this.queryHelpers.loadParticipantsByAssignmentIds(assignmentIds);
 
     return assignments.map(a => {
@@ -159,12 +173,25 @@ export class AssignmentsService {
     });
   }
 
+  /** AS4 — `DaysRepository.existsInTrip`. Raw-bind pass-through, unchanged. */
   async dayExists(dayId: string | number, tripId: string | number) {
-    return !!this.dbs.get('SELECT id FROM days WHERE id = ? AND trip_id = ?', dayId, tripId);
+    return await this.daysRepo.existsInTrip(dayId, tripId);
   }
 
+  /**
+   * AS5 — `SELECT id FROM places WHERE id = ? AND trip_id = ?`. `Places
+   * .repository.ts` was another task's exclusive, actively-edited file this
+   * session (see the class docstring) — inlined here as the one exception to
+   * "SQL lives in a repository method" rather than adding a method there.
+   * Same raw-bind seam as `dayExists`/`DayAssignmentsRepository.existsInDay`.
+   */
   async placeExists(placeId: unknown, tripId: string | number) {
-    return !!this.dbs.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+    const row = await this.placesRepo
+      .qb('p')
+      .select(['p.id'])
+      .where('p.id = ? AND p.trip_id = ?', [placeId, tripId])
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
   }
 
   /**
@@ -175,73 +202,82 @@ export class AssignmentsService {
    * from a place the traveller added, so it draws the hotel a second time.
    */
   async createAssignment(dayId: string | number, placeId: unknown, notes?: string | null, opts: { accommodationId?: number; orderIndex?: number } = {}) {
-    const result = await this.uow.transactional(async () => {
-      const maxOrder = this.dbs.get<{ max: number | null }>('SELECT MAX(order_index) as max FROM day_assignments WHERE day_id = ?', dayId)!;
-      const end = (maxOrder.max !== null ? maxOrder.max : -1) + 1;
+    // Downstream of the caller's own dayExists/placeExists gate in the same
+    // request (every real call site), so the non-null assertion is
+    // dead-code-safe — the class docstring's affinity-seam note.
+    const dayIdNum = toRowId(dayId)!;
+    const placeIdNum = toRowId(placeId)!;
+
+    const insertedId = await this.uow.transactional(async () => {
+      // AS6 — the explicit null check (not `||`) is load-bearing: a stored 0
+      // order_index must survive, which `maxOrder || -1` would not.
+      const maxOrder = await this.dayAssignmentsRepo.maxOrderIndex(dayIdNum);
+      const end = (maxOrder !== null ? maxOrder : -1) + 1;
       // Somewhere in the middle when the caller says so, which means everything from
       // there on moves down. The end is still the default and still what every caller
       // but one asks for.
       const orderIndex = opts.orderIndex !== undefined ? Math.max(0, Math.min(opts.orderIndex, end)) : end;
       if (orderIndex < end) {
-        this.dbs.run('UPDATE day_assignments SET order_index = order_index + 1 WHERE day_id = ? AND order_index >= ?', dayId, orderIndex);
+        await this.dayAssignmentsRepo.shiftOrderFrom(dayIdNum, orderIndex); // AS7
       }
 
-      return this.dbs.run(
-        'INSERT INTO day_assignments (day_id, place_id, order_index, notes, accommodation_id) VALUES (?, ?, ?, ?, ?)',
-        dayId, placeId, orderIndex, notes || null, opts.accommodationId ?? null
-      );
-    });
-
-    return await this.getAssignmentWithPlace(result.lastInsertRowid);
-  }
-
-  async assignmentExistsInDay(id: string | number, dayId: string | number, tripId: string | number) {
-    return !!this.dbs.get(
-      'SELECT da.id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE da.id = ? AND da.day_id = ? AND d.trip_id = ?',
-      id, dayId, tripId
-    );
-  }
-
-  async deleteAssignment(id: string | number): Promise<void> {
-    this.dbs.run('DELETE FROM day_assignments WHERE id = ?', id);
-  }
-
-  async reorderAssignments(dayId: string | number, orderedIds: number[]): Promise<void> {
-    const update = this.dbs.prepare('UPDATE day_assignments SET order_index = ? WHERE id = ? AND day_id = ?');
-    await this.uow.transactional(async () => {
-      orderedIds.forEach((id: number, index: number) => {
-        update.run(index, id, dayId);
+      return await this.dayAssignmentsRepo.insertAssignment({ // AS8
+        day_id: dayIdNum,
+        place_id: placeIdNum,
+        order_index: orderIndex,
+        notes: notes || null,
+        accommodation_id: opts.accommodationId ?? null,
       });
     });
+
+    return await this.getAssignmentWithPlace(insertedId);
   }
 
+  /** AS9 — `DayAssignmentsRepository.existsInDay`. Raw-bind pass-through, unchanged. */
+  async assignmentExistsInDay(id: string | number, dayId: string | number, tripId: string | number) {
+    return await this.dayAssignmentsRepo.existsInDay(id, dayId, tripId);
+  }
+
+  /** AS10 — `DayAssignmentsRepository.deleteById`. */
+  async deleteAssignment(id: string | number): Promise<void> {
+    await this.dayAssignmentsRepo.deleteById(toRowId(id)!);
+  }
+
+  /**
+   * AS11 — `DayAssignmentsRepository.setOrderIndex`, day-scoped, one row per
+   * id, sequentially and in the legacy's own order (not `Promise.all` — the
+   * program's transaction-ordering rule).
+   */
+  async reorderAssignments(dayId: string | number, orderedIds: number[]): Promise<void> {
+    const dayIdNum = toRowId(dayId)!;
+    await this.uow.transactional(async () => {
+      for (const [index, id] of orderedIds.entries()) {
+        await this.dayAssignmentsRepo.setOrderIndex(id, dayIdNum, index);
+      }
+    });
+  }
+
+  /** AS12 — `DayAssignmentsRepository.findInTrip`. Raw-bind pass-through, unchanged. */
   async getAssignmentForTrip(id: string | number, tripId: string | number) {
-    return this.dbs.get<DayAssignment>(`
-      SELECT da.* FROM day_assignments da
-      JOIN days d ON da.day_id = d.id
-      WHERE da.id = ? AND d.trip_id = ?
-    `, id, tripId);
+    return await this.dayAssignmentsRepo.findInTrip(id, tripId);
   }
 
   async moveAssignment(id: string | number, newDayId: unknown, orderIndex: number | null | undefined) {
+    const idNum = toRowId(id)!;
     // The source day comes from the row, not the caller — callers can't lie
     // about (or race on) where the assignment was.
     const oldDayId = await this.uow.transactional(async () => {
-      const row = this.dbs.get<{ day_id: number }>('SELECT day_id FROM day_assignments WHERE id = ?', id);
-      this.dbs.run('UPDATE day_assignments SET day_id = ?, order_index = ? WHERE id = ?', newDayId, orderIndex ?? 0, id);
-      return row?.day_id;
+      const dayId = await this.dayAssignmentsRepo.getDayId(idNum); // AS13
+      await this.dayAssignmentsRepo.moveToDay(idNum, toRowId(newDayId)!, orderIndex ?? 0); // AS14
+      return dayId;
     });
-    const updated = await this.getAssignmentWithPlace(Number(id));
+    const updated = await this.getAssignmentWithPlace(idNum);
     return { assignment: updated, oldDayId };
   }
 
+  /** AS15 — `AssignmentParticipantsRepository.listWithDisplayName`, the same AS2/AS31 statement. */
   async getParticipants(assignmentId: string | number) {
-    return this.dbs.all(`
-      SELECT ap.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
-      FROM assignment_participants ap
-      JOIN users u ON ap.user_id = u.id
-      WHERE ap.assignment_id = ?
-    `, assignmentId);
+    return await this.assignmentParticipantsRepo.listWithDisplayName(toRowId(assignmentId)!);
   }
 
   /**
@@ -258,19 +294,15 @@ export class AssignmentsService {
    * same.
    */
   async updateTime(id: string | number, placeTime: unknown, endTime: unknown): Promise<AssignmentTimeUpdate> {
+    const idNum = toRowId(id)!;
     const sorted = await this.uow.transactional(async () => {
-      const stored = this.dbs.get<{ day_id: number; start: string | null }>(`
-        SELECT da.day_id, COALESCE(da.assignment_time, p.place_time, acc.check_in) AS start
-        FROM day_assignments da
-        JOIN places p ON da.place_id = p.id
-        LEFT JOIN day_accommodations acc ON acc.id = da.accommodation_id
-        WHERE da.id = ?
-      `, id);
+      // AS16 — the three-way COALESCE, via Kysely (no ORM relation to
+      // `day_accommodations` — see `DayAssignmentsRepository`'s docstring).
+      const stored = await this.dayAssignmentsRepo.effectiveStart(idNum);
 
       // Falsy times (null, undefined, '') all clear the override — an empty
-      // string is a clear, not a stored value.
-      this.dbs.run('UPDATE day_assignments SET assignment_time = ?, assignment_end_time = ? WHERE id = ?',
-        placeTime || null, endTime || null, id);
+      // string is a clear, not a stored value. AS17.
+      await this.dayAssignmentsRepo.setTimes(idNum, (placeTime as string | null | undefined) || null, (endTime as string | null | undefined) || null);
 
       // Only a start that moved sorts. An end is a label. A start sent again as it
       // stood (the place form saving an End, the stay dialog taking one off, an MCP
@@ -286,7 +318,7 @@ export class AssignmentsService {
     const vias = sorted?.viasMoved ? { dayId: sorted.dayId, vias: await this.listDayVias(sorted.dayId) } : null;
 
     return {
-      assignment: await this.getAssignmentWithPlace(Number(id)),
+      assignment: await this.getAssignmentWithPlace(idNum),
       reordered: sorted ? { dayId: sorted.dayId, orderedIds: sorted.orderedIds } : null,
       vias,
     };
@@ -302,15 +334,9 @@ export class AssignmentsService {
     // counted as untimed and stayed wherever it had been dropped, so pinning an
     // afternoon stop sorted that one and left the hotel sitting in front of or
     // behind it by accident.
-    const rows = this.dbs.all<DayStopRow>(`
-      SELECT da.id, da.order_index, COALESCE(da.assignment_time, p.place_time, acc.check_in) as effective_time,
-        (p.lat IS NOT NULL AND p.lng IS NOT NULL) as located
-      FROM day_assignments da
-      JOIN places p ON da.place_id = p.id
-      LEFT JOIN day_accommodations acc ON acc.id = da.accommodation_id
-      WHERE da.day_id = ?
-      ORDER BY da.order_index ASC, da.created_at ASC, da.id ASC
-    `, dayId);
+    //
+    // AS18 — `DayAssignmentsRepository.listForTimeSort`, via Kysely.
+    const rows = await this.dayAssignmentsRepo.listForTimeSort(dayId);
 
     const sorted = chronoOrder(rows, row => sortMinutes(row.effective_time));
     if (sorted.every((row, i) => row === rows[i])) return null;
@@ -319,11 +345,12 @@ export class AssignmentsService {
     // goes out as a list of ids and every client numbers it by position, so keys kept
     // with their gaps would put the day notes and bookings that sort between stops in
     // one place for the writer, who reads the day back, and in another for everyone
-    // else. Only a stop whose key changes is written.
-    const update = this.dbs.prepare('UPDATE day_assignments SET order_index = ? WHERE id = ?');
-    sorted.forEach((row, i) => {
-      if (row.order_index !== i) update.run(i, row.id);
-    });
+    // else. Only a stop whose key changes is written. AS19 — no day scoping,
+    // unlike AS11's `reorderAssignments` (`setOrderIndex`'s `day_id` left
+    // `undefined`), sequentially and in the legacy's own order.
+    for (const [i, row] of sorted.entries()) {
+      if (row.order_index !== i) await this.dayAssignmentsRepo.setOrderIndex(row.id, undefined, i);
+    }
 
     return { dayId, orderedIds: sorted.map(row => row.id), viasMoved: await this.reanchorVias(dayId, rows, sorted) };
   }
@@ -352,13 +379,16 @@ export class AssignmentsService {
     // is right for a stop the sort made last and wrong for one that was last already.
     const lastAt = previousIds.length - 1;
     const seam = previousIds[lastAt] === nextIds[lastAt] ? lastAt : null;
+    // AS20 — Plan 3d (`roadtrip_vias`)
     const vias = this.dbs.all<AnchoredVia>('SELECT id, after_order_index, lat, lng FROM roadtrip_vias WHERE day_id = ?', dayId)
       .filter(via => via.after_order_index !== seam);
     const plan = reanchorByStopOrder(vias, previousIds, nextIds);
     for (const viaId of plan.remove) {
+      // AS21 — Plan 3d
       this.dbs.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', viaId, dayId);
     }
     for (const via of plan.vias) {
+      // AS22 — Plan 3d
       this.dbs.run('UPDATE roadtrip_vias SET after_order_index = ? WHERE id = ? AND day_id = ?', via.after_order_index, via.id, dayId);
     }
     return !isEmptyReanchoring(plan);
@@ -367,6 +397,9 @@ export class AssignmentsService {
   /**
    * The day's vias in the shape the road trip routes broadcast them. RoadtripService
    * has this query too, but its module imports this one, so it cannot be injected here.
+   *
+   * AS23 — Plan 3d (`roadtrip_vias`): a deliberate duplicate of RoadtripService's
+   * own query, per the legacy docstring's own note — do not dedupe.
    */
   private async listDayVias(dayId: number): Promise<RoadtripVia[]> {
     return this.dbs.all<RoadtripVia>(
@@ -378,9 +411,11 @@ export class AssignmentsService {
     );
   }
 
+  /** AS24 — `DayAssignmentsRepository.setEndDay`. */
   async setEndDay(id: string | number, endDay: boolean) {
-    this.dbs.run('UPDATE day_assignments SET end_day = ? WHERE id = ?', endDay ? 1 : 0, id);
-    return await this.getAssignmentWithPlace(Number(id));
+    const idNum = toRowId(id)!;
+    await this.dayAssignmentsRepo.setEndDay(idNum, endDay ? 1 : 0);
+    return await this.getAssignmentWithPlace(idNum);
   }
 
   /**
@@ -389,33 +424,36 @@ export class AssignmentsService {
    * invisible in the app. Falsy notes ('' or null) clear the column, the same
    * `notes || null` normalisation createAssignment applies. No auto-sort and no
    * journey reconcile: the note affects neither the day order nor the skeleton
-   * mirror (same as the transport-mode writes).
+   * mirror (same as the transport-mode writes). AS25.
    */
   async updateNotes(id: string | number, notes: string | null | undefined) {
-    this.dbs.run('UPDATE day_assignments SET notes = ? WHERE id = ?', notes || null, id);
-    return await this.getAssignmentWithPlace(Number(id));
+    const idNum = toRowId(id)!;
+    await this.dayAssignmentsRepo.setNotes(idNum, notes || null);
+    return await this.getAssignmentWithPlace(idNum);
   }
 
   /**
    * Set the travel mode of the leg leaving this stop (#1281). null clears the
    * override so the leg falls back to the day's default_transport_mode. This is
    * sticky by design: changing the whole-day default never touches a leg that
-   * carries its own explicit mode.
+   * carries its own explicit mode. AS26.
    */
   async setLegTransportMode(id: string | number, mode: string | null) {
-    this.dbs.run('UPDATE day_assignments SET leg_transport_mode = ? WHERE id = ?', mode ?? null, id);
-    return await this.getAssignmentWithPlace(Number(id));
+    const idNum = toRowId(id)!;
+    await this.dayAssignmentsRepo.setLegMode(idNum, mode ?? null);
+    return await this.getAssignmentWithPlace(idNum);
   }
 
   /**
    * Set the travel mode of the leg arriving at this stop (#1281 boundary legs).
    * Mirrors setLegTransportMode but targets incoming_leg_transport_mode; inert
    * when the previous timeline element is a place (the column is only read for
-   * non-place origins like a booking arrival or a morning hotel departure).
+   * non-place origins like a booking arrival or a morning hotel departure). AS27.
    */
   async setIncomingLegTransportMode(id: string | number, mode: string | null) {
-    this.dbs.run('UPDATE day_assignments SET incoming_leg_transport_mode = ? WHERE id = ?', mode ?? null, id);
-    return await this.getAssignmentWithPlace(Number(id));
+    const idNum = toRowId(id)!;
+    await this.dayAssignmentsRepo.setIncomingLegMode(idNum, mode ?? null);
+    return await this.getAssignmentWithPlace(idNum);
   }
 
   /**
@@ -426,21 +464,18 @@ export class AssignmentsService {
    * the request would strand a trip whose membership changed underneath it.
    */
   async setParticipants(assignmentId: string | number, userIds: number[], tripId: string | number) {
-    const roster = await this.dbs.rosterUserIds(tripId);
+    const idNum = toRowId(assignmentId)!;
+    // AS28 — `TripMembersRepository.rosterUserIds`; off-roster ids drop silently.
+    const roster = await this.tripMembersRepo.rosterUserIds(tripId);
     const scoped = userIds.filter(id => roster.has(id));
     await this.uow.transactional(async () => {
-      this.dbs.run('DELETE FROM assignment_participants WHERE assignment_id = ?', assignmentId);
+      await this.assignmentParticipantsRepo.deleteForAssignment(idNum); // AS29
       if (scoped.length > 0) {
-        const insert = this.dbs.prepare('INSERT OR IGNORE INTO assignment_participants (assignment_id, user_id) VALUES (?, ?)');
-        for (const userId of scoped) insert.run(assignmentId, userId);
+        await this.assignmentParticipantsRepo.insertIgnore(idNum, scoped); // AS30 — `upsertMany`/`onConflictAction: 'ignore'`
       }
     });
 
-    return this.dbs.all(`
-      SELECT ap.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
-      FROM assignment_participants ap
-      JOIN users u ON ap.user_id = u.id
-      WHERE ap.assignment_id = ?
-    `, assignmentId);
+    // AS31
+    return await this.assignmentParticipantsRepo.listWithDisplayName(idNum);
   }
 }

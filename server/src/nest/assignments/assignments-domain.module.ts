@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { JourneyDomainModule } from '../journey/journey-domain.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { QueryHelpersModule } from '../query-helpers/query-helpers.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { AssignmentsService } from './assignments.service';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import { AssignmentParticipants } from '../../db/entities/AssignmentParticipants.entity';
+import { Days } from '../../db/entities/Days.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
 
 /**
  * The assignments SERVICE, split from the controller/MCP/RPC surfaces (the
@@ -12,10 +18,25 @@ import { AssignmentsService } from './assignments.service';
  * that stays off the DaysModule → PlacesModule → AssignmentsModule loop.
  * That is what lets PlacesModule import this and places.mcp.ts inject the
  * service, which retired assignments.bridge. Everything here is a leaf:
- * none of the four imports reaches the days or places domains.
+ * none of the four service imports reaches the days or places domains.
+ *
+ * `MikroOrmModule.forFeature([DayAssignments, AssignmentParticipants, Days,
+ * Places, TripMembers])` registers `DayAssignmentsRepository`/
+ * `AssignmentParticipantsRepository`/`DaysRepository`/`PlacesRepository`/
+ * `TripMembersRepository` for `AssignmentsService`'s `@InjectRepository`
+ * constructor params (Plan 3c Task 3) — the entity classes only, not the
+ * `DaysModule`/`PlacesModule` modules themselves, so the loop this module's
+ * docstring already avoids stays avoided (`DaysModule`'s own precedent for
+ * pulling in `Trips` the same way).
  */
 @Module({
-  imports: [PermissionsModule, QueryHelpersModule, JourneyDomainModule, RealtimeModule],
+  imports: [
+    PermissionsModule,
+    QueryHelpersModule,
+    JourneyDomainModule,
+    RealtimeModule,
+    MikroOrmModule.forFeature([DayAssignments, AssignmentParticipants, Days, Places, TripMembers]),
+  ],
   providers: [AssignmentsService],
   exports: [AssignmentsService],
 })

@@ -163,13 +163,21 @@ describe('DayAssignmentsRepository — the DY1/DY3/AS1/AS3 projection', () => {
   // never hydrates an entity into the identity map by construction — proven
   // anyway, the "not required, proven regardless" shape (AssignmentParticipants
   // precedent).
+  //
+  // Task 2 review (task-2-review.md, L1): the setup read now passes `{
+  // disableIdentityMap: false }` so it genuinely caches a managed
+  // `DayAssignments` entity first (the base's own default previously made
+  // this a no-op read, same class of vacuousness as `DAYREPO-018`) — even
+  // so, `listForDay` is `qb().execute('all', false)`, never `find`/
+  // `findOne`, so it cannot return that cached entity regardless; this test
+  // proves the projection's OWN freshness, not the identity-map guard.
   it('ASSIGNPLACEREPO-008 (D-shape): a place rename after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Old Name' });
     const assignment = createDayAssignment(testDb, day.id, place.id);
-    await t.repo(DayAssignments).find({}); // populate the identity map with an unrelated read
+    await t.repo(DayAssignments).find({}, { disableIdentityMap: false }); // populate the identity map with the managed assignment entity
     testDb.prepare('UPDATE places SET name = ? WHERE id = ?').run('Renamed', place.id);
 
     const [row] = await assignments.listForDay(day.id);
@@ -263,4 +271,327 @@ describe('DayAssignmentsRepository.reanchorToDay (DY24, Kysely)', () => {
     const row = testDb.prepare('SELECT day_id FROM day_assignments WHERE id = ?').get(stop.id) as { day_id: number };
     expect(row.day_id).toBe(toDay.id);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 3 (`AssignmentsService`) — appended after Task 2's own
+// methods/tests above, per this task's file-ownership rule.
+// ---------------------------------------------------------------------------
+
+describe('DayAssignmentsRepository — AS4/AS9/AS12 existence + trip-scoped read', () => {
+  it('ASSIGNREPO-001 (AS9, existsInDay): true only for the matching assignment/day/trip triple', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const otherDay = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    expect(await assignments.existsInDay(a.id, day.id, trip.id)).toBe(true);
+    expect(await assignments.existsInDay(a.id, otherDay.id, trip.id)).toBe(false);
+    expect(await assignments.existsInDay(a.id, day.id, trip.id + 1)).toBe(false);
+  });
+
+  it('ASSIGNREPO-002 (AS9): raw-bind — a string id binds unconverted, same as a real number', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    expect(await assignments.existsInDay(String(a.id), String(day.id), String(trip.id))).toBe(true);
+  });
+
+  it('ASSIGNREPO-003 (AS12, findInTrip): the raw `da.*` row, scoped to the trip via a two-hop join; undefined cross-trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id, { order_index: 3 });
+    testDb.prepare('UPDATE day_assignments SET assignment_time = ?, notes = ? WHERE id = ?').run('09:00', 'a note', a.id);
+
+    const row = await assignments.findInTrip(a.id, trip.id);
+    const legacy = testDb.prepare(`SELECT da.* FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE da.id = ? AND d.trip_id = ?`).get(a.id, trip.id);
+    expect(row).toStrictEqual(legacy);
+    expect(row).toMatchObject({ id: a.id, day_id: day.id, order_index: 3, assignment_time: '09:00', notes: 'a note' });
+    expect(await assignments.findInTrip(a.id, trip.id + 1)).toBeUndefined();
+  });
+});
+
+describe('DayAssignmentsRepository — AS6/AS7/AS8 (createAssignment)', () => {
+  it('ASSIGNREPO-004 (AS6, maxOrderIndex): null for a day with no assignments, otherwise the highest order_index — a stored 0 is not confused with "no rows"', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    expect(await assignments.maxOrderIndex(day.id)).toBeNull();
+    createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
+    expect(await assignments.maxOrderIndex(day.id)).toBe(0);
+    createDayAssignment(testDb, day.id, place.id, { order_index: 5 });
+    expect(await assignments.maxOrderIndex(day.id)).toBe(5);
+  });
+
+  it('ASSIGNREPO-005 (AS7, shiftOrderFrom): shifts order_index for rows at/after the threshold, on that day only', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const otherDay = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const before = createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
+    const at = createDayAssignment(testDb, day.id, place.id, { order_index: 1 });
+    const after = createDayAssignment(testDb, day.id, place.id, { order_index: 2 });
+    const foreign = createDayAssignment(testDb, otherDay.id, place.id, { order_index: 1 });
+
+    await withRequestContext(t.orm, async () => { await assignments.shiftOrderFrom(day.id, 1); });
+
+    const order = (id: number) => (testDb.prepare('SELECT order_index FROM day_assignments WHERE id = ?').get(id) as { order_index: number }).order_index;
+    expect(order(before.id)).toBe(0);
+    expect(order(at.id)).toBe(2);
+    expect(order(after.id)).toBe(3);
+    expect(order(foreign.id)).toBe(1);
+  });
+
+  it('ASSIGNREPO-006 (AS8, insertAssignment): writes every column and returns the inserted id, notes/accommodation_id nullable', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+
+    const id = await withRequestContext(t.orm, () => assignments.insertAssignment({
+      day_id: day.id, place_id: place.id, order_index: 2, notes: null, accommodation_id: null,
+    }));
+    expect(typeof id).toBe('number');
+    const row = testDb.prepare('SELECT day_id, place_id, order_index, notes, accommodation_id FROM day_assignments WHERE id = ?').get(id);
+    expect(row).toEqual({ day_id: day.id, place_id: place.id, order_index: 2, notes: null, accommodation_id: null });
+
+    const id2 = await withRequestContext(t.orm, () => assignments.insertAssignment({
+      day_id: day.id, place_id: place.id, order_index: 0, notes: 'skip the line', accommodation_id: 42,
+    }));
+    const row2 = testDb.prepare('SELECT notes, accommodation_id FROM day_assignments WHERE id = ?').get(id2);
+    expect(row2).toEqual({ notes: 'skip the line', accommodation_id: 42 });
+  });
+});
+
+describe('DayAssignmentsRepository — AS10/AS11/AS13/AS14/AS19 (delete / order / move)', () => {
+  it('ASSIGNREPO-007 (AS10, deleteById): removes the row', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    await withRequestContext(t.orm, () => assignments.deleteById(a.id));
+    expect(testDb.prepare('SELECT id FROM day_assignments WHERE id = ?').get(a.id)).toBeUndefined();
+  });
+
+  it('ASSIGNREPO-008 (AS11, setOrderIndex day-scoped): writes only the row matching BOTH id and day_id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const otherDay = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
+    const foreign = createDayAssignment(testDb, otherDay.id, place.id, { order_index: 0 });
+
+    await withRequestContext(t.orm, () => assignments.setOrderIndex(a.id, day.id, 7));
+    // A day_id mismatch (this id does not sit on otherDay) writes nothing.
+    await withRequestContext(t.orm, () => assignments.setOrderIndex(foreign.id, day.id, 9));
+
+    const order = (id: number) => (testDb.prepare('SELECT order_index FROM day_assignments WHERE id = ?').get(id) as { order_index: number }).order_index;
+    expect(order(a.id)).toBe(7);
+    expect(order(foreign.id)).toBe(0);
+  });
+
+  it('ASSIGNREPO-009 (AS19, setOrderIndex unscoped): day_id undefined writes by id alone', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
+    await withRequestContext(t.orm, () => assignments.setOrderIndex(a.id, undefined, 3));
+    expect((testDb.prepare('SELECT order_index FROM day_assignments WHERE id = ?').get(a.id) as { order_index: number }).order_index).toBe(3);
+  });
+
+  it('ASSIGNREPO-010 (AS13, getDayId): the assignment\'s day_id, undefined for a missing id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    expect(await assignments.getDayId(a.id)).toBe(day.id);
+    expect(await assignments.getDayId(999999)).toBeUndefined();
+  });
+
+  it('ASSIGNREPO-011 (AS14, moveToDay): writes day_id and order_index together', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const target = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
+    await withRequestContext(t.orm, () => assignments.moveToDay(a.id, target.id, 4));
+    const row = testDb.prepare('SELECT day_id, order_index FROM day_assignments WHERE id = ?').get(a.id);
+    expect(row).toEqual({ day_id: target.id, order_index: 4 });
+  });
+});
+
+describe('DayAssignmentsRepository.effectiveStart (AS16, Kysely)', () => {
+  it('ASSIGNREPO-012: byte-identical to the legacy three-way COALESCE, own time wins over the place\'s', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET place_time = ? WHERE id = ?').run('08:00', place.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    testDb.prepare('UPDATE day_assignments SET assignment_time = ? WHERE id = ?').run('14:00', a.id);
+
+    const row = await withRequestContext(t.orm, () => assignments.effectiveStart(a.id));
+    const legacy = testDb.prepare(`
+      SELECT da.day_id, COALESCE(da.assignment_time, p.place_time, acc.check_in) AS start
+      FROM day_assignments da JOIN places p ON da.place_id = p.id
+      LEFT JOIN day_accommodations acc ON acc.id = da.accommodation_id
+      WHERE da.id = ?
+    `).get(a.id);
+    expect(row).toEqual(legacy);
+    expect(row).toEqual({ day_id: day.id, start: '14:00' });
+  });
+
+  it('ASSIGNREPO-013: falls back to the place\'s own time when the assignment has none', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET place_time = ? WHERE id = ?').run('08:00', place.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    expect(await withRequestContext(t.orm, () => assignments.effectiveStart(a.id))).toEqual({ day_id: day.id, start: '08:00' });
+  });
+
+  it('ASSIGNREPO-014: a booked night falls back further, to the accommodation\'s check_in (a LEFT JOIN through the plain accommodation_id column, no ORM relation)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const hotel = createPlace(testDb, trip.id);
+    const night = createDayAssignment(testDb, day.id, hotel.id);
+    const stay = testDb.prepare(
+      "INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in) VALUES (?, ?, ?, ?, '17:00')",
+    ).run(trip.id, hotel.id, day.id, day.id);
+    testDb.prepare('UPDATE day_assignments SET accommodation_id = ? WHERE id = ?').run(Number(stay.lastInsertRowid), night.id);
+
+    expect(await withRequestContext(t.orm, () => assignments.effectiveStart(night.id))).toEqual({ day_id: day.id, start: '17:00' });
+  });
+
+  it('ASSIGNREPO-015: null start when nothing sets a time anywhere in the chain', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    expect(await withRequestContext(t.orm, () => assignments.effectiveStart(a.id))).toEqual({ day_id: day.id, start: null });
+  });
+
+  it('ASSIGNREPO-016: undefined for a missing id', async () => {
+    expect(await withRequestContext(t.orm, () => assignments.effectiveStart(999999))).toBeUndefined();
+  });
+});
+
+describe('DayAssignmentsRepository.listForTimeSort (AS18, Kysely)', () => {
+  it('ASSIGNREPO-017: byte-identical to the legacy statement, including the computed `located` boolean (0/1) and the three-key ORDER BY', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const located = createPlace(testDb, trip.id, { name: 'Has coords' });
+    const unlocated = createPlace(testDb, trip.id, { name: 'No coords' });
+    testDb.prepare('UPDATE places SET lat = NULL, lng = NULL WHERE id = ?').run(unlocated.id);
+    const a1 = createDayAssignment(testDb, day.id, located.id, { order_index: 1 });
+    const a2 = createDayAssignment(testDb, day.id, unlocated.id, { order_index: 0 });
+    testDb.prepare('UPDATE day_assignments SET assignment_time = ? WHERE id = ?').run('09:00', a1.id);
+
+    const rows = await withRequestContext(t.orm, () => assignments.listForTimeSort(day.id));
+    const legacy = testDb.prepare(`
+      SELECT da.id, da.order_index, COALESCE(da.assignment_time, p.place_time, acc.check_in) as effective_time,
+        (p.lat IS NOT NULL AND p.lng IS NOT NULL) as located
+      FROM day_assignments da JOIN places p ON da.place_id = p.id
+      LEFT JOIN day_accommodations acc ON acc.id = da.accommodation_id
+      WHERE da.day_id = ?
+      ORDER BY da.order_index ASC, da.created_at ASC, da.id ASC
+    `).all(day.id);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([a2.id, a1.id]);
+    expect(rows.find((r) => r.id === a1.id)?.located).toBe(1);
+    expect(rows.find((r) => r.id === a2.id)?.located).toBe(0);
+  });
+
+  it('ASSIGNREPO-018: [] for a day with no assignments', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    expect(await withRequestContext(t.orm, () => assignments.listForTimeSort(day.id))).toEqual([]);
+  });
+});
+
+describe('DayAssignmentsRepository — AS17/AS24/AS25/AS26/AS27 (single-column writes)', () => {
+  it('ASSIGNREPO-019 (AS17, setTimes): writes both columns, null-clearable', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    await withRequestContext(t.orm, () => assignments.setTimes(a.id, '09:00', '10:30'));
+    expect(testDb.prepare('SELECT assignment_time, assignment_end_time FROM day_assignments WHERE id = ?').get(a.id))
+      .toEqual({ assignment_time: '09:00', assignment_end_time: '10:30' });
+    await withRequestContext(t.orm, () => assignments.setTimes(a.id, null, null));
+    expect(testDb.prepare('SELECT assignment_time, assignment_end_time FROM day_assignments WHERE id = ?').get(a.id))
+      .toEqual({ assignment_time: null, assignment_end_time: null });
+  });
+
+  it('ASSIGNREPO-020 (AS24, setEndDay): writes the 0/1 flag', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    await withRequestContext(t.orm, () => assignments.setEndDay(a.id, 1));
+    expect((testDb.prepare('SELECT end_day FROM day_assignments WHERE id = ?').get(a.id) as { end_day: number }).end_day).toBe(1);
+  });
+
+  it('ASSIGNREPO-021 (AS25, setNotes): null-clearable', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    await withRequestContext(t.orm, () => assignments.setNotes(a.id, 'a note'));
+    expect((testDb.prepare('SELECT notes FROM day_assignments WHERE id = ?').get(a.id) as { notes: string | null }).notes).toBe('a note');
+    await withRequestContext(t.orm, () => assignments.setNotes(a.id, null));
+    expect((testDb.prepare('SELECT notes FROM day_assignments WHERE id = ?').get(a.id) as { notes: string | null }).notes).toBeNull();
+  });
+
+  it('ASSIGNREPO-022 (AS26/AS27, setLegMode/setIncomingLegMode): each writes its own column', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const a = createDayAssignment(testDb, day.id, place.id);
+    await withRequestContext(t.orm, () => assignments.setLegMode(a.id, 'cycling'));
+    await withRequestContext(t.orm, () => assignments.setIncomingLegMode(a.id, 'walking'));
+    expect(testDb.prepare('SELECT leg_transport_mode, incoming_leg_transport_mode FROM day_assignments WHERE id = ?').get(a.id))
+      .toEqual({ leg_transport_mode: 'cycling', incoming_leg_transport_mode: 'walking' });
+    await withRequestContext(t.orm, () => assignments.setLegMode(a.id, null));
+    expect((testDb.prepare('SELECT leg_transport_mode FROM day_assignments WHERE id = ?').get(a.id) as { leg_transport_mode: string | null }).leg_transport_mode).toBeNull();
+  });
+});
+
+// D-shape: a `qb().execute(..., false)` projection or a Kysely read, neither
+// of which hydrates an entity into the identity map by construction (the
+// ASSIGNPLACEREPO-008 precedent above) — proven anyway for the new reads.
+// Task 2 review (task-2-review.md, L1, program note): the setup read passes
+// `{ disableIdentityMap: false }` so it genuinely caches the managed
+// assignment entity first (a bare `find({})` would be a no-op read under
+// the base's own default, the same vacuousness `DAYREPO-018` had).
+it('ASSIGNREPO-023 (D-shape): a notes write after an unrelated identity-map read is visible in findInTrip', async () => {
+  const { user } = createUser(testDb);
+  const trip = createTrip(testDb, user.id);
+  const day = createDay(testDb, trip.id);
+  const place = createPlace(testDb, trip.id);
+  const a = createDayAssignment(testDb, day.id, place.id);
+  await t.repo(DayAssignments).find({}, { disableIdentityMap: false }); // populate the identity map with the managed assignment entity
+  await withRequestContext(t.orm, () => assignments.setNotes(a.id, 'fresh note'));
+  expect(await assignments.findInTrip(a.id, trip.id)).toMatchObject({ notes: 'fresh note' });
 });

@@ -48,38 +48,43 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember, createDay, createPlace, createDayAssignment, createTag } from '../../helpers/factories';
-import { DatabaseService, type TripAccess } from '../../../src/nest/database/database.service';
+import { type TripAccess } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { AssignmentsService } from '../../../src/nest/assignments/assignments.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import {
+  createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
+  createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
+  createTestTripMembersRepo, createTestDatabaseService,
+} from '../../helpers/test-uow';
 
-const dbs = new DatabaseService(testDb);
-const realtime = new RealtimeService();
 let svc: AssignmentsService;
 beforeAll(async () => {
-  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — the four
-  // repository-backed methods are spied directly on this instance instead,
-  // routed to a real `DatabaseService` built with one.
-  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
-  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
-  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
-  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
-  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
+  // Plan 3c Task 3: `DatabaseService` now needs a real `EntityManager`
+  // up front (AS0's `canAccessTrip` still delegates to it; `TripAccess`'s
+  // shape comes off `TripsRepository`) — `createTestDatabaseService`
+  // (Task 0b's helper) builds one bound to the shared per-file ORM every
+  // repository below also resolves through.
+  const dbs = await createTestDatabaseService(testDb);
+  const realtime = new RealtimeService();
   svc = new AssignmentsService(
-  dbs,
-  new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
-  realtime,
-  new QueryHelpersService(dbs),
-  // Real collaborator rather than a stub: reconcile() runs after every mutation
-  // and needs the same connection to see the rows these cases write.
-  new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
-  await createTestUnitOfWork(dbs.connection),
-);
+    dbs,
+    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    realtime,
+    new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
+    // Real collaborator rather than a stub: reconcile() runs after every mutation
+    // and needs the same connection to see the rows these cases write.
+    new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+    await createTestUnitOfWork(dbs.connection),
+    await createTestDayAssignmentsRepo(dbs.connection),
+    await createTestAssignmentParticipantsRepo(dbs.connection),
+    await createTestDaysRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
+    await createTestTripMembersRepo(dbs.connection),
+  );
 });
 
 /**

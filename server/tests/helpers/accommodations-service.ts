@@ -7,7 +7,11 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from './test-uow';
+import {
+  createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
+  createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
+  createTestTripMembersRepo, sharedTestOrm,
+} from './test-uow';
 
 /**
  * AccommodationsService over a test connection.
@@ -38,9 +42,14 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
   const realtime = new RealtimeService();
   const assignments = new AssignmentsService(
     dbs, permissions, realtime,
-    new QueryHelpersService(dbs),
+    new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
     await createTestUnitOfWork(dbs.connection),
+    await createTestDayAssignmentsRepo(dbs.connection),
+    await createTestAssignmentParticipantsRepo(dbs.connection),
+    await createTestDaysRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
+    await createTestTripMembersRepo(dbs.connection),
   );
   return new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
 }

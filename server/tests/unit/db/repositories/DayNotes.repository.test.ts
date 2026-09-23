@@ -93,4 +93,26 @@ describe('DayNotesRepository.listByDayIds (DY4)', () => {
     const day = createDay(testDb, trip.id);
     expect(await notes.listByDayIds([day.id])).toEqual([]);
   });
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 2 review (task-2-review.md, L2) — appended per the Task 3
+  // coordinator addendum: `listByDayIds` is `find`-based (unlike Task 3's own
+  // qb()/Kysely reads), so the identity-map guard is a real, provable
+  // guarantee here, not "proven regardless". The setup read passes `{
+  // disableIdentityMap: false }` so it genuinely caches a managed entity
+  // first — a bare `find({})` would be a no-op under the base's own default
+  // (`DAYREPO-018`'s vacuousness).
+  // ---------------------------------------------------------------------------
+
+  it('NOTEREPO-008 (D-shape): a text write after an unrelated identity-map read is visible in the FIRST wider listByDayIds', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const note = createDayNote(testDb, day.id, trip.id, { text: 'Old text' });
+    await t.repo(DayNotes).find({}, { disableIdentityMap: false }); // populate the identity map with the managed note entity
+    testDb.prepare('UPDATE day_notes SET text = ? WHERE id = ?').run('Fresh text', note.id);
+
+    const rows = await notes.listByDayIds([day.id]);
+    expect(rows).toEqual([expect.objectContaining({ id: note.id, text: 'Fresh text' })]);
+  });
 });
