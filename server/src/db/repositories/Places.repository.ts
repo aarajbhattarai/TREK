@@ -932,4 +932,53 @@ export class PlacesRepository extends TrekRepository<Places> {
       { currency: prev_currency, updated_at: currentTimestamp(platform) },
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3f Task 1 (`AtlasService`) — additive, append-only per that task's
+  // own file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * AT2 (`AtlasService#getPlacesForTrips`) — `SELECT * FROM places WHERE
+   * trip_id IN (...)`. Dynamic `IN`, empty-array short-circuit (the
+   * `listAllForTrip`/single-id precedent above, widened to a batch of trip
+   * ids — every atlas read that resolves a user's trips first passes the
+   * whole id list through here in one call rather than one query per trip).
+   */
+  async listForTripIds(trip_ids: number[]): Promise<PlaceRow[]> {
+    if (trip_ids.length === 0) return [];
+    return await this.qb('p')
+      .select(['p.*'])
+      .where({ trip: { $in: trip_ids } })
+      .execute<PlaceRow[]>('all', false);
+  }
+
+  /**
+   * AT41 (`AtlasService#getTravelStats`) — `SELECT DISTINCT p.address,
+   * p.lat, p.lng, pr.region_name FROM places p JOIN trips t ON p.trip_id =
+   * t.id LEFT JOIN trip_members tm ON t.id = tm.trip_id LEFT JOIN
+   * place_regions pr ON pr.place_id = p.id WHERE t.user_id = ? OR tm.user_id
+   * = ?`. The resolved region rides along so `cityFromAddress` can tell the
+   * city apart from the region sitting right above it in the same address
+   * (#1115) — unchanged from the legacy projection.
+   */
+  async listAddressesForUser(user_id: number): Promise<{ address: string | null; lat: number | null; lng: number | null; region_name: string | null }[]> {
+    return await this.kysely<PlacesAddressesForUserKyselyDB>()
+      .selectFrom('places as p')
+      .innerJoin('trips as t', 't.id', 'p.trip_id')
+      .leftJoin('trip_members as tm', 'tm.trip_id', 't.id')
+      .leftJoin('place_regions as pr', 'pr.place_id', 'p.id')
+      .select(['p.address', 'p.lat', 'p.lng', 'pr.region_name'])
+      .distinct()
+      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('tm.user_id', '=', user_id)]))
+      .execute();
+  }
+}
+
+/** {@link PlacesRepository.listAddressesForUser}'s narrow `places`/`trips`/`trip_members`/`place_regions` shape. */
+interface PlacesAddressesForUserKyselyDB {
+  places: { id: number; trip_id: number; address: string | null; lat: number | null; lng: number | null };
+  trips: { id: number; user_id: number };
+  trip_members: { trip_id: number; user_id: number };
+  place_regions: { place_id: number; region_name: string | null };
 }

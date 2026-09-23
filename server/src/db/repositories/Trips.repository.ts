@@ -767,6 +767,96 @@ export class TripsRepository extends TrekRepository<Trips> {
       .andWhere({ reminder_days: { $gt: 0 }, start_date: { $ne: null } })
       .execute<TripReminderCandidateRow[]>('all', false);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3f Task 6 (`SystemNoticesService`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /** SN3 (`systemNotices/service.ts`'s former `getActiveNoticesFor`) — `SELECT COUNT(*) AS count FROM trips WHERE user_id = ?`, feeding the `noTrips` condition kind. */
+  async countForUser(userId: number): Promise<number> {
+    return this.count({ user: userId });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3f Task 1 (`AtlasService`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * AT1 (`AtlasService#getUserTrips`, the join every other atlas read
+   * relies on transitively) — `SELECT DISTINCT t.* FROM trips t LEFT JOIN
+   * trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.user_id =
+   * ? OR m.user_id = ? ORDER BY t.start_date DESC`. Reuses
+   * `accessibleTripsQuery` (Plan 3c Task 1) rather than re-deriving the
+   * join: its `m.user: { $ne: null }` half is the LEFT-JOIN-then-`IS NOT
+   * NULL` spelling of the legacy `m.user_id = ?` — the join's own `ON …
+   * AND m.user_id = ?` already restricts every matched `m` row to this
+   * user, so the two WHERE spellings pick out the identical row set. No
+   * explicit `.distinct()`: `TripMembers`' own `uniques: [['trip','
+   * user']]` constraint means at most one `m` row per `(trip, user)`, so
+   * the join can never fan a `t` row out to more than one result row.
+   */
+  async listOwnedOrMember(user_id: number): Promise<TripRawRow[]> {
+    return await this.accessibleTripsQuery(user_id)
+      .select(['t.*'])
+      .orderBy({ 't.start_date': 'desc' })
+      .execute<TripRawRow[]>('all', false);
+  }
+
+  /**
+   * AT39 (`AtlasService#lastTrip`) — `SELECT t.id, t.title, t.start_date,
+   * t.end_date FROM trips t LEFT JOIN trip_members tm ON t.id = tm.trip_id
+   * WHERE (t.user_id = ? OR tm.user_id = ?) AND COALESCE(t.start_date,
+   * t.end_date) IS NOT NULL AND COALESCE(t.start_date, t.end_date) <=
+   * date('now') ORDER BY COALESCE(t.end_date, t.start_date) DESC, t.id DESC
+   * LIMIT 1`. `today` (`date('now')`, UTC) is resolved by the caller once
+   * (`todayUtc()`) and bound here — the `activeTrip(user_id, today)`
+   * precedent above for a literal `date('now')` comparison.
+   */
+  async lastStartedTrip(user_id: number, today: string): Promise<{ id: number; title: string; start_date: string | null; end_date: string | null } | undefined> {
+    return await this.kysely<LastStartedTripKyselyDB>()
+      .selectFrom('trips as t')
+      .leftJoin('trip_members as tm', 'tm.trip_id', 't.id')
+      .select(['t.id', 't.title', 't.start_date', 't.end_date'])
+      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('tm.user_id', '=', user_id)]))
+      .where((eb) => eb(eb.fn.coalesce('t.start_date', 't.end_date'), 'is not', null))
+      .where((eb) => eb(eb.fn.coalesce('t.start_date', 't.end_date'), '<=', today))
+      .orderBy((eb) => eb.fn.coalesce('t.end_date', 't.start_date'), 'desc')
+      .orderBy('t.id', 'desc')
+      .limit(1)
+      .executeTakeFirst();
+  }
+
+  /**
+   * AT42 (`AtlasService#getTravelStats`) — `SELECT COUNT(DISTINCT t.id) as
+   * trips, COUNT(DISTINCT d.id) as days FROM trips t LEFT JOIN days d ON
+   * d.trip_id = t.id LEFT JOIN trip_members tm ON t.id = tm.trip_id WHERE
+   * (t.user_id = ? OR tm.user_id = ?)`. Archived trips still count (the
+   * legacy statement's own doc comment, `atlas.service.ts:1049-1051`) — no
+   * `is_archived` filter here, on purpose.
+   */
+  async countTripsAndDaysForUser(user_id: number): Promise<{ trips: number; days: number }> {
+    const row = await this.kysely<CountTripsAndDaysKyselyDB>()
+      .selectFrom('trips as t')
+      .leftJoin('days as d', 'd.trip_id', 't.id')
+      .leftJoin('trip_members as tm', 'tm.trip_id', 't.id')
+      .select((eb) => [eb.fn.count<number>('t.id').distinct().as('trips'), eb.fn.count<number>('d.id').distinct().as('days')])
+      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('tm.user_id', '=', user_id)]))
+      .executeTakeFirst();
+    return { trips: Number(row?.trips ?? 0), days: Number(row?.days ?? 0) };
+  }
+}
+
+/** {@link TripsRepository.lastStartedTrip}'s narrow `trips`/`trip_members` shape. */
+interface LastStartedTripKyselyDB {
+  trips: { id: number; title: string; start_date: string | null; end_date: string | null; user_id: number };
+  trip_members: { trip_id: number; user_id: number };
+}
+
+/** {@link TripsRepository.countTripsAndDaysForUser}'s narrow `trips`/`days`/`trip_members` shape. */
+interface CountTripsAndDaysKyselyDB {
+  trips: { id: number; user_id: number };
+  days: { id: number; trip_id: number };
+  trip_members: { trip_id: number; user_id: number };
 }
 
 /** {@link TripsRepository.listReminderCandidates}'s row — `t.user` selected bare (not joined here), so it aliases to the physical `user_id` column per `findAccessible`'s documented precedent. */

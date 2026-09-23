@@ -29,15 +29,33 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createPlace, createReservation, addTripMember } from '../../helpers/factories';
 import { AtlasService } from '../../../src/nest/atlas/atlas.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestTripsRepo, createTestPlacesRepo, createTestReservationEndpointsRepo } from '../../helpers/test-uow';
+import {
+  createTestBucketListRepo,
+  createTestHiddenCountriesRepo,
+  createTestHiddenRegionsRepo,
+  createTestVisitedCountriesRepo,
+  createTestVisitedRegionsRepo,
+  createTestPlaceRegionsRepo,
+} from '../../helpers/atlas-repos';
 
 let atlas: AtlasService;
 
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  atlas = new AtlasService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  atlas = new AtlasService(
+    await createTestBucketListRepo(testDb),
+    await createTestHiddenCountriesRepo(testDb),
+    await createTestHiddenRegionsRepo(testDb),
+    await createTestVisitedCountriesRepo(testDb),
+    await createTestVisitedRegionsRepo(testDb),
+    await createTestPlaceRegionsRepo(testDb),
+    await createTestTripsRepo(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestReservationEndpointsRepo(testDb),
+    await createTestUnitOfWork(testDb),
+  );
 });
 beforeEach(() => { resetTestDb(testDb); vi.clearAllMocks(); });
 afterAll(() => { testDb.close(); });

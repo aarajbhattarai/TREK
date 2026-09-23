@@ -107,6 +107,10 @@ import {
   createTestVacayUserColorsRepo, createTestVacayEntriesRepo, createTestVacayCompanyHolidaysRepo,
   createTestVacaySharesRepo, createTestVacayUserSettingsRepo,
 } from './vacay-repos';
+import {
+  createTestBucketListRepo, createTestHiddenCountriesRepo, createTestHiddenRegionsRepo,
+  createTestVisitedCountriesRepo, createTestVisitedRegionsRepo, createTestPlaceRegionsRepo,
+} from './atlas-repos';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -180,7 +184,13 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
   const journey = new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection));
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
-  const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
+  const atlas = new AtlasService(
+    await createTestBucketListRepo(dbs.connection), await createTestHiddenCountriesRepo(dbs.connection),
+    await createTestHiddenRegionsRepo(dbs.connection), await createTestVisitedCountriesRepo(dbs.connection),
+    await createTestVisitedRegionsRepo(dbs.connection), await createTestPlaceRegionsRepo(dbs.connection),
+    await createTestTripsRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
+    await createTestReservationEndpointsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection),
+  );
   const dayNotes = new DayNotesService(dbs, permissions, realtime);
   const assignments = new AssignmentsService(
     dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection),

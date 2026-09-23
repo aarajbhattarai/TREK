@@ -154,6 +154,10 @@ import {
   createTestVacayUserColorsRepo, createTestVacayEntriesRepo, createTestVacayCompanyHolidaysRepo,
   createTestVacaySharesRepo, createTestVacayUserSettingsRepo,
 } from './vacay-repos';
+import {
+  createTestBucketListRepo, createTestHiddenCountriesRepo, createTestHiddenRegionsRepo,
+  createTestVisitedCountriesRepo, createTestVisitedRegionsRepo, createTestPlaceRegionsRepo,
+} from './atlas-repos';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -408,7 +412,13 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new PlacesMcp(placesService, mapsService, await createTestTripsRepo(dbService.connection), authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, await createTestUnitOfWork(dbService.connection)), dbService, authService, addonsService),
       new TransitMcp(new TransitService(new GoogleTransitProvider(dbService, appSettings, usersRepo)), daysService, reservationsService, dbService, authService, guards),
-      new AtlasMcp(new AtlasService(dbService, await createTestUnitOfWork(dbService.connection)), addonsService, authService),
+      new AtlasMcp(new AtlasService(
+        await createTestBucketListRepo(dbService.connection), await createTestHiddenCountriesRepo(dbService.connection),
+        await createTestHiddenRegionsRepo(dbService.connection), await createTestVisitedCountriesRepo(dbService.connection),
+        await createTestVisitedRegionsRepo(dbService.connection), await createTestPlaceRegionsRepo(dbService.connection),
+        await createTestTripsRepo(dbService.connection), await createTestPlacesRepo(dbService.connection),
+        await createTestReservationEndpointsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection),
+      ), addonsService, authService),
       new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection))), addonsService, authService, captureBackfill),
       new MemoriesMcp(immichService, synologyService, addonsService, mcpOrm.repo(PhotoProviders)),
       new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),

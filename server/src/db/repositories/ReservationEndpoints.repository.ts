@@ -1,5 +1,6 @@
 import type { ReservationEndpoints } from '../entities/ReservationEndpoints.entity';
 import { type AssertRowKeys } from './_shared/rows';
+import { travelerOwnsExpr, type ReservationTravelersOwnsKyselyDB } from './_shared/reservation-travelers-owns';
 import { TrekRepository } from './_shared/trek-repository';
 
 /** A `reservation_endpoints` row exactly as `r.*`/`SELECT *` read it (every scalar column). */
@@ -98,4 +99,134 @@ export class ReservationEndpointsRepository extends TrekRepository<ReservationEn
   async setLocalDate(id: number, local_date: string): Promise<void> {
     await this.nativeUpdate({ id }, { local_date });
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3f Task 1 (`AtlasService`) — additive, append-only per that task's
+  // own file-ownership rule. AT6/AT45/AT46 all consume Task 0's shared
+  // `travelerOwnsExpr` (`_shared/reservation-travelers-owns.ts`, R7) rather
+  // than re-deriving the `TRAVELER_OWNS` fragment — one predicate, three
+  // call sites, per the plan's own instruction.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * AT6 (`AtlasService#stats`, countries reached only by a flight —
+   * #1366/#1486/#1535/#1966) — `SELECT DISTINCT e.id, e.reservation_id,
+   * r.trip_id, e.role, e.code, e.lat, e.lng, e.local_date, e.local_time,
+   * r.type AS reservation_type, r.status AS reservation_status, CASE e.role
+   * WHEN 'to' THEN COALESCE(r.reservation_end_time, r.reservation_time)
+   * ELSE COALESCE(r.reservation_time, r.reservation_end_time) END AS
+   * fallback_time FROM reservation_endpoints e JOIN reservations r ON
+   * e.reservation_id = r.id WHERE r.trip_id IN (...) AND e.role IN ('from',
+   * 'to') AND ${TRAVELER_OWNS}`. Dynamic `IN`, empty-array short-circuit —
+   * the caller (`getUserTrips`'s own tripIds) already guards the zero-trip
+   * case before this ever runs, but the guard is repeated here to match
+   * every other dynamic-`IN` site in this cluster (AT2/AT3/AT23/AT28).
+   */
+  async listOwnedEndpointsForTrips(tripIds: number[], userId: number): Promise<TravelerOwnedEndpointRow[]> {
+    if (tripIds.length === 0) return [];
+    const rows = await this.kysely<TravelerOwnedEndpointsKyselyDB>()
+      .selectFrom('reservation_endpoints as e')
+      .innerJoin('reservations as r', 'r.id', 'e.reservation_id')
+      .select((eb) => [
+        'e.id', 'e.reservation_id', 'r.trip_id', 'e.role', 'e.code', 'e.lat', 'e.lng', 'e.local_date', 'e.local_time',
+        'r.type as reservation_type', 'r.status as reservation_status',
+        eb.case().when('e.role', '=', 'to').then(eb.fn.coalesce('r.reservation_end_time', 'r.reservation_time')).else(eb.fn.coalesce('r.reservation_time', 'r.reservation_end_time')).end().as('fallback_time'),
+      ])
+      .distinct()
+      .where('r.trip_id', 'in', tripIds)
+      .where('e.role', 'in', ['from', 'to'])
+      .where((eb) => travelerOwnsExpr(eb, userId))
+      .execute();
+    return rows as TravelerOwnedEndpointRow[];
+  }
+
+  /**
+   * AT45 (`AtlasService#getTravelStats`) — the widest single statement in
+   * this plan: `SELECT DISTINCT e.id, e.reservation_id, r.trip_id, e.role,
+   * e.code, e.lat, e.lng, e.local_date, e.local_time, r.type AS
+   * reservation_type, r.status AS reservation_status, CASE e.role WHEN
+   * 'to' THEN COALESCE(r.reservation_end_time, r.reservation_time) ELSE
+   * COALESCE(r.reservation_time, r.reservation_end_time) END AS
+   * fallback_time FROM reservation_endpoints e JOIN reservations r ON
+   * e.reservation_id = r.id JOIN trips t ON r.trip_id = t.id LEFT JOIN
+   * trip_members tm ON t.id = tm.trip_id WHERE (t.user_id = ? OR tm.user_id
+   * = ?) AND e.role IN ('from', 'to') AND COALESCE(t.start_date, t.end_date)
+   * IS NOT NULL AND COALESCE(t.start_date, t.end_date) <= date('now') AND
+   * ${TRAVELER_OWNS}`. `today` resolved by the caller once (`todayUtc()`),
+   * the `TripsRepository.activeTrip`/`lastStartedTrip` precedent.
+   */
+  async listOwnedEndpointsForUser(userId: number, today: string): Promise<TravelerOwnedEndpointRow[]> {
+    const rows = await this.kysely<TravelerOwnedEndpointsWithTripsKyselyDB>()
+      .selectFrom('reservation_endpoints as e')
+      .innerJoin('reservations as r', 'r.id', 'e.reservation_id')
+      .innerJoin('trips as t', 't.id', 'r.trip_id')
+      .leftJoin('trip_members as tm', 'tm.trip_id', 't.id')
+      .select((eb) => [
+        'e.id', 'e.reservation_id', 'r.trip_id', 'e.role', 'e.code', 'e.lat', 'e.lng', 'e.local_date', 'e.local_time',
+        'r.type as reservation_type', 'r.status as reservation_status',
+        eb.case().when('e.role', '=', 'to').then(eb.fn.coalesce('r.reservation_end_time', 'r.reservation_time')).else(eb.fn.coalesce('r.reservation_time', 'r.reservation_end_time')).end().as('fallback_time'),
+      ])
+      .distinct()
+      .where((eb) => eb.or([eb('t.user_id', '=', userId), eb('tm.user_id', '=', userId)]))
+      .where('e.role', 'in', ['from', 'to'])
+      .where((eb) => eb(eb.fn.coalesce('t.start_date', 't.end_date'), 'is not', null))
+      .where((eb) => eb(eb.fn.coalesce('t.start_date', 't.end_date'), '<=', today))
+      .where((eb) => travelerOwnsExpr(eb, userId))
+      .execute();
+    return rows as TravelerOwnedEndpointRow[];
+  }
+
+  /**
+   * AT46 (`AtlasService#flightDistanceKm`) — `SELECT re.reservation_id,
+   * re.lat, re.lng FROM reservation_endpoints re JOIN reservations r ON
+   * r.id = re.reservation_id JOIN trips t ON t.id = r.trip_id LEFT JOIN
+   * trip_members tm ON tm.trip_id = t.id AND tm.user_id = ? WHERE
+   * (t.user_id = ? OR tm.user_id IS NOT NULL) AND r.type = 'flight' AND
+   * r.status != 'cancelled' AND ${TRAVELER_OWNS} ORDER BY re.reservation_id,
+   * re.sequence`. The haversine summing across ordered legs stays in the
+   * SERVICE (unchanged JS).
+   */
+  async listOwnedFlightLegsForUser(userId: number): Promise<{ reservation_id: number; lat: number; lng: number }[]> {
+    return await this.kysely<TravelerOwnedEndpointsWithTripsKyselyDB>()
+      .selectFrom('reservation_endpoints as re')
+      .innerJoin('reservations as r', 'r.id', 're.reservation_id')
+      .innerJoin('trips as t', 't.id', 'r.trip_id')
+      .leftJoin('trip_members as tm', (join) => join.onRef('tm.trip_id', '=', 't.id').on('tm.user_id', '=', userId))
+      .select(['re.reservation_id', 're.lat', 're.lng'])
+      .where((eb) => eb.or([eb('t.user_id', '=', userId), eb('tm.user_id', 'is not', null)]))
+      .where('r.type', '=', 'flight')
+      .where('r.status', '!=', 'cancelled')
+      .where((eb) => travelerOwnsExpr(eb, userId))
+      .orderBy('re.reservation_id', 'asc')
+      .orderBy('re.sequence', 'asc')
+      .execute();
+  }
+}
+
+/** AT6/AT45's shared projection — `EndpointRow`'s own shape in `atlas.service.ts` (kept independent here so this repository doesn't import a `nest/` type). */
+export interface TravelerOwnedEndpointRow {
+  id: number;
+  reservation_id: number;
+  trip_id: number;
+  role: string;
+  code: string | null;
+  lat: number;
+  lng: number;
+  local_date: string | null;
+  local_time: string | null;
+  reservation_type: string | null;
+  reservation_status: string | null;
+  fallback_time: string | null;
+}
+
+/** {@link ReservationEndpointsRepository.listOwnedEndpointsForTrips}'s narrow `reservation_endpoints`/`reservations`/`reservation_travelers` shape (`r` aliased for `travelerOwnsExpr`, R7). */
+interface TravelerOwnedEndpointsKyselyDB extends ReservationTravelersOwnsKyselyDB {
+  reservation_endpoints: { id: number; reservation_id: number; role: string; sequence: number; code: string | null; lat: number; lng: number; local_date: string | null; local_time: string | null };
+  reservations: ReservationTravelersOwnsKyselyDB['reservations'] & { trip_id: number; type: string | null; status: string | null; reservation_time: string | null; reservation_end_time: string | null };
+}
+
+/** {@link ReservationEndpointsRepository.listOwnedEndpointsForUser}/{@link ReservationEndpointsRepository.listOwnedFlightLegsForUser}'s narrow shape, adding `trips`/`trip_members` to {@link TravelerOwnedEndpointsKyselyDB}. */
+interface TravelerOwnedEndpointsWithTripsKyselyDB extends TravelerOwnedEndpointsKyselyDB {
+  trips: { id: number; user_id: number; start_date: string | null; end_date: string | null };
+  trip_members: { trip_id: number; user_id: number };
 }

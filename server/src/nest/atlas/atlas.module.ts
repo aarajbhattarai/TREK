@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AtlasController } from './atlas.controller';
 import { TravelStatsController } from './travel-stats.controller';
 import { AtlasService } from './atlas.service';
@@ -11,6 +12,15 @@ import { PublicStatsController } from './public-stats.controller';
 import { ApiTokenGuard } from '../public-api/api-token.guard';
 import { TokensModule } from '../tokens/tokens.module';
 import { RateLimitModule } from '../common/rate-limit.module';
+import { BucketList } from '../../db/entities/BucketList.entity';
+import { HiddenCountries } from '../../db/entities/HiddenCountries.entity';
+import { HiddenRegions } from '../../db/entities/HiddenRegions.entity';
+import { VisitedCountries } from '../../db/entities/VisitedCountries.entity';
+import { VisitedRegions } from '../../db/entities/VisitedRegions.entity';
+import { PlaceRegions } from '../../db/entities/PlaceRegions.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
 
 /**
  * Atlas addon domain (L7 leaf module). Registered in AppModule. Exports
@@ -29,9 +39,22 @@ import { RateLimitModule } from '../common/rate-limit.module';
  * than pulled in with PublicApiModule: @UseGuards instantiates a guard in the
  * declaring controller's module, so exporting it from over there would still leave
  * its TokenService unresolvable here. TokensModule is a leaf, so the edge is free.
+ *
+ * `MikroOrmModule.forFeature` registers every entity `AtlasService`'s
+ * `@InjectRepository` constructor needs (Plan 3f Task 1) — the six
+ * atlas-owned tables (`BucketList`/`HiddenCountries`/`HiddenRegions`/
+ * `VisitedCountries`/`VisitedRegions`/`PlaceRegions`) plus the three it
+ * reads additive methods on (`Trips`/`Places`/`ReservationEndpoints`).
  */
 @Module({
-  imports: [AuthModule, PluginGuardsModule, AddonsModule, TokensModule, RateLimitModule],
+  imports: [
+    AuthModule,
+    PluginGuardsModule,
+    AddonsModule,
+    TokensModule,
+    RateLimitModule,
+    MikroOrmModule.forFeature([BucketList, HiddenCountries, HiddenRegions, VisitedCountries, VisitedRegions, PlaceRegions, Trips, Places, ReservationEndpoints]),
+  ],
   controllers: [AtlasController, TravelStatsController, PublicStatsController],
   providers: [AtlasService, AtlasMcp, AtlasRpc, ApiTokenGuard],
   exports: [AtlasService],

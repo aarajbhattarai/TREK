@@ -41,9 +41,16 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation } from '../../helpers/factories';
 import { getCountryFromCoords, getCountryFromAddress, isPointInCountryBox, reverseGeocodeCountry, getRegionGeo, getCountryGeo } from '../../../src/nest/atlas/atlas-geo';
 import { cacheKeyFor, getCached, setCached } from '../../../src/nest/geo/nominatim.client';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AtlasService, BucketItemExistsError } from '../../../src/nest/atlas/atlas.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestTripsRepo, createTestPlacesRepo, createTestReservationEndpointsRepo } from '../../helpers/test-uow';
+import {
+  createTestBucketListRepo,
+  createTestHiddenCountriesRepo,
+  createTestHiddenRegionsRepo,
+  createTestVisitedCountriesRepo,
+  createTestVisitedRegionsRepo,
+  createTestPlaceRegionsRepo,
+} from '../../helpers/atlas-repos';
 
 // Direct construction over the shared test connection — no TestingModule (repo
 // convention for DI-native service unit tests).
@@ -76,7 +83,18 @@ function insertPlace(db: any, tripId: number, name: string, address: string | nu
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  atlas = new AtlasService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  atlas = new AtlasService(
+    await createTestBucketListRepo(testDb),
+    await createTestHiddenCountriesRepo(testDb),
+    await createTestHiddenRegionsRepo(testDb),
+    await createTestVisitedCountriesRepo(testDb),
+    await createTestVisitedRegionsRepo(testDb),
+    await createTestPlaceRegionsRepo(testDb),
+    await createTestTripsRepo(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestReservationEndpointsRepo(testDb),
+    await createTestUnitOfWork(testDb),
+  );
 });
 
 beforeEach(() => {
@@ -1891,5 +1909,71 @@ describe('lastTrip', () => {
     createTrip(testDb, user.id, { title: 'Second', start_date: PAST_START, end_date: PAST_END });
     // The id is the tie-break, so the answer cannot depend on storage order.
     expect((await atlas.lastTrip(user.id))?.title).toBe('Second');
+  });
+});
+
+// ── #1966 re-run: TRAVELER_OWNS at AT6 (stats()'s own booking-derived countries) ──
+//
+// `travel-stats.service.test.ts`'s "personal figures on a shared trip (#1966)" describe
+// already proves the shared `TRAVELER_OWNS` predicate at AT45 (getTravelStats) and AT46
+// (flightDistanceKm). This re-runs the SAME two-case matrix at the third call site,
+// AT6 (stats()'s own countries-reached-only-by-a-flight merge), which no existing test
+// in this file exercises with a populated reservation_travelers table.
+describe('personal figures on a shared trip in stats() (#1966, AT6)', () => {
+  const endpoint = (reservationId: number, role: 'from' | 'to', sequence: number, lat: number, lng: number) =>
+    testDb.prepare(
+      'INSERT INTO reservation_endpoints (reservation_id, role, sequence, name, lat, lng) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(reservationId, role, sequence, `Endpoint ${sequence}`, lat, lng);
+
+  const assignTo = (reservationId: number, userId: number) =>
+    testDb.prepare('INSERT INTO reservation_travelers (reservation_id, user_id) VALUES (?, ?)').run(reservationId, userId);
+
+  /** A shared trip: Alice flies Brussels→Tokyo, Bob flies Brussels→Sydney. */
+  function sharedTrip() {
+    const { user: alice } = createUser(testDb);
+    const { user: bob } = createUser(testDb);
+    const trip = createTrip(testDb, alice.id, { title: 'Shared trip' });
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, bob.id);
+
+    const toTokyo = createReservation(testDb, trip.id, { type: 'flight', title: 'BRU-NRT' });
+    endpoint(toTokyo.id, 'from', 0, 50.9014, 4.4844); // Brussels
+    endpoint(toTokyo.id, 'to', 1, 35.6762, 139.6503); // Tokyo
+
+    const toSydney = createReservation(testDb, trip.id, { type: 'flight', title: 'BRU-SYD' });
+    endpoint(toSydney.id, 'from', 0, 50.9014, 4.4844); // Brussels
+    endpoint(toSydney.id, 'to', 1, -33.8688, 151.2093); // Sydney
+
+    return { alice, bob, toTokyo, toSydney };
+  }
+
+  it('ATLAS-TRAVOWNS-001: an assigned traveler sees only their own flight leg, not their trip-mate\'s', async () => {
+    const { alice, bob, toTokyo, toSydney } = sharedTrip();
+    assignTo(toTokyo.id, alice.id);
+    assignTo(toSydney.id, bob.id);
+
+    const aliceCodes = (await atlas.stats(alice.id)).countries.map((c: { code: string }) => c.code);
+    const bobCodes = (await atlas.stats(bob.id)).countries.map((c: { code: string }) => c.code);
+
+    expect(aliceCodes).toContain('JP');
+    expect(aliceCodes).not.toContain('AU');
+    expect(bobCodes).toContain('AU');
+    expect(bobCodes).not.toContain('JP');
+    // Both still see Brussels, the shared departure point.
+    expect(aliceCodes).toContain('BE');
+    expect(bobCodes).toContain('BE');
+  });
+
+  it('ATLAS-TRAVOWNS-002: a booking with nobody named on it still counts for every trip member (pre-4.0 backward compat)', async () => {
+    const { alice, bob } = sharedTrip();
+    // Neither flight is assigned to anyone.
+
+    const aliceCodes = (await atlas.stats(alice.id)).countries.map((c: { code: string }) => c.code);
+    const bobCodes = (await atlas.stats(bob.id)).countries.map((c: { code: string }) => c.code);
+
+    for (const codes of [aliceCodes, bobCodes]) {
+      expect(codes).toContain('JP');
+      expect(codes).toContain('AU');
+      expect(codes).toContain('BE');
+    }
   });
 });
