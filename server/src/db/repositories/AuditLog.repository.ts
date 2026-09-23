@@ -22,10 +22,36 @@ const _auditLogRowKeys: AssertRowKeys<AuditLogRow, AuditLog> = true;
 /** The column set `insertEntry` writes; `id`/`created_at` are generated. */
 export type NewAuditLogRow = Omit<AuditLogRow, 'id' | 'created_at'>;
 
-// Reserved for Plan 3i (`admin.service.ts`'s paginated read of the same
-// table): `listPage(limit, offset): Promise<AuditLogPageRow[]>` (a `qb()`
-// join to `Users` for `username`/`email`) and `count(): Promise<number>`.
-// Not implemented here — see plan3a-sql-inventory.md §1.
+/**
+ * AD22's joined projection (`admin.service.ts#getAuditLog`): `a.id,
+ * a.created_at, a.user_id, u.username, u.email as user_email, a.action,
+ * a.resource, a.details, a.ip` from `audit_log a LEFT JOIN users u ON
+ * u.id = a.user_id`. Distinct from `AuditLogRow` (the bare-table shape
+ * `insertEntry` writes) — a deleted/never-existing user leaves `username`/
+ * `user_email` both null (the `LEFT JOIN`, not an `INNER JOIN`), the row
+ * itself is still returned. The `created_at` ISO-suffix normalization and
+ * the `details` JSON-parse-with-fallback stay in `AdminService` — this
+ * repository returns the raw joined row untouched, same boundary the
+ * class-level docs elsewhere in this program draw between repository and
+ * service.
+ */
+export interface AuditLogPageRow {
+  id: number;
+  created_at: string | null;
+  user_id: number | null;
+  username: string | null;
+  user_email: string | null;
+  action: string;
+  resource: string | null;
+  details: string | null;
+  ip: string | null;
+}
+
+/** Kysely shape for the `listPage` join — only the columns it actually selects. */
+interface AuditLogKyselyDB {
+  audit_log: AuditLogRow;
+  users: { id: number; username: string; email: string };
+}
 
 export class AuditLogRepository extends TrekRepository<AuditLog> {
   /**
@@ -64,5 +90,39 @@ export class AuditLogRepository extends TrekRepository<AuditLog> {
       details: entry.details,
       ip: entry.ip,
     });
+  }
+
+  /**
+   * AD22 (`admin.service.ts#getAuditLog`) — `SELECT a.id, a.created_at,
+   * a.user_id, u.username, u.email as user_email, a.action, a.resource,
+   * a.details, a.ip FROM audit_log a LEFT JOIN users u ON u.id = a.user_id
+   * ORDER BY a.id DESC LIMIT ? OFFSET ?`. Kysely, not the ORM's own
+   * QueryBuilder — the same `CollabMessagesRepository#joinedQuery` shape
+   * every other flat-projection join in this program uses: `LEFT JOIN`
+   * keeps a deleted-user's row (both `username`/`user_email` come back
+   * null rather than dropping the row), and the projection is nine flat
+   * scalars, not a hydrated `Users` entity.
+   */
+  async listPage(limit: number, offset: number): Promise<AuditLogPageRow[]> {
+    return await this.kysely<AuditLogKyselyDB>()
+      .selectFrom('audit_log as a')
+      .leftJoin('users as u', 'u.id', 'a.user_id')
+      .select(['a.id', 'a.created_at', 'a.user_id', 'u.username', 'u.email as user_email', 'a.action', 'a.resource', 'a.details', 'a.ip'])
+      .orderBy('a.id', 'desc')
+      .limit(limit)
+      .offset(offset)
+      .execute();
+  }
+
+  /**
+   * AD23 (`admin.service.ts#getAuditLog`) — `SELECT COUNT(*) as c FROM
+   * audit_log`. `TrekRepository#count` (no filter) already renders the
+   * equivalent `COUNT(*)` over the whole table; named explicitly here (a
+   * thin `super.count()` pass-through) so the reserved AD23 call site has
+   * its own documented anchor rather than admin's service code calling the
+   * inherited method by its generic name.
+   */
+  override async count(): Promise<number> {
+    return await super.count();
   }
 }
