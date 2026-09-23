@@ -16,15 +16,12 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import type { RuntimeEnvService } from '../../../../src/nest/app-config/runtime-env.service';
 import { StorageEventsService } from '../../../../src/nest/storage/storage-events.service';
 import { StorageRegistryService } from '../../../../src/nest/storage/storage-registry.service';
 import { StorageService } from '../../../../src/nest/storage/storage.service';
 import { StatsBusyError, StorageStatsService } from '../../../../src/nest/storage/storage-stats.service';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
-
-const db = new DatabaseService(testDb);
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../../helpers/test-uow';
 
 beforeAll(() => {
   createTables(testDb);
@@ -59,10 +56,17 @@ async function makeWorld() {
     ]),
   );
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  const appSettings = await createTestAppSettingsRepo(testDb);
+  const registry = new StorageRegistryService(
+    appSettings,
+    env,
+    new StorageEventsService(),
+    await createTestUnitOfWork(testDb),
+    (await sharedTestOrm(testDb)).orm,
+  );
   await registry.onModuleInit();
   const storage = new StorageService(registry);
-  const stats = new StorageStatsService(storage, db);
+  const stats = new StorageStatsService(storage, appSettings);
   return { storage, stats, uploadsRoot };
 }
 

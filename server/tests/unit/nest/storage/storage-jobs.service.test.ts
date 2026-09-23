@@ -17,7 +17,6 @@ import { Readable } from 'node:stream';
 import { Logger } from '@nestjs/common';
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import type { RuntimeEnvService } from '../../../../src/nest/app-config/runtime-env.service';
 import { MirrorDriver } from '../../../../src/nest/storage/drivers/mirror.driver';
 import { StorageEventsService } from '../../../../src/nest/storage/storage-events.service';
@@ -30,9 +29,7 @@ import {
   MigrationTargetError,
   StorageJobsService,
 } from '../../../../src/nest/storage/storage-jobs.service';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
-
-const db = new DatabaseService(testDb);
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../../helpers/test-uow';
 
 beforeAll(() => {
   createTables(testDb);
@@ -72,7 +69,13 @@ async function makeWorld() {
   );
   setSetting('storage.categories', JSON.stringify({ backups: 'm' }));
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  const registry = new StorageRegistryService(
+    await createTestAppSettingsRepo(testDb),
+    env,
+    new StorageEventsService(),
+    await createTestUnitOfWork(testDb),
+    (await sharedTestOrm(testDb)).orm,
+  );
   await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
@@ -102,7 +105,13 @@ async function makeMigrationWorld() {
   );
   setSetting('storage.categories', JSON.stringify({ files: 'uploads-local' }));
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  const registry = new StorageRegistryService(
+    await createTestAppSettingsRepo(testDb),
+    env,
+    new StorageEventsService(),
+    await createTestUnitOfWork(testDb),
+    (await sharedTestOrm(testDb)).orm,
+  );
   await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
@@ -129,7 +138,13 @@ async function makePhotosGoogleMigrationWorld() {
     ]),
   );
   const env = { env: () => ({ paths: { placePhotoDir: placePhotoRoot } }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  const registry = new StorageRegistryService(
+    await createTestAppSettingsRepo(testDb),
+    env,
+    new StorageEventsService(),
+    await createTestUnitOfWork(testDb),
+    (await sharedTestOrm(testDb)).orm,
+  );
   await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
@@ -154,7 +169,13 @@ async function makeMigrationBackfillWorld() {
   );
   setSetting('storage.categories', JSON.stringify({ backups: 'm', files: 'uploads-local' }));
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  const registry = new StorageRegistryService(
+    await createTestAppSettingsRepo(testDb),
+    env,
+    new StorageEventsService(),
+    await createTestUnitOfWork(testDb),
+    (await sharedTestOrm(testDb)).orm,
+  );
   await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
@@ -530,7 +551,13 @@ describe('StorageJobsService.cancelJobsForMissingBackends', () => {
     );
     setSetting('storage.categories', JSON.stringify({ files: 'nas' }));
     const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-    const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+    const registry = new StorageRegistryService(
+    await createTestAppSettingsRepo(testDb),
+    env,
+    new StorageEventsService(),
+    await createTestUnitOfWork(testDb),
+    (await sharedTestOrm(testDb)).orm,
+  );
     await registry.onModuleInit();
     const storage = new StorageService(registry);
     const jobs = new StorageJobsService(registry);

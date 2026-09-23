@@ -17,7 +17,6 @@ import { Logger } from '@nestjs/common';
 import { MASKED_SETTING_VALUE, type StorageConfig } from '@trek/shared';
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import type { RuntimeEnvService } from '../../../../src/nest/app-config/runtime-env.service';
 import { encrypt_api_key } from '../../../../src/nest/common/crypto/apiKeyCrypto';
 import { StorageAdminService } from '../../../../src/nest/storage/storage-admin.service';
@@ -27,9 +26,7 @@ import { StorageStatsService } from '../../../../src/nest/storage/storage-stats.
 import { StorageRegistryService, BACKENDS_KEY, CATEGORIES_KEY } from '../../../../src/nest/storage/storage-registry.service';
 import { StorageService } from '../../../../src/nest/storage/storage.service';
 import { StorageConflictError } from '../../../../src/nest/storage/storage.types';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
-
-const db = new DatabaseService(testDb);
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../../helpers/test-uow';
 
 beforeAll(() => {
   createTables(testDb);
@@ -67,12 +64,19 @@ async function makeService(opts: { uploadsRoot?: string } = {}) {
   setSetting(BACKENDS_KEY, JSON.stringify([{ name: 'uploads-local', type: 'local', options: { root: uploadsRoot } }]));
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
   const uow = await createTestUnitOfWork(testDb);
-  const registry = new StorageRegistryService(db, env, new StorageEventsService(), uow);
+  const appSettings = await createTestAppSettingsRepo(testDb);
+  const registry = new StorageRegistryService(
+    appSettings,
+    env,
+    new StorageEventsService(),
+    uow,
+    (await sharedTestOrm(testDb)).orm,
+  );
   await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
-  const stats = new StorageStatsService(storage, db);
-  const service = new StorageAdminService(db, registry, storage, jobs, stats, uow);
+  const stats = new StorageStatsService(storage, appSettings);
+  const service = new StorageAdminService(appSettings, registry, storage, jobs, stats, uow);
   return { service, registry, uploadsRoot, stats, jobs, uow };
 }
 

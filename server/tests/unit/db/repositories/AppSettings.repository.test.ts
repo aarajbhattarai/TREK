@@ -133,6 +133,32 @@ describe('AppSettingsRepository', () => {
     expect(await appSettings.findByKeyPrefix('perm_')).toEqual([]);
   });
 
+  // Plan 3i (storage task) additions: countKeysPresent (SR1's
+  // `SELECT COUNT(*) ... WHERE key IN (?, ?)`) and upsertOrReplace (SS1's
+  // `INSERT OR REPLACE`), kept as distinct methods from setValue's
+  // `ON CONFLICT DO UPDATE` upsert per R4/R5's ruling even though their
+  // observable behavior on this table is identical (setValue's own
+  // docstring explains why).
+  it('APPSETREPO-015: countKeysPresent counts every matching ROW, including one whose value is NULL — unlike getValues, which drops it', async () => {
+    insertRaw('storage.backends', '[]');
+    insertRaw('storage.categories', null); // present row, NULL value
+    expect(await appSettings.countKeysPresent(['storage.backends', 'storage.categories'])).toBe(2);
+    expect(await appSettings.countKeysPresent(['storage.backends', 'storage.does_not_exist'])).toBe(1);
+    expect(await appSettings.countKeysPresent(['storage.nope_a', 'storage.nope_b'])).toBe(0);
+  });
+
+  it('APPSETREPO-016: upsertOrReplace inserts a new row exactly as INSERT OR REPLACE would', async () => {
+    await appSettings.upsertOrReplace('storage.usage', '{"computedAt":1}');
+    expect(rawRow('storage.usage')).toStrictEqual({ key: 'storage.usage', value: '{"computedAt":1}' });
+  });
+
+  it('APPSETREPO-017: upsertOrReplace on an existing key replaces the value only, with no duplicate/ghost row', async () => {
+    insertRaw('storage.usage', '{"computedAt":1}');
+    await appSettings.upsertOrReplace('storage.usage', '{"computedAt":2}');
+    expect(rawRow('storage.usage')).toStrictEqual({ key: 'storage.usage', value: '{"computedAt":2}' });
+    expect(testDb.prepare('SELECT COUNT(*) as c FROM app_settings WHERE key = ?').get('storage.usage')).toEqual({ c: 1 });
+  });
+
   // LIKE-escaping finding: neither the legacy `LIKE 'prefix%'` literal nor
   // `$like`'s bound parameter here escapes `%`/`_` in the prefix — a bound
   // LIKE parameter's wildcards are interpreted by SQLite exactly like a

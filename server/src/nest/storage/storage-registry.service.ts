@@ -1,15 +1,19 @@
 import fs from 'node:fs';
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { MikroORM } from '@mikro-orm/core';
 import { STORAGE_BACKEND_TYPES, storageConfigSchema } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { withRequestContext } from '../database/request-context';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
 import { decrypt_api_key } from '../common/crypto/apiKeyCrypto';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { LocalDriver } from './drivers/local.driver';
 import { MirrorDriver, type ReplicaFailure } from './drivers/mirror.driver';
 import { S3Driver } from './drivers/s3.driver';
 import { StorageEventsService } from './storage-events.service';
-import { DEFAULT_BACKUPS_ROOT, DEFAULT_UPLOADS_ROOT, GLOBAL_TEMP_DIR, SEED_CONFIG_PATH } from './storage-paths';
+import { DEFAULT_BACKUPS_ROOT, DEFAULT_UPLOADS_ROOT, GLOBAL_TEMP_DIR, getSeedConfigPath } from './storage-paths';
 import { assertNoMaskSentinels, encryptStorageSecrets } from './storage-secrets';
 import {
   SERVED_CATEGORIES,
@@ -131,15 +135,30 @@ export class StorageRegistryService implements OnModuleInit {
   private loadFailure: string | null = null;
 
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly env: RuntimeEnvService,
     private readonly events: StorageEventsService,
     private readonly uow: UnitOfWork,
+    private readonly orm: MikroORM,
   ) {}
 
+  /**
+   * `onModuleInit` is a DIFFERENT boot hook than the `CronRegistrarService`/
+   * `runOnBoot` machinery every job file in this plan otherwise relies on
+   * (Plan 3i's own BOOT GATE note): it fires at Nest's MODULE-INIT lifecycle
+   * stage, before `app.init()` wires up `@mikro-orm/nestjs`'s per-request
+   * middleware — a repository call here has no per-request `EntityManager`
+   * fork to resolve through and would hit MikroORM's `cannotUseGlobalContext`
+   * refusal (confirmed against a real `createNestApplication()` boot, not
+   * only the test ORMs' `allowGlobalContext: true` default, which silently
+   * hides this). This opens its own request context, the same shape
+   * `StorageHealthNotifierService`'s `onApplicationBootstrap` hook uses.
+   */
   async onModuleInit(): Promise<void> {
-    await this.seedFromFileOnce();
-    await this.load(true);
+    await withRequestContext(this.orm, async () => {
+      await this.seedFromFileOnce();
+      await this.load(true);
+    });
   }
 
   /** Re-read settings, validate, atomically swap. In-flight ops keep their resolved instances. */
@@ -203,7 +222,7 @@ export class StorageRegistryService implements OnModuleInit {
 
   /** Current optimistic-concurrency counter — 0 when never bumped (fresh install). */
   async currentConfigVersion(): Promise<number> {
-    return await readConfigVersion(this.db);
+    return await readConfigVersion(this.appSettings);
   }
 
   /** Non-null when the last load() fell back (last-good config or built-in defaults) — null once a load succeeds. */
@@ -229,28 +248,30 @@ export class StorageRegistryService implements OnModuleInit {
     if (!names.has(backend)) {
       throw new StorageBackendError(`cannot assign '${category}' to unknown backend '${backend}'`);
     }
-    // The OTHER writer of the two settings rows, so it enforces the same
-    // shared-replica rule validateConfig does (see assertNoSharedReplicas):
-    // a mirror's sync sweep DELETES replica objects its primary doesn't hold,
-    // so routing a category onto a backend that is somebody's replica would
-    // hand this category's objects to that sweep.
-    const target = defined.find((b) => b.name === backend);
-    const owner = target?.type === 'mirror' ? String(target.options.primary) : backend;
-    const holder = defined.find((b) => b.type === 'mirror' && replicaNamesOf(b.options).includes(owner));
-    if (holder) {
-      throw new StorageBackendError(
-        `cannot assign '${category}' to '${backend}' — '${owner}' is a mirror replica of '${holder.name}', and that mirror's sync sweep would delete the category's objects`,
-      );
-    }
-    const stored = new Map(parseCategoryMap((await this.readSettings()).categories));
+    // R5 defect 2 fix (2026-09-25 ORM Plan 3i, storage task): this used to
+    // run its OWN, narrower inline check here — whether the flip's direct
+    // target (or, for a mirror target, that mirror's primary) is itself a
+    // replica of some OTHER mirror. That covers only the first of
+    // assertNoSharedReplicas's two documented refusal cases and misses the
+    // second (a backend replicating two mirrors whose swept key prefixes
+    // overlap) — a flip could persist a config that the very next
+    // build()/reload() would then refuse (or silently mis-sweep). Calling
+    // the SAME predicate validateConfig() runs on every load — over the
+    // merged backend/category maps with THIS flip applied — catches both
+    // cases before the write, not merely on the next reload. Genuine
+    // behavior change, not parity — see the task report's "For the user"
+    // note.
+    const settings = await this.readSettings();
+    const { backends: mergedBackends, categoryBackends: mergedCategories } = this.mergeBackendsAndCategories(settings);
+    mergedCategories.set(category, backend);
+    assertNoSharedReplicas(mergedBackends, mergedCategories);
+
+    const stored = new Map(parseCategoryMap(settings.categories));
     stored.set(category, backend);
     const next = Object.fromEntries(stored);
     await this.uow.transactional(async () => {
-      const upsert = this.db.prepare(
-        'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      );
-      upsert.run(CATEGORIES_KEY, JSON.stringify(next));
-      upsert.run(VERSION_KEY, String((await readConfigVersion(this.db)) + 1));
+      await this.appSettings.setValue(CATEGORIES_KEY, JSON.stringify(next));
+      await this.appSettings.setValue(VERSION_KEY, String((await readConfigVersion(this.appSettings)) + 1));
     });
     await this.reload();
   }
@@ -278,26 +299,23 @@ export class StorageRegistryService implements OnModuleInit {
    * 'storage.%', restart (documented in the README with slice 3).
    */
   private async seedFromFileOnce(): Promise<void> {
-    const rowCount = this.db.get<{ n: number }>(
-      'SELECT COUNT(*) AS n FROM app_settings WHERE key IN (?, ?)',
-      BACKENDS_KEY,
-      CATEGORIES_KEY,
-    );
-    const filePresent = fs.existsSync(SEED_CONFIG_PATH);
-    if ((rowCount?.n ?? 0) > 0) {
+    const seedPath = getSeedConfigPath();
+    const rowCount = await this.appSettings.countKeysPresent([BACKENDS_KEY, CATEGORIES_KEY]);
+    const filePresent = fs.existsSync(seedPath);
+    if (rowCount > 0) {
       if (filePresent) {
-        this.logger.log(`storage config rows exist — ignoring ${SEED_CONFIG_PATH}; manage storage in the admin UI`);
+        this.logger.log(`storage config rows exist — ignoring ${seedPath}; manage storage in the admin UI`);
       }
       return;
     }
     if (!filePresent) return;
 
     const fail = (detail: string): never => {
-      throw new Error(`invalid storage seed file ${SEED_CONFIG_PATH}: ${detail}`);
+      throw new Error(`invalid storage seed file ${seedPath}: ${detail}`);
     };
     let json: unknown;
     try {
-      json = JSON.parse(fs.readFileSync(SEED_CONFIG_PATH, 'utf8'));
+      json = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
     }
@@ -316,14 +334,11 @@ export class StorageRegistryService implements OnModuleInit {
     }
     const encrypted = encryptStorageSecrets(config);
     await this.uow.transactional(async () => {
-      const upsert = this.db.prepare(
-        'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      );
-      upsert.run(BACKENDS_KEY, JSON.stringify(encrypted.backends));
-      upsert.run(CATEGORIES_KEY, JSON.stringify(encrypted.categories));
+      await this.appSettings.setValue(BACKENDS_KEY, JSON.stringify(encrypted.backends));
+      await this.appSettings.setValue(CATEGORIES_KEY, JSON.stringify(encrypted.categories));
     });
     this.logger.log(
-      `storage config seeded from ${SEED_CONFIG_PATH} — the file is now ignored; manage storage in the admin UI`,
+      `storage config seeded from ${seedPath} — the file is now ignored; manage storage in the admin UI`,
     );
   }
 
@@ -348,11 +363,11 @@ export class StorageRegistryService implements OnModuleInit {
   }
 
   private async readSettings(): Promise<{ backends: unknown; categories: unknown }> {
-    const read = (key: string): unknown => {
-      const row = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key);
-      if (!row?.value) return undefined;
+    const read = async (key: string): Promise<unknown> => {
+      const value = await this.appSettings.getValue(key);
+      if (!value) return undefined;
       try {
-        return JSON.parse(row.value) as unknown;
+        return JSON.parse(value) as unknown;
       } catch (err) {
         // JSON.parse's own SyntaxError can echo a snippet of the raw input
         // around the failure position (Node 24 V8, e.g. `Unexpected token
@@ -368,10 +383,23 @@ export class StorageRegistryService implements OnModuleInit {
         );
       }
     };
-    return { backends: read(BACKENDS_KEY), categories: read(CATEGORIES_KEY) };
+    return { backends: await read(BACKENDS_KEY), categories: await read(CATEGORIES_KEY) };
   }
 
-  private build(settings: { backends: unknown; categories: unknown }, boot: boolean): RegistryState {
+  /**
+   * The merged backend/category maps build() computes as its own steps 1–2
+   * (env defaults + built-ins + settings overrides), without the driver
+   * construction/validation side effects that follow — the shared basis
+   * both build() and assignCategory()'s pre-write assertNoSharedReplicas
+   * check need (R5 defect 2), so the two never compute two different
+   * answers for "what does this instance's config resolve to."
+   */
+  private mergeBackendsAndCategories(settings: { backends: unknown; categories: unknown }): {
+    backends: Map<string, BackendConfig>;
+    backendSources: Map<string, BackendSource>;
+    categoryBackends: Map<ServedCategory, string>;
+    categorySources: Map<ServedCategory, 'default' | 'settings'>;
+  } {
     // 1. Env is read fresh on every load (never snapshotted — RuntimeEnvService rule).
     const placePhotoDir = this.env.env().paths.placePhotoDir;
 
@@ -403,6 +431,11 @@ export class StorageRegistryService implements OnModuleInit {
       categoryBackends.set(category, backendName);
       categorySources.set(category, 'settings');
     }
+    return { backends, backendSources, categoryBackends, categorySources };
+  }
+
+  private build(settings: { backends: unknown; categories: unknown }, boot: boolean): RegistryState {
+    const { backends, backendSources, categoryBackends, categorySources } = this.mergeBackendsAndCategories(settings);
 
     // 3. Validate the merged config as a whole.
     validateConfig(backends, categoryBackends);
@@ -482,9 +515,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Raw read of the version counter row — 0 for an absent/garbage row (fresh install, or a hand-edited DB). */
-async function readConfigVersion(db: DatabaseService): Promise<number> {
-  const row = db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', VERSION_KEY);
-  const parsed = row?.value ? Number.parseInt(row.value, 10) : 0;
+async function readConfigVersion(appSettings: AppSettingsRepository): Promise<number> {
+  const value = await appSettings.getValue(VERSION_KEY);
+  const parsed = value ? Number.parseInt(value, 10) : 0;
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -558,11 +591,6 @@ function decryptedSecret(config: S3BackendConfig): string {
 /** The key-prefix a category uses on a given backend — see keyPrefixFor's doc comment. */
 function prefixFor(category: ServedCategory, backendName: string): string {
   return category === 'photos-google' && backendName === 'place-photos-local' ? '' : CATEGORY_PREFIXES[category];
-}
-
-/** Replica names off a snapshot's loose options record (mirrors always carry a string[] there). */
-function replicaNamesOf(options: Record<string, string | number | string[]>): string[] {
-  return Array.isArray(options.replicas) ? options.replicas : [];
 }
 
 /** Human-readable prefix for an error message — '' is the backend's whole root. */

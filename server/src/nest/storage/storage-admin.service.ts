@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { StorageAdminState, StorageBackend, StorageConfigPut, StorageTestResponse, StorageUsage } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import {
   BACKENDS_KEY,
   CATEGORIES_KEY,
@@ -10,7 +12,7 @@ import {
   StorageRegistryService,
 } from './storage-registry.service';
 import { StorageService } from './storage.service';
-import { SEED_CONFIG_PATH } from './storage-paths';
+import { getSeedConfigPath } from './storage-paths';
 import {
   assertNoMaskSentinels,
   decryptBackendSecrets,
@@ -33,7 +35,7 @@ import { StorageStatsService } from './storage-stats.service';
 @Injectable()
 export class StorageAdminService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly registry: StorageRegistryService,
     private readonly storage: StorageService,
     private readonly jobs: StorageJobsService,
@@ -57,7 +59,7 @@ export class StorageAdminService {
       })),
       categories: snapshot.categories,
       health: { replicaFailures: this.storage.health().replicaFailures.map((f) => ({ ...f })) },
-      seedFilePresent: fs.existsSync(SEED_CONFIG_PATH),
+      seedFilePresent: fs.existsSync(getSeedConfigPath()),
       usage: await this.stats.readUsage(),
       backfills: this.jobs.statuses(),
       migrations: this.jobs.migrationStatuses(),
@@ -119,12 +121,9 @@ export class StorageAdminService {
     this.registry.preview({ backends: unmasked.backends, categories: unmasked.categories });
     const encrypted = encryptStorageSecrets(unmasked);
     await this.uow.transactional(async () => {
-      const upsert = this.db.prepare(
-        'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      );
-      upsert.run(BACKENDS_KEY, JSON.stringify(encrypted.backends));
-      upsert.run(CATEGORIES_KEY, JSON.stringify(encrypted.categories));
-      upsert.run(VERSION_KEY, String(currentVersion + 1));
+      await this.appSettings.setValue(BACKENDS_KEY, JSON.stringify(encrypted.backends));
+      await this.appSettings.setValue(CATEGORIES_KEY, JSON.stringify(encrypted.categories));
+      await this.appSettings.setValue(VERSION_KEY, String(currentVersion + 1));
     });
     await this.registry.reload();
     // Any running job whose backend the reloaded config no longer has ends
@@ -183,10 +182,10 @@ export class StorageAdminService {
 
   /** The raw stored backends row — the unmask source (tolerates absent/garbage rows). */
   private async storedBackendsRow(): Promise<unknown> {
-    const row = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', BACKENDS_KEY);
-    if (!row?.value) return [];
+    const value = await this.appSettings.getValue(BACKENDS_KEY);
+    if (!value) return [];
     try {
-      return JSON.parse(row.value) as unknown;
+      return JSON.parse(value) as unknown;
     } catch {
       return [];
     }

@@ -89,4 +89,36 @@ export class AppSettingsRepository extends TrekRepository<AppSettings> {
   async deleteValue(key: string): Promise<number> {
     return this.nativeDelete({ key });
   }
+
+  /**
+   * `SELECT COUNT(*) AS n FROM app_settings WHERE key IN (?, ?, ...)` (Plan
+   * 3i, storage's SR1 — `StorageRegistryService#seedFromFileOnce`'s
+   * seed-once boot guard). Counts every ROW whose key matches, including one
+   * whose `value` is NULL — unlike `getValues()`, which drops a NULL-valued
+   * row from its Map, this mirrors the legacy statement exactly: no WHERE on
+   * `value`, so a present-but-NULL row still counts as "already seeded."
+   */
+  async countKeysPresent(keys: string[]): Promise<number> {
+    return this.count({ key: { $in: keys } });
+  }
+
+  /**
+   * `INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)` (Plan
+   * 3i, storage's SS1 — `StorageStatsService#scan`). The SAME "one row per
+   * key" write as `setValue()`'s `ON CONFLICT(key) DO UPDATE` upsert, but a
+   * genuinely DIFFERENT legacy SQL text (R4/R5's ruling: `app_settings` has
+   * two distinct upsert dialects across this program's converted call
+   * sites — preserve both as separately-named methods, never merged into one
+   * with a boolean/dialect flag, even where — as here — their observable
+   * behavior on this table is identical). Per `setValue()`'s own docstring,
+   * the only real difference between the two dialects (REPLACE deletes and
+   * reinserts, moving the SQLite rowid; `ON CONFLICT ... DO UPDATE` keeps the
+   * original row) is unobservable on `app_settings` (no `INTEGER PRIMARY
+   * KEY`/`AUTOINCREMENT`/trigger/FK references it) — this method exists so
+   * the repository's public surface keeps naming the legacy text 1:1, not
+   * because the two need different runtime behavior on this table.
+   */
+  async upsertOrReplace(key: string, value: string): Promise<void> {
+    await this.upsert({ key, value }, { onConflictFields: ['key'], onConflictAction: 'merge' });
+  }
 }

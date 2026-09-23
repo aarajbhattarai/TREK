@@ -30,17 +30,15 @@ const Database = require('better-sqlite3');
 
 import { createTables } from '../../src/db/schema';
 import { runMigrations } from '../../src/db/migrations';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import type { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { StorageEventsService } from '../../src/nest/storage/storage-events.service';
 import { BACKENDS_KEY, CATEGORIES_KEY, StorageRegistryService } from '../../src/nest/storage/storage-registry.service';
 import { StorageService } from '../../src/nest/storage/storage.service';
-import { createTestUnitOfWork } from '../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../helpers/test-uow';
 
 const testDb = new Database(':memory:');
 testDb.exec('PRAGMA journal_mode = WAL');
 testDb.exec('PRAGMA foreign_keys = ON');
-const db = new DatabaseService(testDb);
 
 beforeAll(() => {
   createTables(testDb);
@@ -81,7 +79,13 @@ describe('C6 — restore reloads the storage registry (audit #4)', () => {
     ]);
     setSetting(CATEGORIES_KEY, { files: 'nas-a' });
 
-    const registry = new StorageRegistryService(db, envStub(), new StorageEventsService(), await createTestUnitOfWork(testDb));
+    const registry = new StorageRegistryService(
+      await createTestAppSettingsRepo(testDb),
+      envStub(),
+      new StorageEventsService(),
+      await createTestUnitOfWork(testDb),
+      (await sharedTestOrm(testDb)).orm,
+    );
     await registry.onModuleInit();
     const storage = new StorageService(registry);
 

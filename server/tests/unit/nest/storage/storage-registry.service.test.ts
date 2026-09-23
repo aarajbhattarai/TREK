@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
 import { Logger } from '@nestjs/common';
 
 // ── DB setup (the permissions.service.test.ts pattern: real in-memory SQLite
@@ -22,7 +22,6 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import type { RuntimeEnvService } from '../../../../src/nest/app-config/runtime-env.service';
 import { encrypt_api_key } from '../../../../src/nest/common/crypto/apiKeyCrypto';
 import { StorageEventsService } from '../../../../src/nest/storage/storage-events.service';
@@ -34,12 +33,11 @@ import {
   GLOBAL_TEMP_DIR,
   DEFAULT_BACKUPS_ROOT,
   DEFAULT_UPLOADS_ROOT,
-  SEED_CONFIG_PATH,
+  getSeedConfigPath,
+  setSeedConfigPathForTests,
 } from '../../../../src/nest/storage/storage-paths';
 import { STORAGE_CATEGORIES } from '../../../../src/nest/storage/storage.types';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
-
-const db = new DatabaseService(testDb);
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../../helpers/test-uow';
 
 beforeAll(() => {
   createTables(testDb);
@@ -94,7 +92,13 @@ async function makeRegistry(opts: RegistryOpts = {}) {
   setSetting('storage.backends', JSON.stringify([uploadsOverride(uploadsRoot), ...(opts.backends ?? [])]));
   if (opts.categories) setSetting('storage.categories', JSON.stringify(opts.categories));
   const stub = makeEnvStub({ placePhotoDir: opts.placePhotoDir });
-  const registry = new StorageRegistryService(db, stub.env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  const registry = new StorageRegistryService(
+    await createTestAppSettingsRepo(testDb),
+    stub.env,
+    new StorageEventsService(),
+    await createTestUnitOfWork(testDb),
+    (await sharedTestOrm(testDb)).orm,
+  );
   if (opts.boot !== false) await registry.onModuleInit();
   return { registry, uploadsRoot, setUploadsRoot: (root: string) => rewriteUploadsOverride(root) };
 }
@@ -474,7 +478,7 @@ describe('StorageRegistryService assignCategory', () => {
     expect(await registry.currentConfigVersion()).toBe(0);
   });
 
-  it('REG-ASSIGN-005 refuses the migration flip onto a backend that is currently a mirror replica (validateConfig, other direction)', async () => {
+  it('REG-ASSIGN-005 refuses the migration flip onto a backend that is currently a mirror replica (validateConfig, other direction) — via the shared assertNoSharedReplicas predicate (R5 defect 2)', async () => {
     const { registry } = await makeRegistry({
       backends: [
         { name: 'nas-backups', type: 'local', options: { root: makeTmpDir() } },
@@ -483,14 +487,19 @@ describe('StorageRegistryService assignCategory', () => {
       categories: { backups: 'backups-mirror' },
     });
 
+    // Message wording changed under R5 defect 2: assignCategory no longer
+    // runs its own narrower inline check — it now calls the SAME
+    // assertNoSharedReplicas predicate validateConfig() uses, so this is the
+    // predicate's own case-1 message, not the old bespoke "cannot assign"
+    // text. Still refuses, still persists nothing — see the task report.
     await expect(registry.assignCategory('files', 'nas-backups')).rejects.toThrow(
-      /cannot assign 'files' to 'nas-backups' — 'nas-backups' is a mirror replica of 'backups-mirror'/,
+      /backend 'nas-backups' is a mirror replica of 'backups-mirror' and also serves category 'files'/,
     );
     expect(registry.snapshot().categories.files.backend).toBe('uploads-local'); // unchanged
     expect(await registry.currentConfigVersion()).toBe(0); // nothing written
   });
 
-  it('REG-ASSIGN-006 refuses the flip onto a MIRROR whose primary is a replica of another mirror', async () => {
+  it('REG-ASSIGN-006 refuses the flip onto a MIRROR whose primary is a replica of another mirror — via the shared assertNoSharedReplicas predicate (R5 defect 2)', async () => {
     const { registry } = await makeRegistry({
       backends: [
         { name: 'nas', type: 'local', options: { root: makeTmpDir() } },
@@ -501,10 +510,48 @@ describe('StorageRegistryService assignCategory', () => {
       categories: { backups: 'backups-mirror' },
     });
 
+    // Same wording change as REG-ASSIGN-005 — see its comment.
     await expect(registry.assignCategory('files', 'nas-mirror')).rejects.toThrow(
-      /cannot assign 'files' to 'nas-mirror' — 'nas' is a mirror replica of 'backups-mirror'/,
+      /backend 'nas' is a mirror replica of 'backups-mirror' and also serves category 'files'/,
     );
     expect(await registry.currentConfigVersion()).toBe(0);
+  });
+
+  it('REG-ASSIGN-007 R5 defect 2 (regression): refuses a flip that would let two mirrors share a replica with overlapping swept prefixes — the OLD narrower inline check missed this case entirely', async () => {
+    // Two mirrors (m-backups, m-files) both list 'nas' as a replica. Only
+    // 'backups' is routed through m-backups at boot — a single mirror
+    // replicating 'nas' trips no refusal (REG-SHARED-003's pairwise overlap
+    // check needs at least two). The OLD inline check in assignCategory only
+    // asked "is the flip's OWN target (or its mirror's primary) a replica of
+    // some mirror" — flipping 'files' onto m-files computes owner='p2' (the
+    // mirror's primary), and NOTHING replicates 'p2', so the old code would
+    // have let this through, only for the NEXT build()/reload() to refuse it
+    // (or worse, silently let two mirrors' sync sweeps fight over 'nas').
+    const { registry } = await makeRegistry({
+      backends: [
+        { name: 'nas', type: 'local', options: { root: makeTmpDir() } },
+        { name: 'p1', type: 'local', options: { root: makeTmpDir() } },
+        { name: 'p2', type: 'local', options: { root: makeTmpDir() } },
+        { name: 'm-backups', type: 'mirror', options: { primary: 'p1', replicas: ['nas'] } },
+        { name: 'm-files', type: 'mirror', options: { primary: 'p2', replicas: ['nas'] } },
+      ],
+      categories: { backups: 'm-backups' }, // 'files' still defaults to uploads-local
+    });
+    expect(await registry.currentConfigVersion()).toBe(0);
+
+    await expect(registry.assignCategory('files', 'm-files')).rejects.toThrow(
+      /backend 'nas' replicates both 'm-backups' and 'm-files', whose swept key prefixes overlap/,
+    );
+
+    // Refused BEFORE any write — not merely on the next reload. The
+    // pre-seeded 'storage.categories' row (written by makeRegistry's setup,
+    // not by this call) is byte-unchanged — no 'files' key was added.
+    expect(registry.snapshot().categories.files.backend).toBe('uploads-local');
+    expect(await registry.currentConfigVersion()).toBe(0);
+    const row = testDb.prepare("SELECT value FROM app_settings WHERE key = 'storage.categories'").get() as {
+      value: string;
+    };
+    expect(JSON.parse(row.value)).toEqual({ backups: 'm-backups' });
   });
 });
 
@@ -718,17 +765,46 @@ describe('StorageRegistryService shared-replica refusals', () => {
 // ── seed-once boot import ─────────────────────────────────────────────────────
 
 describe('seed-once storage-config.json import', () => {
+  // R5 defect 1 fix (2026-09-25 ORM Plan 3i, storage task — the
+  // storage-config.json test-harness race, 3c's deferred L13,
+  // task-9-review-template.md:131): SEED_CONFIG_PATH used to be a FIXED
+  // source-tree path (data/storage-config.json) that this describe block
+  // wrote and deleted in place, while other vitest workers' concurrent
+  // buildApp() boots read the SAME real file through seedFromFileOnce() —
+  // genuinely racy across workers. setSeedConfigPathForTests() redirects
+  // every test below to a private per-worker tmp path (still named
+  // storage-config.json, so the SEED-004 error-message regex below still
+  // matches) that no other worker or suite ever touches; production never
+  // calls the setter, so getSeedConfigPath() there is always the real path.
+  const seedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'trek-storage-seed-'));
+  const seedPath = path.join(seedDir, 'storage-config.json');
+
+  beforeAll(() => {
+    setSeedConfigPathForTests(seedPath);
+  });
+
+  afterAll(() => {
+    setSeedConfigPathForTests(null);
+    fs.rmSync(seedDir, { recursive: true, force: true });
+  });
+
   const nasRoot = () => makeTmpDir();
 
   function writeSeed(content: string): void {
-    fs.mkdirSync(path.dirname(SEED_CONFIG_PATH), { recursive: true });
-    fs.writeFileSync(SEED_CONFIG_PATH, content);
+    fs.mkdirSync(path.dirname(seedPath), { recursive: true });
+    fs.writeFileSync(seedPath, content);
   }
 
   /** A registry with NO storage.* rows (makeRegistry seeds an override row, so build raw). */
   async function makeUnseededRegistry() {
     const stub = makeEnvStub({});
-    return new StorageRegistryService(db, stub.env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+    return new StorageRegistryService(
+      await createTestAppSettingsRepo(testDb),
+      stub.env,
+      new StorageEventsService(),
+      await createTestUnitOfWork(testDb),
+      (await sharedTestOrm(testDb)).orm,
+    );
   }
 
   function readRow(key: string): string | undefined {
@@ -739,7 +815,12 @@ describe('seed-once storage-config.json import', () => {
   }
 
   afterEach(() => {
-    fs.rmSync(SEED_CONFIG_PATH, { force: true });
+    fs.rmSync(seedPath, { force: true });
+  });
+
+  it('REG-SEED-PATH-011 getSeedConfigPath() honors the test override (the race fix itself)', () => {
+    expect(getSeedConfigPath()).toBe(seedPath);
+    expect(getSeedConfigPath()).not.toBe(path.join('data', 'storage-config.json'));
   });
 
   it('SEED-001 imports a valid file when no rows exist: encrypted rows, live drivers, pinned log', async () => {
