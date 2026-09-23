@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   RouteUsageDayRow,
   RouteUsageProfile,
@@ -6,7 +7,11 @@ import type {
   RouteUsageSummaryResult,
   RouteUsageSurface,
 } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
+import { todayUtc } from '@trek/shared';
+import { RouteUsageDaily } from '../../db/entities/RouteUsageDaily.entity';
+import { RouteUsageDailyRepository } from '../../db/repositories/RouteUsageDaily.repository';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { UnitOfWork } from '../database/unit-of-work';
 
 /** Days a counted day survives. Aggregates are tiny, so this is a year and a bit. */
@@ -14,17 +19,6 @@ export const RETENTION_DAYS = 400;
 
 /** Days returned in the summary's own series, newest first. */
 export const SERIES_DAYS = 90;
-
-interface DbRow {
-  day: string;
-  profile: string;
-  surface: string;
-  self_hosted: number;
-  requests: number;
-  waypoints: number;
-  km: number;
-  failed: number;
-}
 
 /**
  * Route usage counters.
@@ -42,55 +36,53 @@ interface DbRow {
 @Injectable()
 export class RouteUsageService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(RouteUsageDaily) private readonly routeUsageRepo: RouteUsageDailyRepository,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly uow: UnitOfWork,
   ) {}
 
   async enabled(): Promise<boolean> {
-    const row = this.db.get<{ value: string }>(
-      "SELECT value FROM app_settings WHERE key = 'route_usage_enabled'",
-    );
+    const value = await this.appSettings.getValue('route_usage_enabled');
     // Absent means on: the counters have to be collecting before anyone thinks to
     // look for them, and there is nothing here to protect.
-    return row?.value !== 'false';
+    return value !== 'false';
   }
 
   /**
    * Adds a batch onto today's rows. Returns whether anything was written, so a
    * switched-off instance answers 200 rather than an error the client would log on
    * every flush.
+   *
+   * RU2/R4: `RouteUsageDailyRepository.record`'s Kysely `onConflict(...)
+   * .doUpdateSet(...)` upsert is ADDITIVE (`requests = requests +
+   * excluded.requests`, …), not a blind overwrite — see that method's own
+   * docstring. `today` is resolved ONCE per batch (`todayUtc()`, the 3f
+   * bare-`date('now')` precedent), not re-derived per entry.
    */
   async record(report: RouteUsageReportRequest): Promise<boolean> {
     if (!(await this.enabled())) return false;
+    const today = todayUtc();
     // One transaction for the batch: a flush is a handful of rows, and a partial
     // one would leave a day counted twice on the client's next retry.
     await this.uow.transactional(async () => {
       for (const entry of report.entries) {
-        this.db.run(
-          `INSERT INTO route_usage_daily (day, profile, surface, self_hosted, requests, waypoints, km, failed)
-           VALUES (date('now'), ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(day, profile, surface, self_hosted) DO UPDATE SET
-             requests = requests + excluded.requests,
-             waypoints = waypoints + excluded.waypoints,
-             km = km + excluded.km,
-             failed = failed + excluded.failed`,
-          entry.profile,
-          entry.surface,
-          entry.selfHosted ? 1 : 0,
-          entry.requests,
-          entry.waypoints,
-          Math.round(entry.km),
-          entry.failed,
-        );
+        await this.routeUsageRepo.record({
+          day: today,
+          profile: entry.profile,
+          surface: entry.surface,
+          self_hosted: entry.selfHosted ? 1 : 0,
+          requests: entry.requests,
+          waypoints: entry.waypoints,
+          km: Math.round(entry.km),
+          failed: entry.failed,
+        });
       }
     });
     return true;
   }
 
   async rows(): Promise<RouteUsageDayRow[]> {
-    const rows = this.db.all<DbRow>(
-      'SELECT * FROM route_usage_daily ORDER BY day DESC, profile, surface',
-    );
+    const rows = await this.routeUsageRepo.rows();
     return rows.map((r) => ({
       day: r.day,
       profile: r.profile as RouteUsageProfile,
@@ -174,16 +166,11 @@ export class RouteUsageService {
 
   /** Removes days past the retention window. Returns how many rows went. */
   async purgeExpired(): Promise<number> {
-    const result = this.db.run(
-      `DELETE FROM route_usage_daily WHERE day < date('now', ?)`,
-      `-${RETENTION_DAYS} days`,
-    );
-    return result.changes ?? 0;
+    return this.routeUsageRepo.purgeExpired(RETENTION_DAYS);
   }
 
   /** Wipes every counter. The admin's own "start over". */
   async clear(): Promise<number> {
-    const result = this.db.run('DELETE FROM route_usage_daily');
-    return result.changes ?? 0;
+    return this.routeUsageRepo.clear();
   }
 }

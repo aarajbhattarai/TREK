@@ -85,7 +85,7 @@ import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
-  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestCategoriesRepo,
+  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestCategoriesRepo, createTestPlaceDetailsCacheRepo,
   createTestReservationsRepo,
   createTestReservationEndpointsRepo,
   createTestReservationTravelersRepo,
@@ -153,7 +153,7 @@ beforeAll(async () => {
   );
   placesSvc = new PlacesService(
   dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
-  new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)), new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
+  new MapsService(photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestPlaceDetailsCacheRepo(dbs().connection), await createTestPlacesRepo(dbs().connection)), new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
   new JourneyDomainService(
     dbs(), new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), await createTestJourneyPhotosRepo(dbs().connection), dbs()), await createTestUnitOfWork(dbs().connection),

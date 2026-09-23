@@ -60,8 +60,6 @@ vi.mock('../../../src/nest/maps/trek-places.client', async (importOriginal) => (
   trekPlacesSearch: vi.fn(async (): Promise<unknown[]> => []),
 }));
 
-import { db } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { MapsService } from '../../../src/nest/maps/maps.service';
 import {
   AmapPlacesProvider,
@@ -74,6 +72,8 @@ import { isGooglePlaceId } from '../../../src/nest/maps/maps.helpers';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import type { PlaceDetailsCacheRepository } from '../../../src/db/repositories/PlaceDetailsCache.repository';
+import type { PlacesRepository } from '../../../src/db/repositories/Places.repository';
 
 // resolveMapsKey/resolveAmapKey (maps.service.ts) now read AppSettingsRepository/
 // UsersRepository directly (Plan 3a Task 5's instance-api-keys.ts conversion)
@@ -81,8 +81,12 @@ import type { UsersRepository } from '../../../src/db/repositories/Users.reposit
 // the SAME mockInstanceGet/mockDbGet seams the rest of this file already
 // controls into the new repository methods, so every existing keys()/
 // mockInstanceGet/mockProviderGet call below keeps its meaning unchanged.
+// `places_provider` keeps its own dedicated mockProviderGet seam, per the
+// pre-conversion raw-SQL mock's own `args[0] === 'places_provider'` branch —
+// MAP2 (`placesProviderChoice`) reads that key through this stub now.
 const appSettingsStub = {
-  getValue: async (key: string) => (mockInstanceGet(key) as { value: string | null } | undefined)?.value ?? null,
+  getValue: async (key: string) =>
+    (key === 'places_provider' ? mockProviderGet(key) : (mockInstanceGet(key) as { value: string | null } | undefined))?.value ?? null,
 } as unknown as AppSettingsRepository;
 const usersStub = {
   getApiKeyColumn: async (userId: number, name: 'maps_api_key' | 'amap_api_key') => {
@@ -90,6 +94,24 @@ const usersStub = {
     return row?.[name] ?? null;
   },
 } as unknown as UsersRepository;
+
+// Plan 3h Task 4 (R8/MAP9): the SAME mockDbGet/mockDbRun-preserving shape
+// maps.service.test.ts's own stubs use for `place_details_cache`/`places`.
+const placeDetailsCacheStub = {
+  findEntry: async (placeId: string, lang: string, _kind: number) => {
+    const row = mockDbGet(placeId, lang) as { payload_json: string; fetched_at: number } | undefined;
+    return row ? { payload_json: row.payload_json, fetched_at: row.fetched_at } : null;
+  },
+  upsertEntry: async (row: { place_id: string; lang: string; expanded: number; payload_json: string; fetched_at: number }) => {
+    mockDbRun(row.place_id, row.lang, row.payload_json, row.fetched_at);
+  },
+} as unknown as PlaceDetailsCacheRepository;
+const placesStub = {
+  setImageUrlIfUnset: async (google_place_id: string, image_url: string) => {
+    mockDbRun(image_url, google_place_id);
+    return 1;
+  },
+} as unknown as PlacesRepository;
 
 const photoCacheStub = {
   get: vi.fn(() => null),
@@ -101,7 +123,7 @@ const photoCacheStub = {
   serveKey: vi.fn(() => null),
 } as unknown as PlacePhotoCacheService;
 
-const svc = new MapsService(new DatabaseService(db as never), photoCacheStub, appSettingsStub, usersStub);
+const svc = new MapsService(photoCacheStub, appSettingsStub, usersStub, placeDetailsCacheStub, placesStub);
 
 /** A provider over a fixed key, which is all these cases need. */
 function provider(): AmapPlacesProvider {

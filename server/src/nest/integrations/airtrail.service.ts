@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { AirtrailFlight } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
+import { Users } from '../../db/entities/Users.entity';
+import { UsersRepository } from '../../db/repositories/Users.repository';
 import { AuditService } from '../audit/audit.service';
 import { maybe_encrypt_api_key, decrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { checkSsrf } from '../../utils/ssrfGuard';
@@ -29,29 +31,33 @@ interface UserConnRow {
  * airtrail_allow_insecure_tls, airtrail_write_enabled). That was a deliberate
  * decision, not an omission: an integrations table would have needed a migration
  * and bought nothing while AirTrail is the only integration of this shape.
+ *
+ * Plan 3h Task 4 (ATC1-5): the raw `users` reads/writes now go through
+ * `UsersRepository`'s additive `getAirtrailConnRow`/`getAirtrailWriteEnabled`/
+ * `setAirtrailSettingsWithKey`/`setAirtrailSettings`/`clearAirtrailApiKey`
+ * methods (R7 — the repository sees only opaque, already-encrypted TEXT;
+ * `maybe_encrypt_api_key`/`decrypt_api_key` stay here). `saveSettings` keeps
+ * its pre-existing asymmetry with `DawarichService#saveSettings`
+ * (Task 3): Dawarich wraps its writes in `uow.transactional`, this one does
+ * not — preserved exactly, not "fixed" to match.
  */
 @Injectable()
 export class AirtrailService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
     private readonly audit: AuditService,
     private readonly client: AirtrailClient,
   ) {}
 
   private async readRow(userId: number): Promise<UserConnRow | undefined> {
-    return this.db.get<UserConnRow>(
-      'SELECT airtrail_url, airtrail_api_key, airtrail_allow_insecure_tls, airtrail_write_enabled FROM users WHERE id = ?',
-      userId,
-    );
+    const row = await this.usersRepo.getAirtrailConnRow(userId);
+    return row ?? undefined;
   }
 
   /** Has this user opted in to TREK writing their flight edits back to AirTrail? (#1240) */
   async isAirtrailWriteEnabled(userId: number): Promise<boolean> {
-    const row = this.db.get<{ airtrail_write_enabled?: number | null }>(
-      'SELECT airtrail_write_enabled FROM users WHERE id = ?',
-      userId,
-    );
-    return !!row?.airtrail_write_enabled;
+    const value = await this.usersRepo.getAirtrailWriteEnabled(userId);
+    return !!value;
   }
 
   /** Decrypted creds for outbound calls, or null when the user has no connection. */
@@ -116,18 +122,12 @@ export class AirtrailService {
     const newKey = provided && provided !== KEY_MASK ? maybe_encrypt_api_key(provided) : undefined;
 
     if (newKey !== undefined) {
-      this.db.run(
-        'UPDATE users SET airtrail_url = ?, airtrail_api_key = ?, airtrail_allow_insecure_tls = ?, airtrail_write_enabled = ? WHERE id = ?',
-        trimmedUrl || null, newKey, allowInsecureTls ? 1 : 0, writeEnabled ? 1 : 0, userId,
-      );
+      await this.usersRepo.setAirtrailSettingsWithKey(userId, trimmedUrl || null, newKey, allowInsecureTls ? 1 : 0, writeEnabled ? 1 : 0);
     } else {
-      this.db.run(
-        'UPDATE users SET airtrail_url = ?, airtrail_allow_insecure_tls = ?, airtrail_write_enabled = ? WHERE id = ?',
-        trimmedUrl || null, allowInsecureTls ? 1 : 0, writeEnabled ? 1 : 0, userId,
-      );
+      await this.usersRepo.setAirtrailSettings(userId, trimmedUrl || null, allowInsecureTls ? 1 : 0, writeEnabled ? 1 : 0);
       // Clearing the URL with no key left makes the connection meaningless — drop the key too.
       if (!trimmedUrl) {
-        this.db.run('UPDATE users SET airtrail_api_key = NULL WHERE id = ?', userId);
+        await this.usersRepo.clearAirtrailApiKey(userId);
       }
     }
 

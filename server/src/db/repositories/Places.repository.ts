@@ -1126,6 +1126,30 @@ export class PlacesRepository extends TrekRepository<Places> {
     const result = await this.kysely<PlacesNarrowInsertKyselyDB>().insertInto('places').values(row).executeTakeFirstOrThrow();
     return Number(result.insertId);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 4 (`maps.service.ts`'s photo-fetch method, MAP9) — additive,
+  // per this task's own file-ownership rule ("additive methods on
+  // Reservations/ReservationEndpoints/Days/Places/Users repositories").
+  // ---------------------------------------------------------------------------
+
+  /**
+   * MAP9 — `UPDATE places SET image_url = ?, updated_at = CURRENT_TIMESTAMP
+   * WHERE google_place_id = ? AND (image_url IS NULL OR image_url = '')`.
+   * **SECURITY/PARITY**: the `$or` guard is what stops this from ever
+   * clobbering a place's already-set/custom image — preserved exactly.
+   * Unscoped by `trip_id`/`id` (matching the legacy statement): a
+   * `google_place_id` can appear on more than one place row across
+   * different trips, and every empty-image row sharing it is filled in one
+   * statement.
+   */
+  async setImageUrlIfUnset(google_place_id: string, image_url: string): Promise<number> {
+    const platform = this.getEntityManager().getPlatform();
+    return this.nativeUpdate(
+      { google_place_id, $or: [{ image_url: null }, { image_url: '' }] },
+      { image_url, updated_at: currentTimestamp(platform) },
+    );
+  }
 }
 
 /** {@link PlacesRepository.listImportable}'s row shape (CL45). */

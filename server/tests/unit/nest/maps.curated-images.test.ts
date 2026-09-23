@@ -23,11 +23,9 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
   SsrfBlockedError: class extends Error {},
 }));
 
-import { db } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { MapsService } from '../../../src/nest/maps/maps.service';
 
-const svcOf = () => new MapsService(new DatabaseService(db as never), {} as never, {} as never, {} as never);
+const svcOf = () => new MapsService({} as never, {} as never, {} as never, {} as never, {} as never);
 
 const filePage = (over: Record<string, unknown> = {}) => ({
   pageid: 4711,

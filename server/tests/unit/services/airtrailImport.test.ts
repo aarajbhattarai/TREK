@@ -38,7 +38,9 @@ async function makeImportService(): Promise<AirtrailImportService> {
   const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection));
   const realtime = { broadcast } as unknown as RealtimeService;
   return new AirtrailImportService(
-    dbs(),
+    await createTestReservationsRepo(dbs().connection),
+    await createTestReservationEndpointsRepo(dbs().connection),
+    await createTestDaysRepo(dbs().connection),
     realtime,
     new ReservationsService(
       dbs(),

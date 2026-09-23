@@ -18,7 +18,9 @@ vi.mock('../../../src/nest/integrations/airtrail.mapper', () => ({
 
 import { AirtrailLinkService } from '../../../src/nest/integrations/airtrail-link.service';
 import { AirtrailAuthError } from '../../../src/nest/integrations/airtrail.client';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { ReservationsRepository } from '../../../src/db/repositories/Reservations.repository';
+import type { ReservationEndpointsRepository } from '../../../src/db/repositories/ReservationEndpoints.repository';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { AirtrailSyncService } from '../../../src/nest/integrations/airtrail-sync.service';
@@ -29,7 +31,6 @@ import type { AirtrailService } from '../../../src/nest/integrations/airtrail.se
 
 const linkedRow = { id: 5, trip_id: 9, external_id: '42', external_owner_user_id: 7, sync_enabled: 1 };
 
-const runSpy = vi.fn();
 const getFlight = vi.fn();
 const listFlights = vi.fn();
 const saveFlight = vi.fn();
@@ -39,26 +40,39 @@ const updateReservation = vi.fn();
 const isAirtrailWriteEnabled = vi.fn();
 const getAirtrailCredentials = vi.fn();
 
-/** Routes reads by SQL, exactly as the old db.prepare stub did. */
-let dbGet: (sql: string) => unknown;
-let dbAll: (sql: string) => unknown[];
+// The Plan 3h Task 4 conversion's repository-shaped seams, replacing the old
+// "route reads by SQL text" db.prepare stub: same fixtures, same test intent
+// (the write gate + the #1535 multi-leg guard), asserted against the
+// repository METHOD now instead of a literal SQL fragment.
+const getValueMock = vi.fn<(key: string) => string | null>();
+const countEndpointsMock = vi.fn<(filter: unknown) => number>();
+const findAirtrailLinkedMock = vi.fn<(id: number) => typeof linkedRow | undefined>();
+const detachSpy = vi.fn<(id: number) => void>();
+const setAirtrailSyncStampSpy = vi.fn();
+const listSyncCandidatesMock = vi.fn<(ownerId: number) => unknown[]>();
 
 function makeServices(): { link: AirtrailLinkService; sync: AirtrailSyncService } {
-  const db = {
-    get: (sql: string) => dbGet(sql),
-    all: (sql: string) => dbAll(sql),
-    run: (sql: string, ...args: unknown[]) => {
-      runSpy(sql, args);
-      return {};
-    },
-  } as unknown as DatabaseService;
+  const reservationsRepo = {
+    findAirtrailLinked: (id: number) => Promise.resolve(findAirtrailLinkedMock(id)),
+    setAirtrailSyncDisabled: (id: number) => { detachSpy(id); return Promise.resolve(); },
+    setAirtrailSyncStamp: (...args: unknown[]) => { setAirtrailSyncStampSpy(...args); return Promise.resolve(); },
+    listAirtrailSyncCandidatesForOwner: (ownerId: number) => Promise.resolve(listSyncCandidatesMock(ownerId)),
+  } as unknown as ReservationsRepository;
+  const endpointsRepo = {
+    count: (filter: unknown) => Promise.resolve(countEndpointsMock(filter)),
+  } as unknown as ReservationEndpointsRepository;
+  const appSettings = {
+    getValue: (key: string) => Promise.resolve(getValueMock(key)),
+  } as unknown as AppSettingsRepository;
 
   const client = { getFlight, listFlights, saveFlight } as unknown as AirtrailClient;
   const airtrail = { isAirtrailWriteEnabled, getAirtrailCredentials } as unknown as AirtrailService;
   // The push and the shared link lifecycle live on AirtrailLinkService since the
   // core/pull split (which retired airtrail.bridge); the pull delegates to it.
   const link = new AirtrailLinkService(
-    db,
+    reservationsRepo,
+    endpointsRepo,
+    appSettings,
     { broadcast: vi.fn() } as unknown as RealtimeService,
     { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService,
     { getReservationWithJoins } as unknown as ReservationsReadService,
@@ -66,7 +80,7 @@ function makeServices(): { link: AirtrailLinkService; sync: AirtrailSyncService 
     airtrail,
   );
   const sync = new AirtrailSyncService(
-    db,
+    reservationsRepo,
     link,
     { getReservation, update: updateReservation } as unknown as ReservationsService,
     client,
@@ -81,13 +95,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Global sync setting, the linked reservation row and the endpoint count the
   // multi-leg guard checks (#1535) — two = plain from/to.
-  dbGet = (sql: string) => {
-    if (sql.includes('app_settings')) return { value: 'true' };
-    if (sql.includes('FROM reservation_endpoints')) return { n: 2 };
-    if (sql.includes('FROM reservations')) return { ...linkedRow };
-    return undefined;
-  };
-  dbAll = () => [];
+  getValueMock.mockReturnValue('true');
+  countEndpointsMock.mockReturnValue(2);
+  findAirtrailLinkedMock.mockReturnValue({ ...linkedRow });
+  listSyncCandidatesMock.mockReturnValue([]);
   svc = makeServices();
 
   getAirtrailCredentials.mockReturnValue({ baseUrl: 'https://at.example', apiKey: 'k', allowInsecureTls: false });
@@ -113,7 +124,8 @@ describe('pushReservationToAirtrail write gate (#1240)', () => {
     await svc.link.pushReservationToAirtrail(5, 9);
     expect(getFlight).not.toHaveBeenCalled();
     expect(saveFlight).not.toHaveBeenCalled();
-    expect(runSpy).not.toHaveBeenCalled(); // no detach, no hash write — pure no-op
+    expect(detachSpy).not.toHaveBeenCalled(); // no detach, no hash write — pure no-op
+    expect(setAirtrailSyncStampSpy).not.toHaveBeenCalled();
   });
 
   it('writes back, preserving AirTrail-owned fields, when the owner has opted in', async () => {
@@ -127,16 +139,11 @@ describe('pushReservationToAirtrail write gate (#1240)', () => {
 
   it('#1535 detaches instead of pushing when the reservation grew extra stops', async () => {
     isAirtrailWriteEnabled.mockReturnValue(true);
-    dbGet = (sql: string) => {
-      if (sql.includes('app_settings')) return { value: 'true' };
-      if (sql.includes('FROM reservation_endpoints')) return { n: 3 }; // from + stop + to
-      if (sql.includes('FROM reservations')) return { ...linkedRow };
-      return undefined;
-    };
+    countEndpointsMock.mockReturnValue(3); // from + stop + to
     await svc.link.pushReservationToAirtrail(5, 9);
     // Pushing would rewrite the single AirTrail flight to span the whole route.
     expect(saveFlight).not.toHaveBeenCalled();
-    expect(runSpy).toHaveBeenCalledWith(expect.stringContaining('sync_enabled = 0'), [5]);
+    expect(detachSpy).toHaveBeenCalledWith(5);
   });
 
   it('#1535 detaches on metadata.legs even when the endpoint count is not available', async () => {
@@ -149,7 +156,7 @@ describe('pushReservationToAirtrail write gate (#1240)', () => {
     });
     await svc.link.pushReservationToAirtrail(5, 9);
     expect(saveFlight).not.toHaveBeenCalled();
-    expect(runSpy).toHaveBeenCalledWith(expect.stringContaining('sync_enabled = 0'), [5]);
+    expect(detachSpy).toHaveBeenCalledWith(5);
   });
 
   it('detaches when the owner key stopped working, rather than retrying forever', async () => {
@@ -157,7 +164,7 @@ describe('pushReservationToAirtrail write gate (#1240)', () => {
     getFlight.mockRejectedValue(new AirtrailAuthError('invalid key'));
     await svc.link.pushReservationToAirtrail(5, 9);
     expect(saveFlight).not.toHaveBeenCalled();
-    expect(runSpy).toHaveBeenCalledWith(expect.stringContaining('sync_enabled = 0'), [5]);
+    expect(detachSpy).toHaveBeenCalledWith(5);
   });
 
   it('detaches when the flight is gone from AirTrail — the same as a remote delete', async () => {
@@ -165,19 +172,15 @@ describe('pushReservationToAirtrail write gate (#1240)', () => {
     getFlight.mockResolvedValue(null);
     await svc.link.pushReservationToAirtrail(5, 9);
     expect(saveFlight).not.toHaveBeenCalled();
-    expect(runSpy).toHaveBeenCalledWith(expect.stringContaining('sync_enabled = 0'), [5]);
+    expect(detachSpy).toHaveBeenCalledWith(5);
   });
 });
 
 describe('inbound sync multi-leg guard (#1535)', () => {
   function withLinkedRow(endpointCount: number) {
-    dbGet = (sql: string) => {
-      if (sql.includes('app_settings')) return { value: 'true' };
-      if (sql.includes('FROM reservation_endpoints')) return { n: endpointCount };
-      return undefined;
-    };
-    dbAll = (sql: string) =>
-      sql.includes('sync_enabled = 1') ? [{ id: 5, trip_id: 9, external_id: '42', external_hash: 'stale' }] : [];
+    getValueMock.mockReturnValue('true');
+    countEndpointsMock.mockReturnValue(endpointCount);
+    listSyncCandidatesMock.mockReturnValue([{ id: 5, trip_id: 9, external_id: '42', external_hash: 'stale' }]);
     svc = makeServices();
   }
 
@@ -191,7 +194,7 @@ describe('inbound sync multi-leg guard (#1535)', () => {
 
     const { changed } = await svc.sync.runAirtrailSyncForUser(7);
     expect(updateReservation).not.toHaveBeenCalled();
-    expect(runSpy).toHaveBeenCalledWith(expect.stringContaining('sync_enabled = 0'), [5]);
+    expect(detachSpy).toHaveBeenCalledWith(5);
     expect(changed).toBe(1);
   });
 
@@ -202,7 +205,7 @@ describe('inbound sync multi-leg guard (#1535)', () => {
 
     await svc.sync.runAirtrailSyncForUser(7);
     expect(updateReservation).toHaveBeenCalledTimes(1);
-    expect(runSpy).not.toHaveBeenCalledWith(expect.stringContaining('sync_enabled = 0'), expect.anything());
+    expect(detachSpy).not.toHaveBeenCalled();
   });
 
   it('detaches a flight that vanished from AirTrail, keeping the TREK row', async () => {
@@ -210,7 +213,7 @@ describe('inbound sync multi-leg guard (#1535)', () => {
     listFlights.mockResolvedValue([]); // the linked id is no longer there
     const { changed } = await svc.sync.runAirtrailSyncForUser(7);
     expect(updateReservation).not.toHaveBeenCalled();
-    expect(runSpy).toHaveBeenCalledWith(expect.stringContaining('sync_enabled = 0'), [5]);
+    expect(detachSpy).toHaveBeenCalledWith(5);
     expect(changed).toBe(1);
   });
 
@@ -219,7 +222,7 @@ describe('inbound sync multi-leg guard (#1535)', () => {
     getAirtrailCredentials.mockReturnValue(null);
     const { changed } = await svc.sync.runAirtrailSyncForUser(7);
     expect(listFlights).not.toHaveBeenCalled();
-    expect(runSpy).not.toHaveBeenCalled();
+    expect(detachSpy).not.toHaveBeenCalled();
     expect(changed).toBe(0);
   });
 });

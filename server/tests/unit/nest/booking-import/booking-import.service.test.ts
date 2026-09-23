@@ -9,8 +9,6 @@ vi.mock('../../../../src/db/database', () => ({
   // them, but the module-level import has to resolve.
   canAccessTrip: vi.fn(), isOwner: () => false, getPlaceWithTags: () => null,
 }));
-import { db as dbConn } from '../../../../src/db/database';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 vi.mock('../../../../src/websocket', () => ({ broadcast: vi.fn() }));
 const permissionsStub = { checkPermission: vi.fn(() => true) };
 
@@ -32,7 +30,13 @@ function make(opts: { kit?: boolean; ai?: boolean; extract?: any; parse?: any })
   // Places became a constructor dep with the place DI fold (was a path mock of
   // services/placeService); only confirm() reaches it, so a bare create stub does.
   const places = { create: vi.fn() };
-  return { svc: new BookingImportService(extractor as any, llmParse as any, new DatabaseService(dbConn), reservations as never, permissionsStub as never, undefined as never, undefined as never, undefined as never, maps as never, places as never), extractor, llmParse, reservations, maps, places };
+  return {
+    svc: new BookingImportService(
+      extractor as any, llmParse as any, undefined as never, undefined as never,
+      reservations as never, permissionsStub as never, undefined as never, undefined as never, undefined as never, maps as never, places as never,
+    ),
+    extractor, llmParse, reservations, maps, places,
+  };
 }
 
 beforeEach(() => vi.clearAllMocks());

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 import { ReservationsService } from '../reservations/reservations.service';
 import { logError, logInfo } from '../audit/audit-log.logger';
 import { AirtrailAuthError, type AirtrailFlightRaw } from './airtrail.client';
@@ -27,7 +29,7 @@ export { buildSavePayload } from './airtrail-sync.helpers';
 @Injectable()
 export class AirtrailSyncService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
     private readonly link: AirtrailLinkService,
     private readonly reservations: ReservationsService,
     private readonly client: AirtrailClient,
@@ -64,10 +66,7 @@ export class AirtrailSyncService {
     }
     const byId = new Map(flights.map((f) => [String(f.id), f]));
 
-    const linked = this.db.all<{ id: number; trip_id: number; external_id: string; external_hash: string | null }>(
-      "SELECT id, trip_id, external_id, external_hash FROM reservations WHERE external_source = 'airtrail' AND sync_enabled = 1 AND external_owner_user_id = ?",
-      uid,
-    );
+    const linked = await this.reservationsRepo.listAirtrailSyncCandidatesForOwner(uid);
 
     let changed = 0;
     for (const row of linked) {
@@ -92,12 +91,7 @@ export class AirtrailSyncService {
       }
       try {
         await this.reservations.update(row.id, row.trip_id, mapFlightToReservation(flight) as any, current as any);
-        this.db.run(
-          'UPDATE reservations SET external_hash = ?, external_synced_at = ? WHERE id = ?',
-          hash,
-          new Date().toISOString(),
-          row.id,
-        );
+        await this.reservationsRepo.setAirtrailSyncStamp(row.id, hash, new Date().toISOString());
         await this.link.broadcastUpdated(row.trip_id, row.id);
         changed++;
       } catch (err) {
@@ -114,10 +108,8 @@ export class AirtrailSyncService {
     this.running = true;
     let changed = 0;
     try {
-      const owners = this.db.all<{ uid: number }>(
-        "SELECT DISTINCT external_owner_user_id AS uid FROM reservations WHERE external_source = 'airtrail' AND sync_enabled = 1 AND external_owner_user_id IS NOT NULL",
-      );
-      for (const { uid } of owners) changed += await this.syncOwner(uid);
+      const owners = await this.reservationsRepo.listAirtrailSyncOwners();
+      for (const uid of owners) changed += await this.syncOwner(uid);
       if (changed > 0) logInfo(`AirTrail sync: applied ${changed} change(s)`);
     } catch (err) {
       logError(`AirTrail sync failed: ${err instanceof Error ? err.message : err}`);

@@ -578,6 +578,16 @@ interface PublicApiUnplannedPlaceKyselyDB {
   day_accommodations: { id: number; place_id: number | null };
 }
 
+/**
+ * Plan 3h Task 4 (`AirportsService.backfillFlightEndpoints`, AIR1) —
+ * additive. The narrow `reservations`/`reservation_endpoints` shape the
+ * `NOT EXISTS` guard needs.
+ */
+interface FlightsMissingEndpointsKyselyDB {
+  reservations: { id: number; metadata: string | null; reservation_time: string | null; reservation_end_time: string | null; type: string | null };
+  reservation_endpoints: { id: number; reservation_id: number };
+}
+
 export class ReservationsRepository extends TrekRepository<Reservations> {
   private joinedQuery() {
     return this.kysely<ReservationJoinKyselyDB>()
@@ -1498,6 +1508,141 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
       .selectAll()
       .where('id', '=', id as number)
       .executeTakeFirst();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 4 (AirTrail's bookkeeping, `nest/integrations/airtrail*.ts` —
+  // owns zero tables of its own, R7) + airports' flight-endpoint backfill
+  // (`nest/airports/airports.service.ts`) — additive, per this task's own
+  // file-ownership rule ("additive methods on Reservations/ReservationEndpoints/
+  // Days/Places/Users repositories"). `trip_id` is a `persist(false)` FK
+  // mirror — every trip-scoped read below filters by the `trip` ref property
+  // (the `findInTrip`/`listResyncCandidates` precedent above), never a raw
+  // column name.
+  // ---------------------------------------------------------------------------
+
+  /** ATI1 (`airtrail-import.service.ts#importAirtrailFlights`, dedup: already-linked ids) — `SELECT external_id, metadata FROM reservations WHERE trip_id = ? AND external_source = 'airtrail'`. */
+  async listAirtrailLinkedForTrip(trip_id: number): Promise<{ external_id: string | null; metadata: string | null }[]> {
+    return this.qb('r')
+      .select(['r.external_id', 'r.metadata'])
+      .where({ trip: trip_id, external_source: 'airtrail' })
+      .execute<{ external_id: string | null; metadata: string | null }[]>('all', false);
+  }
+
+  /** ATI2 (`airtrail-import.service.ts#importAirtrailFlights`, existing-flight signature dedup) — `SELECT r.id, r.reservation_time, r.metadata FROM reservations r WHERE r.trip_id = ? AND r.type = 'flight'`. */
+  async listFlightReservationsForTrip(trip_id: number): Promise<{ id: number; reservation_time: string | null; metadata: string | null }[]> {
+    return this.qb('r')
+      .select(['r.id', 'r.reservation_time', 'r.metadata'])
+      .where({ trip: trip_id, type: 'flight' })
+      .execute<{ id: number; reservation_time: string | null; metadata: string | null }[]>('all', false);
+  }
+
+  /**
+   * ATI5 (`airtrail-import.service.ts#importAirtrailFlights`, multi-leg
+   * branch) — `UPDATE reservations SET external_source = 'airtrail',
+   * external_id = ?, external_owner_user_id = ?, sync_enabled = 0,
+   * external_synced_at = ? WHERE id = ?`. **CORRECTNESS GAP, pre-existing,
+   * report don't fix** (inventory §3b): neither this nor {@link
+   * linkAirtrailSingleFlight} is transactional with the preceding
+   * `ReservationsService.create` call — a failure between the two leaves an
+   * untracked reservation. Preserved exactly, not "fixed" with an added
+   * `uow.transactional` wrap.
+   */
+  async linkAirtrailMultiLeg(id: number, external_id: string, external_owner_user_id: number, external_synced_at: string): Promise<void> {
+    await this.nativeUpdate({ id }, { external_source: 'airtrail', external_id, external_owner_user_id, sync_enabled: 0, external_synced_at });
+  }
+
+  /**
+   * ATI6 (`airtrail-import.service.ts#importAirtrailFlights`, single-flight
+   * branch) — `UPDATE reservations SET external_source = 'airtrail',
+   * external_id = ?, external_owner_user_id = ?, sync_enabled = 1,
+   * external_hash = ?, external_synced_at = ? WHERE id = ?`. Same
+   * pre-existing tx gap as {@link linkAirtrailMultiLeg} — report don't fix.
+   */
+  async linkAirtrailSingleFlight(id: number, external_id: string, external_owner_user_id: number, external_hash: string, external_synced_at: string): Promise<void> {
+    await this.nativeUpdate({ id }, { external_source: 'airtrail', external_id, external_owner_user_id, sync_enabled: 1, external_hash, external_synced_at });
+  }
+
+  /** ATL2 (`airtrail-link.service.ts#detach`) — `UPDATE reservations SET sync_enabled = 0 WHERE id = ?`. */
+  async setAirtrailSyncDisabled(id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { sync_enabled: 0 });
+  }
+
+  /**
+   * ATL4 (`airtrail-link.service.ts#pushReservationToAirtrail`) — `SELECT
+   * id, trip_id, external_id, external_owner_user_id, sync_enabled FROM
+   * reservations WHERE id = ? AND external_source = 'airtrail'`. `trip_id`
+   * via `columnRef` (the `listResyncCandidates` precedent above) — the
+   * mirror column, not a bare select.
+   */
+  async findAirtrailLinked(id: number): Promise<{ id: number; trip_id: number; external_id: string | null; external_owner_user_id: number | null; sync_enabled: number | null } | undefined> {
+    const platform = this.getEntityManager().getPlatform();
+    return this.qb('r')
+      .select(['r.id', columnRef(platform, 'r.trip_id').as('trip_id'), 'r.external_id', 'r.external_owner_user_id', 'r.sync_enabled'])
+      .where({ id, external_source: 'airtrail' })
+      .execute<{ id: number; trip_id: number; external_id: string | null; external_owner_user_id: number | null; sync_enabled: number | null } | undefined>('get', false);
+  }
+
+  /**
+   * ATL5 (`airtrail-link.service.ts#pushReservationToAirtrail`, self-write
+   * suppression) / ATS2 (`airtrail-sync.service.ts#syncOwner`, byte-identical
+   * 2nd call site) — `UPDATE reservations SET external_hash = ?,
+   * external_synced_at = ? WHERE id = ?`. One method, two call sites (D4).
+   */
+  async setAirtrailSyncStamp(id: number, external_hash: string, external_synced_at: string): Promise<void> {
+    await this.nativeUpdate({ id }, { external_hash, external_synced_at });
+  }
+
+  /**
+   * ATS1 (`airtrail-sync.service.ts#syncOwner`) — `SELECT id, trip_id,
+   * external_id, external_hash FROM reservations WHERE external_source =
+   * 'airtrail' AND sync_enabled = 1 AND external_owner_user_id = ?`.
+   */
+  async listAirtrailSyncCandidatesForOwner(owner_user_id: number): Promise<{ id: number; trip_id: number; external_id: string | null; external_hash: string | null }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    return this.qb('r')
+      .select(['r.id', columnRef(platform, 'r.trip_id').as('trip_id'), 'r.external_id', 'r.external_hash'])
+      .where({ external_source: 'airtrail', sync_enabled: 1, external_owner_user_id: owner_user_id })
+      .execute<{ id: number; trip_id: number; external_id: string | null; external_hash: string | null }[]>('all', false);
+  }
+
+  /**
+   * ATS3 (`airtrail-sync.service.ts#runAirtrailSync`) — `SELECT DISTINCT
+   * external_owner_user_id AS uid FROM reservations WHERE external_source =
+   * 'airtrail' AND sync_enabled = 1 AND external_owner_user_id IS NOT NULL`.
+   * **NON-HTTP ENTRYPOINT SOURCE** — the cron poll's owner list.
+   */
+  async listAirtrailSyncOwners(): Promise<number[]> {
+    const rows = await this.qb('r')
+      .select(['r.external_owner_user_id'])
+      .distinct()
+      .where({ external_source: 'airtrail', sync_enabled: 1, external_owner_user_id: { $ne: null } })
+      .execute<{ external_owner_user_id: number }[]>('all', false);
+    return rows.map((row) => row.external_owner_user_id);
+  }
+
+  /**
+   * AIR1 (`airports.service.ts#backfillFlightEndpoints`) — `SELECT r.id,
+   * r.metadata, r.reservation_time, r.reservation_end_time FROM reservations
+   * r WHERE r.type = 'flight' AND NOT EXISTS (SELECT 1 FROM
+   * reservation_endpoints e WHERE e.reservation_id = r.id)`. **NON-HTTP
+   * ENTRYPOINT SOURCE** — the boot-sweep backfill; idempotent via this NOT
+   * EXISTS guard, same shape as `Reservations.repository.ts`'s own
+   * `listUnplannedPlacesForPublicApi` NOT EXISTS precedent (`eb.not(eb.exists(...))`).
+   */
+  async listFlightsMissingEndpoints(): Promise<{ id: number; metadata: string | null; reservation_time: string | null; reservation_end_time: string | null }[]> {
+    const rows = await this.kysely<FlightsMissingEndpointsKyselyDB>()
+      .selectFrom('reservations as r')
+      .select(['r.id', 'r.metadata', 'r.reservation_time', 'r.reservation_end_time'])
+      .where('r.type', '=', 'flight')
+      .where((eb) => eb.not(eb.exists(eb.selectFrom('reservation_endpoints as e').select('e.id').whereRef('e.reservation_id', '=', 'r.id'))))
+      .execute();
+    return rows;
+  }
+
+  /** AIR3 (`airports.service.ts#backfillFlightEndpoints`, looped) — `UPDATE reservations SET needs_review = 1 WHERE id = ?`. */
+  async markNeedsReview(id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { needs_review: 1 });
   }
 }
 

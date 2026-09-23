@@ -1,6 +1,8 @@
 import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { logInfo, logError } from '../audit/audit-log.logger';
-import { DatabaseService } from '../database/database.service';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 import { AirtrailSyncService } from './airtrail-sync.service';
 
@@ -14,22 +16,23 @@ import { AirtrailSyncService } from './airtrail-sync.service';
 @Injectable()
 export class AirtrailSyncJob implements OnApplicationBootstrap {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly airtrail: AirtrailSyncService,
     private readonly registrar: CronRegistrarService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
-    // Through runOnBoot (task-6-review-parity.md C1: raw SQL today, but the
-    // wrap belongs at the entrypoint so it stays safe if this dependency
-    // graph goes repository-backed later). minutes defaults to the same
-    // fallback the interval read itself falls back to, so an absent MikroORM
-    // (logged distinctly by runOnBoot, never silently) still registers the
-    // job at its default cadence rather than not registering at all.
+    // Through runOnBoot (task-6-review-parity.md C1 — the same shape whether
+    // the read below is raw SQL or, as of Plan 3h Task 4 (ATJ1), repository-
+    // backed: the wrap belongs at the entrypoint either way). minutes
+    // defaults to the same fallback the interval read itself falls back to,
+    // so an absent MikroORM (logged distinctly by runOnBoot, never silently)
+    // still registers the job at its default cadence rather than not
+    // registering at all.
     let minutes = 5;
     await this.registrar.runOnBoot('airtrail-sync-boot', async () => {
-      const value = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', 'airtrail_poll_interval_minutes')?.value;
+      const value = await this.appSettings.getValue('airtrail_poll_interval_minutes');
       const raw = Number.parseInt(value || '5', 10);
       minutes = Number.isFinite(raw) && raw >= 1 && raw <= 59 ? raw : 5;
       logInfo(`AirTrail sync: scheduled every ${minutes}m`);

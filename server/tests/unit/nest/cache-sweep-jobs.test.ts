@@ -18,7 +18,7 @@ import type { TrekPhotoCacheService } from '../../../src/nest/memories/trek-phot
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import type { ThumbnailService } from '../../../src/nest/memories/thumbnail.service';
 import type { AirtrailSyncService } from '../../../src/nest/integrations/airtrail-sync.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
 
 function registrarStub(enabled = true) {
@@ -144,12 +144,12 @@ describe('JourneyThumbsJob', () => {
 describe('AirtrailSyncJob', () => {
   function make(intervalSetting: string | undefined, enabled = true) {
     const registrar = registrarStub(enabled);
-    const db = {
-      get: vi.fn(() => (intervalSetting === undefined ? undefined : { value: intervalSetting })),
+    const appSettings = {
+      getValue: vi.fn(async () => (intervalSetting === undefined ? null : intervalSetting)),
     };
     const airtrail = { runAirtrailSync: vi.fn().mockResolvedValue(undefined) };
     const job = new AirtrailSyncJob(
-      db as unknown as DatabaseService,
+      appSettings as unknown as AppSettingsRepository,
       airtrail as unknown as AirtrailSyncService,
       registrar as unknown as CronRegistrarService,
     );

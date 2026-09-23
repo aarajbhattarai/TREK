@@ -1,7 +1,11 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { Airport } from '@trek/shared';
 import { searchAirports, findByIata, load } from './airports.data';
-import { DatabaseService } from '../database/database.service';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import { ReservationEndpointsRepository } from '../../db/repositories/ReservationEndpoints.repository';
 import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 
 /**
@@ -35,7 +39,8 @@ import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 @Injectable()
 export class AirportsService implements OnApplicationBootstrap {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(ReservationEndpoints) private readonly endpointsRepo: ReservationEndpointsRepository,
     private readonly registrar: CronRegistrarService,
   ) {}
 
@@ -62,33 +67,23 @@ export class AirportsService implements OnApplicationBootstrap {
   }
 
   async backfillFlightEndpoints(): Promise<void> {
-    const pending = this.db.prepare(`
-      SELECT r.id, r.metadata, r.reservation_time, r.reservation_end_time
-      FROM reservations r
-      WHERE r.type = 'flight'
-        AND NOT EXISTS (SELECT 1 FROM reservation_endpoints e WHERE e.reservation_id = r.id)
-    `).all() as { id: number; metadata: string | null; reservation_time: string | null; reservation_end_time: string | null }[];
+    const pending = await this.reservationsRepo.listFlightsMissingEndpoints();
 
     if (pending.length === 0) return;
 
     load();
-    const insert = this.db.prepare(`
-      INSERT INTO reservation_endpoints (reservation_id, role, sequence, name, code, lat, lng, timezone, local_time, local_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const markReview = this.db.prepare('UPDATE reservations SET needs_review = 1 WHERE id = ?');
 
     let filled = 0;
     let flagged = 0;
     for (const r of pending) {
-      if (!r.metadata) { markReview.run(r.id); flagged++; continue; }
+      if (!r.metadata) { await this.reservationsRepo.markNeedsReview(r.id); flagged++; continue; }
       let meta: any;
-      try { meta = JSON.parse(r.metadata); } catch { markReview.run(r.id); flagged++; continue; }
+      try { meta = JSON.parse(r.metadata); } catch { await this.reservationsRepo.markNeedsReview(r.id); flagged++; continue; }
 
       const dep = meta.departure_airport ? findByIata(String(meta.departure_airport).slice(0, 3)) : null;
       const arr = meta.arrival_airport ? findByIata(String(meta.arrival_airport).slice(0, 3)) : null;
 
-      if (!dep || !arr) { markReview.run(r.id); flagged++; continue; }
+      if (!dep || !arr) { await this.reservationsRepo.markNeedsReview(r.id); flagged++; continue; }
 
       const split = (iso: string | null) => {
         if (!iso) return { date: null as string | null, time: null as string | null };
@@ -98,8 +93,16 @@ export class AirportsService implements OnApplicationBootstrap {
       const depParts = split(r.reservation_time);
       const arrParts = split(r.reservation_end_time);
 
-      insert.run(r.id, 'from', 0, dep.city ? `${dep.city} (${dep.iata})` : dep.name, dep.iata, dep.lat, dep.lng, dep.tz, depParts.time, depParts.date);
-      insert.run(r.id, 'to', 1, arr.city ? `${arr.city} (${arr.iata})` : arr.name, arr.iata, arr.lat, arr.lng, arr.tz, arrParts.time, arrParts.date);
+      await this.endpointsRepo.insertEndpoint({
+        reservation_id: r.id, role: 'from', sequence: 0,
+        name: dep.city ? `${dep.city} (${dep.iata})` : dep.name, code: dep.iata,
+        lat: dep.lat, lng: dep.lng, timezone: dep.tz, local_time: depParts.time, local_date: depParts.date,
+      });
+      await this.endpointsRepo.insertEndpoint({
+        reservation_id: r.id, role: 'to', sequence: 1,
+        name: arr.city ? `${arr.city} (${arr.iata})` : arr.name, code: arr.iata,
+        lat: arr.lat, lng: arr.lng, timezone: arr.tz, local_time: arrParts.time, local_date: arrParts.date,
+      });
       filled++;
     }
 

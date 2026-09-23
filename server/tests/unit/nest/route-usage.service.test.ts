@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { RouteUsageService, RETENTION_DAYS } from '../../../src/nest/route-usage/route-usage.service';
 import type { RouteUsageEntry } from '@trek/shared';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
+import { RouteUsageDaily } from '../../../src/db/entities/RouteUsageDaily.entity';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
 
 /**
  * SRV-ROUTEUSAGE-001..010 — the counters behind "could TREK host a router".
@@ -27,16 +29,15 @@ function makeDb(): Database.Database {
   return db;
 }
 
-/** The slice of DatabaseService this domain uses. */
+/**
+ * Plan 3h Task 4 (R4/RU2): the real `RouteUsageDailyRepository`/
+ * `AppSettingsRepository`, over the SAME MikroORM `createTestUnitOfWork`
+ * shares (`sharedTestOrm`, one ORM per handle) — the additive-counter Kysely
+ * upsert (RU2) needs a genuine MikroORM/Kysely connection, not a raw bridge.
+ */
 async function serviceOver(db: Database.Database): Promise<RouteUsageService> {
-  const bridge = {
-    get: <T>(sql: string, ...p: unknown[]) => db.prepare(sql).get(...p) as T | undefined,
-    all: <T>(sql: string, ...p: unknown[]) => db.prepare(sql).all(...p) as T[],
-    run: (sql: string, ...p: unknown[]) => db.prepare(sql).run(...p),
-  };
-  // The batch transaction runs through MikroORM on this very handle now, so the
-  // raw statements inside the callback still land inside it.
-  return new RouteUsageService(bridge as never, await createTestUnitOfWork(db));
+  const t = await sharedTestOrm(db);
+  return new RouteUsageService(t.repo(RouteUsageDaily), t.repo(AppSettings), await createTestUnitOfWork(db));
 }
 
 const entry = (over: Partial<RouteUsageEntry> = {}): RouteUsageEntry => ({

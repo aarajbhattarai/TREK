@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AddonsModule } from '../addons/addons.module';
 import { AuditModule } from '../audit/audit.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { ReservationsReadModule } from '../reservations/reservations-read.module';
+import { Users } from '../../db/entities/Users.entity';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
 import { AirtrailClient } from './airtrail.client';
 import { AirtrailLinkService } from './airtrail-link.service';
 import { AirtrailService } from './airtrail.service';
@@ -15,9 +20,23 @@ import { AirtrailService } from './airtrail.service';
  * ReservationsReadModule — so ReservationsModule → AirtrailCoreModule carries
  * no cycle. The pull (AirtrailSyncService), which does need
  * ReservationsService, lives one level up in AirtrailModule.
+ *
+ * `MikroOrmModule.forFeature([Users, Reservations, ReservationEndpoints,
+ * AppSettings])` (Plan 3h Task 4): `AirtrailService`'s entire credential
+ * surface lives on `Users` (R7 — AirTrail owns zero tables of its own);
+ * `AirtrailLinkService` reaches `Reservations`/`ReservationEndpoints` for its
+ * bookkeeping and `AppSettings` for the sync-enabled kill-switch. Only
+ * entity classes are imported here, not their owning Nest modules — no new
+ * module edge, so no cycle risk.
  */
 @Module({
-  imports: [AuditModule, AddonsModule, RealtimeModule, ReservationsReadModule],
+  imports: [
+    AuditModule,
+    AddonsModule,
+    RealtimeModule,
+    ReservationsReadModule,
+    MikroOrmModule.forFeature([Users, Reservations, ReservationEndpoints, AppSettings]),
+  ],
   providers: [AirtrailClient, AirtrailService, AirtrailLinkService],
   exports: [AirtrailClient, AirtrailService, AirtrailLinkService],
 })

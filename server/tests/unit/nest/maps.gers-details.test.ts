@@ -18,7 +18,6 @@ vi.mock('../../../src/nest/maps/trek-places.client', async (importOriginal) => (
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'test-secret', ENCRYPTION_KEY: '0'.repeat(64) }));
 
 import { MapsService } from '../../../src/nest/maps/maps.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -45,8 +44,7 @@ const PLACE = {
 };
 
 function make(osmTags: Record<string, string> | null) {
-  const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
-  const svc = new MapsService(database, {} as PlacePhotoCacheService, noAppSettings, noUsers);
+  const svc = new MapsService({} as PlacePhotoCacheService, noAppSettings, noUsers, {} as never, {} as never);
   vi.spyOn(svc, 'resolveOsmIdentity').mockResolvedValue(
     osmTags ? { tags: osmTags, osmUrl: 'https://www.openstreetmap.org/node/1', matchedName: "L'Osteria" } : null,
   );
@@ -111,8 +109,7 @@ describe('MapsService.getPlaceDetails for a gers: id', () => {
     // only adds what OSM knows about the same building. Letting its failure
     // through would turn a working answer into an error for the one user whose
     // details request happened to land while Overpass was unreachable.
-    const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
-    const svc = new MapsService(database, {} as PlacePhotoCacheService, noAppSettings, noUsers);
+    const svc = new MapsService({} as PlacePhotoCacheService, noAppSettings, noUsers, {} as never, {} as never);
     vi.spyOn(svc, 'resolveOsmIdentity').mockRejectedValue(new Error('overpass down'));
     mockById.mockResolvedValue({ ...PLACE, hours: { osm: 'Mo-Su 12:00-22:00' } });
 

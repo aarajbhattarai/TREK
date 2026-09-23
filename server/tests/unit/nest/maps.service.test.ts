@@ -169,12 +169,12 @@ const photoCacheStub = {
   serveKey: (placeId: string) => mockServeFilePath(placeId),
 } as unknown as PlacePhotoCacheService;
 
-import { db } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { MapsService, withPhotoFetchSlot, readWikiIdentity } from '../../../src/nest/maps/maps.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import type { PlaceDetailsCacheRepository } from '../../../src/db/repositories/PlaceDetailsCache.repository';
+import type { PlacesRepository } from '../../../src/db/repositories/Places.repository';
 // Type-only, so the module stays mocked: this import is erased at runtime.
 import type { SsrfResult } from '../../../src/utils/ssrfGuard';
 
@@ -183,9 +183,14 @@ import type { SsrfResult } from '../../../src/utils/ssrfGuard';
 // mocked db module above — these two stubs wire the SAME mockInstanceGet/
 // mockDbGet seams the rest of this file already controls into the new
 // repository methods, so every existing mockInstanceGet/mockDbGet call below
-// keeps its meaning unchanged.
+// keeps its meaning unchanged. `places_provider` keeps its own dedicated
+// mockProviderGet seam (mirroring the pre-conversion raw-SQL mock's own
+// `args[0] === 'places_provider'` branch) — MAP2 (`placesProviderChoice`)
+// reads that key through this SAME stub now, and the amap-provider-choice
+// suite (`mockProviderGet.mockReturnValue(...)`) still drives it.
 const appSettingsStub = {
-  getValue: async (key: string) => (mockInstanceGet(key) as { value: string | null } | undefined)?.value ?? null,
+  getValue: async (key: string) =>
+    (key === 'places_provider' ? mockProviderGet(key) : (mockInstanceGet(key) as { value: string | null } | undefined))?.value ?? null,
 } as unknown as AppSettingsRepository;
 const usersStub = {
   getApiKeyColumn: async (userId: number, name: 'maps_api_key' | 'amap_api_key') => {
@@ -194,10 +199,35 @@ const usersStub = {
   },
 } as unknown as UsersRepository;
 
-// The service under test, constructed over the mocked db stub — DatabaseService
-// routes get/run through the stubbed prepare(), so mockDbGet/mockDbRun keep
-// flowing exactly as they did for the legacy module.
-const svc = new MapsService(new DatabaseService(db as never), photoCacheStub, appSettingsStub, usersStub);
+// Plan 3h Task 4 (R8/MAP9): MAP3-8 (`place_details_cache`) and MAP9
+// (`places.image_url`) used to be raw `this.database.get`/`.run` calls,
+// intercepted by the SAME mockDbGet/mockDbRun seams every other bare `db.get`/
+// `db.run` call in this file already flows through. These stubs preserve that
+// exact positional-argument shape (the SQL text itself was never bound, so
+// dropping it costs nothing) so every existing mockDbGet/mockDbRun
+// configuration and assertion below keeps its meaning unchanged.
+const placeDetailsCacheStub = {
+  findEntry: async (placeId: string, lang: string, _kind: number) => {
+    const row = mockDbGet(placeId, lang) as { payload_json: string; fetched_at: number } | undefined;
+    return row ? { payload_json: row.payload_json, fetched_at: row.fetched_at } : null;
+  },
+  upsertEntry: async (row: { place_id: string; lang: string; expanded: number; payload_json: string; fetched_at: number }) => {
+    mockDbRun(row.place_id, row.lang, row.payload_json, row.fetched_at);
+  },
+} as unknown as PlaceDetailsCacheRepository;
+const placesStub = {
+  setImageUrlIfUnset: async (google_place_id: string, image_url: string) => {
+    mockDbRun(image_url, google_place_id);
+    return 1;
+  },
+} as unknown as PlacesRepository;
+
+// The service under test, constructed over the mocked seams above — every
+// collaborator that used to reach the mocked db module directly now routes
+// through a repository stub that flows into the SAME mockDbGet/mockDbRun/
+// mockInstanceGet/mockProviderGet functions, so they keep firing exactly as
+// they did for the legacy module.
+const svc = new MapsService(photoCacheStub, appSettingsStub, usersStub, placeDetailsCacheStub, placesStub);
 
 /**
  * Switch the TREK Places index off for one case.
@@ -2672,14 +2702,14 @@ describe('searchOverpassPois all-endpoints-down', () => {
 
 // ── Wrapper surface (kept from the pre-fold wrapper suite) ────────────────────
 
-/** A DatabaseService stub whose get() returns the row the test wants. */
-function makeSettingsDb(row?: { value: string }) {
-  const get = vi.fn(() => row);
-  return { db: { get } as unknown as DatabaseService, get };
+/** An AppSettingsRepository stub whose getValue() returns the row's value the test wants. */
+function makeSettingsRepo(row?: { value: string }) {
+  const getValue = vi.fn(async (_key: string) => row?.value ?? null);
+  return { repo: { getValue } as unknown as AppSettingsRepository, getValue };
 }
 
 function settingsSvc(row?: { value: string }) {
-  return new MapsService(makeSettingsDb(row).db, photoCacheStub, appSettingsStub, usersStub);
+  return new MapsService(photoCacheStub, makeSettingsRepo(row).repo, usersStub, placeDetailsCacheStub, placesStub);
 }
 
 describe('kill-switch settings reads', () => {
@@ -2702,14 +2732,14 @@ describe('kill-switch settings reads', () => {
   });
 
   it('queries the matching app_settings key', async () => {
-    const { db: settingsDb, get } = makeSettingsDb({ value: 'true' });
-    const s = new MapsService(settingsDb, photoCacheStub, appSettingsStub, usersStub);
+    const { repo: settingsRepo, getValue } = makeSettingsRepo({ value: 'true' });
+    const s = new MapsService(photoCacheStub, settingsRepo, usersStub, placeDetailsCacheStub, placesStub);
     await s.autocompleteDisabled();
-    expect(get).toHaveBeenCalledWith(expect.stringContaining('app_settings'), 'places_autocomplete_enabled');
+    expect(getValue).toHaveBeenCalledWith('places_autocomplete_enabled');
     await s.detailsDisabled();
-    expect(get).toHaveBeenCalledWith(expect.any(String), 'places_details_enabled');
+    expect(getValue).toHaveBeenCalledWith('places_details_enabled');
     await s.photosDisabled();
-    expect(get).toHaveBeenCalledWith(expect.any(String), 'places_photos_enabled');
+    expect(getValue).toHaveBeenCalledWith('places_photos_enabled');
   });
 });
 
@@ -3401,7 +3431,7 @@ describe('readWikiIdentity', () => {
 describe('brandLogo', () => {
   // A fresh service per case: the logo cache lives on the instance, and a hit from
   // one case would answer the next one's question before its fetch stub ran.
-  const service = (): MapsService => new MapsService(new DatabaseService(db as never), photoCacheStub, appSettingsStub, usersStub);
+  const service = (): MapsService => new MapsService(photoCacheStub, appSettingsStub, usersStub, placeDetailsCacheStub, placesStub);
 
   const claimResponse = (file: string | null) => ({
     ok: true,

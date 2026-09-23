@@ -18,6 +18,10 @@ import { AppSettings } from '../../db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { PlaceDetailsCache } from '../../db/entities/PlaceDetailsCache.entity';
+import type { PlaceDetailsCacheRepository } from '../../db/repositories/PlaceDetailsCache.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
 import { isPlacesProviderChoice, type PlacesProviderChoice } from './providers/places-provider';
 import {
   AMAP_SHORT_HOSTS,
@@ -28,7 +32,6 @@ import {
 } from './providers/amap.provider';
 // ── Photo cache (disk-backed) ────────────────────────────────────────────────
 import { PlacePhotoCacheService } from '../place-photos/place-photo-cache.service';
-import { DatabaseService } from '../database/database.service';
 import { nominatimFetch, type GeoLane } from '../geo/nominatim.client';
 import {
   trekPlacesSearch,
@@ -683,20 +686,29 @@ type KeyedProvider =
  * (Nominatim/Overpass/Google), the place-details/photo caches and the SSRF
  * guard on every outbound URL. DI-native since the maps fold: the legacy
  * services/mapsService.ts functions live here as methods over the injected
- * DatabaseService (byte-identical SQL and behaviour). Every consumer injects
+ * repositories (byte-identical SQL and behaviour). Every consumer injects
  * this class; pure helpers live in maps.helpers.ts.
  *
  * The per-endpoint kill-switches are settings reads the legacy route does
  * inline; they're encapsulated here as `*Disabled()` helpers over the same
- * `app_settings` rows.
+ * `app_settings` rows (`AppSettingsRepository`, already injected pre-Plan-3h
+ * for the API-key resolution logic).
+ *
+ * Plan 3h Task 4 (R8): the file's last 9 raw statements are converted —
+ * MAP1/MAP2 reuse the already-injected `AppSettingsRepository`; MAP3-8
+ * (`place_details_cache`) reuse `PlaceDetailsCacheRepository` — built for
+ * `place-enrichment.service.ts`, an unrelated domain reading the SAME
+ * table — no new repository; MAP9 (`places.image_url`) is one additive
+ * `PlacesRepository` method.
  */
 @Injectable()
 export class MapsService {
   constructor(
-    private readonly database: DatabaseService,
     private readonly photoCache: PlacePhotoCacheService,
     @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
+    @InjectRepository(PlaceDetailsCache) private readonly placeDetailsCache: PlaceDetailsCacheRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
   ) {}
 
   /** Brand id → logo bytes, or null for "asked, has none". Insertion-ordered, so the
@@ -704,11 +716,8 @@ export class MapsService {
   private readonly brandLogoCache = new Map<string, { at: number; logo: BrandLogo | null }>();
 
   private async isSettingDisabled(key: string): Promise<boolean> {
-    const row = this.database.get<{ value: string }>(
-      'SELECT value FROM app_settings WHERE key = ?',
-      key,
-    );
-    return row?.value === 'false';
+    const value = await this.appSettings.getValue(key);
+    return value === 'false';
   }
 
   /**
@@ -1031,11 +1040,8 @@ export class MapsService {
    * not take place search down.
    */
   async placesProviderChoice(): Promise<PlacesProviderChoice> {
-    const row = this.database.get<{ value: string }>(
-      'SELECT value FROM app_settings WHERE key = ?',
-      PLACES_PROVIDER_SETTING,
-    );
-    return isPlacesProviderChoice(row?.value) ? row.value : 'auto';
+    const value = await this.appSettings.getValue(PLACES_PROVIDER_SETTING);
+    return isPlacesProviderChoice(value) ? value : 'auto';
   }
 
   /**
@@ -2486,11 +2492,7 @@ export class MapsService {
 
     // Check DB cache first (lean mask, expanded=0) — 7-day TTL
     const DETAILS_TTL = 7 * 24 * 60 * 60 * 1000;
-    const cached = this.database.get<{ payload_json: string; fetched_at: number }>(
-      'SELECT payload_json, fetched_at FROM place_details_cache WHERE place_id = ? AND lang = ? AND expanded = 0',
-      placeId,
-      langKey,
-    );
+    const cached = await this.placeDetailsCache.findEntry(placeId, langKey, 0);
     if (cached && Date.now() - cached.fetched_at < DETAILS_TTL) return { place: JSON.parse(cached.payload_json) };
 
     // Closes the autocomplete session this lookup belongs to, so Google bills
@@ -2546,13 +2548,7 @@ export class MapsService {
     };
 
     try {
-      this.database.run(
-        'INSERT OR REPLACE INTO place_details_cache (place_id, lang, expanded, payload_json, fetched_at) VALUES (?, ?, 0, ?, ?)',
-        placeId,
-        langKey,
-        JSON.stringify(place),
-        Date.now(),
-      );
+      await this.placeDetailsCache.upsertEntry({ place_id: placeId, lang: langKey, expanded: 0, payload_json: JSON.stringify(place), fetched_at: Date.now() });
     } catch (dbErr) {
       console.error('Failed to cache place details:', dbErr);
     }
@@ -2579,24 +2575,14 @@ export class MapsService {
 
     const langKey = toApiLang(lang);
     const DETAILS_TTL = 7 * 24 * 60 * 60 * 1000;
-    const cached = this.database.get<{ payload_json: string; fetched_at: number }>(
-      'SELECT payload_json, fetched_at FROM place_details_cache WHERE place_id = ? AND lang = ? AND expanded = 0',
-      placeId,
-      langKey,
-    );
+    const cached = await this.placeDetailsCache.findEntry(placeId, langKey, 0);
     if (cached && Date.now() - cached.fetched_at < DETAILS_TTL) return { place: JSON.parse(cached.payload_json) };
 
     const place = await provider.placeDetails(placeId, lang);
     if (!place) return { place: null };
 
     try {
-      this.database.run(
-        'INSERT OR REPLACE INTO place_details_cache (place_id, lang, expanded, payload_json, fetched_at) VALUES (?, ?, 0, ?, ?)',
-        placeId,
-        langKey,
-        JSON.stringify(place),
-        Date.now(),
-      );
+      await this.placeDetailsCache.upsertEntry({ place_id: placeId, lang: langKey, expanded: 0, payload_json: JSON.stringify(place), fetched_at: Date.now() });
     } catch (dbErr) {
       console.error('Failed to cache place details:', dbErr);
     }
@@ -2635,11 +2621,7 @@ export class MapsService {
 
     // Check DB cache for expanded result
     if (!refresh) {
-      const cached = this.database.get<{ payload_json: string }>(
-        'SELECT payload_json FROM place_details_cache WHERE place_id = ? AND lang = ? AND expanded = 1',
-        placeId,
-        langKey,
-      );
+      const cached = await this.placeDetailsCache.findEntry(placeId, langKey, 1);
       if (cached) return { place: JSON.parse(cached.payload_json) };
     }
 
@@ -2694,13 +2676,7 @@ export class MapsService {
     };
 
     try {
-      this.database.run(
-        'INSERT OR REPLACE INTO place_details_cache (place_id, lang, expanded, payload_json, fetched_at) VALUES (?, ?, 1, ?, ?)',
-        placeId,
-        langKey,
-        JSON.stringify(place),
-        Date.now(),
-      );
+      await this.placeDetailsCache.upsertEntry({ place_id: placeId, lang: langKey, expanded: 1, payload_json: JSON.stringify(place), fetched_at: Date.now() });
     } catch (dbErr) {
       console.error('Failed to cache expanded place details:', dbErr);
     }
@@ -2844,11 +2820,7 @@ export class MapsService {
 
           // Persist stable proxy URL to database
           try {
-            this.database.run(
-              "UPDATE places SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE google_place_id = ? AND (image_url IS NULL OR image_url = '')",
-              cached.photoUrl,
-              placeId,
-            );
+            await this.placesRepo.setImageUrlIfUnset(placeId, cached.photoUrl);
           } catch (dbErr) {
             console.error('Failed to persist photo URL to database:', dbErr);
           }

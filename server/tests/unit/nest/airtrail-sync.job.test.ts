@@ -16,7 +16,7 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => logMock);
 
 import { AirtrailSyncJob } from '../../../src/nest/integrations/airtrail-sync.job';
 import type { AirtrailSyncService } from '../../../src/nest/integrations/airtrail-sync.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
 
 const SETTING_KEY = 'airtrail_poll_interval_minutes';
@@ -32,18 +32,18 @@ function makeJob(intervalSetting?: string, enabled = true) {
     unregister: vi.fn(),
     runOnBoot: vi.fn(async (_name: string, fn: () => void | Promise<void>) => { await fn(); }),
   };
-  const db = {
-    get: vi.fn((_sql: string, ..._params: unknown[]) => (intervalSetting === undefined ? undefined : { value: intervalSetting })),
+  const appSettings = {
+    getValue: vi.fn((_key: string) => Promise.resolve(intervalSetting === undefined ? null : intervalSetting)),
   };
   const airtrail = {
     runAirtrailSync: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   };
   const job = new AirtrailSyncJob(
-    db as unknown as DatabaseService,
+    appSettings as unknown as AppSettingsRepository,
     airtrail as unknown as AirtrailSyncService,
     registrar as unknown as CronRegistrarService,
   );
-  return { job, registrar, db, airtrail, takeTick: () => onTick };
+  return { job, registrar, appSettings, airtrail, takeTick: () => onTick };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -57,9 +57,9 @@ describe('AirtrailSyncJob bootstrap', () => {
   });
 
   it('AIRTRAIL-JOB-002: reads its own setting key, not the Dawarich one', async () => {
-    const { job, db } = makeJob('10');
+    const { job, appSettings } = makeJob('10');
     await job.onApplicationBootstrap();
-    expect(db.get).toHaveBeenCalledWith('SELECT value FROM app_settings WHERE key = ?', SETTING_KEY);
+    expect(appSettings.getValue).toHaveBeenCalledWith(SETTING_KEY);
   });
 
   it('AIRTRAIL-JOB-003: clamps the interval to 1-59 minutes and falls back to 5 on anything else', async () => {
@@ -80,10 +80,10 @@ describe('AirtrailSyncJob bootstrap', () => {
   });
 
   it('AIRTRAIL-JOB-004: the test gate stops the job before it registers, reads or logs anything', async () => {
-    const { job, registrar, db } = makeJob('5', false);
+    const { job, registrar, appSettings } = makeJob('5', false);
     await job.onApplicationBootstrap();
     expect(registrar.register).not.toHaveBeenCalled();
-    expect(db.get).not.toHaveBeenCalled();
+    expect(appSettings.getValue).not.toHaveBeenCalled();
     expect(logMock.logInfo).not.toHaveBeenCalled();
     expect(registrar.runOnBoot).not.toHaveBeenCalled();
   });
@@ -104,10 +104,10 @@ describe('AirtrailSyncJob bootstrap', () => {
   });
 
   it('AIRTRAIL-JOB-010: registers at the default 5m cadence if runOnBoot declines to run fn (no ORM available)', async () => {
-    const { job, registrar, db } = makeJob('30');
+    const { job, registrar, appSettings } = makeJob('30');
     registrar.runOnBoot.mockImplementationOnce(async () => { /* simulates no ORM available — fn never runs */ });
     await job.onApplicationBootstrap();
-    expect(db.get).not.toHaveBeenCalled();
+    expect(appSettings.getValue).not.toHaveBeenCalled();
     expect(registrar.register).toHaveBeenCalledWith('airtrail-sync', '*/5 * * * *', expect.any(Function));
   });
 });

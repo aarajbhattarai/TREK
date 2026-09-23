@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { AirtrailImportResult } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import { ReservationEndpointsRepository } from '../../db/repositories/ReservationEndpoints.repository';
+import { Days } from '../../db/entities/Days.entity';
+import { DaysRepository } from '../../db/repositories/Days.repository';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ReservationsService } from '../reservations/reservations.service';
 import { AirtrailRequestError, type AirtrailFlightRaw } from './airtrail.client';
@@ -108,12 +114,26 @@ function orderConnectionChain(group: AirtrailFlightRaw[]): AirtrailFlightRaw[] |
 @Injectable()
 export class AirtrailImportService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(ReservationEndpoints) private readonly endpointsRepo: ReservationEndpointsRepository,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
     private readonly realtime: RealtimeService,
     private readonly reservations: ReservationsService,
     private readonly client: AirtrailClient,
     private readonly airtrail: AirtrailService,
   ) {}
+
+  /**
+   * `tripId` arrives as `string | number` (route param vs. internal caller);
+   * `DaysRepository.listByTrip`'s typed filter needs a genuine `number`
+   * (rule 23) — same coercion shape as `ReservationsService.rowIdNum`.
+   * `-1` never matches a real trip id, so an already-impossible `tripId`
+   * degrades to "no days", never a `NaN` reaching the query.
+   */
+  private rowIdNum(value: string | number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : -1;
+  }
 
   async importAirtrailFlights(
     tripId: string | number,
@@ -130,13 +150,12 @@ export class AirtrailImportService {
     const byId = new Map(selected.map(f => [String(f.id), f]));
 
     const result: AirtrailImportResult = { imported: [], skipped: [] };
+    const tripIdNum = this.rowIdNum(tripId);
 
     // Every AirTrail id already linked to this trip: the external_id column plus
     // the metadata.airtrail_ids of joined multi-leg imports.
     const linkedIds = new Set<string>();
-    const linkedRows = this.db.connection
-      .prepare("SELECT external_id, metadata FROM reservations WHERE trip_id = ? AND external_source = 'airtrail'")
-      .all(tripId) as { external_id: string | null; metadata: string | null }[];
+    const linkedRows = await this.reservationsRepo.listAirtrailLinkedForTrip(tripIdNum);
     for (const row of linkedRows) {
       if (row.external_id) linkedIds.add(row.external_id);
       try {
@@ -147,24 +166,16 @@ export class AirtrailImportService {
       }
     }
 
-    const existing = this.db.connection
-      .prepare("SELECT r.id, r.reservation_time, r.metadata FROM reservations r WHERE r.trip_id = ? AND r.type = 'flight'")
-      .all(tripId) as ExistingFlightRow[];
+    const existing = await this.reservationsRepo.listFlightReservationsForTrip(tripIdNum);
     const endpointsByReservation = new Map<number, EndpointRow[]>();
-    const endpointRows = this.db.connection
-      .prepare(
-        `SELECT e.reservation_id, e.code, e.local_date, e.sequence
-         FROM reservation_endpoints e JOIN reservations r ON r.id = e.reservation_id
-         WHERE r.trip_id = ? AND r.type = 'flight' ORDER BY e.sequence`,
-      )
-      .all(tripId) as EndpointRow[];
+    const endpointRows = await this.endpointsRepo.listFlightEndpointsForTrip(tripIdNum);
     for (const ep of endpointRows) {
       const list = endpointsByReservation.get(ep.reservation_id);
       if (list) list.push(ep);
       else endpointsByReservation.set(ep.reservation_id, [ep]);
     }
 
-    const days = this.db.prepare('SELECT id, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; date: string | null }[];
+    const days = await this.daysRepo.listByTrip(tripIdNum);
     const dayIdByDate = new Map<string, number>();
     const dayDateById = new Map<number, string>();
     for (const day of days) {
@@ -236,10 +247,7 @@ export class AirtrailImportService {
         const mapped = mapFlightsToMultiLegReservation(chain, resolveDayId);
         const { reservation } = await this.reservations.create(tripId, mapped as any);
         const now = new Date().toISOString();
-        this.db.prepare(
-          `UPDATE reservations SET external_source = 'airtrail', external_id = ?, external_owner_user_id = ?,
-                  sync_enabled = 0, external_synced_at = ? WHERE id = ?`,
-        ).run(ids[0], userId, now, reservation.id);
+        await this.reservationsRepo.linkAirtrailMultiLeg(Number(reservation.id), ids[0], userId, now);
 
         reservation.external_source = 'airtrail';
         reservation.external_id = ids[0];
@@ -280,10 +288,7 @@ export class AirtrailImportService {
       try {
         const { reservation } = await this.reservations.create(tripId, mapped as any);
         const now = new Date().toISOString();
-        this.db.prepare(
-          `UPDATE reservations SET external_source = 'airtrail', external_id = ?, external_owner_user_id = ?,
-                  sync_enabled = 1, external_hash = ?, external_synced_at = ? WHERE id = ?`,
-        ).run(fid, userId, canonicalHash(flight), now, reservation.id);
+        await this.reservationsRepo.linkAirtrailSingleFlight(Number(reservation.id), fid, userId, canonicalHash(flight), now);
 
         // Carry the linkage on the broadcast payload so members see the badge live.
         reservation.external_source = 'airtrail';

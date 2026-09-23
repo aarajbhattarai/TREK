@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
-import { DatabaseService } from '../database/database.service';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import { ReservationEndpointsRepository } from '../../db/repositories/ReservationEndpoints.repository';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AddonsService } from '../addons/addons.service';
 import { ReservationsReadService } from '../reservations/reservations-read.service';
@@ -25,7 +31,9 @@ import { buildSavePayload } from './airtrail-sync.helpers';
 @Injectable()
 export class AirtrailLinkService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(ReservationEndpoints) private readonly endpointsRepo: ReservationEndpointsRepository,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly realtime: RealtimeService,
     private readonly addons: AddonsService,
     private readonly reads: ReservationsReadService,
@@ -36,8 +44,8 @@ export class AirtrailLinkService {
   /** Global on/off: the addon must be enabled and sync not explicitly turned off. */
   async syncGloballyEnabled(): Promise<boolean> {
     if (!(await this.addons.isAddonEnabled(ADDON_IDS.AIRTRAIL))) return false;
-    const row = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'airtrail_sync_enabled'");
-    return row?.value !== 'false';
+    const value = await this.appSettings.getValue('airtrail_sync_enabled');
+    return value !== 'false';
   }
 
   async broadcastUpdated(tripId: number, reservationId: number): Promise<void> {
@@ -50,7 +58,7 @@ export class AirtrailLinkService {
   }
 
   async detach(tripId: number, reservationId: number): Promise<void> {
-    this.db.run('UPDATE reservations SET sync_enabled = 0 WHERE id = ?', reservationId);
+    await this.reservationsRepo.setAirtrailSyncDisabled(reservationId);
     await this.broadcastUpdated(tripId, reservationId);
   }
 
@@ -68,11 +76,8 @@ export class AirtrailLinkService {
     } catch {
       /* malformed metadata — fall through to the endpoint count */
     }
-    const row = this.db.get<{ n: number }>(
-      'SELECT COUNT(*) AS n FROM reservation_endpoints WHERE reservation_id = ?',
-      reservationId,
-    ) as { n: number };
-    return row.n > 2;
+    const n = await this.endpointsRepo.count({ reservation: reservationId });
+    return n > 2;
   }
 
   /**
@@ -84,12 +89,7 @@ export class AirtrailLinkService {
   async pushReservationToAirtrail(reservationId: number, tripId: number): Promise<void> {
     if (!(await this.syncGloballyEnabled())) return;
 
-    const row = this.db.get<{
-      id: number; trip_id: number; external_id: string; external_owner_user_id: number | null; sync_enabled: number;
-    }>(
-      "SELECT id, trip_id, external_id, external_owner_user_id, sync_enabled FROM reservations WHERE id = ? AND external_source = 'airtrail'",
-      reservationId,
-    );
+    const row = await this.reservationsRepo.findAirtrailLinked(reservationId);
     if (!row || !row.sync_enabled) return;
 
     // An edit that turned this linked flight into a multi-leg booking severs the
@@ -136,12 +136,7 @@ export class AirtrailLinkService {
       // next poll doesn't treat our own write as an inbound change.
       const saved = await this.client.getFlight(creds, Number(row.external_id));
       if (saved) {
-        this.db.run(
-          'UPDATE reservations SET external_hash = ?, external_synced_at = ? WHERE id = ?',
-          canonicalHash(saved),
-          new Date().toISOString(),
-          row.id,
-        );
+        await this.reservationsRepo.setAirtrailSyncStamp(row.id, canonicalHash(saved), new Date().toISOString());
       }
     } catch (err) {
       logError(`AirTrail push failed for reservation ${row.id}: ${err instanceof Error ? err.message : err}`);

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { MikroORM } from '@mikro-orm/core';
 import { randomUUID } from 'node:crypto';
+import { withRequestContext } from '../database/request-context';
 import { RealtimeService } from '../realtime/realtime.service';
 import { BookingImportService } from './booking-import.service';
 import type { BookingImportMode, BookingImportPreviewResponse, TrekWsPayload } from '@trek/shared';
@@ -36,7 +38,11 @@ export class ImportJobsService {
   /** Tail of each user's job chain — parses run one at a time per user, not all at once. */
   private readonly chains = new Map<number, Promise<void>>();
 
-  constructor(private readonly bookingImport: BookingImportService, private readonly realtime: RealtimeService) {}
+  constructor(
+    private readonly bookingImport: BookingImportService,
+    private readonly realtime: RealtimeService,
+    private readonly orm: MikroORM,
+  ) {}
 
   /** Create a job and queue it behind the user's other parses; returns the job id at once. */
   start(tripId: string, files: Express.Multer.File[], mode: BookingImportMode, userId: number): string {
@@ -45,8 +51,20 @@ export class ImportJobsService {
     this.jobs.set(id, job);
     // Chain onto the user's previous parse so they run sequentially (one CPU-heavy
     // inference at a time), while the request returns immediately.
+    //
+    // R9 (Plan 3h Task 4, per 3f's own `StorageHealthNotifierService`
+    // precedent): `run()` executes fully detached from the original HTTP
+    // request — the controller has already returned by the time this
+    // `.then()` continuation even starts — so it gets its own fresh
+    // `withRequestContext` fork here, independent of whatever context (if
+    // any) was live at `start()`'s own call site. Insurance, not a fix for
+    // an observed failure: `BookingImportService.preview` has no
+    // `EntityManager` to lose before this task's own conversion (raw
+    // `better-sqlite3` calls have no request-scoping concept at all) — the
+    // risk only exists AFTER BI1/BI2 convert, which is why the wrap lands
+    // in this SAME commit.
     const prev = this.chains.get(userId) ?? Promise.resolve();
-    const next = prev.then(() => this.run(job, files, mode)).catch(() => {});
+    const next = prev.then(() => withRequestContext(this.orm, () => this.run(job, files, mode))).catch(() => {});
     this.chains.set(userId, next);
     void next.finally(() => {
       if (this.chains.get(userId) === next) this.chains.delete(userId);

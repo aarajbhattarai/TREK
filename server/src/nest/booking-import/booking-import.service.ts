@@ -1,4 +1,5 @@
 import { Injectable, HttpException } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { ReservationsService } from '../reservations/reservations.service';
@@ -7,7 +8,10 @@ import { BudgetService } from '../budget/budget.service';
 import { AddonsService } from '../addons/addons.service';
 import { ADDON_IDS } from '../../addons';
 import { MapsService } from '../maps/maps.service';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import { Days } from '../../db/entities/Days.entity';
+import { DaysRepository } from '../../db/repositories/Days.repository';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 import type { User } from '../../types';
 import { KitineraryExtractorService } from './kitinerary-extractor.service';
 import { LlmParseService } from '../llm-parse/llm-parse.service';
@@ -21,7 +25,8 @@ export class BookingImportService {
   constructor(
     private readonly extractor: KitineraryExtractorService,
     private readonly llmParse: LlmParseService,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
     private readonly reservations: ReservationsService,
     private readonly permissions: PermissionsService,
     private readonly budget: BudgetService,
@@ -31,20 +36,34 @@ export class BookingImportService {
     private readonly places: PlacesService,
   ) {}
 
-  private get db() {
-    return this.dbs.connection;
-  }
-
+  /**
+   * BI1/BI2 — `SELECT id FROM days WHERE trip_id = ? AND date = ? LIMIT 1`
+   * then, on a miss, `SELECT id FROM days WHERE trip_id = ? ORDER BY
+   * ABS(JULIANDAY(date) - JULIANDAY(?)) ASC, date ASC LIMIT 1`. The SAME
+   * two-statement shape `ReservationsService#resolveDayIdFromTime` already
+   * converted (RS10/RS11) — `DaysRepository.findByTripAndDate` for the exact
+   * match, `ReservationsRepository.findNearestDayId` (which already wraps
+   * `dayDistance`, R4/BI2's own "not a new SQL helper" resolution) for the
+   * nearest-day fallback — reused here rather than re-derived, per the
+   * project's single-source-of-truth rule.
+   */
   private async resolveDayId(tripId: string, iso: string | null | undefined): Promise<number | null> {
     if (!iso) return null;
     const date = iso.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-    const exact = this.db.prepare('SELECT id FROM days WHERE trip_id = ? AND date = ? LIMIT 1').get(tripId, date) as { id: number } | undefined;
+    const tripIdNum = this.rowIdNum(tripId);
+    const exact = await this.daysRepo.findByTripAndDate(tripIdNum, date);
     if (exact) return exact.id;
     // Clamp to the nearest trip day so an out-of-range / unmatched check-in still
     // resolves and the accommodation row is inserted.
-    const nearest = this.db.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY ABS(JULIANDAY(date) - JULIANDAY(?)) ASC, date ASC LIMIT 1').get(tripId, date) as { id: number } | undefined;
-    return nearest?.id ?? null;
+    const nearestId = await this.reservationsRepo.findNearestDayId(tripIdNum, date);
+    return nearestId ?? null;
+  }
+
+  /** `tripId` arrives as a route-param string; both repository calls above need a genuine `number` (rule 23) — same coercion shape as `ReservationsService.rowIdNum`. */
+  private rowIdNum(value: string): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : -1;
   }
 
   isAvailable(): boolean {

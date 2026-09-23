@@ -128,7 +128,7 @@ const dbs = new DatabaseService(testDb);
 const placesStorageFx = makeStorageFixture('');
 
 async function makePlacesService(
-  maps: MapsService = new MapsService(dbs, photoCacheStub, noAppSettings, noUsers),
+  maps: MapsService = new MapsService(photoCacheStub, noAppSettings, noUsers, {} as never, {} as never),
 ): Promise<PlacesService> {
   return new PlacesService(
     dbs,

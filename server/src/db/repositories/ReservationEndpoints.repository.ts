@@ -1,5 +1,6 @@
 import type { ReservationEndpoints } from '../entities/ReservationEndpoints.entity';
 import { type AssertRowKeys } from './_shared/rows';
+import { columnRef } from '../dialect/sql-functions';
 import { travelerOwnsExpr, type ReservationTravelersOwnsKyselyDB } from './_shared/reservation-travelers-owns';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -98,6 +99,31 @@ export class ReservationEndpointsRepository extends TrekRepository<ReservationEn
   /** DY18 — `UPDATE reservation_endpoints SET local_date = ? WHERE id = ?`. */
   async setLocalDate(id: number, local_date: string): Promise<void> {
     await this.nativeUpdate({ id }, { local_date });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 4 (`airtrail-import.service.ts`) — additive, per this task's
+  // own file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * ATI3 (`airtrail-import.service.ts#importAirtrailFlights`) — `SELECT
+   * e.reservation_id, e.code, e.local_date, e.sequence FROM
+   * reservation_endpoints e JOIN reservations r ON r.id = e.reservation_id
+   * WHERE r.trip_id = ? AND r.type = 'flight' ORDER BY e.sequence`. Distinct
+   * from {@link listForTrip} above (RS3): a narrower column list, a
+   * `r.type = 'flight'` filter and a single-key `ORDER BY e.sequence` (not
+   * `e.reservation_id, e.sequence`) — a genuinely different statement, per
+   * D4.
+   */
+  async listFlightEndpointsForTrip(trip_id: number): Promise<{ reservation_id: number; code: string | null; local_date: string | null; sequence: number }[]> {
+    const platform = this.getEntityManager().getPlatform();
+    return this.qb('e')
+      .join('e.reservation', 'r')
+      .select([columnRef(platform, 'e.reservation_id').as('reservation_id'), 'e.code', 'e.local_date', 'e.sequence'])
+      .where({ 'r.trip': trip_id, 'r.type': 'flight' })
+      .orderBy({ sequence: 'asc' })
+      .execute<{ reservation_id: number; code: string | null; local_date: string | null; sequence: number }[]>('all', false);
   }
 
   // ---------------------------------------------------------------------------

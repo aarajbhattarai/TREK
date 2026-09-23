@@ -10,7 +10,6 @@ import { db } from '../../../src/db/database';
 import { createUser } from '../../helpers/factories';
 import { AirtrailService } from '../../../src/nest/integrations/airtrail.service';
 import { AirtrailClient } from '../../../src/nest/integrations/airtrail.client';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/database/../audit/audit.service';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
@@ -27,7 +26,7 @@ let t: TestOrm;
 beforeAll(async () => {
   t = await createTestOrm(db);
   svc = new AirtrailService(
-    new DatabaseService(db),
+    t.repo(Users),
     new AuditService(t.repo(AuditLog), t.repo(Users)),
     new AirtrailClient(),
   );

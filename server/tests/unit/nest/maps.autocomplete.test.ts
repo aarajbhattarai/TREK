@@ -24,7 +24,6 @@ vi.mock('../../../src/nest/maps/trek-places.client', async (importOriginal) => (
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'test-secret', ENCRYPTION_KEY: '0'.repeat(64) }));
 
 import { MapsService } from '../../../src/nest/maps/maps.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -90,8 +89,7 @@ const osmHit = (over: Record<string, unknown> = {}) => ({
  */
 function make(enabled = true) {
   trekPlaces.on = enabled;
-  const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
-  return new MapsService(database, {} as PlacePhotoCacheService, noAppSettings, noUsers);
+  return new MapsService({} as PlacePhotoCacheService, noAppSettings, noUsers, {} as never, {} as never);
 }
 
 beforeEach(() => {
