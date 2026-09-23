@@ -32,11 +32,16 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { VacayService } from '../../../src/nest/vacay/vacay.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
+import {
+  createTestVacayPlansRepo, createTestVacayPlanMembersRepo, createTestVacayYearsRepo, createTestVacayUserYearsRepo,
+  createTestVacayUserColorsRepo, createTestVacayEntriesRepo, createTestVacayCompanyHolidaysRepo,
+  createTestVacaySharesRepo, createTestVacayUserSettingsRepo,
+} from '../../helpers/vacay-repos';
+import { createTestVacayHolidayCalendarsRepo, createTestSchoolHolidayRegionsRepo } from '../../helpers/school-holidays-repos';
 
 // VACAY-SVC-001 through VACAY-SVC-066 moved 1:1 from the legacy
 // tests/unit/services/vacayService.test.ts (the named-function imports became
@@ -51,7 +56,15 @@ let svc: VacayService;
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new VacayService(new DatabaseService(testDb), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+  svc = new VacayService(
+    await createTestVacayPlansRepo(testDb), await createTestVacayPlanMembersRepo(testDb),
+    await createTestVacayYearsRepo(testDb), await createTestVacayUserYearsRepo(testDb),
+    await createTestVacayUserColorsRepo(testDb), await createTestVacayEntriesRepo(testDb),
+    await createTestVacayCompanyHolidaysRepo(testDb), await createTestVacayHolidayCalendarsRepo(testDb),
+    await createTestVacaySharesRepo(testDb), await createTestVacayUserSettingsRepo(testDb),
+    await createTestSchoolHolidayRegionsRepo(testDb),
+    new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb),
+  );
 });
 
 beforeEach(() => {
@@ -499,6 +512,77 @@ describe('deleteYear', () => {
       .all(plan.id, `${targetYear}-%`);
     expect(entries).toHaveLength(0);
   });
+
+  it('VACAY-SVC-030a (VC102 parity): touches only each author\'s OWN leave-year window, not one shared window across a fused plan', async () => {
+    // Two members of the SAME plan on genuinely different leave-year shapes
+    // (#737): userA stays on the default calendar year, userB is fiscal
+    // (Apr 1 start). deleteYear(planId, 2026) must delete userA's entry that
+    // falls in A's calendar-2026 window and userB's entry that falls in B's
+    // fiscal-2026 window, while leaving each author's OWN neighbouring-period
+    // entry untouched — a shortcut that computed ONE shared window (off
+    // either the plan or either single author) and reused it across both
+    // authors would either strand entries or delete another member's rows on
+    // their differently-shaped year.
+    const { user: userA, plan } = await setupUserWithPlan();
+    const { user: userB } = createUser(testDb);
+    await svc.getOwnPlan(userB.id);
+    insertMember(plan.id, userB.id, 'accepted');
+    await svc.updateYearSettings(userB.id, { year_type: 'fiscal', year_start_month: 4, year_start_day: 1 });
+    await svc.addYear(plan.id, 2026, undefined);
+
+    const insertEntry = (userId: number, date: string) =>
+      testDb.prepare('INSERT INTO vacay_entries (plan_id, user_id, date, note) VALUES (?, ?, ?, ?)').run(plan.id, userId, date, '');
+    insertEntry(userA.id, '2026-02-10'); // inside A's CALENDAR 2026 window [2026-01-01, 2027-01-01) — must be deleted
+    insertEntry(userA.id, '2025-11-01'); // inside A's CALENDAR 2025 window — must survive
+    insertEntry(userB.id, '2026-02-10'); // inside B's FISCAL 2025 window [2025-04-01, 2026-04-01) — must survive
+    insertEntry(userB.id, '2026-05-10'); // inside B's FISCAL 2026 window [2026-04-01, 2027-04-01) — must be deleted
+
+    await svc.deleteYear(plan.id, 2026, undefined);
+
+    const remaining = testDb.prepare('SELECT user_id, date FROM vacay_entries WHERE plan_id = ? ORDER BY user_id, date').all(plan.id);
+    expect(remaining).toEqual([
+      { user_id: userA.id, date: '2025-11-01' },
+      { user_id: userB.id, date: '2026-02-10' },
+    ]);
+  });
+});
+
+// ── shiftOwnerEntriesForTripWindow (VC4 restructured date-diff shape) ─────────
+
+describe('shiftOwnerEntriesForTripWindow', () => {
+  it('VACAY-SVC-030b (VC4 parity): shifts an entry by the exact calendar-day offset between the old and new trip start, across several date-pair shapes incl. a leap-year boundary', async () => {
+    // R9's verified restructured shape (task-0-report.md): plain JS
+    // Math.round((Date.parse(newStart) - Date.parse(oldStart)) / 86400000)
+    // in place of the legacy CAST(julianday(?) - julianday(?) AS INTEGER) —
+    // verified there against the SQL on 5 date pairs incl. a leap-year
+    // boundary and a negative offset, all matched exactly. This proves the
+    // SAME arithmetic end-to-end through the converted service method.
+    const { user, plan } = await setupUserWithPlan();
+    const cases: [oldStart: string, oldEnd: string, newStart: string, entryDate: string, expectedShifted: string][] = [
+      ['2026-03-01', '2026-03-10', '2026-03-06', '2026-03-05', '2026-03-10'], // +5 days
+      ['2024-02-25', '2024-03-05', '2024-02-28', '2024-03-01', '2024-03-04'], // leap-year boundary, +3 days
+      ['2026-06-10', '2026-06-20', '2026-06-03', '2026-06-15', '2026-06-08'], // -7 days
+    ];
+    for (const [oldStart, oldEnd, newStart, entryDate, expectedShifted] of cases) {
+      testDb.prepare('DELETE FROM vacay_entries WHERE plan_id = ?').run(plan.id);
+      testDb.prepare('INSERT INTO vacay_entries (plan_id, user_id, date, note) VALUES (?, ?, ?, ?)').run(plan.id, user.id, entryDate, '');
+
+      await svc.shiftOwnerEntriesForTripWindow(user.id, oldStart, oldEnd, newStart);
+
+      const row = testDb.prepare('SELECT date FROM vacay_entries WHERE plan_id = ? AND user_id = ?').get(plan.id, user.id) as { date: string };
+      expect(row.date).toBe(expectedShifted);
+    }
+  });
+
+  it('VACAY-SVC-030c: a zero offset is a no-op (no write at all)', async () => {
+    const { user, plan } = await setupUserWithPlan();
+    testDb.prepare('INSERT INTO vacay_entries (plan_id, user_id, date, note) VALUES (?, ?, ?, ?)').run(plan.id, user.id, '2026-05-05', '');
+
+    await svc.shiftOwnerEntriesForTripWindow(user.id, '2026-05-01', '2026-05-10', '2026-05-01');
+
+    const row = testDb.prepare('SELECT date FROM vacay_entries WHERE plan_id = ? AND user_id = ?').get(plan.id, user.id) as { date: string };
+    expect(row.date).toBe('2026-05-05');
+  });
 });
 
 // ── getEntries / toggleEntry ──────────────────────────────────────────────────
@@ -512,6 +596,46 @@ describe('getEntries', () => {
 
     expect(result.entries).toEqual([]);
     expect(result.companyHolidays).toEqual([]);
+  });
+
+  it('VACAY-SVC-031a (VC111 parity): full-key toEqual against the legacy statement run raw on the same seeded rows', async () => {
+    // A fused plan across all three leave-year-window shapes (#737), every
+    // fraction/kind combination, and a member left on the default color to
+    // exercise the COALESCE(c.color, '#6366f1') fallback branch too — rule
+    // 19's "fully seeded" bar for this read model.
+    const { user: owner, plan } = await setupUserWithPlan();
+    allowWeekends(plan.id);
+    const { user: userB } = createUser(testDb);
+    const { user: userC } = createUser(testDb);
+    await svc.getOwnPlan(userB.id);
+    await svc.getOwnPlan(userC.id);
+    insertMember(plan.id, userB.id, 'accepted');
+    insertMember(plan.id, userC.id, 'accepted');
+    await svc.updateYearSettings(userB.id, { year_type: 'fiscal', year_start_month: 4, year_start_day: 1 });
+    await svc.updateYearSettings(userC.id, { year_type: 'anniversary', hire_date: '2020-06-15' });
+    await svc.setUserColor(owner.id, plan.id, '#111111', undefined);
+    await svc.setUserColor(userB.id, plan.id, '#222222', undefined);
+    // userC keeps whatever color getOwnPlan seeded by default — not
+    // re-set here, so its row exercises the LEFT JOIN's COALESCE fallback
+    // the same way a row with no vacay_user_colors match would.
+
+    await svc.toggleEntry(owner.id, plan.id, '2026-02-10', 1, 'vacation');
+    await svc.toggleEntry(userB.id, plan.id, '2026-05-05', 0.5, 'vacation');
+    await svc.toggleEntry(userC.id, plan.id, '2026-08-20', 1, 'comp');
+
+    const result = await svc.getEntries(plan.id, '2026', owner.id);
+
+    const legacy = testDb.prepare(`
+      SELECT e.*, u.username as person_name, COALESCE(c.color, '#6366f1') as person_color
+      FROM vacay_entries e
+      JOIN users u ON e.user_id = u.id
+      LEFT JOIN vacay_user_colors c ON c.user_id = e.user_id AND c.plan_id = e.plan_id
+      WHERE e.plan_id = ? AND e.date >= ? AND e.date < ?
+    `).all(plan.id, '2026-01-01', '2027-01-01') as { id: number }[];
+
+    expect(legacy).toHaveLength(3);
+    const byId = <T extends { id: number }>(rows: T[]) => [...rows].sort((a, b) => a.id - b.id);
+    expect(byId(result.entries as { id: number }[])).toEqual(byId(legacy));
   });
 });
 
@@ -1520,15 +1644,62 @@ describe('getSharedCalendars', () => {
 // ── Quirk fixes (transactions, fetch hygiene, cache TTL, addYear errors) ──────
 
 describe('quirk fixes', () => {
-  /** A DatabaseService whose run() throws when the SQL matches, for atomicity checks. */
+  /** A fresh, fully-functioning VacayService over the same testDb — repository-backed now (Plan 3f Task 5), so a fresh instance no longer needs a `DatabaseService` wrapper, only its own repo set (the holiday-provider cache is instance state, so `applyHolidayCalendars`/`getCountries`/etc.'s TTL tests need a service the earlier tests in this file never touched). */
+  async function freshVacayService(): Promise<VacayService> {
+    return (await buildVacayServiceWithRepos()).service;
+  }
+
+  /**
+   * Same repo set `freshVacayService` builds, but returns the repos
+   * themselves too, so a caller can `vi.spyOn` one of them before
+   * constructing — the repository-backed replacement for the legacy
+   * `failingService`'s `DatabaseService.run` SQL-text-match spy (this file's
+   * pre-conversion mechanism could match a raw SQL substring; a repository
+   * has no raw SQL text left to match, so this spies on the REPOSITORY
+   * METHOD that now issues the statement instead).
+   */
+  async function buildVacayServiceWithRepos() {
+    const repos = {
+      plans: await createTestVacayPlansRepo(testDb),
+      members: await createTestVacayPlanMembersRepo(testDb),
+      years: await createTestVacayYearsRepo(testDb),
+      userYears: await createTestVacayUserYearsRepo(testDb),
+      userColors: await createTestVacayUserColorsRepo(testDb),
+      entries: await createTestVacayEntriesRepo(testDb),
+      companyHolidays: await createTestVacayCompanyHolidaysRepo(testDb),
+      holidayCalendars: await createTestVacayHolidayCalendarsRepo(testDb),
+      shares: await createTestVacaySharesRepo(testDb),
+      userSettings: await createTestVacayUserSettingsRepo(testDb),
+      schoolHolidayRegions: await createTestSchoolHolidayRegionsRepo(testDb),
+    };
+    const service = new VacayService(
+      repos.plans, repos.members, repos.years, repos.userYears, repos.userColors, repos.entries,
+      repos.companyHolidays, repos.holidayCalendars, repos.shares, repos.userSettings, repos.schoolHolidayRegions,
+      new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb),
+    );
+    return { repos, service };
+  }
+
+  /**
+   * A VacayService whose one named repository method throws once, for
+   * atomicity checks — the `uow.transactional` rollback proof. `match` keeps
+   * the three call sites below unchanged (they still name the legacy
+   * statement they mean to fail); this maps it onto the repository method
+   * that now issues it. `mockImplementationOnce` self-restores after the one
+   * throw, so it never leaks into a later test even though `createTestVacay*
+   * Repo` memoises one repository instance per entity per `testDb` handle
+   * (the same instance `svc`, built once in `beforeAll`, also uses).
+   */
   async function failingService(match: string) {
-    const failingDb = new DatabaseService(testDb);
-    const realRun = failingDb.run.bind(failingDb);
-    vi.spyOn(failingDb, 'run').mockImplementation((sql: string, ...params: unknown[]) => {
-      if (sql.includes(match)) throw new Error('boom');
-      return realRun(sql, ...params);
-    });
-    return new VacayService(failingDb, new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+    const { repos, service } = await buildVacayServiceWithRepos();
+    if (match === 'INSERT OR IGNORE INTO vacay_user_years') {
+      vi.spyOn(repos.userYears, 'insertIgnore').mockImplementationOnce(() => { throw new Error('boom'); });
+    } else if (match === 'DELETE FROM vacay_user_years') {
+      vi.spyOn(repos.userYears, 'deleteForYear').mockImplementationOnce(() => { throw new Error('boom'); });
+    } else {
+      throw new Error(`failingService: no repository mapping for match "${match}"`);
+    }
+    return service;
   }
 
   it('VACAY-SVC-068: acceptInvite is atomic — a failure mid-flow rolls the status flip back', async () => {
@@ -1560,7 +1731,7 @@ describe('quirk fixes', () => {
   it('VACAY-SVC-070: getCountries surfaces an upstream non-2xx as the fetch error and caches nothing', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 502, json: async () => ({}) });
     vi.stubGlobal('fetch', fetchMock);
-    const fresh = new VacayService(new DatabaseService(testDb), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+    const fresh = await freshVacayService();
 
     expect(await fresh.getCountries()).toEqual({ error: 'Failed to fetch countries' });
     // Nothing cached: a retry hits the network again.
@@ -1572,7 +1743,7 @@ describe('quirk fixes', () => {
   it('VACAY-SVC-070a: getHolidays refuses a year or country that is not a plain code', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    const fresh = new VacayService(new DatabaseService(testDb), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+    const fresh = await freshVacayService();
 
     for (const [year, country] of [['../../..', 'DE'], ['2026', 'DE/../../x'], ['20xx', 'DE'], ['2026', 'DEU']]) {
       expect(await fresh.getHolidays(year, country)).toEqual({ error: 'Failed to fetch holidays' });
@@ -1583,7 +1754,7 @@ describe('quirk fixes', () => {
   it('VACAY-SVC-070b: getSchoolHolidayRegions refuses a country that is not an alpha-2 code', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    const fresh = new VacayService(new DatabaseService(testDb), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+    const fresh = await freshVacayService();
 
     expect(await fresh.getSchoolHolidayRegions('DE&countryIsoCode=FR')).toEqual({
       error: 'Failed to fetch school holiday regions',
@@ -1598,7 +1769,7 @@ describe('quirk fixes', () => {
       json: async () => [{ date: '2026-01-01' }],
     });
     vi.stubGlobal('fetch', fetchMock);
-    const fresh = new VacayService(new DatabaseService(testDb), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+    const fresh = await freshVacayService();
 
     expect(await fresh.getCountries()).toEqual({ error: 'Failed to fetch countries' });
     expect(await fresh.getHolidays('2026', 'DE')).toEqual({ error: 'Failed to fetch holidays' });
@@ -1624,7 +1795,7 @@ describe('quirk fixes', () => {
       };
     });
     vi.stubGlobal('fetch', fetchMock);
-    const fresh = new VacayService(new DatabaseService(testDb), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+    const fresh = await freshVacayService();
 
     expect(await fresh.getHolidays('2026', 'DE')).toEqual({ error: 'Failed to fetch holidays' });
     expect(await fresh.getCountries()).toEqual({ error: 'Failed to fetch countries' });
@@ -1636,7 +1807,7 @@ describe('quirk fixes', () => {
     testDb.prepare("INSERT INTO vacay_holiday_calendars (plan_id, region) VALUES (?, 'DE')").run(plan.id);
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
     vi.stubGlobal('fetch', fetchMock);
-    const fresh = new VacayService(new DatabaseService(testDb), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb));
+    const fresh = await freshVacayService();
 
     await fresh.applyHolidayCalendars(plan.id);
     const afterFirst = fetchMock.mock.calls.length;

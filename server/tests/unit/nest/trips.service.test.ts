@@ -113,6 +113,12 @@ import {
   createTestPackingTemplateItemsRepo,
 } from '../../helpers/packing-repos';
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
+import {
+  createTestVacayPlansRepo, createTestVacayPlanMembersRepo, createTestVacayYearsRepo, createTestVacayUserYearsRepo,
+  createTestVacayUserColorsRepo, createTestVacayEntriesRepo, createTestVacayCompanyHolidaysRepo,
+  createTestVacaySharesRepo, createTestVacayUserSettingsRepo,
+} from '../../helpers/vacay-repos';
+import { createTestVacayHolidayCalendarsRepo, createTestSchoolHolidayRegionsRepo } from '../../helpers/school-holidays-repos';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -205,7 +211,15 @@ beforeAll(async () => {
   daysSvc,
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
   budgetSvc,
-  new VacayService(dbs(), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
+  new VacayService(
+    await createTestVacayPlansRepo(dbs().connection), await createTestVacayPlanMembersRepo(dbs().connection),
+    await createTestVacayYearsRepo(dbs().connection), await createTestVacayUserYearsRepo(dbs().connection),
+    await createTestVacayUserColorsRepo(dbs().connection), await createTestVacayEntriesRepo(dbs().connection),
+    await createTestVacayCompanyHolidaysRepo(dbs().connection), await createTestVacayHolidayCalendarsRepo(dbs().connection),
+    await createTestVacaySharesRepo(dbs().connection), await createTestVacayUserSettingsRepo(dbs().connection),
+    await createTestSchoolHolidayRegionsRepo(dbs().connection),
+    new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection),
+  ),
   new RealtimeService(),
   undefined as never, // unsplash — not exercised here
   coversFx.storage,

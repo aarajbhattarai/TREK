@@ -149,6 +149,11 @@ import {
   createTestSchoolHolidayCountriesRepo, createTestSchoolHolidayRegionsRepo,
   createTestSchoolHolidayPeriodsRepo, createTestVacayHolidayCalendarsRepo,
 } from './school-holidays-repos';
+import {
+  createTestVacayPlansRepo, createTestVacayPlanMembersRepo, createTestVacayYearsRepo, createTestVacayUserYearsRepo,
+  createTestVacayUserColorsRepo, createTestVacayEntriesRepo, createTestVacayCompanyHolidaysRepo,
+  createTestVacaySharesRepo, createTestVacayUserSettingsRepo,
+} from './vacay-repos';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -289,7 +294,15 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     daysService,
     permissionsService,
     budgetService,
-    new VacayService(dbService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection)),
+    new VacayService(
+      await createTestVacayPlansRepo(dbService.connection), await createTestVacayPlanMembersRepo(dbService.connection),
+      await createTestVacayYearsRepo(dbService.connection), await createTestVacayUserYearsRepo(dbService.connection),
+      await createTestVacayUserColorsRepo(dbService.connection), await createTestVacayEntriesRepo(dbService.connection),
+      await createTestVacayCompanyHolidaysRepo(dbService.connection), await createTestVacayHolidayCalendarsRepo(dbService.connection),
+      await createTestVacaySharesRepo(dbService.connection), await createTestVacayUserSettingsRepo(dbService.connection),
+      await createTestSchoolHolidayRegionsRepo(dbService.connection),
+      realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection),
+    ),
     realtimeService,
     new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage),
     generalStorage,
@@ -367,7 +380,15 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new AccommodationsMcp(accommodationsService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),
       new CollabMcp(collabService, authService, addonsService, guards),
-      new VacayMcp(new VacayService(dbService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection)), authService, addonsService),
+      new VacayMcp(new VacayService(
+      await createTestVacayPlansRepo(dbService.connection), await createTestVacayPlanMembersRepo(dbService.connection),
+      await createTestVacayYearsRepo(dbService.connection), await createTestVacayUserYearsRepo(dbService.connection),
+      await createTestVacayUserColorsRepo(dbService.connection), await createTestVacayEntriesRepo(dbService.connection),
+      await createTestVacayCompanyHolidaysRepo(dbService.connection), await createTestVacayHolidayCalendarsRepo(dbService.connection),
+      await createTestVacaySharesRepo(dbService.connection), await createTestVacayUserSettingsRepo(dbService.connection),
+      await createTestSchoolHolidayRegionsRepo(dbService.connection),
+      realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection),
+    ), authService, addonsService),
       new SchoolHolidaysMcp(
         new SchoolHolidaysService(
           await createTestSchoolHolidayCountriesRepo(dbService.connection),

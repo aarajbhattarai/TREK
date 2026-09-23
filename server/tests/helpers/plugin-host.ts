@@ -101,6 +101,12 @@ import {
   createTestPackingTemplateItemsRepo,
 } from './packing-repos';
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from './todo-repos';
+import { createTestVacayHolidayCalendarsRepo, createTestSchoolHolidayRegionsRepo } from './school-holidays-repos';
+import {
+  createTestVacayPlansRepo, createTestVacayPlanMembersRepo, createTestVacayYearsRepo, createTestVacayUserYearsRepo,
+  createTestVacayUserColorsRepo, createTestVacayEntriesRepo, createTestVacayCompanyHolidaysRepo,
+  createTestVacaySharesRepo, createTestVacayUserSettingsRepo,
+} from './vacay-repos';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -147,7 +153,15 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestCollabPollVotesRepo(dbs.connection), await createTestCollabLinksRepo(dbs.connection), await createTestCollabMessagesRepo(dbs.connection),
     await createTestTripsRepo(dbs.connection),
   );
-  const vacay = new VacayService(dbs, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
+  const vacay = new VacayService(
+    await createTestVacayPlansRepo(dbs.connection), await createTestVacayPlanMembersRepo(dbs.connection),
+    await createTestVacayYearsRepo(dbs.connection), await createTestVacayUserYearsRepo(dbs.connection),
+    await createTestVacayUserColorsRepo(dbs.connection), await createTestVacayEntriesRepo(dbs.connection),
+    await createTestVacayCompanyHolidaysRepo(dbs.connection), await createTestVacayHolidayCalendarsRepo(dbs.connection),
+    await createTestVacaySharesRepo(dbs.connection), await createTestVacayUserSettingsRepo(dbs.connection),
+    await createTestSchoolHolidayRegionsRepo(dbs.connection),
+    realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection),
+  );
   const days = new DaysService(
     dbs,
     permissions,
