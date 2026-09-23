@@ -1,9 +1,6 @@
 import semver from 'semver';
 import { readEnv } from '../app-config';
-import { db } from '../db/database.js';
-import { SYSTEM_NOTICES } from './registry.js';
-import { evaluate } from './conditions.js';
-import type { SystemNotice, SystemNoticeDTO } from './types.js';
+import type { SystemNotice } from './types.js';
 
 export function getCurrentAppVersion(): string {
   const fromEnv = semver.valid(readEnv().app.appVersion ?? '');
@@ -31,91 +28,14 @@ export function isNoticeVersionActive(n: SystemNotice, currentAppVersion: string
   return true;
 }
 
-function severityWeight(s: string): number {
+/**
+ * Sort weight: critical > warn > info. Pure, no DB — kept here per Plan 3f
+ * Task 0's R1 wiring plan ("isNoticeVersionActive, getCurrentAppVersion,
+ * severityWeight are pure — stay as plain exported functions"), now exported
+ * for `SystemNoticesService.getActiveFor` (`nest/system-notices/`), which
+ * absorbed the DB-touching `getActiveNoticesFor`/`dismissNotice` that used to
+ * live in this file.
+ */
+export function severityWeight(s: string): number {
   return s === 'critical' ? 2 : s === 'warn' ? 1 : 0;
-}
-
-export async function getActiveNoticesFor(
-  userId: number,
-  addonEnabled: (addonId: string) => Promise<boolean>,
-  managed = false
-): Promise<SystemNoticeDTO[]> {
-  const user = db.prepare(
-    'SELECT login_count, first_seen_version, role FROM users WHERE id = ?'
-  ).get(userId) as { login_count: number; first_seen_version: string; role: string } | undefined;
-
-  if (!user) return [];
-
-  const { count: tripCount } = db.prepare(
-    'SELECT COUNT(*) AS count FROM trips WHERE user_id = ?'
-  ).get(userId) as { count: number };
-
-  // Dismissals mapped to the app version they were dismissed at (used by per-version notices).
-  const dismissals = new Map<string, string | null>(
-    (db.prepare('SELECT notice_id, dismissed_app_version FROM user_notice_dismissals WHERE user_id = ?')
-      .all(userId) as Array<{ notice_id: string; dismissed_app_version: string | null }>)
-      .map(r => [r.notice_id, r.dismissed_app_version])
-  );
-
-  const now = new Date();
-  const currentAppVersion = getCurrentAppVersion();
-  // `evaluate` runs inside a .filter(), which cannot await, so the addon flags
-  // the registry is able to ask about are resolved up front and handed to it as
-  // a lookup. The ids come from the notices themselves, so every question the
-  // conditions can ask has an answer here.
-  const addonFlags = new Map<string, boolean>();
-  for (const condition of SYSTEM_NOTICES.flatMap(n => n.conditions)) {
-    if (condition.kind === 'addonEnabled' && !addonFlags.has(condition.addonId)) {
-      addonFlags.set(condition.addonId, await addonEnabled(condition.addonId));
-    }
-  }
-  const ctx = {
-    user: { ...user, noTrips: tripCount },
-    currentAppVersion,
-    now,
-    addonEnabled: (addonId: string) => addonFlags.get(addonId),
-    managed,
-  };
-  const appVer = semver.coerce(currentAppVersion)?.version ?? '0.0.0';
-
-  const isStillDismissed = (n: SystemNotice): boolean => {
-    if (!dismissals.has(n.id)) return false;
-    if (n.recurring === 'per-version') {
-      // Re-show once the running app version moves past the version it was last dismissed at,
-      // so a per-version notice surfaces again on each install/upgrade.
-      const dismissedVer = semver.coerce(dismissals.get(n.id) ?? '0.0.0')?.version ?? '0.0.0';
-      return semver.gte(dismissedVer, appVer);
-    }
-    return true; // default: permanent one-time dismissal
-  };
-
-  return SYSTEM_NOTICES
-    .filter(n => {
-      if (isStillDismissed(n)) return false;
-      if (!isNoticeVersionActive(n, currentAppVersion)) return false;
-      return evaluate(n, ctx);
-    })
-    .sort((a, b) => {
-      const pw = (b.priority ?? 0) - (a.priority ?? 0);
-      if (pw !== 0) return pw;
-      const sw = severityWeight(b.severity) - severityWeight(a.severity);
-      if (sw !== 0) return sw;
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-    })
-    .map(({ conditions: _c, publishedAt: _p, minVersion: _mn, maxVersion: _mx, priority: _pr, recurring: _rc, ...dto }) => dto);
-}
-
-export async function dismissNotice(userId: number, noticeId: string): Promise<boolean> {
-  const exists = SYSTEM_NOTICES.some(n => n.id === noticeId);
-  if (!exists) return false;
-  // Record the app version at dismissal so per-version notices can re-appear on the next
-  // upgrade. Upsert (not INSERT OR IGNORE) so re-dismissing after a bump refreshes the version.
-  db.prepare(`
-    INSERT INTO user_notice_dismissals (user_id, notice_id, dismissed_at, dismissed_app_version)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(user_id, notice_id) DO UPDATE SET
-      dismissed_at = excluded.dismissed_at,
-      dismissed_app_version = excluded.dismissed_app_version
-  `).run(userId, noticeId, Date.now(), getCurrentAppVersion());
-  return true;
 }

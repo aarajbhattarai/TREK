@@ -31,6 +31,11 @@ const baseCtx = {
   // The ordinary install, so every case below is unaffected by the flag; the
   // managed condition itself is exercised in its own describe block at the end.
   managed: false,
+  // Plan 3f Task 6: threaded in by the caller the same way addonEnabled is,
+  // for a `case 'custom'` predicate that needs a pre-resolved DB-backed flag
+  // (registry.ts's whitespace-collision-detected). No case below exercises a
+  // custom predicate, so this stays false throughout.
+  settingFlag: () => false,
 };
 
 describe('firstLogin', () => {

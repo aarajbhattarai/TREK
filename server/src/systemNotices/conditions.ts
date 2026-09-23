@@ -12,6 +12,18 @@ interface ConditionContext {
   addonEnabled: (addonId: string) => boolean;
   /** True when somebody other than this install's admin owns its configuration. */
   managed: boolean;
+  /**
+   * A custom predicate's pre-resolved answer to a question that would
+   * otherwise need a DB read — same shape as `addonEnabled`/`managed`: the
+   * caller (`SystemNoticesService.getActiveFor`, Plan 3f Task 6/R1) resolves
+   * every key a registered `case 'custom'` predicate needs BEFORE calling
+   * `evaluate()`, since `evaluateOne` below calls a predicate synchronously
+   * inside `SYSTEM_NOTICES.filter(...)`, which cannot `await` a repository
+   * read. `registry.ts`'s `whitespace-collision-detected` predicate is the
+   * only current reader (`ctx.settingFlag('whitespace_migration_collision')`);
+   * this module stays free of any DB import either way.
+   */
+  settingFlag: (key: string) => boolean;
 }
 
 // Custom predicate registry — extensible without modifying this file
