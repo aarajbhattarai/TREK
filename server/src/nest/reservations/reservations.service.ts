@@ -132,16 +132,11 @@ export interface UpdateReservationData {
   needs_review?: boolean;
 }
 
-/**
- * True when `reservation_time` actually carries a date and not just a bare
- * `HH:MM`. Both shapes reach this column — the booking form writes the
- * datetime-local `YYYY-MM-DDTHH:MM`, while day-anchored rows (the demo seed
- * among them) hold only a time — and comparing the two against an ISO
- * timestamp as strings silently sorts `'20:00'` above `'2026-…'` while
- * dropping `'08:30'` below it, which is how half a trip's bookings vanished
- * from the dashboard widget (#1934).
- */
-const DATED = "r.reservation_time GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*'";
+// The "does reservation_time actually carry a date, not just a bare HH:MM"
+// question (#1934) that RS20's legacy `DATED` constant used to answer here
+// now lives as `startsWithIsoDateKysely` inside
+// `ReservationsRepository.listUpcomingForUser` (Plan 3d Task 4) — RS20 was
+// this constant's only caller.
 
 type AccommodationTimesMeta = {
   check_in_time?: string | null;
@@ -478,89 +473,14 @@ export class ReservationsService {
    * fields hotels do not use.
    *
    * RS20 — Task 4 (calendar + listUpcoming + the visibility predicate
-   * consumers). Stays raw on `DatabaseService` in this task per the plan's
-   * own split; the tier ruling (Kysely full statement vs. an explicit
-   * exception vs. a JS-merge decomposition) is Task 4's, per Task 0's
-   * concern #4.
+   * consumers). Ruling (ii): ONE fully typed Kysely statement, in
+   * `ReservationsRepository.listUpcomingForUser` — see that method's own
+   * docstring for the CTE/`UNION ALL`/GLOB/CAST shape.
    */
   async listUpcoming(userId: number, limit = 6) {
     const today = new Date().toISOString().slice(0, 10);
     const now = new Date().toISOString();
-
-    const reservations = this.db.all<Record<string, unknown>>(`
-    WITH visible_trips AS (
-      SELECT t.id, t.title, t.cover_image
-      FROM trips t
-      LEFT JOIN trip_members tm ON tm.trip_id = t.id AND tm.user_id = ?
-      WHERE (t.user_id = ? OR tm.user_id IS NOT NULL) AND t.is_archived = 0
-    ),
-    -- One row per candidate with its date and time already separated, so the
-    -- filter and the sort below never have to guess what reservation_time holds.
-    entries AS (
-      SELECT r.id, r.trip_id, r.title, r.type, r.status, r.location,
-             r.reservation_time, r.confirmation_number,
-             tr.title as trip_title, tr.cover_image as trip_cover,
-             d.date as day_date, p.name as place_name, p.image_url as place_image,
-             CASE WHEN ${DATED} THEN substr(r.reservation_time, 1, 10) ELSE d.date END as at_date,
-             CASE WHEN ${DATED} THEN substr(r.reservation_time, 12) ELSE r.reservation_time END as at_time
-      FROM reservations r
-      JOIN visible_trips tr ON tr.id = r.trip_id
-      LEFT JOIN days d ON r.day_id = d.id
-      LEFT JOIN places p ON r.place_id = p.id
-      WHERE r.status != 'cancelled'
-        AND COALESCE(r.type, '') != 'hotel'
-
-      UNION ALL
-
-      -- Check-in and check-out as their own moments (#1934). The stay itself is
-      -- still left out: it covers a range, and a week in one hotel would hold a
-      -- slot in a six-entry widget for the whole week. Arriving and leaving are
-      -- points in time, which is exactly what this widget is for, and they are
-      -- the two the traveller needs reminding of.
-      SELECT a.id, a.trip_id,
-             COALESCE(p.name, (SELECT res.title FROM reservations res
-                                WHERE CAST(res.accommodation_id AS INTEGER) = a.id
-                                  AND res.status != 'cancelled'
-                                ORDER BY res.id LIMIT 1), tr.title) as title,
-             'checkin' as type, 'confirmed' as status, NULL as location,
-             CASE WHEN a.check_in IS NOT NULL THEN d.date || 'T' || a.check_in END as reservation_time,
-             a.confirmation as confirmation_number,
-             tr.title as trip_title, tr.cover_image as trip_cover,
-             d.date as day_date, p.name as place_name, p.image_url as place_image,
-             d.date as at_date, a.check_in as at_time
-      FROM day_accommodations a
-      JOIN visible_trips tr ON tr.id = a.trip_id
-      JOIN days d ON d.id = a.start_day_id
-      LEFT JOIN places p ON p.id = a.place_id
-
-      UNION ALL
-
-      SELECT a.id, a.trip_id,
-             COALESCE(p.name, (SELECT res.title FROM reservations res
-                                WHERE CAST(res.accommodation_id AS INTEGER) = a.id
-                                  AND res.status != 'cancelled'
-                                ORDER BY res.id LIMIT 1), tr.title) as title,
-             'checkout' as type, 'confirmed' as status, NULL as location,
-             CASE WHEN a.check_out IS NOT NULL THEN d.date || 'T' || a.check_out END as reservation_time,
-             a.confirmation as confirmation_number,
-             tr.title as trip_title, tr.cover_image as trip_cover,
-             d.date as day_date, p.name as place_name, p.image_url as place_image,
-             d.date as at_date, a.check_out as at_time
-      FROM day_accommodations a
-      JOIN visible_trips tr ON tr.id = a.trip_id
-      JOIN days d ON d.id = a.end_day_id
-      LEFT JOIN places p ON p.id = a.place_id
-    )
-    SELECT id, trip_id, title, type, status, location, reservation_time,
-           confirmation_number, trip_title, trip_cover, day_date, place_name, place_image
-    FROM entries
-    WHERE at_date IS NOT NULL
-      AND (at_date > ? OR (at_date = ? AND COALESCE(at_time, '23:59') >= ?))
-    ORDER BY at_date ASC, COALESCE(at_time, '00:00') ASC, id ASC
-    LIMIT ?
-  `, userId, userId, today, today, now.slice(11, 16), limit);
-
-    return reservations;
+    return await this.reservationsRepo.listUpcomingForUser(userId, today, now.slice(11, 16), limit);
   }
 
   async getReservationWithJoins(id: string | number) {

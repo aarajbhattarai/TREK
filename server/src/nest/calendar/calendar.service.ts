@@ -1,10 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { ReservationsService } from '../reservations/reservations.service';
-import { publicReservationSql, publicStaySql } from '../reservations/reservation-visibility';
 import { addDays } from '../days/days.service';
 import { resolveTimeZone } from '../common/timezoneService';
 import { NotFoundError } from '../common/domain-errors';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { DayNotes } from '../../db/entities/DayNotes.entity';
+import type { DayNotesRepository } from '../../db/repositories/DayNotes.repository';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 
 /** The VCALENDAR preamble every TREK calendar starts with, single-trip or merged. */
 export const CALENDAR_HEADER =
@@ -124,13 +131,12 @@ function buildVTimezone(zone: string, yyyymmdd: string): string {
 @Injectable()
 export class CalendarService {
   constructor(
-    private readonly dbs: DatabaseService,
     private readonly reservations: ReservationsService,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(DayNotes) private readonly dayNotesRepo: DayNotesRepository,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
   ) {}
-
-  private get db() {
-    return this.dbs.connection;
-  }
 
   // ── ICS export ────────────────────────────────────────────────────────────
 
@@ -145,31 +151,14 @@ export class CalendarService {
    * "END:VEVENT". Handing out the parts removes the need to reassemble them.
    */
   async buildTripCalendar(tripId: string | number): Promise<TripCalendar> {
-    const trip = this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as any;
+    const trip = await this.tripsRepo.findRaw(tripId);
     if (!trip) throw new NotFoundError('Trip not found');
 
     // A hotel keeps its dates on the linked stay, not on the reservation: the
     // booking form writes reservation_time = NULL for type 'hotel' and lets
     // day_accommodations carry start day, end day and the check-in/out clock.
     // Joining them here is what lets a stay span its whole range (#1586).
-    const reservations = this.db
-      .prepare(
-        `SELECT r.*, pl.lat AS place_lat, pl.lng AS place_lng,
-                sd.date AS stay_start_date, ed.date AS stay_end_date,
-                a.check_in AS stay_check_in, a.check_out AS stay_check_out,
-                (SELECT MIN(r2.id) FROM reservations r2
-                  WHERE r2.accommodation_id = a.id) AS stay_first_reservation_id,
-                rd.date AS day_date, red.date AS end_day_date
-         FROM reservations r
-         LEFT JOIN places pl ON r.place_id = pl.id
-         LEFT JOIN day_accommodations a ON r.accommodation_id = a.id
-         LEFT JOIN days sd ON a.start_day_id = sd.id
-         LEFT JOIN days ed ON a.end_day_id = ed.id
-         LEFT JOIN days rd ON r.day_id = rd.id
-         LEFT JOIN days red ON r.end_day_id = red.id
-         WHERE r.trip_id = ? AND ${publicReservationSql('r')}`,
-      )
-      .all(tripId) as any[];
+    const reservations = await this.reservationsRepo.listForCalendar(trip.id);
 
     const esc = (s: string) => s
       .replaceAll(/\\/g, '\\\\')
@@ -237,7 +226,7 @@ export class CalendarService {
     }
 
     // Days with assignments and notes
-    const days = this.db.prepare('SELECT * FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(tripId) as any[];
+    const days = await this.daysRepo.listByTrip(trip.id);
     for (const day of days) {
       if (!day.date) continue;
 
@@ -246,21 +235,9 @@ export class CalendarService {
       // planned to visit, and the booking already comes through below as the
       // stay block or its check-in and check-out markers. Read here as well it
       // would put the hotel on the day a second time.
-      const assignments = this.db.prepare(`
-        SELECT da.*, p.name as place_name, p.address as place_address,
-          p.lat as place_lat, p.lng as place_lng,
-          COALESCE(da.assignment_time, p.place_time) as effective_time,
-          COALESCE(da.assignment_end_time, p.end_time) as effective_end_time
-        FROM day_assignments da
-        JOIN places p ON da.place_id = p.id
-        WHERE da.day_id = ?
-          AND da.accommodation_id IS NULL
-        ORDER BY da.order_index ASC, da.created_at ASC
-      `).all(day.id) as any[];
+      const assignments = await this.reservationsRepo.listCalendarStops(day.id);
 
-      const notes = this.db.prepare(
-        'SELECT * FROM day_notes WHERE day_id = ? ORDER BY sort_order ASC, created_at ASC'
-      ).all(day.id) as any[];
+      const notes = await this.dayNotesRepo.listByDayIds([day.id]);
 
       const timed = assignments.filter(a => a.effective_time);
       const untimed = assignments.filter(a => !a.effective_time);
@@ -601,20 +578,7 @@ export class CalendarService {
     // keyed by the stay, that emitted the same UID twice and clients then pick one
     // of the duplicates at random (#1869). Lowest id wins so the title is stable
     // across exports.
-    const stays = this.db.prepare(`
-      SELECT a.id, a.check_in, a.check_in_end, a.check_out,
-             sd.date AS start_date, ed.date AS end_date,
-             p.name AS place_name, p.address AS place_address, p.lat AS place_lat, p.lng AS place_lng,
-             (SELECT r.title FROM reservations r
-               WHERE r.accommodation_id = a.id AND ${publicReservationSql('r')}
-               ORDER BY r.id ASC LIMIT 1) AS reservation_title
-      FROM day_accommodations a
-      LEFT JOIN days sd ON a.start_day_id = sd.id
-      LEFT JOIN days ed ON a.end_day_id = ed.id
-      LEFT JOIN places p ON a.place_id = p.id
-      WHERE a.trip_id = ? AND ${publicStaySql('a')}
-      ORDER BY a.id ASC
-    `).all(tripId) as any[];
+    const stays = await this.reservationsRepo.listPublicStaysForCalendar(trip.id);
 
     for (const stay of stays) {
       const name = stay.reservation_title || stay.place_name || 'Accommodation';

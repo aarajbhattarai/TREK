@@ -7,6 +7,7 @@ import { TokensModule } from '../tokens/tokens.module';
 import { TripMembershipModule } from '../trip-membership/trip-membership.module';
 import { RateLimitModule } from '../common/rate-limit.module';
 import { Trips } from '../../db/entities/Trips.entity';
+import { Reservations } from '../../db/entities/Reservations.entity';
 
 /**
  * Public API v1 — the versioned read-only surface for third-party integrations.
@@ -26,12 +27,15 @@ import { Trips } from '../../db/entities/Trips.entity';
  * class itself. No module edge either way — which is the point.
  */
 @Module({
-  // `MikroOrmModule.forFeature([Trips])` registers `TripsRepository` for
-  // `PublicApiService`'s `@InjectRepository` constructor param (Plan 3d Task 5
-  // — its trip reads convert onto the same repository `TripsModule` owns,
-  // without pulling `TripsModule` itself in, per this module's leaf-module
-  // constraint above).
-  imports: [TokensModule, TripMembershipModule, RateLimitModule, MikroOrmModule.forFeature([Trips])],
+  // `MikroOrmModule.forFeature([Trips, Reservations])` registers
+  // `TripsRepository` (Plan 3d Task 5 — its trip reads convert onto the same
+  // repository `TripsModule` owns) and `ReservationsRepository` (Plan 3d
+  // Task 4's pickup — `reservationsByDay`/`buildAccommodations`/
+  // `buildUnplannedPlaces`/`buildUnscheduledReservations`) for
+  // `PublicApiService`'s `@InjectRepository` constructor params, without
+  // pulling `TripsModule`/`ReservationsModule` themselves in, per this
+  // module's leaf-module constraint above.
+  imports: [TokensModule, TripMembershipModule, RateLimitModule, MikroOrmModule.forFeature([Trips, Reservations])],
   controllers: [PublicApiController],
   providers: [PublicApiService, ApiTokenGuard],
 })

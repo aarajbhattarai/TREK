@@ -14,6 +14,8 @@ import type {
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { Trips } from '../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 import { DatabaseService } from '../database/database.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
 
@@ -42,6 +44,7 @@ export class PublicApiService {
     private readonly db: DatabaseService,
     private readonly membership: TripMembershipService,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
   ) {}
 
   /** Every trip the token's owner may read, newest first, without itineraries. */
@@ -175,17 +178,8 @@ export class PublicApiService {
    * way to tell that from three flights.
    */
   private async reservationsByDay(tripId: number): Promise<Map<number, PublicApiReservation[]>> {
-    // Task 2 — ReservationsRepository owns this table; Task 2 had not landed
-    // when this task ran (Plan 3d Task 5), so this statement stays raw.
-    const rows = this.db.all<ReservationRow>(
-      `SELECT day_id, type, title, location, reservation_time, reservation_end_time,
-              status, notes
-         FROM reservations
-        WHERE trip_id = ? AND day_id IS NOT NULL
-        ORDER BY day_id ASC, reservation_time ASC`,
-      tripId,
-    );
-    return groupBy(rows, (r: ReservationRow) => r.day_id, toReservation);
+    const rows = await this.reservationsRepo.listScheduledForPublicApi(tripId);
+    return groupBy(rows as ReservationRow[], (r: ReservationRow) => r.day_id, toReservation);
   }
 
   /**
@@ -195,20 +189,7 @@ export class PublicApiService {
    * TREK day id, and the dates are what it actually needs to match its own nights.
    */
   private async buildAccommodations(tripId: number): Promise<PublicApiAccommodation[]> {
-    // Task 3 — DayAccommodationsRepository owns this table; Task 3 had not
-    // landed when this task ran (Plan 3d Task 5), so this statement stays raw.
-    const rows = this.db.all<AccommodationRow>(
-      `SELECT p.name, p.address, p.lat, p.lng,
-              ds.date AS start_date, de.date AS end_date,
-              a.check_in, a.check_out, a.notes
-         FROM day_accommodations a
-         LEFT JOIN places p ON p.id = a.place_id
-         LEFT JOIN days ds ON ds.id = a.start_day_id
-         LEFT JOIN days de ON de.id = a.end_day_id
-        WHERE a.trip_id = ?
-        ORDER BY ds.date ASC`,
-      tripId,
-    );
+    const rows = await this.reservationsRepo.listAccommodationsForPublicApi(tripId);
     return rows.map((r) => ({
       name: r.name ?? null,
       address: r.address ?? null,
@@ -239,24 +220,7 @@ export class PublicApiService {
    * `accommodations` — listing it twice would read as two different intentions.
    */
   private async buildUnplannedPlaces(tripId: number): Promise<PublicApiPlace[]> {
-    // Task 3 — the `NOT EXISTS (... day_accommodations ...)` arm reaches a
-    // table DayAccommodationsRepository owns; Task 3 had not landed when this
-    // task ran (Plan 3d Task 5). The whole statement stays raw rather than
-    // splitting the `places`/`day_assignments` reads from the one 3d-table
-    // predicate — `places`/`day_assignments` are Plan 3c, DONE, but a single
-    // SQL statement cannot be partially converted.
-    const rows = this.db.all<Omit<PlaceRow, 'day_id'>>(
-      `SELECT p.name, p.address, p.lat, p.lng, p.place_time, p.end_time,
-              p.duration_minutes, p.notes, p.transport_mode,
-              c.name AS category
-         FROM places p
-         LEFT JOIN categories c ON c.id = p.category_id
-        WHERE p.trip_id = ?
-          AND NOT EXISTS (SELECT 1 FROM day_assignments da WHERE da.place_id = p.id)
-          AND NOT EXISTS (SELECT 1 FROM day_accommodations a WHERE a.place_id = p.id)
-        ORDER BY p.created_at ASC, p.id ASC`,
-      tripId,
-    );
+    const rows = await this.reservationsRepo.listUnplannedPlacesForPublicApi(tripId);
     return rows.map(toPlace);
   }
 
@@ -266,16 +230,7 @@ export class PublicApiService {
    * pinned to. Reporting only day-bound bookings would quietly lose those.
    */
   private async buildUnscheduledReservations(tripId: number): Promise<PublicApiReservation[]> {
-    // Task 2 — ReservationsRepository owns this table; Task 2 had not landed
-    // when this task ran (Plan 3d Task 5), so this statement stays raw.
-    const rows = this.db.all<Omit<ReservationRow, 'day_id'>>(
-      `SELECT type, title, location, reservation_time, reservation_end_time,
-              status, notes
-         FROM reservations
-        WHERE trip_id = ? AND day_id IS NULL
-        ORDER BY reservation_time ASC, id ASC`,
-      tripId,
-    );
+    const rows = await this.reservationsRepo.listUnscheduledForPublicApi(tripId);
     return rows.map(toReservation);
   }
 

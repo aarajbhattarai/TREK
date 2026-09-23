@@ -265,7 +265,11 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     packingService, reservationsService, collabService, placesService, todoService,
     new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em),
   );
-  const calendarService = new CalendarService(dbService, reservationsService);
+  const calendarService = new CalendarService(
+    reservationsService,
+    await createTestTripsRepo(dbService.connection), await createTestDaysRepo(dbService.connection),
+    await createTestDayNotesRepo(dbService.connection), await createTestReservationsRepo(dbService.connection),
+  );
   // The nine addon-gated surfaces read their toggle off an injected service now
   // rather than off addons.bridge's own instance, so the harness has to supply
   // one — against the same test DB, which is what makes the `when:` gates
@@ -316,7 +320,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new SchoolHolidaysMcp(new SchoolHolidaysService(dbService, await createTestUnitOfWork(dbService.connection)), guards),
       new TripsMcp(tripsService, todoService, collabService, authService, calendarService, membersService, readModelService, addonsService, guards),
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
-      new ShareMcp(new ShareService(dbService, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection)), authService, guards),
+      new ShareMcp(new ShareService(dbService, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection), await createTestReservationsRepo(dbService.connection)), authService, guards),
       new FeedsMcp(new FeedsService(await createTestTripsRepo(dbService.connection), usersRepo, calendarService), dbService, new RuntimeEnvService(), guards),
       new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo)),
       new MapsMcp(mapsService),

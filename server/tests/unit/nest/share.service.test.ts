@@ -60,7 +60,7 @@ import { ShareService, publicReservationMetadata } from '../../../src/nest/share
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import type { User } from '../../../src/types';
-import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo } from '../../helpers/test-uow';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestReservationsRepo } from '../../helpers/test-uow';
 import type { TestOrm } from '../../helpers/test-orm';
 
 let svc: ShareService;
@@ -81,6 +81,7 @@ beforeAll(async () => {
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     photoCacheStub,
     await createTestUnitOfWork(testDb),
+    await createTestReservationsRepo(testDb),
   );
 });
 

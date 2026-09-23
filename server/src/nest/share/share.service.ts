@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import crypto from 'crypto';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../database/database.service';
 import type { TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { PlacePhotoCacheService } from '../place-photos/place-photo-cache.service';
-import { publicReservationSql, publicStaySql } from '../reservations/reservation-visibility';
 import { SettingsService } from '../settings/settings.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import type { User } from '../../types';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 
 type Trip = TripAccess;
 
@@ -66,20 +68,12 @@ const PUBLIC_PLACE_COLUMNS = [
   'transport_mode', 'created_at', 'updated_at',
 ].map(c => `p.${c}`).join(', ');
 
-/**
- * What a booking shows the public: when, where, what kind, and the note and
- * link the owner attached to it. Never the confirmation number, never the
- * import trail, never who is travelling on it.
- */
-const PUBLIC_RESERVATION_COLUMNS = [
-  'id', 'trip_id', 'day_id', 'end_day_id', 'place_id', 'accommodation_id', 'title', 'type', 'status', 'location',
-  'reservation_time', 'reservation_end_time', 'notes', 'url', 'metadata', 'created_at',
-].map(c => `r.${c}`).join(', ');
-
-/** A stay: which place, which nights, when the desk opens. Not the confirmation. */
-const PUBLIC_ACCOMMODATION_COLUMNS = [
-  'id', 'trip_id', 'place_id', 'start_day_id', 'end_day_id', 'check_in', 'check_in_end', 'check_out', 'notes',
-].map(c => `a.${c}`).join(', ');
+// What a booking/stay shows the public — never the confirmation number, the
+// import trail, or who is travelling — now lives as the exact column list in
+// `ReservationsRepository.listPublicForShare`/`listPublicAccommodationsForShare`'s
+// own docstrings (Plan 3d Task 4): this file no longer spells the SQL, so
+// keeping a second copy of the allow-list here would drift from the one the
+// query actually runs.
 
 /**
  * The parts of a booking's metadata that describe the journey rather than the
@@ -157,6 +151,7 @@ export class ShareService {
     private readonly queryHelpers: QueryHelpersService,
     private readonly photoCache: PlacePhotoCacheService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string, userId: number) {
@@ -246,12 +241,7 @@ export class ShareService {
    * to the database.
    */
   private async publicEndpointsByReservation(tripId: number): Promise<Map<number, Array<Record<string, unknown>>>> {
-    const rows = this.dbs.all<{ reservation_id: number } & Record<string, unknown>>(
-      `SELECT e.reservation_id, e.role, e.sequence, e.name, e.code, e.lat, e.lng, e.timezone, e.local_date, e.local_time
-         FROM reservation_endpoints e JOIN reservations r ON r.id = e.reservation_id
-        WHERE r.trip_id = ? ORDER BY e.reservation_id ASC, e.sequence ASC`,
-      tripId,
-    );
+    const rows = await this.reservationsRepo.listEndpointsForShare(tripId);
     const out = new Map<number, Array<Record<string, unknown>>>();
     for (const { reservation_id, ...endpoint } of rows) {
       if (!out.has(reservation_id)) out.set(reservation_id, []);
@@ -363,12 +353,7 @@ export class ShareService {
     let reservations: any[] = [];
     let accommodations: unknown[] = [];
     if (permissions.share_bookings) {
-      const dayPositions = this.dbs.all<{ reservation_id: number; day_id: number; position: number }>(`
-        SELECT rdp.reservation_id, rdp.day_id, rdp.position
-        FROM reservation_day_positions rdp
-        JOIN reservations r ON rdp.reservation_id = r.id
-        WHERE r.trip_id = ?
-      `, tripId);
+      const dayPositions = await this.reservationsRepo.listDayPositionsForShare(tripId);
 
       const posMap = new Map<number, Record<number, number>>();
       for (const dp of dayPositions) {
@@ -383,10 +368,7 @@ export class ShareService {
       // link shows what the booking is, not what it would take to change it
       // (#2320). The endpoints ride along, since the map draws from them.
       const endpoints = await this.publicEndpointsByReservation(tripId);
-      reservations = this.dbs.all<any>(
-        `SELECT ${PUBLIC_RESERVATION_COLUMNS} FROM reservations r
-         WHERE r.trip_id = ? AND ${publicReservationSql('r')}
-         ORDER BY r.reservation_time ASC`, tripId)
+      reservations = (await this.reservationsRepo.listPublicForShare(tripId))
         .map((r) => ({
           ...r,
           url: publicHttpUrl(r.url),
@@ -395,12 +377,7 @@ export class ShareService {
           day_positions: posMap.get(r.id) ?? null,
         }));
 
-      accommodations = this.dbs.all(`
-        SELECT ${PUBLIC_ACCOMMODATION_COLUMNS},
-          p.name as place_name, p.address as place_address, p.lat as place_lat, p.lng as place_lng
-        FROM day_accommodations a JOIN places p ON a.place_id = p.id
-        WHERE a.trip_id = ? AND ${publicStaySql('a')}
-      `, tripId);
+      accommodations = await this.reservationsRepo.listPublicAccommodationsForShare(tripId);
     }
 
     // Packing — a public viewer is neither owner nor recipient, so only Common items

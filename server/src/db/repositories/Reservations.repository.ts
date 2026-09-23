@@ -1,7 +1,9 @@
 import type { Reservations } from '../entities/Reservations.entity';
 import { DayAssignments } from '../entities/DayAssignments.entity';
 import { Days } from '../entities/Days.entity';
-import { castIntegerKysely, coalesceParam, columnRef, concatKysely, dayDistance, substringKysely } from '../dialect/sql-functions';
+import { castIntegerKysely, coalesceParam, columnRef, concatKysely, dayDistance, startsWithIsoDateKysely, substringKysely } from '../dialect/sql-functions';
+import { publicReservationExpr, publicStayExists, type ReservationVisibilityKyselyDB } from './_shared/reservation-visibility';
+import type { DayAssignmentRow } from './DayAssignments.repository';
 import { TrekRepository } from './_shared/trek-repository';
 
 /**
@@ -153,6 +155,420 @@ interface ReservationsByAccommodationKyselyDB {
     accommodation_id: string | null;
     metadata: string | null;
   };
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3d Task 4 (calendar, `listUpcoming`, the visibility-predicate
+// consumers incl. `share`, the `public-api` pickup) — additive. `calendar/**`
+// and `share/**`'s reads on `day_accommodations`/`reservation_endpoints`/
+// `reservation_day_positions` land here rather than on those tables' own
+// repositories: `RoadtripVias`/`RoadtripDayTracks`/`RoadtripPreferences`/
+// `RoadtripDayBoundaries`/`DayAccommodations`/`ReservationEndpoints`/
+// `ReservationTravelers` repositories are Task 6's file set for this window
+// (trip copy's additive methods), so a cross-table Kysely read — the SAME
+// escape hatch `joinedQuery()`/`getAssignmentTripId`/`findNearestDayId`
+// above already use to reach `days`/`places`/`day_accommodations` from this
+// file — lands the read here instead of opening a second implementer's file.
+// `DayAssignments.repository.ts` is not in Task 6's set, but CL4's read is
+// kept alongside its RS20/CL2/CL7 siblings for the same "one file, one
+// diff" reason.
+// ---------------------------------------------------------------------------
+
+/**
+ * CL2 (`CalendarService.buildTripCalendar`'s reservation read) — `SELECT
+ * r.*, pl.lat AS place_lat, pl.lng AS place_lng, sd.date AS stay_start_date,
+ * ed.date AS stay_end_date, a.check_in AS stay_check_in, a.check_out AS
+ * stay_check_out, (SELECT MIN(r2.id) FROM reservations r2 WHERE
+ * r2.accommodation_id = a.id) AS stay_first_reservation_id, rd.date AS
+ * day_date, red.date AS end_day_date FROM reservations r LEFT JOIN places
+ * pl … LEFT JOIN day_accommodations a ON r.accommodation_id = a.id LEFT
+ * JOIN days sd/ed/rd/red … WHERE r.trip_id = ? AND <RV1('r')>`, no `ORDER
+ * BY`. `r.accommodation_id = a.id` and `r2.accommodation_id = a.id` are
+ * plain column-to-column joins (no `CAST`) — SQLite applies numeric
+ * affinity to the TEXT side against a genuine INTEGER column on its own
+ * (§18.1), the same reasoning `joinedQuery()`'s `ap`/`acc_p` joins above
+ * already rely on; a `CAST` is only needed where one side is a BOUND value
+ * (RV2, RS20's correlated title subquery). The `stay_first_reservation_id`
+ * subquery is deliberately **not** filtered by RV1 — inventory §18.2's
+ * documented, unfixed hole (a staged sibling booking with a lower id can
+ * win the slot and suppress a public booking's all-day block); kept
+ * byte-for-byte, pinned by CAL-CL2-HOLE-001 in the repository test.
+ */
+export interface CalendarReservationRow extends ReservationAllColumnsRow {
+  place_lat: number | null;
+  place_lng: number | null;
+  stay_start_date: string | null;
+  stay_end_date: string | null;
+  stay_check_in: string | null;
+  stay_check_out: string | null;
+  stay_first_reservation_id: number | null;
+  day_date: string | null;
+  end_day_date: string | null;
+}
+
+interface CalendarReservationKyselyDB {
+  reservations: ReservationJoinKyselyDB['reservations'];
+  places: { id: number; lat: number | null; lng: number | null };
+  day_accommodations: { id: number; start_day_id: number | null; end_day_id: number | null; check_in: string | null; check_out: string | null };
+  days: { id: number; date: string | null };
+}
+
+/**
+ * CL4 (`CalendarService.buildTripCalendar`'s per-day assignment read,
+ * previously run once per dated day) — `SELECT da.*, p.name as place_name,
+ * p.address as place_address, p.lat as place_lat, p.lng as place_lng,
+ * COALESCE(da.assignment_time, p.place_time) as effective_time,
+ * COALESCE(da.assignment_end_time, p.end_time) as effective_end_time FROM
+ * day_assignments da JOIN places p ON da.place_id = p.id WHERE da.day_id =
+ * ? AND da.accommodation_id IS NULL ORDER BY da.order_index ASC,
+ * da.created_at ASC` — the booked-night stop (its own accommodation-linked
+ * `day_assignments` row) is excluded, matching the legacy comment ("that
+ * stop is the booking … reading it here as well would put the hotel on the
+ * day a second time"). Kept per-day (the caller's own loop), not batched —
+ * result-identical either way per the inventory's own note; per-day is the
+ * smaller diff against the legacy statement shape.
+ */
+export interface CalendarStopRow extends DayAssignmentRow {
+  place_name: string;
+  place_address: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+  effective_time: string | null;
+  effective_end_time: string | null;
+}
+
+interface CalendarStopsKyselyDB {
+  day_assignments: {
+    id: number; day_id: number; place_id: number; order_index: number | null; notes: string | null;
+    reservation_status: string | null; reservation_notes: string | null; reservation_datetime: string | null;
+    created_at: string | null; assignment_time: string | null; assignment_end_time: string | null;
+    leg_transport_mode: string | null; incoming_leg_transport_mode: string | null; end_day: number; accommodation_id: number | null;
+  };
+  places: { id: number; name: string; address: string | null; lat: number | null; lng: number | null; place_time: string | null; end_time: string | null };
+}
+
+/**
+ * CL7 (`CalendarService.buildTripCalendar`'s check-in/check-out stay read)
+ * — `SELECT a.id, a.check_in, a.check_in_end, a.check_out, sd.date AS
+ * start_date, ed.date AS end_date, p.name AS place_name, p.address AS
+ * place_address, p.lat AS place_lat, p.lng AS place_lng, (SELECT r.title
+ * FROM reservations r WHERE r.accommodation_id = a.id AND <RV1('r')> ORDER
+ * BY r.id ASC LIMIT 1) AS reservation_title FROM day_accommodations a LEFT
+ * JOIN days sd … LEFT JOIN days ed … LEFT JOIN places p … WHERE a.trip_id =
+ * ? AND <RV2('a')> ORDER BY a.id ASC`. The `reservation_title` subquery is
+ * a plain column-to-column compare too (no `CAST`), same reasoning as CL2.
+ * `.where('a.trip_id', ...).where(publicStayExists)` are chained BEFORE the
+ * `sd`/`ed`/`p` joins below (Kysely renders WHERE after JOIN regardless of
+ * call order — the AST, not the call sequence, decides clause order) so
+ * `publicStayExists`'s narrow `ExpressionBuilder<…, 'a'>` signature sees
+ * exactly the `a` alias it requires (Task 0 review's own finding: a
+ * differently-joined outer query typechecks as long as the alias stays
+ * `a`).
+ */
+export interface CalendarStayRow {
+  id: number;
+  check_in: string | null;
+  check_in_end: string | null;
+  check_out: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  place_name: string | null;
+  place_address: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+  reservation_title: string | null;
+}
+
+interface CalendarStayKyselyDB extends ReservationVisibilityKyselyDB {
+  day_accommodations: {
+    id: number; trip_id: number | string; place_id: number | null; start_day_id: number | null; end_day_id: number | null;
+    check_in: string | null; check_in_end: string | null; check_out: string | null;
+  };
+  reservations: ReservationVisibilityKyselyDB['reservations'] & { title: string };
+  days: { id: number; date: string | null };
+  places: { id: number; name: string | null; address: string | null; lat: number | null; lng: number | null };
+}
+
+/**
+ * RS20 (`ReservationsService.listUpcoming`) — the CTE + `UNION ALL`
+ * statement, inventory §2e. Ruling (ii): ONE fully typed Kysely statement
+ * (no `connection.execute()` exception, no JS merge/re-sort — the reviewer's
+ * prototype matched legacy rows across 5 `(today, now, limit)` settings
+ * incl. the cross-table `id` tiebreak, and the plan adopted that). GLOB
+ * through `startsWithIsoDateKysely`; `CAST` through `castIntegerKysely`
+ * (the correlated title subquery compares a BOUND `a.id` — an outer-query
+ * value, not a plain column-to-column join, unlike CL2/CL7's `MIN`/title
+ * subqueries — so the legacy statement casts here too:
+ * `CAST(res.accommodation_id AS INTEGER) = a.id`); `||` through
+ * `concatKysely`; `substr` through `substringKysely`. `LIMIT` stays inside
+ * SQL; the SQLite collation `ORDER BY at_date ASC, COALESCE(at_time,
+ * '00:00') ASC, id ASC` (the cross-table `id` tiebreak — a stay id and a
+ * reservation id can collide) is reproduced exactly, never a JS `.sort()`.
+ *
+ * Each of the three `entries` arms is `$castTo<EntriesRow>()`'d before the
+ * `unionAll` chain: Kysely infers a literal type (`'checkin'`) for
+ * `eb.val('checkin').as('type')` in arms 2/3 against `r.type: string |
+ * null` in arm 1, and the three arms' `title`/`reservation_time` sources
+ * differ in nullability shape too — the union of literal/nullable variants
+ * doesn't collapse into one column type on its own, the same
+ * `DayStopRow`/`AssignmentTimeSortKyselyDB` precedent
+ * (`DayAssignments.repository.ts::listForTimeSort`) uses for its own
+ * `eb.and([...])`-inferred boolean column.
+ */
+export interface UpcomingReservationRow {
+  id: number;
+  trip_id: number;
+  title: string;
+  type: string | null;
+  status: string | null;
+  location: string | null;
+  reservation_time: string | null;
+  confirmation_number: string | null;
+  trip_title: string;
+  trip_cover: string | null;
+  day_date: string | null;
+  place_name: string | null;
+  place_image: string | null;
+}
+
+/** RS20's `entries` CTE row shape — see {@link UpcomingReservationRow}'s docstring for why every arm is cast to this. */
+interface EntriesRow extends UpcomingReservationRow {
+  at_date: string | null;
+  at_time: string | null;
+}
+
+interface UpcomingReservationsKyselyDB {
+  trips: { id: number; user_id: number; title: string; cover_image: string | null; is_archived: number };
+  trip_members: { trip_id: number; user_id: number };
+  reservations: {
+    id: number; trip_id: number; title: string; type: string | null; status: string | null;
+    location: string | null; reservation_time: string | null; confirmation_number: string | null;
+    day_id: number | null; place_id: number | null; accommodation_id: string | null;
+  };
+  days: { id: number; date: string | null };
+  places: { id: number; name: string | null; image_url: string | null };
+  day_accommodations: {
+    id: number; trip_id: number; place_id: number | null; start_day_id: number; end_day_id: number;
+    check_in: string | null; check_out: string | null; confirmation: string | null;
+  };
+}
+
+/**
+ * `share.service.ts:251` (`publicEndpointsByReservation`) — `SELECT
+ * e.reservation_id, e.role, e.sequence, e.name, e.code, e.lat, e.lng,
+ * e.timezone, e.local_date, e.local_time FROM reservation_endpoints e JOIN
+ * reservations r ON r.id = e.reservation_id WHERE r.trip_id = ? ORDER BY
+ * e.reservation_id ASC, e.sequence ASC`. Not filtered by RV1 — the legacy
+ * statement loads every reservation's endpoints regardless of
+ * `ingest_state`, and the caller only ever looks one up for a reservation
+ * `share.service.ts`'s OWN filtered read already returned (parity, matching
+ * `CalendarService.loadEndpointsByTrip`'s identical shape, §4's CL6 note).
+ */
+export interface ShareEndpointRow {
+  reservation_id: number;
+  role: string;
+  sequence: number;
+  name: string;
+  code: string | null;
+  lat: number;
+  lng: number;
+  timezone: string | null;
+  local_date: string | null;
+  local_time: string | null;
+}
+
+interface ShareEndpointsKyselyDB {
+  reservation_endpoints: {
+    reservation_id: number; role: string; sequence: number; name: string; code: string | null;
+    lat: number; lng: number; timezone: string | null; local_date: string | null; local_time: string | null;
+  };
+  reservations: { id: number; trip_id: number | string };
+}
+
+/**
+ * `share.service.ts:368` (`getSharedTripData`'s day-position read) —
+ * `SELECT rdp.reservation_id, rdp.day_id, rdp.position FROM
+ * reservation_day_positions rdp JOIN reservations r ON rdp.reservation_id =
+ * r.id WHERE r.trip_id = ?`, no `ORDER BY`, no RV1 filter (same reasoning
+ * as the endpoints read above — the caller only consults `posMap` for a
+ * reservation its own filtered read already returned).
+ */
+export interface ShareDayPositionRow {
+  reservation_id: number;
+  day_id: number;
+  position: number;
+}
+
+interface ShareDayPositionsKyselyDB {
+  reservation_day_positions: { reservation_id: number; day_id: number; position: number };
+  reservations: { id: number; trip_id: number | string };
+}
+
+/**
+ * `share.service.ts:387` (`getSharedTripData`'s public booking read) —
+ * `SELECT ${PUBLIC_RESERVATION_COLUMNS} FROM reservations r WHERE r.trip_id
+ * = ? AND <RV1('r')> ORDER BY r.reservation_time ASC` —
+ * `PUBLIC_RESERVATION_COLUMNS` is `id, trip_id, day_id, end_day_id,
+ * place_id, accommodation_id, title, type, status, location,
+ * reservation_time, reservation_end_time, notes, url, metadata,
+ * created_at`, the allow-list a public link may see (never the
+ * confirmation number, the import trail or who is travelling).
+ */
+export interface SharePublicReservationRow {
+  id: number;
+  trip_id: number;
+  day_id: number | null;
+  end_day_id: number | null;
+  place_id: number | null;
+  accommodation_id: string | null;
+  title: string;
+  type: string | null;
+  status: string | null;
+  location: string | null;
+  reservation_time: string | null;
+  reservation_end_time: string | null;
+  notes: string | null;
+  url: string | null;
+  metadata: string | null;
+  created_at: string | null;
+}
+
+interface SharePublicReservationKyselyDB {
+  reservations: ReservationVisibilityKyselyDB['reservations'] & {
+    trip_id: number | string;
+    day_id: number | null; end_day_id: number | null; place_id: number | null; title: string;
+    type: string | null; status: string | null; location: string | null;
+    reservation_time: string | null; reservation_end_time: string | null;
+    notes: string | null; url: string | null; metadata: string | null; created_at: string | null;
+  };
+}
+
+/**
+ * `share.service.ts:401` (`getSharedTripData`'s public stay read) —
+ * `SELECT ${PUBLIC_ACCOMMODATION_COLUMNS}, p.name as place_name, p.address
+ * as place_address, p.lat as place_lat, p.lng as place_lng FROM
+ * day_accommodations a JOIN places p ON a.place_id = p.id WHERE a.trip_id =
+ * ? AND <RV2('a')>` — an INNER `JOIN`, not `LEFT`, unlike CL7: a stay with
+ * no linked place is silently excluded from a public link (parity, kept
+ * exactly). `PUBLIC_ACCOMMODATION_COLUMNS` is `id, trip_id, place_id,
+ * start_day_id, end_day_id, check_in, check_in_end, check_out, notes`.
+ */
+export interface SharePublicAccommodationRow {
+  id: number;
+  trip_id: number;
+  place_id: number | null;
+  start_day_id: number | null;
+  end_day_id: number | null;
+  check_in: string | null;
+  check_in_end: string | null;
+  check_out: string | null;
+  notes: string | null;
+  place_name: string | null;
+  place_address: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+}
+
+interface SharePublicAccommodationKyselyDB extends ReservationVisibilityKyselyDB {
+  day_accommodations: {
+    id: number; trip_id: number | string; place_id: number | null; start_day_id: number | null; end_day_id: number | null;
+    check_in: string | null; check_in_end: string | null; check_out: string | null; notes: string | null;
+  };
+  places: { id: number; name: string | null; address: string | null; lat: number | null; lng: number | null };
+}
+
+/**
+ * `public-api.service.ts::reservationsByDay` (Task 5's `// Task 2` pickup)
+ * — `SELECT day_id, type, title, location, reservation_time,
+ * reservation_end_time, status, notes FROM reservations WHERE trip_id = ?
+ * AND day_id IS NOT NULL ORDER BY day_id ASC, reservation_time ASC`.
+ */
+export interface PublicApiScheduledReservationRow {
+  day_id: number;
+  type: string | null;
+  title: string | null;
+  location: string | null;
+  reservation_time: string | null;
+  reservation_end_time: string | null;
+  status: string | null;
+  notes: string | null;
+}
+
+/**
+ * `public-api.service.ts::buildUnscheduledReservations` (Task 5's `// Task
+ * 2` pickup) — the same 7 columns minus `day_id`, `WHERE trip_id = ? AND
+ * day_id IS NULL ORDER BY reservation_time ASC, id ASC`.
+ */
+export type PublicApiUnscheduledReservationRow = Omit<PublicApiScheduledReservationRow, 'day_id'>;
+
+interface PublicApiReservationKyselyDB {
+  reservations: {
+    id: number; trip_id: number; day_id: number | null; type: string | null; title: string | null;
+    location: string | null; reservation_time: string | null; reservation_end_time: string | null;
+    status: string | null; notes: string | null;
+  };
+}
+
+/**
+ * `public-api.service.ts::buildAccommodations` (Task 5's `// Task 3`
+ * pickup) — `SELECT p.name, p.address, p.lat, p.lng, ds.date AS start_date,
+ * de.date AS end_date, a.check_in, a.check_out, a.notes FROM
+ * day_accommodations a LEFT JOIN places p ON p.id = a.place_id LEFT JOIN
+ * days ds ON ds.id = a.start_day_id LEFT JOIN days de ON de.id =
+ * a.end_day_id WHERE a.trip_id = ? ORDER BY ds.date ASC`.
+ */
+export interface PublicApiAccommodationRow {
+  name: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  check_in: string | null;
+  check_out: string | null;
+  notes: string | null;
+}
+
+interface PublicApiAccommodationKyselyDB {
+  day_accommodations: { id: number; trip_id: number; place_id: number | null; start_day_id: number | null; end_day_id: number | null; check_in: string | null; check_out: string | null; notes: string | null };
+  places: { id: number; name: string | null; address: string | null; lat: number | null; lng: number | null };
+  days: { id: number; date: string | null };
+}
+
+/**
+ * `public-api.service.ts::buildUnplannedPlaces` (Task 5's `// Task 3`
+ * pickup — "the whole statement stays raw rather than splitting the
+ * places/day_assignments reads from the one 3d-table predicate", the
+ * method's own comment) — `SELECT p.name, p.address, p.lat, p.lng,
+ * p.place_time, p.end_time, p.duration_minutes, p.notes, p.transport_mode,
+ * c.name AS category FROM places p LEFT JOIN categories c ON c.id =
+ * p.category_id WHERE p.trip_id = ? AND NOT EXISTS (SELECT 1 FROM
+ * day_assignments da WHERE da.place_id = p.id) AND NOT EXISTS (SELECT 1
+ * FROM day_accommodations a WHERE a.place_id = p.id) ORDER BY
+ * p.created_at ASC, p.id ASC`.
+ */
+export interface PublicApiUnplannedPlaceRow {
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  place_time: string | null;
+  end_time: string | null;
+  duration_minutes: number | null;
+  notes: string | null;
+  transport_mode: string | null;
+  category: string | null;
+}
+
+interface PublicApiUnplannedPlaceKyselyDB {
+  places: {
+    id: number; trip_id: number; name: string; address: string | null; lat: number | null; lng: number | null;
+    place_time: string | null; end_time: string | null; duration_minutes: number | null; notes: string | null;
+    transport_mode: string | null; category_id: number | null; created_at: string | null;
+  };
+  categories: { id: number; name: string };
+  day_assignments: { id: number; place_id: number };
+  day_accommodations: { id: number; place_id: number | null };
 }
 
 export class ReservationsRepository extends TrekRepository<Reservations> {
@@ -554,6 +970,375 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
       .where((eb) => eb(castIntegerKysely(platform, eb, 'accommodation_id'), '=', accommodation_id))
       .execute();
     return rows as { id: number }[];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 4 — additive (see the file-level comment above the interfaces
+  // this section's methods return).
+  // ---------------------------------------------------------------------------
+
+  /** CL2 — see {@link CalendarReservationRow}'s docstring. */
+  async listForCalendar(trip_id: number | string): Promise<CalendarReservationRow[]> {
+    const rows = await this.kysely<CalendarReservationKyselyDB>()
+      .selectFrom('reservations as r')
+      .leftJoin('places as pl', 'pl.id', 'r.place_id')
+      .leftJoin('day_accommodations as a', 'a.id', 'r.accommodation_id')
+      .leftJoin('days as sd', 'sd.id', 'a.start_day_id')
+      .leftJoin('days as ed', 'ed.id', 'a.end_day_id')
+      .leftJoin('days as rd', 'rd.id', 'r.day_id')
+      .leftJoin('days as red', 'red.id', 'r.end_day_id')
+      .selectAll('r')
+      .select((eb) => [
+        'pl.lat as place_lat',
+        'pl.lng as place_lng',
+        'sd.date as stay_start_date',
+        'ed.date as stay_end_date',
+        'a.check_in as stay_check_in',
+        'a.check_out as stay_check_out',
+        eb
+          .selectFrom('reservations as r2')
+          .select((eb2) => eb2.fn.min<number | null>('r2.id').as('c'))
+          .whereRef('r2.accommodation_id', '=', 'a.id')
+          .as('stay_first_reservation_id'),
+        'rd.date as day_date',
+        'red.date as end_day_date',
+      ])
+      .where('r.trip_id', '=', trip_id)
+      .where((eb) => publicReservationExpr(eb, 'r.ingest_state'))
+      .execute();
+    return rows as CalendarReservationRow[];
+  }
+
+  /** CL4 — see {@link CalendarStopRow}'s docstring. */
+  async listCalendarStops(day_id: number): Promise<CalendarStopRow[]> {
+    const rows = await this.kysely<CalendarStopsKyselyDB>()
+      .selectFrom('day_assignments as da')
+      .innerJoin('places as p', 'p.id', 'da.place_id')
+      .selectAll('da')
+      .select((eb) => [
+        'p.name as place_name',
+        'p.address as place_address',
+        'p.lat as place_lat',
+        'p.lng as place_lng',
+        eb.fn.coalesce('da.assignment_time', 'p.place_time').as('effective_time'),
+        eb.fn.coalesce('da.assignment_end_time', 'p.end_time').as('effective_end_time'),
+      ])
+      .where('da.day_id', '=', day_id)
+      .where('da.accommodation_id', 'is', null)
+      .orderBy('da.order_index', 'asc')
+      .orderBy('da.created_at', 'asc')
+      .execute();
+    return rows as CalendarStopRow[];
+  }
+
+  /** CL7 — see {@link CalendarStayRow}'s docstring. */
+  async listPublicStaysForCalendar(trip_id: number | string): Promise<CalendarStayRow[]> {
+    const rows = await this.kysely<CalendarStayKyselyDB>()
+      .selectFrom('day_accommodations as a')
+      .where('a.trip_id', '=', trip_id)
+      .where((eb) => publicStayExists(eb))
+      .leftJoin('days as sd', 'sd.id', 'a.start_day_id')
+      .leftJoin('days as ed', 'ed.id', 'a.end_day_id')
+      .leftJoin('places as p', 'p.id', 'a.place_id')
+      .select((eb) => [
+        'a.id',
+        'a.check_in',
+        'a.check_in_end',
+        'a.check_out',
+        'sd.date as start_date',
+        'ed.date as end_date',
+        'p.name as place_name',
+        'p.address as place_address',
+        'p.lat as place_lat',
+        'p.lng as place_lng',
+        eb
+          .selectFrom('reservations as r')
+          .select('r.title')
+          .whereRef('r.accommodation_id', '=', 'a.id')
+          .where((eb2) => publicReservationExpr(eb2, 'r.ingest_state'))
+          .orderBy('r.id', 'asc')
+          .limit(1)
+          .as('reservation_title'),
+      ])
+      .orderBy('a.id', 'asc')
+      .execute();
+    return rows as CalendarStayRow[];
+  }
+
+  /** RS20 — see {@link UpcomingReservationRow}'s docstring. */
+  async listUpcomingForUser(user_id: number, today: string, now_hhmm: string, limit: number): Promise<UpcomingReservationRow[]> {
+    const platform = this.getEntityManager().getPlatform();
+
+    // The `COALESCE(place name, nameless-stay's-linked-booking title, trip
+    // title)` title is identical across the check-in and check-out arms
+    // (both name the STAY, not the moment); it is spelled out in each rather
+    // than factored into a shared helper, matching `Trips.repository.ts`'s
+    // `activeTrip` precedent for its own repeated `CASE WHEN` — a helper
+    // spanning two differently-joined query builders would need the same
+    // kind of hand-written cross-callback type `_shared/reservation-visibility
+    // .ts`'s own module docstring explains doesn't hold up.
+    const rows = await this.kysely<UpcomingReservationsKyselyDB>()
+      .with('visible_trips', (qb) =>
+        qb
+          .selectFrom('trips as t')
+          .leftJoin('trip_members as tm', (join) => join.onRef('tm.trip_id', '=', 't.id').on('tm.user_id', '=', user_id))
+          .select(['t.id', 't.title', 't.cover_image'])
+          .where((eb) =>
+            eb.and([eb.or([eb('t.user_id', '=', user_id), eb('tm.user_id', 'is not', null)]), eb('t.is_archived', '=', 0)]),
+          ),
+      )
+      .with('entries', (qb) => {
+        const bookings = qb
+          .selectFrom('reservations as r')
+          .innerJoin('visible_trips as tr', 'tr.id', 'r.trip_id')
+          .leftJoin('days as d', 'd.id', 'r.day_id')
+          .leftJoin('places as p', 'p.id', 'r.place_id')
+          .select((eb) => [
+            'r.id as id',
+            'r.trip_id as trip_id',
+            'r.title as title',
+            'r.type as type',
+            'r.status as status',
+            'r.location as location',
+            'r.reservation_time as reservation_time',
+            'r.confirmation_number as confirmation_number',
+            'tr.title as trip_title',
+            'tr.cover_image as trip_cover',
+            'd.date as day_date',
+            'p.name as place_name',
+            'p.image_url as place_image',
+            eb
+              .case()
+              .when(startsWithIsoDateKysely(platform, eb, 'r.reservation_time'))
+              .then(substringKysely(platform, eb, 'r.reservation_time', 1, 10))
+              .else(eb.ref('d.date'))
+              .end()
+              .as('at_date'),
+            eb
+              .case()
+              .when(startsWithIsoDateKysely(platform, eb, 'r.reservation_time'))
+              .then(substringKysely(platform, eb, 'r.reservation_time', 12))
+              .else(eb.ref('r.reservation_time'))
+              .end()
+              .as('at_time'),
+          ])
+          .where('r.status', '!=', 'cancelled')
+          .where((eb) => eb(eb.fn.coalesce(eb.ref('r.type'), eb.val('')), '!=', 'hotel'))
+          .$castTo<EntriesRow>();
+
+        const checkins = qb
+          .selectFrom('day_accommodations as a')
+          .innerJoin('visible_trips as tr', 'tr.id', 'a.trip_id')
+          .innerJoin('days as d', 'd.id', 'a.start_day_id')
+          .leftJoin('places as p', 'p.id', 'a.place_id')
+          .select((eb) => [
+            'a.id as id',
+            'a.trip_id as trip_id',
+            eb
+              .fn.coalesce(
+                eb.ref('p.name'),
+                eb
+                  .selectFrom('reservations as res')
+                  .select('res.title')
+                  .where((eb2) => eb2(castIntegerKysely(platform, eb2, 'res.accommodation_id'), '=', eb2.ref('a.id')))
+                  .where('res.status', '!=', 'cancelled')
+                  .orderBy('res.id', 'asc')
+                  .limit(1),
+                eb.ref('tr.title'),
+              )
+              .as('title'),
+            eb.val('checkin').as('type'),
+            eb.val('confirmed').as('status'),
+            eb.val<string | null>(null).as('location'),
+            eb
+              .case()
+              .when('a.check_in', 'is not', null)
+              .then(concatKysely(platform, eb, { column: 'd.date' }, { value: 'T' }, { column: 'a.check_in' }))
+              .end()
+              .as('reservation_time'),
+            'a.confirmation as confirmation_number',
+            'tr.title as trip_title',
+            'tr.cover_image as trip_cover',
+            'd.date as day_date',
+            'p.name as place_name',
+            'p.image_url as place_image',
+            'd.date as at_date',
+            'a.check_in as at_time',
+          ])
+          .$castTo<EntriesRow>();
+
+        const checkouts = qb
+          .selectFrom('day_accommodations as a')
+          .innerJoin('visible_trips as tr', 'tr.id', 'a.trip_id')
+          .innerJoin('days as d', 'd.id', 'a.end_day_id')
+          .leftJoin('places as p', 'p.id', 'a.place_id')
+          .select((eb) => [
+            'a.id as id',
+            'a.trip_id as trip_id',
+            eb
+              .fn.coalesce(
+                eb.ref('p.name'),
+                eb
+                  .selectFrom('reservations as res')
+                  .select('res.title')
+                  .where((eb2) => eb2(castIntegerKysely(platform, eb2, 'res.accommodation_id'), '=', eb2.ref('a.id')))
+                  .where('res.status', '!=', 'cancelled')
+                  .orderBy('res.id', 'asc')
+                  .limit(1),
+                eb.ref('tr.title'),
+              )
+              .as('title'),
+            eb.val('checkout').as('type'),
+            eb.val('confirmed').as('status'),
+            eb.val<string | null>(null).as('location'),
+            eb
+              .case()
+              .when('a.check_out', 'is not', null)
+              .then(concatKysely(platform, eb, { column: 'd.date' }, { value: 'T' }, { column: 'a.check_out' }))
+              .end()
+              .as('reservation_time'),
+            'a.confirmation as confirmation_number',
+            'tr.title as trip_title',
+            'tr.cover_image as trip_cover',
+            'd.date as day_date',
+            'p.name as place_name',
+            'p.image_url as place_image',
+            'd.date as at_date',
+            'a.check_out as at_time',
+          ])
+          .$castTo<EntriesRow>();
+
+        return bookings.unionAll(checkins).unionAll(checkouts);
+      })
+      .selectFrom('entries')
+      .select(['id', 'trip_id', 'title', 'type', 'status', 'location', 'reservation_time', 'confirmation_number', 'trip_title', 'trip_cover', 'day_date', 'place_name', 'place_image'])
+      .where('at_date', 'is not', null)
+      .where((eb) =>
+        eb.or([
+          eb('at_date', '>', today),
+          eb.and([eb('at_date', '=', today), eb(eb.fn.coalesce(eb.ref('at_time'), eb.val('23:59')), '>=', now_hhmm)]),
+        ]),
+      )
+      .orderBy('at_date', 'asc')
+      .orderBy((eb) => eb.fn.coalesce(eb.ref('at_time'), eb.val('00:00')), 'asc')
+      .orderBy('id', 'asc')
+      .limit(limit)
+      .execute();
+    return rows as UpcomingReservationRow[];
+  }
+
+  /** `share.service.ts:251` — see {@link ShareEndpointRow}'s docstring. */
+  async listEndpointsForShare(trip_id: number | string): Promise<ShareEndpointRow[]> {
+    const rows = await this.kysely<ShareEndpointsKyselyDB>()
+      .selectFrom('reservation_endpoints as e')
+      .innerJoin('reservations as r', 'r.id', 'e.reservation_id')
+      .select(['e.reservation_id', 'e.role', 'e.sequence', 'e.name', 'e.code', 'e.lat', 'e.lng', 'e.timezone', 'e.local_date', 'e.local_time'])
+      .where('r.trip_id', '=', trip_id)
+      .orderBy('e.reservation_id', 'asc')
+      .orderBy('e.sequence', 'asc')
+      .execute();
+    return rows as ShareEndpointRow[];
+  }
+
+  /** `share.service.ts:368` — see {@link ShareDayPositionRow}'s docstring. */
+  async listDayPositionsForShare(trip_id: number | string): Promise<ShareDayPositionRow[]> {
+    const rows = await this.kysely<ShareDayPositionsKyselyDB>()
+      .selectFrom('reservation_day_positions as rdp')
+      .innerJoin('reservations as r', 'r.id', 'rdp.reservation_id')
+      .select(['rdp.reservation_id', 'rdp.day_id', 'rdp.position'])
+      .where('r.trip_id', '=', trip_id)
+      .execute();
+    return rows as ShareDayPositionRow[];
+  }
+
+  /** `share.service.ts:387` — see {@link SharePublicReservationRow}'s docstring. */
+  async listPublicForShare(trip_id: number | string): Promise<SharePublicReservationRow[]> {
+    const rows = await this.kysely<SharePublicReservationKyselyDB>()
+      .selectFrom('reservations as r')
+      .select([
+        'r.id', 'r.trip_id', 'r.day_id', 'r.end_day_id', 'r.place_id', 'r.accommodation_id',
+        'r.title', 'r.type', 'r.status', 'r.location', 'r.reservation_time', 'r.reservation_end_time',
+        'r.notes', 'r.url', 'r.metadata', 'r.created_at',
+      ])
+      .where('r.trip_id', '=', trip_id)
+      .where((eb) => publicReservationExpr(eb, 'r.ingest_state'))
+      .orderBy('r.reservation_time', 'asc')
+      .execute();
+    return rows as SharePublicReservationRow[];
+  }
+
+  /** `share.service.ts:401` — see {@link SharePublicAccommodationRow}'s docstring. */
+  async listPublicAccommodationsForShare(trip_id: number | string): Promise<SharePublicAccommodationRow[]> {
+    const rows = await this.kysely<SharePublicAccommodationKyselyDB>()
+      .selectFrom('day_accommodations as a')
+      .where('a.trip_id', '=', trip_id)
+      .where((eb) => publicStayExists(eb))
+      .innerJoin('places as p', 'p.id', 'a.place_id')
+      .select([
+        'a.id', 'a.trip_id', 'a.place_id', 'a.start_day_id', 'a.end_day_id',
+        'a.check_in', 'a.check_in_end', 'a.check_out', 'a.notes',
+        'p.name as place_name', 'p.address as place_address', 'p.lat as place_lat', 'p.lng as place_lng',
+      ])
+      .execute();
+    return rows as SharePublicAccommodationRow[];
+  }
+
+  /** `public-api.service.ts::reservationsByDay` (Task 5's `// Task 2` pickup) — see {@link PublicApiScheduledReservationRow}'s docstring. */
+  async listScheduledForPublicApi(trip_id: number): Promise<PublicApiScheduledReservationRow[]> {
+    const rows = await this.kysely<PublicApiReservationKyselyDB>()
+      .selectFrom('reservations')
+      .select(['day_id', 'type', 'title', 'location', 'reservation_time', 'reservation_end_time', 'status', 'notes'])
+      .where('trip_id', '=', trip_id)
+      .where('day_id', 'is not', null)
+      .orderBy('day_id', 'asc')
+      .orderBy('reservation_time', 'asc')
+      .execute();
+    return rows as PublicApiScheduledReservationRow[];
+  }
+
+  /** `public-api.service.ts::buildUnscheduledReservations` (Task 5's `// Task 2` pickup) — see {@link PublicApiUnscheduledReservationRow}'s docstring. */
+  async listUnscheduledForPublicApi(trip_id: number): Promise<PublicApiUnscheduledReservationRow[]> {
+    const rows = await this.kysely<PublicApiReservationKyselyDB>()
+      .selectFrom('reservations')
+      .select(['type', 'title', 'location', 'reservation_time', 'reservation_end_time', 'status', 'notes'])
+      .where('trip_id', '=', trip_id)
+      .where('day_id', 'is', null)
+      .orderBy('reservation_time', 'asc')
+      .orderBy('id', 'asc')
+      .execute();
+    return rows as PublicApiUnscheduledReservationRow[];
+  }
+
+  /** `public-api.service.ts::buildAccommodations` (Task 5's `// Task 3` pickup) — see {@link PublicApiAccommodationRow}'s docstring. */
+  async listAccommodationsForPublicApi(trip_id: number): Promise<PublicApiAccommodationRow[]> {
+    const rows = await this.kysely<PublicApiAccommodationKyselyDB>()
+      .selectFrom('day_accommodations as a')
+      .leftJoin('places as p', 'p.id', 'a.place_id')
+      .leftJoin('days as ds', 'ds.id', 'a.start_day_id')
+      .leftJoin('days as de', 'de.id', 'a.end_day_id')
+      .select(['p.name', 'p.address', 'p.lat', 'p.lng', 'ds.date as start_date', 'de.date as end_date', 'a.check_in', 'a.check_out', 'a.notes'])
+      .where('a.trip_id', '=', trip_id)
+      .orderBy('ds.date', 'asc')
+      .execute();
+    return rows as PublicApiAccommodationRow[];
+  }
+
+  /** `public-api.service.ts::buildUnplannedPlaces` (Task 5's `// Task 3` pickup) — see {@link PublicApiUnplannedPlaceRow}'s docstring. */
+  async listUnplannedPlacesForPublicApi(trip_id: number): Promise<PublicApiUnplannedPlaceRow[]> {
+    const rows = await this.kysely<PublicApiUnplannedPlaceKyselyDB>()
+      .selectFrom('places as p')
+      .leftJoin('categories as c', 'c.id', 'p.category_id')
+      .select((eb) => [
+        'p.name', 'p.address', 'p.lat', 'p.lng', 'p.place_time', 'p.end_time',
+        'p.duration_minutes', 'p.notes', 'p.transport_mode', 'c.name as category',
+      ])
+      .where('p.trip_id', '=', trip_id)
+      .where((eb) => eb.not(eb.exists(eb.selectFrom('day_assignments as da').select('da.id').whereRef('da.place_id', '=', 'p.id'))))
+      .where((eb) => eb.not(eb.exists(eb.selectFrom('day_accommodations as a').select('a.id').whereRef('a.place_id', '=', 'p.id'))))
+      .orderBy('p.created_at', 'asc')
+      .orderBy('p.id', 'asc')
+      .execute();
+    return rows as PublicApiUnplannedPlaceRow[];
   }
 }
 

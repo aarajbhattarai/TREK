@@ -6,10 +6,29 @@ import { createDayAccommodation, createPlace, createReservation, createTrip, cre
 import { Reservations } from '../../../../../src/db/entities/Reservations.entity';
 import {
   publicReservationCondition,
+  publicReservationExpr,
   publicStayExists,
   type ReservationVisibilityKyselyDB,
 } from '../../../../../src/db/repositories/_shared/reservation-visibility';
-import { publicReservationSql, publicStaySql } from '../../../../../src/nest/reservations/reservation-visibility';
+
+/**
+ * The legacy string fragments this harness proves parity against
+ * (`src/nest/reservations/reservation-visibility.ts`'s `publicReservationSql`/
+ * `publicStaySql`) were DELETED by Plan 3d Task 4 once calendar and `share`
+ * — their only two consumers — were converted onto the typed predicates
+ * above in the same commit (no two live implementations of an
+ * anonymous-surface security check). Kept here, byte-identical to the
+ * deleted file's own text, as this test's own oracle: the point of a
+ * string-vs-predicate parity harness is to hold the STRING side fixed and
+ * independent of the production code it is proving, not to import it from
+ * production (there is no longer a production copy to import).
+ */
+const publicReservationSql = (alias = 'r'): string => `COALESCE(${alias}.ingest_state, 'live') <> 'staged'`;
+const publicStaySql = (alias = 'a'): string => `(
+      NOT EXISTS (SELECT 1 FROM reservations vr WHERE CAST(vr.accommodation_id AS INTEGER) = ${alias}.id)
+      OR EXISTS (SELECT 1 FROM reservations vr WHERE CAST(vr.accommodation_id AS INTEGER) = ${alias}.id
+                   AND ${publicReservationSql('vr')})
+    )`;
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -88,6 +107,75 @@ describe('reservation-visibility parity (RV1: publicReservationCondition vs publ
       .all(trip.id) as { id: number }[];
 
     expect(typed.map((r) => r.id)).toEqual([live.id]);
+    expect(typed).toEqual(legacy);
+  });
+});
+
+/**
+ * RV1's Kysely-expression twin (L2, Plan 3d Task 4) — `publicReservationExpr`,
+ * the form CL2/CL7/`share.service.ts`'s reads use (statements built with
+ * `this.kysely()`, not the MikroORM QueryBuilder `publicReservationCondition`
+ * spreads into). Run through a bare `reservations` selectFrom rather than
+ * through a repository, since this file has no repository of its own — the
+ * same "no consumer-facing generic DB" shape `publicStayExists` documents.
+ */
+interface PublicReservationExprTestDB {
+  reservations: { id: number; trip_id: number; ingest_state: string | null };
+}
+
+describe('reservation-visibility parity (RV1 Kysely form: publicReservationExpr vs publicReservationSql)', () => {
+  it('RESVIS-011: a mix of live/staged reservations — publicReservationExpr and the legacy string fragment select the identical row set', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const live1 = createReservation(testDb, trip.id, { title: 'Live 1' });
+    const live2 = createReservation(testDb, trip.id, { title: 'Live 2' });
+    const staged = createReservation(testDb, trip.id, { title: 'Staged' });
+    testDb.prepare("UPDATE reservations SET ingest_state = 'staged' WHERE id = ?").run(staged.id);
+
+    const typed = await t.em.getKysely<PublicReservationExprTestDB>()
+      .selectFrom('reservations as r')
+      .select('r.id')
+      .where('r.trip_id', '=', trip.id)
+      .where((eb) => publicReservationExpr(eb, 'r.ingest_state'))
+      .orderBy('r.id', 'asc')
+      .execute();
+    const legacy = testDb
+      .prepare(`SELECT id FROM reservations r WHERE r.trip_id = ? AND ${publicReservationSql('r')} ORDER BY id ASC`)
+      .all(trip.id) as { id: number }[];
+
+    expect(typed.map((r) => r.id)).toEqual([live1.id, live2.id]);
+    expect(typed).toEqual(legacy);
+  });
+
+  // Mutation-sensitive: a third `ingest_state` value (neither 'live' nor
+  // 'staged' — reachable today, no CHECK constraint pins the column to two
+  // values, `Migration20200101031900...`) must stay PUBLIC. A one-token
+  // confusion between "hide unless live" (`<> 'live'`, wrong) and "hide only
+  // staged" (`<> 'staged'`, the actual rule) diverges exactly on this row:
+  // manually mutated `publicReservationExpr`'s `'staged'` literal to `'live'`
+  // and re-ran this suite — this case goes red (the row is wrongly hidden)
+  // while every RESVIS-001/003 live/staged-only case stays green, so it is
+  // not redundant with them.
+  it('RESVIS-012 (mutation-sensitive): a third ingest_state value (neither live nor staged) is public — only "staged" hides a row', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createReservation(testDb, trip.id, { title: 'Some other ingest state' });
+    testDb.prepare("UPDATE reservations SET ingest_state = 'archived_import' WHERE id = ?").run(other.id);
+    const staged = createReservation(testDb, trip.id, { title: 'Staged' });
+    testDb.prepare("UPDATE reservations SET ingest_state = 'staged' WHERE id = ?").run(staged.id);
+
+    const typed = await t.em.getKysely<PublicReservationExprTestDB>()
+      .selectFrom('reservations as r')
+      .select('r.id')
+      .where('r.trip_id', '=', trip.id)
+      .where((eb) => publicReservationExpr(eb, 'r.ingest_state'))
+      .orderBy('r.id', 'asc')
+      .execute();
+    const legacy = testDb
+      .prepare(`SELECT id FROM reservations r WHERE r.trip_id = ? AND ${publicReservationSql('r')} ORDER BY id ASC`)
+      .all(trip.id) as { id: number }[];
+
+    expect(typed.map((r) => r.id)).toEqual([other.id]);
     expect(typed).toEqual(legacy);
   });
 });

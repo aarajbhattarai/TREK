@@ -1,5 +1,5 @@
 import type { Platform } from '@mikro-orm/core';
-import type { ExpressionBuilder } from 'kysely';
+import type { ExpressionBuilder, ExpressionWrapper, ReferenceExpression, SqlBool } from 'kysely';
 import { coalesceParam } from '../../dialect/sql-functions';
 
 /**
@@ -7,10 +7,12 @@ import { coalesceParam } from '../../dialect/sql-functions';
  * through — ONE source, typed, for `reservations`/`day_accommodations`
  * (Plan 3d Task 0, R3).
  *
- * Derived from the two legacy SQL-fragment builders this file supersedes
+ * Derived from the two legacy SQL-fragment builders this file superseded
  * (`src/nest/reservations/reservation-visibility.ts`'s `publicReservationSql`
- * and `publicStaySql`, kept in place — string form — until Tasks 2/4/5
- * convert their own consumers and `share`'s owner is decided, §14.6):
+ * and `publicStaySql` — DELETED by Plan 3d Task 4, once calendar and
+ * `share` were the string form's only remaining consumers and both were
+ * converted in the same commit: no two live implementations of an
+ * anonymous-surface security predicate, §18.2):
  *
  * - **RV1** `publicReservationSql(alias)` — `` COALESCE(${alias}.ingest_state,
  *   'live') <> 'staged' ``. A reservation is public unless an automated
@@ -21,22 +23,28 @@ import { coalesceParam } from '../../dialect/sql-functions';
  *   `CAST(vr.accommodation_id AS INTEGER) = ${alias}.id` (`accommodation_id`
  *   is TEXT with no FK, §18.1 — some rows read back as `"14.0"`).
  *
- * Two shapes are exported because the two predicates need different query
- * APIs: RV1 has no correlated subquery, so it renders as a typed MikroORM
- * QueryBuilder filter OBJECT (`publicReservationCondition`) — spreadable
- * into any `.where({...})` call at any table alias, exactly like the
- * legacy fragment builder's own runtime-alias shape, no compile-time table
- * binding needed (rule 23: a typed condition, not a string). RV2's
- * NOT EXISTS/EXISTS pair has no MikroORM QueryBuilder expression (no
- * relation exists from `day_accommodations` to `reservations` via
- * `accommodation_id` — R10 keeps it that way; QB's `$exists` operator
- * checks embeddable/JSON path existence, not a correlated SQL subquery),
- * so it is built with Kysely's own typed `ExpressionBuilder`
- * (`publicStayExists`) — `eb.exists`/`eb.not` (Kysely's `unary('exists'|
- * 'not', …)` shortcuts), `eb.cast`, `eb.fn.coalesce`, all fully typed,
- * never a `raw()` call or a `sql` tagged template (both banned under
- * `src/db/repositories/**` by ESLint's `no-restricted-syntax`, checked
- * directly against `server/eslint.config.mjs`).
+ * THREE shapes are exported, because RV1 alone needs two different query
+ * APIs and RV2 needs a third that calls back into one of them. RV1 has no
+ * correlated subquery, so where a caller already holds a MikroORM
+ * QueryBuilder it renders as a typed filter OBJECT
+ * (`publicReservationCondition`) — spreadable into any `.where({...})`
+ * call at any table alias, exactly like the legacy fragment builder's own
+ * runtime-alias shape, no compile-time table binding needed (rule 23: a
+ * typed condition, not a string). Where a caller is instead building a raw,
+ * multi-join statement through `this.kysely()` (CL2/CL7/`share`'s reads —
+ * no ORM relation exists to join those rows through the QueryBuilder at
+ * all), RV1 is `publicReservationExpr`, a Kysely expression-builder
+ * predicate. RV2's NOT EXISTS/EXISTS pair has no MikroORM QueryBuilder
+ * expression either (no relation exists from `day_accommodations` to
+ * `reservations` via `accommodation_id` — R10 keeps it that way; QB's
+ * `$exists` operator checks embeddable/JSON path existence, not a
+ * correlated SQL subquery), so it is built with Kysely's own typed
+ * `ExpressionBuilder` (`publicStayExists`) — `eb.exists`/`eb.not` (Kysely's
+ * `unary('exists'|'not', …)` shortcuts), `eb.cast`, and `publicReservationExpr`
+ * itself for its own inner RV1 check, all fully typed, never a `raw()` call
+ * or a `sql` tagged template (both banned under `src/db/repositories/**` by
+ * ESLint's `no-restricted-syntax`, checked directly against
+ * `server/eslint.config.mjs`).
  *
  * **`publicStayExists` is deliberately narrow, not maximally generic** —
  * `ReservationVisibilityKyselyDB` fixes the two aliases every known
@@ -87,6 +95,30 @@ export function publicReservationCondition(platform: Platform, alias: string) {
 }
 
 /**
+ * RV1 as a Kysely predicate (L2, Plan 3d Task 0 review): the SAME
+ * `COALESCE(<ref>, 'live') <> 'staged'` boolean, spelled through the
+ * expression builder instead of a QB filter object — for the raw-SQL-shaped
+ * statements CL2/CL7/`share.service.ts`'s reads convert onto (no ORM
+ * relation joins those rows the QueryBuilder could filter through, so they
+ * are built with `this.kysely()`, same as `publicStayExists` below).
+ * `ref` is the caller's own already-aliased `ingest_state` column
+ * (`'r.ingest_state'`, `'vr.ingest_state'`) — generic over `<DB, TB>`
+ * (unlike `publicStayExists`, this needs no correlated subquery and no
+ * table-set beyond whatever the caller already has in scope, so nothing
+ * forces a narrow, non-generic signature the way `publicStayExists`'s
+ * `ExpressionBuilder<ReservationVisibilityKyselyDB & { a: … }, 'a'>` does).
+ * `publicStayExists` below calls this rather than re-spelling the
+ * `COALESCE`/`<>` pair a second time — ONE implementation of RV1, not two
+ * (the Task 0 review's own finding, L2).
+ */
+export function publicReservationExpr<DB, TB extends keyof DB>(
+  eb: ExpressionBuilder<DB, TB>,
+  ref: ReferenceExpression<DB, TB>,
+): ExpressionWrapper<DB, TB, SqlBool> {
+  return eb(eb.fn.coalesce(ref, eb.val('live')), '<>', eb.val('staged'));
+}
+
+/**
  * `reservations`/`day_accommodations`'s REAL table names, the shape
  * `publicStayExists` needs. A consumer's own local Kysely `DB` interface
  * (the `DayAssignmentsKyselyDB`/`AssignmentTimeSortKyselyDB`/
@@ -129,8 +161,6 @@ export function publicStayExists(eb: ExpressionBuilder<ReservationVisibilityKyse
 
   return eb.or([
     eb.not(eb.exists(linkedTo)),
-    eb.exists(
-      linkedTo.where((eb2) => eb2(eb2.fn.coalesce(eb2.ref('vr.ingest_state'), eb2.val('live')), '<>', eb2.val('staged'))),
-    ),
+    eb.exists(linkedTo.where((eb2) => publicReservationExpr(eb2, 'vr.ingest_state'))),
   ]);
 }
