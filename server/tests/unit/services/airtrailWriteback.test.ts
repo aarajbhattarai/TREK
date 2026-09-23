@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+// ATC-TX-001 reads Nest's own emitted constructor-param metadata (the same
+// mechanism `discovery.test.ts` uses) — needs the polyfill `src/index.ts`
+// normally provides, absent from the vitest entrypoint.
+import 'reflect-metadata';
 
 // Avoid any real DNS/network from the SSRF guard during saveSettings.
 vi.mock('../../../src/utils/ssrfGuard', () => ({
@@ -59,5 +63,46 @@ describe('airtrail writeback opt-in persistence (#1240)', () => {
     await saveSettings(user.id, 'https://at.example.com', undefined, false, false, null);
     expect(await isAirtrailWriteEnabled(user.id)).toBe(false);
     expect((await getConnectionSettings(user.id)).connected).toBe(true);
+  });
+});
+
+describe('airtrail saveSettings preserves its pre-existing NO-transaction asymmetry with Dawarich (Plan 3h Task 4, R7/Risks)', () => {
+  it('ATC-TX-001: AirtrailService is constructed with no UnitOfWork at all — saveSettings has nothing to wrap its writes in', () => {
+    // `DawarichService#saveSettings`'s equivalent DOES take a `UnitOfWork` and
+    // wraps its writes in `uow.transactional`; AirtrailService's own
+    // constructor (`UsersRepository`, `AuditService`, `AirtrailClient`) never
+    // gained one during the Plan 3h Task 4 conversion — a structural
+    // guarantee that a future edit re-introducing a transactional wrap here
+    // would have to ALSO add a new constructor param to do it, not just
+    // touch `saveSettings`'s body.
+    const paramTypes = Reflect.getMetadata('design:paramtypes', AirtrailService) as unknown[] | undefined;
+    expect(paramTypes).toBeDefined();
+    expect(paramTypes!.map((p) => (p as { name?: string })?.name)).toEqual(['UsersRepository', 'AuditService', 'AirtrailClient']);
+  });
+
+  it('ATC-TX-002: the URL-cleared branch performs its two writes as genuinely separate UsersRepository calls, not one atomic statement', async () => {
+    const { user } = createUser(db);
+    await saveSettings(user.id, 'https://at.example.com', 'secret-key', false, false, null);
+
+    const usersRepo = t.repo(Users);
+    const setSpy = vi.spyOn(usersRepo, 'setAirtrailSettings');
+    const clearSpy = vi.spyOn(usersRepo, 'clearAirtrailApiKey');
+    try {
+      // Clearing the URL with no key left drops the key too (ATC4 then ATC5) —
+      // TWO independent nativeUpdate calls, not a single transactional unit.
+      await saveSettings(user.id, '', undefined, false, false, null);
+      expect(setSpy).toHaveBeenCalledTimes(1);
+      expect(clearSpy).toHaveBeenCalledTimes(1);
+      // clearAirtrailApiKey only runs AFTER setAirtrailSettings's own write
+      // resolved (sequential awaits in the service body, never Promise.all
+      // or a single wrapped call) — the same "report, don't fix" asymmetry
+      // the plan's Risks section flags.
+      const setOrder = setSpy.mock.invocationCallOrder[0];
+      const clearOrder = clearSpy.mock.invocationCallOrder[0];
+      expect(clearOrder).toBeGreaterThan(setOrder);
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    }
   });
 });
