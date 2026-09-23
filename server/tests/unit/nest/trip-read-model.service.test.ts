@@ -104,6 +104,9 @@ import {
   createTestPackingTemplateItemsRepo,
 } from '../../helpers/packing-repos';
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
 // actual SQL of every domain it fans out to, so a shape change downstream shows
@@ -150,7 +153,11 @@ beforeAll(async () => {
   dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
   new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)), new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
-  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection)),
+  new JourneyDomainService(
+    dbs(), new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection),
+    await createTestJourneysRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection),
+    await createTestJourneyTripsRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+  ),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
   await createTestPlacesRepo(dbs().connection),

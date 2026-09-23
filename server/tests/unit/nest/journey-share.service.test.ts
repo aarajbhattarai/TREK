@@ -43,8 +43,11 @@ import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.s
 import { JourneyShareService } from '../../../src/nest/journey/journey-share.service';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { db as dbConn } from '../../../src/db/database';
-import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo } from '../../helpers/test-uow';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestTripsRepo } from '../../helpers/test-uow';
 import type { TestOrm } from '../../helpers/test-orm';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
 
 const dbs = new DatabaseService(dbConn);
 let svc: JourneyShareService;
@@ -62,7 +65,11 @@ beforeAll(async () => {
   t = await sharedTestOrm(testDb);
   svc = new JourneyShareService(
     dbs,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), uow),
+    new JourneyDomainService(
+      dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), uow,
+      await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+      await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
+    ),
     new SettingsService(uow, await createTestAppSettingsRepo(testDb), await createTestSettingsRepo(testDb)),
   );
 });

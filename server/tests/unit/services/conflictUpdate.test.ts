@@ -73,6 +73,9 @@ import {
 } from '../../helpers/test-uow';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
+import {
   createTestPackingItemsRepo,
   createTestPackingItemContributorsRepo,
   createTestPackingBagsRepo,
@@ -133,7 +136,11 @@ beforeAll(async () => {
   new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), runtimeEnv, makeStorageFixture('').storage),
   photoCache,
-  new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
+  new JourneyDomainService(
+    dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection),
+    await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+    await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+  ),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
   await createTestPlacesRepo(dbs.connection),

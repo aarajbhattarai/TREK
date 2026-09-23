@@ -158,6 +158,9 @@ import {
   createTestBucketListRepo, createTestHiddenCountriesRepo, createTestHiddenRegionsRepo,
   createTestVisitedCountriesRepo, createTestVisitedRegionsRepo, createTestPlaceRegionsRepo,
 } from './atlas-repos';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from './journey-repos';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -245,7 +248,14 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // and its on-disk set only work if all three readers see the same maps.
   const placePhotoCache = new PlacePhotoCacheService(dbService, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbService.connection), await createTestPlacesRepo(dbService.connection));
   const mapsService = new MapsService(dbService, placePhotoCache, appSettings, usersRepo);
-  const journeyDomain = new JourneyDomainService(dbService, realtimeService, new TrekPhotoRegistrationService(mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripPhotos), dbService), await createTestUnitOfWork(dbService.connection));
+  const journeyDomain = new JourneyDomainService(
+    dbService, realtimeService, new TrekPhotoRegistrationService(mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripPhotos), dbService), await createTestUnitOfWork(dbService.connection),
+    // Plan 3g Task 1 — the constructor-ripple fix (R9): four journey-owned
+    // repositories + the already-shared `TripsRepository` (AP1/`getTitle`).
+    await createTestJourneysRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection),
+    await createTestJourneyTripsRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection),
+    await createTestTripsRepo(dbService.connection),
+  );
   // The last three were previously omitted, which left them `undefined` at
   // runtime — silently fine while nothing called them, a TypeError the moment
   // the journey skeleton hooks landed on the place write paths. tsconfig.tests.json

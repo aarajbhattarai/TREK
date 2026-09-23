@@ -111,6 +111,9 @@ import {
   createTestBucketListRepo, createTestHiddenCountriesRepo, createTestHiddenRegionsRepo,
   createTestVisitedCountriesRepo, createTestVisitedRegionsRepo, createTestPlaceRegionsRepo,
 } from './atlas-repos';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from './journey-repos';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -182,7 +185,14 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   );
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbs.connection), await createTestPlacesRepo(dbs.connection));
   const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
-  const journey = new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection));
+  const journey = new JourneyDomainService(
+    dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection),
+    // Plan 3g Task 1 — the constructor-ripple fix (R9): four journey-owned
+    // repositories + the already-shared `TripsRepository` (AP1/`getTitle`).
+    await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+    await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection),
+    await createTestTripsRepo(dbs.connection),
+  );
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(
     await createTestBucketListRepo(dbs.connection), await createTestHiddenCountriesRepo(dbs.connection),

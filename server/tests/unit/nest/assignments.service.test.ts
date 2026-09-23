@@ -60,8 +60,11 @@ import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
   createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
-  createTestTripMembersRepo, createTestDatabaseService, createTestRoadtripViasRepo, sharedTestOrm,
+  createTestTripMembersRepo, createTestDatabaseService, createTestRoadtripViasRepo, sharedTestOrm, createTestTripsRepo,
 } from '../../helpers/test-uow';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
 
 let svc: AssignmentsService;
 beforeAll(async () => {
@@ -79,7 +82,11 @@ beforeAll(async () => {
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     // Real collaborator rather than a stub: reconcile() runs after every mutation
     // and needs the same connection to see the rows these cases write.
-    new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
+    new JourneyDomainService(
+      dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection),
+      await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+      await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+    ),
     await createTestUnitOfWork(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestAssignmentParticipantsRepo(dbs.connection),

@@ -68,7 +68,10 @@ import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { db as dbConn } from '../../../src/db/database';
-import { createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm, createTestTripsRepo } from '../../helpers/test-uow';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
 
 const dbs = new DatabaseService(dbConn);
 let svc: JourneyDomainService;
@@ -92,7 +95,11 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   const t = await sharedTestOrm(testDb);
-  svc = new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(testDb));
+  svc = new JourneyDomainService(
+    dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(testDb),
+    await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+    await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
+  );
 });
 
 beforeEach(() => {

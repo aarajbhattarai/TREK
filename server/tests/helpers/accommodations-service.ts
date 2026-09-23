@@ -13,9 +13,12 @@ import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
   createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
   createTestTripMembersRepo, createTestRoadtripViasRepo, createTestDayAccommodationsRepo, createTestReservationsRepo,
-  sharedTestOrm,
+  sharedTestOrm, createTestTripsRepo,
 } from './test-uow';
 import { createTestBudgetItemsRepo } from './files-repos';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from './journey-repos';
 
 /**
  * AccommodationsService over a test connection.
@@ -48,7 +51,11 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
   const assignments = new AssignmentsService(
     dbs, permissions, realtime,
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
-    new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
+    new JourneyDomainService(
+      dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection),
+      await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+      await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+    ),
     await createTestUnitOfWork(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestAssignmentParticipantsRepo(dbs.connection),

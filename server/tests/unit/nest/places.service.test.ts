@@ -81,6 +81,9 @@ import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import { isUpdateConflict, type UpdateConflict } from '../../../src/nest/common/conflictResult';
@@ -134,7 +137,11 @@ async function makePlacesService(
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), new RuntimeEnvService(), placesStorageFx.storage),
     photoCacheStub,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
+    new JourneyDomainService(
+      dbs, new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection),
+      await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+      await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+    ),
     placesStorageFx.storage,
     await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
     await createTestPlacesRepo(dbs.connection),

@@ -119,6 +119,9 @@ import {
   createTestVacaySharesRepo, createTestVacayUserSettingsRepo,
 } from '../../helpers/vacay-repos';
 import { createTestVacayHolidayCalendarsRepo, createTestSchoolHolidayRegionsRepo } from '../../helpers/school-holidays-repos';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -193,7 +196,11 @@ beforeAll(async () => {
   new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), coversFx.storage),
   photoCache,
-  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotoRegistrationService(dbsEm!.getRepository(TrekPhotos), dbsEm!.getRepository(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection)),
+  new JourneyDomainService(
+    dbs(), new RealtimeService(), new TrekPhotoRegistrationService(dbsEm!.getRepository(TrekPhotos), dbsEm!.getRepository(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection),
+    await createTestJourneysRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection),
+    await createTestJourneyTripsRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+  ),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
   await createTestPlacesRepo(dbs().connection),

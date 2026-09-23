@@ -12,22 +12,17 @@ const { testDb, dbMock } = vi.hoisted(() => {
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    // Mirror the real canAccessTrip semantics against the test DB (owner or member
-    // → truthy access row, else undefined) so addTripToJourney's trip-access guard
-    // behaves as in production. (Was an unused `() => null` stub before the guard existed.)
-    canAccessTrip: (tripId: number | string, userId: number) =>
-      db
-        .prepare(
-          'SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)',
-        )
-        .get(userId, tripId, userId),
-    isOwner: () => false,
-  };
+  // Plan 3g Task 1 (Part A, R9): `getPlaceWithTags`/`canAccessTrip`/`isOwner`
+  // dropped from this mock — none of the three are exports of
+  // `src/db/database.ts` any more (it exports only `db`/`closeDb`/
+  // `reinitialize`/`getRawConnection`/`registerReinitializeHook`/
+  // `runDemoSeed`; the three methods this mock used to shadow moved to real
+  // `DatabaseService` class methods, delegating to real repositories, long
+  // before this task). They were dead weight even before AP1 converted —
+  // nothing in this file ever read them off the mocked module. AP1's own
+  // guard now goes through a REAL `TripsRepository.findAccessible` below
+  // (`createTestTripsRepo`), not a hand-written closure.
+  const mock = { db, closeDb: () => {}, reinitialize: () => {} };
   return { testDb: db, dbMock: mock };
 });
 
@@ -60,17 +55,50 @@ import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { db as dbConn } from '../../../src/db/database';
-import { createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm, createTestTripsRepo } from '../../helpers/test-uow';
+import {
+  createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+} from '../../helpers/journey-repos';
 
 let dbs: DatabaseService;
 let svc: JourneyDomainService;
+// Plan 3g Task 1's own additions (below, "repositories (R9's parity + mutation
+// proofs)" describe block) reach the repositories directly — held here so
+// that block doesn't need its own second construction.
+let journeysRepoDirect: Awaited<ReturnType<typeof createTestJourneysRepo>>;
+let contributorsRepoDirect: Awaited<ReturnType<typeof createTestJourneyContributorsRepo>>;
+let journeyTripsRepoDirect: Awaited<ReturnType<typeof createTestJourneyTripsRepo>>;
+let entriesRepoDirect: Awaited<ReturnType<typeof createTestJourneyEntriesRepo>>;
+let tripsRepoDirect: Awaited<ReturnType<typeof createTestTripsRepo>>;
 
+// Plan 3g Task 1 (Part A, R9's construction/wrapping pattern): the SAME
+// direct-construction shape every converted service in this program uses for
+// its own hand-built unit test (`atlas.service.test.ts`/`vacay.service.test.ts`
+// precedent) — real repositories resolved off `sharedTestOrm(testDb)`
+// (`allowGlobalContext: true` by default, `test-orm.ts`'s own docstring), no
+// `withRequestContext` wrapper needed or added. `db` (the raw `DatabaseService`)
+// stays a constructor param and is still exercised directly: Part B's methods
+// (journey stats, entries CRUD, the photos surface, contributors CRUD,
+// suggestions — Task 2's own, unconverted by this task) still issue raw
+// `this.db.prepare(...)` calls the ~40 `describe` blocks below covering them
+// exercise unchanged. Every test in this file calls `svc.<method>()` directly
+// with no wrapper — this single `beforeAll` construction is the whole of
+// R9's "fix the constructor call for the entire file in one pass" edit; nothing
+// below this block changes.
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   const t = await sharedTestOrm(testDb);
   dbs = new DatabaseService(dbConn, t.em);
-  svc = new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(testDb));
+  journeysRepoDirect = await createTestJourneysRepo(testDb);
+  contributorsRepoDirect = await createTestJourneyContributorsRepo(testDb);
+  journeyTripsRepoDirect = await createTestJourneyTripsRepo(testDb);
+  entriesRepoDirect = await createTestJourneyEntriesRepo(testDb);
+  tripsRepoDirect = await createTestTripsRepo(testDb);
+  svc = new JourneyDomainService(
+    dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(testDb),
+    journeysRepoDirect, contributorsRepoDirect, journeyTripsRepoDirect, entriesRepoDirect, tripsRepoDirect,
+  );
 });
 
 beforeEach(() => {
@@ -2725,5 +2753,320 @@ describe('entry field switches', () => {
     addJourneyContributor(testDb, journey.id, editor.id, 'editor');
 
     expect(await svc.updateJourney(journey.id, editor.id, { show_mood: false })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plan 3g Task 1 — repository parity + mutation proofs (R9's brief: "this is
+// the bulk of this task's actual work"). Everything above this line is the
+// pre-existing suite, exercised unchanged against the converted service
+// (only the construction block at the very top of this file changed). These
+// new cases go straight at the four repositories built this task
+// (`journeysRepoDirect`/`contributorsRepoDirect`/`journeyTripsRepoDirect`/
+// `entriesRepoDirect`, captured in the shared `beforeAll` above) rather than
+// only through `svc`, so each converted read model gets its own byte-level
+// proof against the exact legacy statement text (plan3g-sql-inventory.md
+// §1a-§1d), not just an outcome-level assertion through the service.
+// ---------------------------------------------------------------------------
+
+describe('Plan 3g Task 1 — repository parity (full-key toEqual against the legacy statement)', () => {
+  /**
+   * A fully-seeded journey: an owner plus BOTH contributor roles (editor and
+   * viewer), one linked trip with places on two days, one place standing on
+   * BOTH days (#2329's multi-day skeleton case), and one place whose skeleton
+   * was filled in with a story and THEN removed from the trip (the
+   * detach-and-annotate path, exercised via the real `onPlaceDeleted`).
+   */
+  async function seedFullJourney() {
+    const { user: owner } = createUser(testDb);
+    const { user: editor } = createUser(testDb);
+    const { user: viewer } = createUser(testDb);
+    const journey = createJourney(testDb, owner.id, { title: 'Parity Journey' });
+    addJourneyContributor(testDb, journey.id, editor.id, 'editor');
+    addJourneyContributor(testDb, journey.id, viewer.id, 'viewer');
+
+    const trip = createTrip(testDb, owner.id, {
+      title: 'Parity Trip', start_date: '2026-05-01', end_date: '2026-05-03',
+    });
+    const day1 = createDay(testDb, trip.id, { date: '2026-05-01' });
+    const day2 = createDay(testDb, trip.id, { date: '2026-05-02' });
+    const multiDayPlace = createPlace(testDb, trip.id, { name: 'Hotel Nordic', lat: 60.39, lng: 5.32 });
+    createDayAssignment(testDb, day1.id, multiDayPlace.id);
+    createDayAssignment(testDb, day2.id, multiDayPlace.id);
+    const singleDayPlace = createPlace(testDb, trip.id, { name: 'Fish Market', lat: 60.4, lng: 5.31 });
+    createDayAssignment(testDb, day1.id, singleDayPlace.id);
+
+    await svc.addTripToJourney(journey.id, trip.id, owner.id);
+
+    // Fill in one of the skeletons, then run the `onPlaceDeleted` hook for its
+    // place — the entry must survive, detached and annotated, per that
+    // method's has-content branch. Matches JOURNEY-SVC-SKEL-008's own
+    // ordering precedent (the hook runs against the still-existing place
+    // row — the places domain's own row delete is a separate statement the
+    // hook does not itself issue or depend on).
+    const filledSkeleton = testDb
+      .prepare('SELECT id FROM journey_entries WHERE source_place_id = ? LIMIT 1')
+      .get(singleDayPlace.id) as { id: number };
+    testDb.prepare("UPDATE journey_entries SET type = 'entry', story = 'Great fish' WHERE id = ?").run(filledSkeleton.id);
+    await svc.onPlaceDeleted(singleDayPlace.id);
+    // The place is now actually removed from the trip (the hook already
+    // detached the entry, so this cascade touches nothing left referencing it).
+    testDb.prepare('DELETE FROM day_assignments WHERE place_id = ?').run(singleDayPlace.id);
+    testDb.prepare('DELETE FROM places WHERE id = ?').run(singleDayPlace.id);
+
+    return { owner, editor, viewer, journey, trip, day1, day2, multiDayPlace, singleDayPlace };
+  }
+
+  it('the detached, annotated entry survives the place removal (fixture sanity check)', async () => {
+    const { journey } = await seedFullJourney();
+
+    const entries = await entriesRepoDirect.listForJourney(journey.id);
+    const detached = entries.find((e) => e.location_name === 'Fish Market');
+
+    expect(detached).toBeDefined();
+    expect(detached!.source_place_id).toBeNull();
+    expect(detached!.source_trip_id).toBeNull();
+    expect(detached!.type).toBe('entry');
+    expect(detached!.story).toContain('Great fish');
+    expect(detached!.story).toContain('removed from the trip plan');
+  });
+
+  it('JourneysRepository.listForUser (JG8) matches the legacy statement, full row and order', async () => {
+    const { owner } = await seedFullJourney();
+    // A second, unrelated journey so the WHERE/ORDER BY have something to discriminate.
+    createJourney(testDb, owner.id, { title: 'Second Journey' });
+
+    const legacy = testDb
+      .prepare(
+        `
+      SELECT DISTINCT j.*,
+        (SELECT COUNT(*) FROM journey_entries je WHERE je.journey_id = j.id AND je.type != 'skeleton') as entry_count,
+        (SELECT COUNT(*) FROM journey_photos jp WHERE jp.journey_id = j.id) as photo_count,
+        (SELECT COUNT(DISTINCT je3.location_name) FROM journey_entries je3 WHERE je3.journey_id = j.id AND je3.location_name IS NOT NULL AND je3.location_name != '') as place_count,
+        (SELECT MIN(t.start_date) FROM journey_trips jt JOIN trips t ON jt.trip_id = t.id WHERE jt.journey_id = j.id) as trip_date_min,
+        (SELECT MAX(t.end_date) FROM journey_trips jt JOIN trips t ON jt.trip_id = t.id WHERE jt.journey_id = j.id) as trip_date_max
+      FROM journeys j
+      LEFT JOIN journey_contributors jc ON j.id = jc.journey_id AND jc.user_id = ?
+      WHERE j.user_id = ? OR jc.user_id = ?
+      ORDER BY j.updated_at DESC
+    `,
+      )
+      .all(owner.id, owner.id, owner.id);
+
+    const converted = await journeysRepoDirect.listForUser(owner.id);
+    expect(converted).toEqual(legacy);
+  });
+
+  it("JourneyContributorsRepository.listForJourney (JG18) matches the legacy statement — owner, editor AND viewer all present", async () => {
+    const { journey } = await seedFullJourney();
+
+    const legacy = testDb
+      .prepare(
+        `
+      SELECT jc.journey_id, jc.user_id, jc.role, jc.added_at, u.username, u.avatar
+      FROM journey_contributors jc JOIN users u ON jc.user_id = u.id
+      WHERE jc.journey_id = ? ORDER BY jc.added_at
+    `,
+      )
+      .all(journey.id);
+
+    const converted = await contributorsRepoDirect.listForJourney(journey.id);
+    expect(converted).toEqual(legacy);
+    expect(converted.map((c) => c.role).sort()).toEqual(['editor', 'owner', 'viewer']);
+  });
+
+  it('JourneyTripsRepository.listForJourney (JG17) matches the legacy statement', async () => {
+    const { journey } = await seedFullJourney();
+
+    const legacy = testDb
+      .prepare(
+        `
+      SELECT jt.trip_id, jt.added_at, t.title, t.start_date, t.end_date, t.cover_image, t.currency,
+        (SELECT COUNT(*) FROM places WHERE trip_id = t.id) as place_count
+      FROM journey_trips jt JOIN trips t ON jt.trip_id = t.id
+      WHERE jt.journey_id = ? ORDER BY t.start_date ASC
+    `,
+      )
+      .all(journey.id);
+
+    const converted = await journeyTripsRepoDirect.listForJourney(journey.id);
+    expect(converted).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.listForJourney (JG14) matches the legacy statement', async () => {
+    const { journey } = await seedFullJourney();
+
+    const legacy = testDb
+      .prepare('SELECT * FROM journey_entries WHERE journey_id = ? AND dismissed = 0 ORDER BY entry_date ASC, sort_order ASC, id ASC')
+      .all(journey.id);
+
+    const converted = await entriesRepoDirect.listForJourney(journey.id);
+    expect(converted).toEqual(legacy);
+  });
+
+  it('JourneyTripsRepository.listAssignedPlacesForTrip (JG34) matches the legacy projection, including a place standing on two days (#2329)', async () => {
+    const { trip, multiDayPlace } = await seedFullJourney();
+
+    const legacy = (
+      testDb
+        .prepare(
+          `
+        SELECT p.*, da.id AS assignment_id, da.day_id, d.date as day_date, da.assignment_time, da.assignment_end_time, d.day_number
+        FROM places p
+        INNER JOIN day_assignments da ON da.place_id = p.id
+        INNER JOIN days d ON da.day_id = d.id
+        WHERE p.trip_id = ?
+        ORDER BY d.day_number ASC, da.order_index ASC
+      `,
+        )
+        .all(trip.id) as { id: number; name: string; address: string | null; lat: number | null; lng: number | null; place_time: string | null; assignment_id: number; day_date: string | null; assignment_time: string | null }[]
+    ).map((r) => ({
+      id: r.id,
+      name: r.name,
+      address: r.address,
+      lat: r.lat,
+      lng: r.lng,
+      place_time: r.place_time,
+      assignment_id: r.assignment_id,
+      day_date: r.day_date,
+      assignment_time: r.assignment_time,
+    }));
+
+    const converted = await journeyTripsRepoDirect.listAssignedPlacesForTrip(trip.id);
+    expect(converted).toEqual(legacy);
+    // The multi-day place appears twice — once per assignment — proving #2329's
+    // one-skeleton-per-assignment shape survives the conversion at the read layer.
+    expect(converted.filter((r) => r.id === multiDayPlace.id)).toHaveLength(2);
+  });
+});
+
+describe('Plan 3g Task 1 — mutation proofs (R5/R7)', () => {
+  it("JG119: JourneyContributorsRepository.deleteNonOwner never removes the owner row, even targeted at the owner's own id", async () => {
+    const { user: owner } = createUser(testDb);
+    const journey = createJourney(testDb, owner.id);
+
+    const changed = await contributorsRepoDirect.deleteNonOwner(journey.id, owner.id);
+
+    expect(changed).toBe(0);
+    const row = testDb
+      .prepare('SELECT role FROM journey_contributors WHERE journey_id = ? AND user_id = ?')
+      .get(journey.id, owner.id) as { role: string } | undefined;
+    expect(row?.role).toBe('owner');
+  });
+
+  it("JG119 mutation check: the statement WITHOUT the role != 'owner' guard WOULD have removed the same row — proves the test above is not vacuous", async () => {
+    const { user: owner } = createUser(testDb);
+    const journey = createJourney(testDb, owner.id);
+
+    // The exact statement JG119's guard replaces (no `role != 'owner'` clause).
+    const res = testDb
+      .prepare('DELETE FROM journey_contributors WHERE journey_id = ? AND user_id = ?')
+      .run(journey.id, owner.id);
+    expect(res.changes).toBe(1);
+  });
+
+  it('AP1: a non-member caller is refused (no insert, no broadcast) — and stubbing findAccessible to always succeed removes that refusal', async () => {
+    const { user } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const foreignTrip = createTrip(testDb, stranger.id, { title: "Stranger's Trip" });
+    const broadcastSpy = vi.spyOn(RealtimeService.prototype, 'broadcastToUser').mockImplementation(() => {});
+
+    try {
+      const refused = await svc.addTripToJourney(journey.id, foreignTrip.id, user.id);
+
+      expect(refused).toBe(false);
+      expect(broadcastSpy).not.toHaveBeenCalled();
+      const link = testDb
+        .prepare('SELECT * FROM journey_trips WHERE journey_id = ? AND trip_id = ?')
+        .get(journey.id, foreignTrip.id);
+      expect(link).toBeUndefined();
+
+      // Mutation check: stub AP1's own primitive to always report access — the
+      // exact guard-bypass AP1 exists to close (plan3g-inputs.md §0's
+      // "the REST route never did" history). Restored in `finally`.
+      const findAccessibleSpy = vi
+        .spyOn(tripsRepoDirect, 'findAccessible')
+        .mockResolvedValue({ id: foreignTrip.id, user_id: stranger.id, currency: null });
+      try {
+        const bypassed = await svc.addTripToJourney(journey.id, foreignTrip.id, user.id);
+
+        // With the guard's own primitive stubbed truthy, the SAME call now
+        // succeeds — proving the refusal above genuinely depends on AP1's
+        // real `findAccessible` check, not on some other guard.
+        expect(bypassed).toBe(true);
+        const linkAfterBypass = testDb
+          .prepare('SELECT * FROM journey_trips WHERE journey_id = ? AND trip_id = ?')
+          .get(journey.id, foreignTrip.id);
+        expect(linkAfterBypass).toBeDefined();
+      } finally {
+        findAccessibleSpy.mockRestore();
+      }
+    } finally {
+      broadcastSpy.mockRestore();
+    }
+  });
+});
+
+describe('Plan 3g Task 1 — reconcileTripSkeletons: all three branches in one call', () => {
+  it('inserts a newly-assigned place, claims an unclaimed pre-assignment-link row, and drops a gone assignment, simultaneously', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const trip = createTrip(testDb, user.id, { title: 'Three Branches', start_date: '2026-06-01', end_date: '2026-06-03' });
+    const day1 = createDay(testDb, trip.id, { date: '2026-06-01' });
+    const day2 = createDay(testDb, trip.id, { date: '2026-06-02' });
+
+    const keepPlace = createPlace(testDb, trip.id, { name: 'Keep' });
+    const dropPlace = createPlace(testDb, trip.id, { name: 'Drop' });
+    const claimPlace = createPlace(testDb, trip.id, { name: 'Claim' });
+
+    createDayAssignment(testDb, day1.id, keepPlace.id);
+    const dropAssignment = createDayAssignment(testDb, day1.id, dropPlace.id);
+    await svc.addTripToJourney(journey.id, trip.id, user.id);
+
+    // An "unclaimed" pre-assignment-link skeleton for claimPlace — the shape
+    // a backfill (or a row from before the assignment link existed) leaves
+    // behind: `source_place_id` set, `source_assignment_id` NULL.
+    const claimAssignment = createDayAssignment(testDb, day2.id, claimPlace.id);
+    testDb
+      .prepare(
+        `
+      INSERT INTO journey_entries (journey_id, source_trip_id, source_place_id, source_assignment_id, author_id, type, title, entry_date, sort_order, created_at, updated_at)
+      VALUES (?, ?, ?, NULL, ?, 'skeleton', ?, ?, 0, ?, ?)
+    `,
+      )
+      .run(journey.id, trip.id, claimPlace.id, user.id, claimPlace.name, '2026-06-02', Date.now(), Date.now());
+
+    // Change the plan three ways at once: drop dropPlace's assignment (branch
+    // 3), leave keepPlace untouched (a control — no branch should fire for
+    // it), and add a brand-new place to day 2 (branch 1). claimPlace's day-2
+    // assignment (already on the plan, above) is what branch 2 claims.
+    testDb.prepare('DELETE FROM day_assignments WHERE id = ?').run(dropAssignment.id);
+    const newPlace = createPlace(testDb, trip.id, { name: 'New' });
+    createDayAssignment(testDb, day2.id, newPlace.id);
+
+    await svc.reconcileTripSkeletons(trip.id);
+
+    const entries = testDb.prepare('SELECT * FROM journey_entries WHERE journey_id = ?').all(journey.id) as {
+      source_place_id: number | null;
+      source_assignment_id: number | null;
+      type: string;
+    }[];
+
+    // Branch 1 — insert: the brand-new place got a skeleton.
+    expect(entries.some((e) => e.source_place_id === newPlace.id && e.type === 'skeleton')).toBe(true);
+
+    // Branch 2 — claim: the unclaimed row now carries claimAssignment's id,
+    // not a second, freshly-inserted row.
+    const claimed = entries.filter((e) => e.source_place_id === claimPlace.id);
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0].source_assignment_id).toBe(claimAssignment.id);
+
+    // Branch 3 — drop: dropPlace's empty skeleton is gone outright (no story, no photos).
+    expect(entries.some((e) => e.source_place_id === dropPlace.id)).toBe(false);
+
+    // Control: keepPlace's already-synced skeleton is untouched — the fixture
+    // doesn't over-fire a branch that shouldn't apply to it.
+    expect(entries.some((e) => e.source_place_id === keepPlace.id)).toBe(true);
   });
 });
