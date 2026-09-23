@@ -873,3 +873,31 @@ describe('updateUser — password-reset transaction boundary (AD11/12/13)', () =
     spy.mockRestore();
   });
 });
+
+describe('createUser — the pre-existing uniqueness-check TOCTOU window (AD2-4, R4 "report, don\'t fix")', () => {
+  it('ADMIN-SVC-094 — a race between the email pre-check and the INSERT is not caught by a transaction; the row-level UNIQUE constraint is what actually stops the duplicate, surfacing as a thrown error rather than a clean 409', async () => {
+    const { user: existing } = createUser(testDb, { email: 'race@test.example.com' });
+
+    // Simulates the concurrent-request race AD2-4's non-transactional shape
+    // leaves open (unchanged by this conversion, per R4): the uniqueness
+    // pre-check (AD3) reports no conflict, as it would if a second request's
+    // own insert lands in the gap between this request's check and its own
+    // INSERT — the two statements are two separate, un-transacted repository
+    // calls, exactly as the legacy raw SQL was.
+    const usersRepo = await createTestUsersRepo(dbs.connection);
+    const spy = vi.spyOn(usersRepo, 'findIdByEmailExact').mockResolvedValueOnce(null);
+
+    // The pre-check said "clear," but `users.email` carries its own UNIQUE
+    // index (`Migration20200101000000_baseline_schema.ts`) — that's what
+    // actually stops the duplicate, at the SQL level, not this service's own
+    // TOCTOU-vulnerable pre-check. Because nothing here catches that
+    // failure, it propagates as an unhandled rejection rather than the
+    // clean `{ error: 'Email already taken', status: 409 }` a request that
+    // lost the race with more lead time would have gotten.
+    await expect(
+      svcCreateUser({ username: 'raceuser', email: existing.email, password: 'ValidPass1!' }),
+    ).rejects.toThrow();
+
+    spy.mockRestore();
+  });
+});
