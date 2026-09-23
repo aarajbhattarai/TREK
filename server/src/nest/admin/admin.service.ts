@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -14,14 +15,12 @@ import { updateJwtSecret } from '../../config';
 import { revokeUserSessions, revokeUserSessionsForClient } from '../../mcp/sessionManager';
 import { invalidateMcpSessions } from '../../mcp';
 import { emitUserDeleted } from '../../plugin-user-lifecycle';
-import type { User, Addon } from '../../types';
 import { maybe_encrypt_api_key, decrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { avatarUrl } from '../common/avatarUrl';
 import { prepareLlmAddonConfigForWrite, maskLlmAddonConfig } from '../llm-parse/llm-config';
 import { getPhotoProviderConfig } from '../memories/memories.helpers';
 import { validatePassword } from '../common/passwordPolicy';
 import { UserCleanupService } from '../auth/user-cleanup.service';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { AddonsService } from '../addons/addons.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -30,6 +29,31 @@ import { AuthService } from '../auth/auth.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { PERMISSION_ACTIONS } from '../permissions/permissions.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository, AdminEditPatch } from '../../db/repositories/Users.repository';
+import { AuditLog } from '../../db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../db/repositories/AuditLog.repository';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Addons } from '../../db/entities/Addons.entity';
+import type { AddonsRepository } from '../../db/repositories/Addons.repository';
+import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
+import type { PhotoProvidersRepository } from '../../db/repositories/PhotoProviders.repository';
+import { PhotoProviderFields } from '../../db/entities/PhotoProviderFields.entity';
+import type { PhotoProviderFieldsRepository } from '../../db/repositories/PhotoProviderFields.repository';
+import { DocumentProviders } from '../../db/entities/DocumentProviders.entity';
+import type { DocumentProvidersRepository } from '../../db/repositories/DocumentProviders.repository';
+import { McpTokens } from '../../db/entities/McpTokens.entity';
+import type { McpTokensRepository } from '../../db/repositories/McpTokens.repository';
+import { OauthTokens } from '../../db/entities/OauthTokens.entity';
+import type { OauthTokensRepository } from '../../db/repositories/OauthTokens.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { TripFiles } from '../../db/entities/TripFiles.entity';
+import type { TripFilesRepository } from '../../db/repositories/TripFiles.repository';
+import type { AddonConfig } from '../../db/entities/Addons.entity';
 import {
   BCRYPT_COST,
   compareVersions,
@@ -48,18 +72,25 @@ const GITHUB_MAX_BYTES = 2_000_000;
 const VERSION_FAILURE_TTL = 60_000;
 
 /**
- * Admin domain service — owns the admin SQL (folded from the legacy
- * services/adminService.ts with the 2026-08 migration): user CRUD, instance
- * stats, the permission matrix, the audit-log read side, OIDC settings, the
- * demo baseline, GitHub release/version checks, invite tokens, the three
- * places feature toggles, addons + photo providers, MCP tokens, OAuth sessions
- * and JWT rotation.
+ * Admin domain service — owns admin's data access (folded from the legacy
+ * services/adminService.ts with the 2026-08 migration, converted onto
+ * repositories by Plan 3i Task 1): user CRUD, instance stats, the permission
+ * matrix, the audit-log read side, OIDC settings, the demo baseline, GitHub
+ * release/version checks, invite tokens, the three places feature toggles,
+ * addons + photo providers, MCP tokens, OAuth sessions and JWT rotation.
  *
- * Every quirk relocated byte-for-byte: the `||` falsy defaults (never `??`),
- * post-insert/post-update re-selects instead of RETURNING, the COALESCE partial
- * update, the #1362 guest exclusions and the exact error strings. The legacy
- * `{ error, status }` envelope is the return contract — the controller's `ok()`
- * helper turns it into an HttpException, so nothing here throws.
+ * Every quirk stays byte-for-byte: the `||` falsy defaults (never `??`),
+ * post-insert/post-update re-selects instead of RETURNING, the COALESCE-shaped
+ * partial update (now a repository call that omits unchanged keys — the same
+ * net effect), the #1362 guest exclusions and the exact error strings. The
+ * legacy `{ error, status }` envelope is the return contract — the
+ * controller's `ok()` helper turns it into an HttpException, so nothing here
+ * throws.
+ *
+ * The three self-protection invariants (own-account delete, own-MFA reset,
+ * last-admin demote) stay exactly where the legacy had them: plain JS
+ * comparisons in this service, never folded into a repository method's WHERE
+ * clause (R4).
  *
  * The bag-tracking/collab-feature toggles, user defaults, passkey reset and
  * packing templates delegate to the services that own those tables. The pure
@@ -69,7 +100,18 @@ const VERSION_FAILURE_TTL = 60_000;
 @Injectable()
 export class AdminService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(Users) private readonly users: UsersRepository,
+    @InjectRepository(AuditLog) private readonly auditLog: AuditLogRepository,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Addons) private readonly addonsRepo: AddonsRepository,
+    @InjectRepository(PhotoProviders) private readonly photoProviders: PhotoProvidersRepository,
+    @InjectRepository(PhotoProviderFields) private readonly photoProviderFields: PhotoProviderFieldsRepository,
+    @InjectRepository(DocumentProviders) private readonly documentProviders: DocumentProvidersRepository,
+    @InjectRepository(McpTokens) private readonly mcpTokens: McpTokensRepository,
+    @InjectRepository(OauthTokens) private readonly oauthTokens: OauthTokensRepository,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
+    @InjectRepository(Places) private readonly places: PlacesRepository,
+    @InjectRepository(TripFiles) private readonly tripFiles: TripFilesRepository,
     private readonly addons: AddonsService,
     private readonly passkeys: PasskeyService,
     private readonly auth: AuthService,
@@ -85,13 +127,7 @@ export class AdminService {
   async listUsers() {
     // Guests (#1362) are accountless trip participants, not real users — keep them out
     // of admin user management entirely.
-    const users = this.db.all<
-      Pick<User, 'id' | 'username' | 'email' | 'role' | 'created_at' | 'updated_at' | 'last_login'> & {
-        avatar?: string | null;
-      }
-    >(
-      'SELECT id, username, email, role, avatar, created_at, updated_at, last_login FROM users WHERE COALESCE(is_guest, 0) = 0 ORDER BY created_at DESC',
-    );
+    const users = await this.users.listForAdmin();
     let onlineUserIds = new Set<number>();
     try {
       // The catch stays here rather than in the facade: an admin list that shows
@@ -128,36 +164,33 @@ export class AdminService {
     }
 
     // Guests (#1362) live in a reserved synthetic namespace; never let one block a real account.
-    const existingUsername = this.db.get('SELECT id FROM users WHERE username = ? AND COALESCE(is_guest, 0) = 0', username);
+    const existingUsername = await this.users.findIdByUsernameExact(username);
     if (existingUsername) return { error: 'Username already taken', status: 409 };
 
-    const existingEmail = this.db.get('SELECT id FROM users WHERE email = ? AND COALESCE(is_guest, 0) = 0', email);
+    const existingEmail = await this.users.findIdByEmailExact(email);
     if (existingEmail) return { error: 'Email already taken', status: 409 };
 
     const passwordHash = bcrypt.hashSync(password, BCRYPT_COST);
 
-    const result = this.db.run(
-      'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      username, email, passwordHash, data.role || 'user',
-    );
+    const insertedId = await this.users.insertAdminCreatedUser({
+      username, email, password_hash: passwordHash, role: data.role || 'user',
+    });
 
-    const user = this.db.get(
-      'SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = ?',
-      result.lastInsertRowid,
-    );
+    const user = await this.users.findAdminSummary(insertedId);
 
     return {
       user,
-      insertedId: Number(result.lastInsertRowid),
+      insertedId,
       auditDetails: { username, email, role: data.role || 'user' },
     };
   }
 
   async updateUser(id: string, data: { username?: string; email?: string; role?: string; password?: string }) {
+    const userId = Number(id);
     const username = typeof data.username === 'string' ? data.username.trim() : data.username;
     const email = typeof data.email === 'string' ? data.email.trim() : data.email;
     const { role, password } = data;
-    const user = this.db.get<User>('SELECT * FROM users WHERE id = ?', id);
+    const user = await this.users.findById(userId);
 
     if (!user) return { error: 'User not found', status: 404 };
 
@@ -171,11 +204,11 @@ export class AdminService {
     if (email === '') return { error: 'Email cannot be empty', status: 400 };
 
     if (username && username !== user.username) {
-      const conflict = this.db.get('SELECT id FROM users WHERE username = ? AND id != ? AND COALESCE(is_guest, 0) = 0', username, id);
+      const conflict = await this.users.findIdByUsernameExactExcluding(username, userId);
       if (conflict) return { error: 'Username already taken', status: 409 };
     }
     if (email && email !== user.email) {
-      const conflict = this.db.get('SELECT id FROM users WHERE email = ? AND id != ? AND COALESCE(is_guest, 0) = 0', email, id);
+      const conflict = await this.users.findIdByEmailExactExcluding(email, userId);
       if (conflict) return { error: 'Email already taken', status: 409 };
     }
 
@@ -187,10 +220,13 @@ export class AdminService {
 
     // Don't let the admin UI demote the last remaining admin — that would leave the
     // instance with no one able to manage it (and on OIDC-only setups, no recovery). #1274
+    // SECURITY: plain JS comparisons, deliberately never folded into a
+    // repository method's WHERE clause (R4) — two repository reads, one
+    // service-level `if`.
     if (role && role !== 'admin') {
-      const current = this.db.get<{ role?: string }>('SELECT role FROM users WHERE id = ?', id);
-      if (current?.role === 'admin') {
-        const adminCount = this.db.get<{ count: number }>("SELECT COUNT(*) as count FROM users WHERE role = 'admin'")!.count;
+      const currentRole = await this.users.getRole(userId);
+      if (currentRole === 'admin') {
+        const adminCount = await this.users.countAdmins();
         if (adminCount <= 1) return { error: 'Cannot remove the last admin', status: 400 };
       }
     }
@@ -200,33 +236,31 @@ export class AdminService {
     // accepting every cookie the intruder already holds, so the one action taken
     // to lock them out was the one action that did not. Both self-service paths
     // (changePassword, resetPassword) have always done this; this one had not.
-    const newPv = password ? ((user as User & { password_version?: number }).password_version ?? 0) + 1 : null;
+    const newPv = password ? (user.password_version ?? 0) + 1 : null;
 
+    const patch: AdminEditPatch = {};
+    if (username) patch.username = username;
+    if (email) patch.email = email;
+    if (role) patch.role = role;
+    if (password) {
+      patch.password_hash = passwordHash!;
+      patch.password_version = newPv!;
+    }
+
+    // The password-reset transaction's CURRENT boundary, preserved exactly
+    // (R4): the users UPDATE, the mcp_tokens DELETE and the oauth_tokens
+    // revoke stay inside the SAME uow.transactional call, never split across
+    // separate un-transacted repository calls.
     await this.uow.transactional(async () => {
-      this.db.run(
-        `
-    UPDATE users SET
-      username = COALESCE(?, username),
-      email = COALESCE(?, email),
-      role = COALESCE(?, role),
-      password_hash = COALESCE(?, password_hash),
-      password_version = COALESCE(?, password_version),
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `,
-        username || null, email || null, role || null, passwordHash, newPv, id,
-      );
+      await this.users.applyAdminEdit(userId, patch);
 
       if (password) {
         // The version bump only invalidates JWT cookies. These two stores carry
         // their own credentials and are revoked separately, exactly as the
         // self-service paths do it.
-        this.db.run('DELETE FROM mcp_tokens WHERE user_id = ?', id);
+        await this.mcpTokens.deleteAllForUser(userId);
         try {
-          this.db.run(
-            'UPDATE oauth_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL',
-            id,
-          );
+          await this.oauthTokens.revokeAllForUser(userId);
         } catch { /* very old installs predate oauth_tokens */ }
       }
     });
@@ -235,7 +269,7 @@ export class AdminService {
       try { revokeUserSessions(Number(id)); } catch { /* best-effort, same as elsewhere */ }
     }
 
-    const updated = this.db.get('SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = ?', id);
+    const updated = await this.users.findAdminSummary(userId);
 
     const changed: string[] = [];
     if (username) changed.push('username');
@@ -251,11 +285,13 @@ export class AdminService {
   }
 
   async deleteUser(id: string, currentUserId: number) {
+    // SECURITY: plain JS comparison, deliberately kept exactly here — never
+    // folded into a repository method's WHERE clause (R4).
     if (Number.parseInt(id) === currentUserId) {
       return { error: 'Cannot delete own account', status: 400 };
     }
 
-    const userToDel = this.db.get<{ id: number; email: string }>('SELECT id, email FROM users WHERE id = ?', id);
+    const userToDel = await this.users.findIdAndEmail(Number(id));
     if (!userToDel) return { error: 'User not found', status: 404 };
 
     await this.userCleanup.deleteUserCompletely(userToDel.id);
@@ -280,21 +316,17 @@ export class AdminService {
    */
   async resetUserMfa(id: string, actingUserId: number): Promise<{ error?: string; status?: number; success?: boolean; email?: string }> {
     const targetId = Number(id);
+    // SECURITY: plain JS comparison, deliberately kept exactly here — never
+    // folded into a repository method's WHERE clause (R4).
     if (targetId === actingUserId) {
       return { error: 'Use Settings to change your own two-factor setup', status: 400 };
     }
-    const target = this.db.get<{ id: number; email: string; mfa_enabled: number | boolean }>(
-      'SELECT id, email, mfa_enabled FROM users WHERE id = ?',
-      targetId,
-    );
+    const target = await this.users.findIdEmailMfaEnabled(targetId);
     if (!target) return { error: 'User not found', status: 404 };
 
     // Same three columns disableMfa clears, so an admin reset and a self-service
     // disable leave the account in exactly one state rather than two.
-    this.db.run(
-      'UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, mfa_backup_codes = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      targetId,
-    );
+    await this.users.disableMfa(targetId);
 
     return { success: true, email: target.email };
   }
@@ -302,10 +334,10 @@ export class AdminService {
   // ── Stats ──────────────────────────────────────────────────────────────────
 
   async getStats() {
-    const totalUsers = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE COALESCE(is_guest, 0) = 0')!.count;
-    const totalTrips = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM trips')!.count;
-    const totalPlaces = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM places')!.count;
-    const totalFiles = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM trip_files')!.count;
+    const totalUsers = await this.users.countNonGuest();
+    const totalTrips = await this.trips.count();
+    const totalPlaces = await this.places.count();
+    const totalFiles = await this.tripFiles.count();
     return { totalUsers, totalTrips, totalPlaces, totalFiles };
   }
 
@@ -335,30 +367,8 @@ export class AdminService {
     const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 100, 1), 500);
     const offset = Math.max(Number.isFinite(offsetRaw) ? offsetRaw : 0, 0);
 
-    type Row = {
-      id: number;
-      created_at: string;
-      user_id: number | null;
-      username: string | null;
-      user_email: string | null;
-      action: string;
-      resource: string | null;
-      details: string | null;
-      ip: string | null;
-    };
-
-    const rows = this.db.all<Row>(
-      `
-    SELECT a.id, a.created_at, a.user_id, u.username, u.email as user_email, a.action, a.resource, a.details, a.ip
-    FROM audit_log a
-    LEFT JOIN users u ON u.id = a.user_id
-    ORDER BY a.id DESC
-    LIMIT ? OFFSET ?
-  `,
-      limit, offset,
-    );
-
-    const total = this.db.get<{ c: number }>('SELECT COUNT(*) as c FROM audit_log')!.c;
+    const rows = await this.auditLog.listPage(limit, offset);
+    const total = await this.auditLog.count();
 
     const entries = rows.map((r) => {
       // Unparseable details fall back to the raw string rather than the old
@@ -516,15 +526,14 @@ export class AdminService {
       const result = await this.checkVersion();
       if (!result.update_available) return;
 
-      const lastNotified = this.db.get<{ value: string }>(
-        'SELECT value FROM app_settings WHERE key = ?', 'last_notified_version',
-      )?.value;
+      const lastNotified = await this.appSettings.getValue('last_notified_version');
       if (lastNotified === result.latest) return;
 
-      this.db.run(
-        'INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)',
-        'last_notified_version', result.latest,
-      );
+      // INSERT OR REPLACE shape — the SAME dialect storage's `upsertOrReplace`
+      // (Plan 3i Task 2, SS1) already added to AppSettingsRepository, reused
+      // here rather than adding a second method for the identical SQL text
+      // (`INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)`).
+      await this.appSettings.upsertOrReplace('last_notified_version', result.latest);
 
       await this.notifications.send({
         event: 'version_available',
@@ -541,8 +550,7 @@ export class AdminService {
   // ── Addons ─────────────────────────────────────────────────────────────────
 
   async listAddons() {
-    const addons = this.db
-      .all<Addon>('SELECT * FROM addons ORDER BY sort_order, id')
+    const addons = (await this.addonsRepo.listAllOrdered())
       // Hidden rather than shown-and-refused, because a toggle that answers 403
       // is worse than no toggle.
       //
@@ -561,38 +569,12 @@ export class AdminService {
               a.id === ADDON_IDS.DAWARICH)
           ),
       );
-    const providers = this.db.all<{
-      id: string;
-      name: string;
-      description?: string | null;
-      icon: string;
-      enabled: number;
-      sort_order: number;
-    }>(`
-    SELECT id, name, description, icon, enabled, sort_order
-    FROM photo_providers
-    ORDER BY sort_order, id
-  `)
+    const providers = (await this.photoProviders.listAllOrdered())
       // Immich and Synology Photos are servers the admin runs at home. A managed
       // instance cannot reach one (its egress does not go there, and it should
       // not), so offering the connection would only produce a timeout.
       .filter(() => !readEnv().managed.enabled);
-    const fields = this.db.all<{
-      provider_id: string;
-      field_key: string;
-      label: string;
-      input_type: string;
-      placeholder?: string | null;
-      required: number;
-      secret: number;
-      settings_key?: string | null;
-      payload_key?: string | null;
-      sort_order: number;
-    }>(`
-    SELECT provider_id, field_key, label, input_type, placeholder, required, secret, settings_key, payload_key, sort_order
-    FROM photo_provider_fields
-    ORDER BY sort_order, id
-  `);
+    const fields = await this.photoProviderFields.listAllOrderedForAdminShelf();
     const fieldsByProvider = new Map<string, typeof fields>();
     for (const field of fields) {
       const arr = fieldsByProvider.get(field.provider_id) || [];
@@ -609,18 +591,8 @@ export class AdminService {
     // not belong to a user here but to a trip, so they are entered in the trip
     // rather than in settings. The admin decides only whether a provider may be
     // offered at all.
-    const docProviders = this.db.all<{
-      id: string;
-      name: string;
-      description?: string | null;
-      icon: string;
-      enabled: number;
-      sort_order: number;
-    }>(`
-    SELECT id, name, description, icon, enabled, sort_order
-    FROM document_providers
-    ORDER BY sort_order, id
-  `).filter(() => !readEnv().managed.enabled);
+    const docProviders = (await this.documentProviders.listAllOrdered())
+      .filter(() => !readEnv().managed.enabled);
 
     return [
       ...addons.map((a) => ({
@@ -628,8 +600,8 @@ export class AdminService {
         enabled: !!a.enabled,
         config:
           a.id === ADDON_IDS.LLM_PARSING
-            ? maskLlmAddonConfig(JSON.parse(a.config || '{}'))
-            : JSON.parse(a.config || '{}'),
+            ? maskLlmAddonConfig(a.config ?? {})
+            : (a.config ?? {}),
       })),
       ...providers.map((p) => ({
         id: p.id,
@@ -638,8 +610,8 @@ export class AdminService {
         type: 'photo_provider',
         icon: p.icon,
         enabled: !!p.enabled,
-        config: getPhotoProviderConfig(p.id),
-        fields: (fieldsByProvider.get(p.id) || []).map((f) => ({
+        config: getPhotoProviderConfig(p.id!),
+        fields: (fieldsByProvider.get(p.id!) || []).map((f) => ({
           key: f.field_key,
           label: f.label,
           input_type: f.input_type,
@@ -667,10 +639,9 @@ export class AdminService {
   }
 
   async updateAddon(id: string, data: { enabled?: boolean; config?: Record<string, unknown> }) {
-    type ProviderRow = { id: string; name: string; description?: string | null; icon: string; enabled: number; sort_order: number };
-    const addon = this.db.get<Addon>('SELECT * FROM addons WHERE id = ?', id);
-    const provider = this.db.get<ProviderRow>('SELECT * FROM photo_providers WHERE id = ?', id);
-    const docProvider = this.db.get<ProviderRow>('SELECT * FROM document_providers WHERE id = ?', id);
+    const addon = await this.addonsRepo.findById(id);
+    const provider = await this.photoProviders.findById(id);
+    const docProvider = await this.documentProviders.findById(id);
     if (!addon && !provider && !docProvider) return { error: 'Addon not found', status: 404 };
 
     // The whole addon, not just its config: on a centrally administered install
@@ -696,46 +667,46 @@ export class AdminService {
     }
 
     await this.uow.transactional(async () => {
-    if (addon) {
-      if (data.enabled !== undefined) {
-        this.db.run('UPDATE addons SET enabled = ? WHERE id = ?', data.enabled ? 1 : 0, id);
-        // Journey off takes its providers with it: a row left enabled would
-        // resurface the moment journey returns, which nobody switched on.
-        if (id === ADDON_IDS.JOURNEY && !data.enabled)
-          this.db.run('UPDATE photo_providers SET enabled = 0');
-        // Documents off takes its providers with it, for the reason above: a
-        // row left enabled would resurface the moment the addon returns.
-        if (id === ADDON_IDS.DOCUMENTS && !data.enabled)
-          this.db.run('UPDATE document_providers SET enabled = 0');
+      if (addon) {
+        if (data.enabled !== undefined) {
+          await this.addonsRepo.setEnabled(id, !!data.enabled);
+          // Journey off takes its providers with it: a row left enabled would
+          // resurface the moment journey returns, which nobody switched on.
+          if (id === ADDON_IDS.JOURNEY && !data.enabled)
+            await this.photoProviders.disableAll();
+          // Documents off takes its providers with it, for the reason above: a
+          // row left enabled would resurface the moment the addon returns.
+          if (id === ADDON_IDS.DOCUMENTS && !data.enabled)
+            await this.documentProviders.disableAll();
+        }
+        if (data.config !== undefined) {
+          // The AI-parsing addon holds an API key — encrypt it at rest and preserve
+          // the stored key when the client echoes the mask sentinel (see llmConfig.ts).
+          const configToStore =
+            id === ADDON_IDS.LLM_PARSING
+              ? prepareLlmAddonConfigForWrite(data.config, addon.config ?? {})
+              : data.config;
+          await this.addonsRepo.setConfig(id, configToStore as AddonConfig);
+        }
+      } else if (provider) {
+        if (data.enabled !== undefined)
+          await this.photoProviders.setEnabled(id, data.enabled ? 1 : 0);
+      } else {
+        if (data.enabled !== undefined)
+          await this.documentProviders.setEnabled(id, data.enabled ? 1 : 0);
       }
-      if (data.config !== undefined) {
-        // The AI-parsing addon holds an API key — encrypt it at rest and preserve
-        // the stored key when the client echoes the mask sentinel (see llmConfig.ts).
-        const configToStore =
-          id === ADDON_IDS.LLM_PARSING
-            ? prepareLlmAddonConfigForWrite(data.config, JSON.parse(addon.config || '{}'))
-            : data.config;
-        this.db.run('UPDATE addons SET config = ? WHERE id = ?', JSON.stringify(configToStore), id);
-      }
-    } else if (provider) {
-      if (data.enabled !== undefined)
-        this.db.run('UPDATE photo_providers SET enabled = ? WHERE id = ?', data.enabled ? 1 : 0, id);
-    } else {
-      if (data.enabled !== undefined)
-        this.db.run('UPDATE document_providers SET enabled = ? WHERE id = ?', data.enabled ? 1 : 0, id);
-    }
     });
 
-    const updatedAddon = this.db.get<Addon>('SELECT * FROM addons WHERE id = ?', id);
-    const updatedProvider = this.db.get<ProviderRow>('SELECT * FROM photo_providers WHERE id = ?', id);
+    const updatedAddon = await this.addonsRepo.findById(id);
+    const updatedProvider = await this.photoProviders.findById(id);
     const updated = updatedAddon
       ? {
           ...updatedAddon,
           enabled: !!updatedAddon.enabled,
           config:
             updatedAddon.id === ADDON_IDS.LLM_PARSING
-              ? maskLlmAddonConfig(JSON.parse(updatedAddon.config || '{}'))
-              : JSON.parse(updatedAddon.config || '{}'),
+              ? maskLlmAddonConfig(updatedAddon.config ?? {})
+              : (updatedAddon.config ?? {}),
         }
       : updatedProvider
         ? {
@@ -745,7 +716,7 @@ export class AdminService {
             type: 'photo_provider',
             icon: updatedProvider.icon,
             enabled: !!updatedProvider.enabled,
-            config: getPhotoProviderConfig(updatedProvider.id),
+            config: getPhotoProviderConfig(updatedProvider.id!),
             sort_order: updatedProvider.sort_order,
           }
         : null;
@@ -761,7 +732,11 @@ export class AdminService {
     // after an admin switched them off, while the REST half answered 404 for the
     // same user in the same moment.
     const MCP_RELEVANT_ADDONS = new Set<string>(MCP_GATED_ADDON_IDS);
-    const enabledChanged = !!addon && data.enabled !== undefined && (data.enabled ? 1 : 0) !== addon.enabled;
+    // `addon.enabled` is a JS boolean now (the repository's `AddonRow.enabled`
+    // shape, not the raw stored int the legacy `SELECT *` returned) — comparing
+    // two booleans for a real flip is the same predicate the legacy int
+    // comparison (`(data.enabled ? 1 : 0) !== addon.enabled`) expressed.
+    const enabledChanged = !!addon && data.enabled !== undefined && !!data.enabled !== addon.enabled;
 
     return {
       addon: updated,

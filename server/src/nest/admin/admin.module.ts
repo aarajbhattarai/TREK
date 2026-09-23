@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { TokensModule } from '../tokens/tokens.module';
 import { OauthModule } from '../oauth/oauth.module';
 import { KitineraryExtractorModule } from '../booking-import/kitinerary-extractor.module';
@@ -23,9 +24,35 @@ import { PackingModule } from '../packing/packing.module';
 // not @Global, so the import must be explicit.
 import { PermissionsModule } from '../permissions/permissions.module';
 import { AppConfigModule } from '../app-config/app-config.module';
+import { Users } from '../../db/entities/Users.entity';
+import { AuditLog } from '../../db/entities/AuditLog.entity';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { Addons } from '../../db/entities/Addons.entity';
+import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
+import { PhotoProviderFields } from '../../db/entities/PhotoProviderFields.entity';
+import { DocumentProviders } from '../../db/entities/DocumentProviders.entity';
+import { McpTokens } from '../../db/entities/McpTokens.entity';
+import { OauthTokens } from '../../db/entities/OauthTokens.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { TripFiles } from '../../db/entities/TripFiles.entity';
 
+/**
+ * MikroOrmModule.forFeature registers the ten repositories `AdminService`'s
+ * `@InjectRepository` constructor needs (Plan 3i Task 1 — AD1-AD40's
+ * conversion off `DatabaseService`): `Users`/`AuditLog`/`AppSettings` for the
+ * user-CRUD + audit-log + instance-settings surface, `Addons`/
+ * `PhotoProviders`/`PhotoProviderFields`/`DocumentProviders` for the addon
+ * shelf, `McpTokens`/`OauthTokens` for the password-reset session revoke, and
+ * `Trips`/`Places`/`TripFiles` (owned by other domains, 3c/3e) for
+ * `getStats`'s three bare cross-domain counts — the same forFeature +
+ * @InjectRepository wiring pattern `AddonsModule` already uses.
+ */
 @Module({
-  imports: [AppConfigModule, PluginsRuntimeModule, SettingsModule, AuditModule, AddonsModule, AuthModule, NotificationsModule, PackingModule, PermissionsModule, TokensModule, OauthModule, SchedulingModule, KitineraryExtractorModule],
+  imports: [
+    MikroOrmModule.forFeature([Users, AuditLog, AppSettings, Addons, PhotoProviders, PhotoProviderFields, DocumentProviders, McpTokens, OauthTokens, Trips, Places, TripFiles]),
+    AppConfigModule, PluginsRuntimeModule, SettingsModule, AuditModule, AddonsModule, AuthModule, NotificationsModule, PackingModule, PermissionsModule, TokensModule, OauthModule, SchedulingModule, KitineraryExtractorModule,
+  ],
   controllers: [AdminController],
   providers: [AdminService, VersionCheckJob, DemoResetJob],
 })

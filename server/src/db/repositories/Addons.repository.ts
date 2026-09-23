@@ -47,4 +47,47 @@ export class AddonsRepository extends TrekRepository<Addons> {
     const rows = await this.find({ enabled: true }, { orderBy: { sort_order: 'asc' } });
     return rows.map((row) => toRow(row) as AddonRow);
   }
+
+  // ---------------------------------------------------------------------
+  // Plan 3i Task 1 (`AdminService` — AD26/AD30/AD33/AD36/AD39, admin's
+  // addon-shelf listing + config/enabled writes).
+  // ---------------------------------------------------------------------
+
+  /**
+   * AD26 (`admin.service.ts#listAddons`) — `SELECT * FROM addons ORDER BY
+   * sort_order, id`, UNFILTERED (unlike {@link listEnabled}'s `WHERE
+   * enabled = 1`) — admin's own catalog listing, filtered afterward in JS
+   * for managed-instance hiding.
+   */
+  async listAllOrdered(): Promise<AddonRow[]> {
+    const rows = await this.find({}, { orderBy: { sort_order: 'asc', id: 'asc' } });
+    return rows.map((row) => toRow(row) as AddonRow);
+  }
+
+  /** AD30/AD39 (`admin.service.ts#updateAddon`'s pre-write read and post-TX re-select, byte-identical text at both sites) — `SELECT * FROM addons WHERE id = ?`. */
+  async findById(id: string): Promise<AddonRow | null> {
+    const row = await this.findOne({ id });
+    return row ? (toRow(row) as AddonRow) : null;
+  }
+
+  /** AD33 (`admin.service.ts#updateAddon`, inside `uow.transactional`) — `UPDATE addons SET enabled = ? WHERE id = ?`. */
+  async setEnabled(id: string, enabled: boolean): Promise<void> {
+    await this.nativeUpdate({ id }, { enabled: !!enabled });
+  }
+
+  /**
+   * AD36 (`admin.service.ts#updateAddon`, inside `uow.transactional`) —
+   * `UPDATE addons SET config = ? WHERE id = ?`. The LLM-parsing addon's API
+   * key is already encrypted by `AdminService`
+   * (`prepareLlmAddonConfigForWrite`) before this call — this repository
+   * never touches the crypto, only persists whatever JSON blob it is
+   * handed (3e R6's encrypted-column precedent: the service encrypts, the
+   * repository passes the ciphertext through untouched). `config` is a
+   * `p.json()` column — MikroORM serializes the object to the stored TEXT
+   * column itself, the same JSON text the legacy statement's hand-called
+   * `JSON.stringify` produced.
+   */
+  async setConfig(id: string, config: AddonConfig): Promise<void> {
+    await this.nativeUpdate({ id }, { config });
+  }
 }

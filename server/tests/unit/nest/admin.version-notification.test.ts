@@ -73,7 +73,15 @@ import {
   createTestTripsRepo,
   createTestTripMembersRepo,
   createTestSettingsRepo,
+  createTestPlacesRepo,
+  sharedTestOrm,
 } from '../../helpers/test-uow';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import { Addons } from '../../../src/db/entities/Addons.entity';
+import { PhotoProviders } from '../../../src/db/entities/PhotoProviders.entity';
+import { PhotoProviderFields } from '../../../src/db/entities/PhotoProviderFields.entity';
+import { DocumentProviders } from '../../../src/db/entities/DocumentProviders.entity';
+import { TripFiles } from '../../../src/db/entities/TripFiles.entity';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
 import { createTestShareTokensRepo } from '../../helpers/share-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
@@ -103,8 +111,20 @@ beforeAll(async () => {
     await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),
     await createTestOauthTokensRepo(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestPasswordResetTokensRepo(dbs.connection),
   );
+  const t = await sharedTestOrm(testDb);
   svc = new AdminService(
-  dbs,
+  await createTestUsersRepo(dbs.connection),
+  t.repo(AuditLog),
+  await createTestAppSettingsRepo(dbs.connection),
+  t.repo(Addons),
+  t.repo(PhotoProviders),
+  t.repo(PhotoProviderFields),
+  t.repo(DocumentProviders),
+  await createTestMcpTokensRepo(dbs.connection),
+  await createTestOauthTokensRepo(dbs.connection),
+  await createTestTripsRepo(dbs.connection),
+  await createTestPlacesRepo(dbs.connection),
+  t.repo(TripFiles),
   await createTestAddonsService(testDb, dbs),
   new PasskeyService(auth, webauthn, await createTestUnitOfWork(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestWebauthnChallengesRepo(dbs.connection), await createTestUsersRepo(dbs.connection)),
   auth,

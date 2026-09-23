@@ -55,4 +55,41 @@ export class PhotoProvidersRepository extends TrekRepository<PhotoProviders> {
     const row = await this.findOne({ id }, { fields: ['enabled'] });
     return row ? { enabled: row.enabled ?? null } : null;
   }
+
+  // ---------------------------------------------------------------------
+  // Plan 3i Task 1 (`AdminService` — AD27/AD31/AD34/AD37/AD40, admin's
+  // addon-shelf listing + enabled writes).
+  // ---------------------------------------------------------------------
+
+  /**
+   * AD27 (`admin.service.ts#listAddons`) — `SELECT id, name, description,
+   * icon, enabled, sort_order FROM photo_providers ORDER BY sort_order,
+   * id`, UNFILTERED (unlike {@link listEnabled}'s `WHERE enabled = 1`).
+   */
+  async listAllOrdered(): Promise<PhotoProviderRow[]> {
+    const rows = await this.find({}, { orderBy: { sort_order: 'asc', id: 'asc' } });
+    return rows.map((row) => toRow(row) as PhotoProviderRow);
+  }
+
+  /** AD31/AD40 (`admin.service.ts#updateAddon`'s pre-write read and post-TX re-select, byte-identical text at both sites) — `SELECT * FROM photo_providers WHERE id = ?`. */
+  async findById(id: string): Promise<PhotoProviderRow | null> {
+    const row = await this.findOne({ id });
+    return row ? (toRow(row) as PhotoProviderRow) : null;
+  }
+
+  /**
+   * AD34 (`admin.service.ts#updateAddon`, inside `uow.transactional`, the
+   * Journey-off cascade — "Journey off takes its providers with it") —
+   * `UPDATE photo_providers SET enabled = 0`, deliberately UNSCOPED (every
+   * row, no WHERE). Named `disableAll`, not a generic `setEnabled` overload
+   * that could be called with an accidentally omitted id (R4).
+   */
+  async disableAll(): Promise<void> {
+    await this.nativeUpdate({}, { enabled: 0 });
+  }
+
+  /** AD37 (`admin.service.ts#updateAddon`, inside `uow.transactional`) — `UPDATE photo_providers SET enabled = ? WHERE id = ?`. `enabled` stays the raw stored int (this entity's column is `p.integer()`, not `p.boolean()` — see {@link listEnabled}'s docstring), matching the legacy `data.enabled ? 1 : 0` bind exactly. */
+  async setEnabled(id: string, enabled: number): Promise<void> {
+    await this.nativeUpdate({ id }, { enabled });
+  }
 }

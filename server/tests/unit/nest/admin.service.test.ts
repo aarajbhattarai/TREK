@@ -95,7 +95,17 @@ import {
   createTestTripsRepo,
   createTestTripMembersRepo,
   createTestSettingsRepo,
+  createTestPlacesRepo,
+  sharedTestOrm,
 } from '../../helpers/test-uow';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
+import { Addons } from '../../../src/db/entities/Addons.entity';
+import { PhotoProviders } from '../../../src/db/entities/PhotoProviders.entity';
+import { PhotoProviderFields } from '../../../src/db/entities/PhotoProviderFields.entity';
+import { DocumentProviders } from '../../../src/db/entities/DocumentProviders.entity';
+import { TripFiles } from '../../../src/db/entities/TripFiles.entity';
+import type { McpTokensRepository } from '../../../src/db/repositories/McpTokens.repository';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
 import { createTestShareTokensRepo } from '../../helpers/share-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
@@ -116,6 +126,8 @@ let permissions: PermissionsService;
 let userCleanup: UserCleanupService;
 let auth: AuthService;
 let svc: AdminService;
+let mcpTokensRepo: McpTokensRepository;
+let auditLogRepo: AuditLogRepository;
 beforeAll(async () => {
   webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(dbs.connection));
   permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
@@ -125,8 +137,22 @@ beforeAll(async () => {
     await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),
     await createTestOauthTokensRepo(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestPasswordResetTokensRepo(dbs.connection),
   );
+  const t = await sharedTestOrm(testDb);
+  mcpTokensRepo = await createTestMcpTokensRepo(dbs.connection);
+  auditLogRepo = t.repo(AuditLog);
   svc = new AdminService(
-  dbs,
+  await createTestUsersRepo(dbs.connection),
+  auditLogRepo,
+  await createTestAppSettingsRepo(dbs.connection),
+  t.repo(Addons),
+  t.repo(PhotoProviders),
+  t.repo(PhotoProviderFields),
+  t.repo(DocumentProviders),
+  mcpTokensRepo,
+  await createTestOauthTokensRepo(dbs.connection),
+  await createTestTripsRepo(dbs.connection),
+  await createTestPlacesRepo(dbs.connection),
+  t.repo(TripFiles),
   await createTestAddonsService(testDb, dbs),
   new PasskeyService(auth, webauthn, await createTestUnitOfWork(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestWebauthnChallengesRepo(dbs.connection), await createTestUsersRepo(dbs.connection)),
   auth,
@@ -736,5 +762,114 @@ describe('checkVersion on a centrally administered install', () => {
       expect(info.current).toBe('3.4.1');
       expect(fetchSpy).not.toHaveBeenCalled();
     });
+  });
+});
+
+// ── Plan 3i Task 1 — R4's guard-location + TX-boundary + AD22 parity proofs ──
+
+describe('updateUser — last-admin guard (AD9/AD10, R4)', () => {
+  it('ADMIN-SVC-090 — refuses to demote the sole remaining admin, row untouched', async () => {
+    const { user: soleAdmin } = createAdmin(testDb);
+
+    const result = (await updateUser(String(soleAdmin.id), { role: 'user' })) as { error?: string; status?: number };
+
+    expect(result).toEqual({ error: 'Cannot remove the last admin', status: 400 });
+    const row = testDb.prepare('SELECT role FROM users WHERE id = ?').get(soleAdmin.id) as { role: string };
+    expect(row.role).toBe('admin');
+  });
+
+  it('ADMIN-SVC-091 — demoting one of SEVERAL admins is allowed', async () => {
+    createAdmin(testDb);
+    const { user: secondAdmin } = createAdmin(testDb);
+
+    const result = (await updateUser(String(secondAdmin.id), { role: 'user' })) as { user?: { role: string }; error?: string };
+
+    expect(result.error).toBeUndefined();
+    const row = testDb.prepare('SELECT role FROM users WHERE id = ?').get(secondAdmin.id) as { role: string };
+    expect(row.role).toBe('user');
+  });
+});
+
+describe('getAuditLog — AD22 parity through the service (LEFT JOIN survives a deleted user, rule 16)', () => {
+  it('ADMIN-SVC-092 — a deleted user\'s audit row keeps its row (not dropped) with username/user_email both null, matching the legacy raw LEFT JOIN', async () => {
+    const { user: liveUser } = createUser(testDb);
+    const { user: doomedUser } = createUser(testDb);
+
+    testDb.prepare('INSERT INTO audit_log (user_id, action, resource, details, ip) VALUES (?, ?, ?, ?, ?)')
+      .run(liveUser.id, 'live_user_action', 'trip', null, '127.0.0.1');
+    testDb.prepare('INSERT INTO audit_log (user_id, action, resource, details, ip) VALUES (?, ?, ?, ?, ?)')
+      .run(doomedUser.id, 'about_to_be_deleted_action', 'trip', null, '127.0.0.1');
+
+    // audit_log.user_id is ON DELETE SET NULL (Task 0's report) — deleting the
+    // user directly (not through the service) makes the row's user_id
+    // genuinely NULL, the exact LEFT JOIN shape rule 16 warns about.
+    testDb.prepare('DELETE FROM users WHERE id = ?').run(doomedUser.id);
+
+    // The legacy statement, run raw on the SAME seeded rows — the parity anchor.
+    const legacyRows = testDb
+      .prepare(
+        `SELECT a.id, a.created_at, a.user_id, u.username, u.email as user_email, a.action, a.resource, a.details, a.ip
+         FROM audit_log a
+         LEFT JOIN users u ON u.id = a.user_id
+         ORDER BY a.id DESC
+         LIMIT ? OFFSET ?`,
+      )
+      .all(500, 0) as Array<{
+        id: number; created_at: string; user_id: number | null; username: string | null;
+        user_email: string | null; action: string; resource: string | null; details: string | null; ip: string | null;
+      }>;
+
+    const result = (await getAuditLog({ limit: '500', offset: '0' })) as {
+      entries: Array<{ user_id: number | null; username: string | null; user_email: string | null; action: string }>;
+      total: number;
+    };
+
+    expect(result.entries.length).toBe(legacyRows.length);
+
+    const deletedEntry = result.entries.find((e) => e.action === 'about_to_be_deleted_action');
+    const legacyDeletedRow = legacyRows.find((r) => r.action === 'about_to_be_deleted_action');
+    expect(deletedEntry).toBeDefined();
+    expect(legacyDeletedRow).toBeDefined();
+    // The row survives the LEFT JOIN (never dropped): user_id is preserved,
+    // username/user_email both null — never `undefined` (rule 16: T | null).
+    expect(deletedEntry!.user_id).toBe(legacyDeletedRow!.user_id);
+    expect(deletedEntry!.username).toBeNull();
+    expect(deletedEntry!.user_email).toBeNull();
+    expect(legacyDeletedRow!.username).toBeNull();
+    expect(legacyDeletedRow!.user_email).toBeNull();
+
+    const liveEntry = result.entries.find((e) => e.action === 'live_user_action');
+    const legacyLiveRow = legacyRows.find((r) => r.action === 'live_user_action');
+    expect(liveEntry!.username).toBe(legacyLiveRow!.username);
+    expect(liveEntry!.user_email).toBe(legacyLiveRow!.user_email);
+  });
+});
+
+describe('updateUser — password-reset transaction boundary (AD11/12/13)', () => {
+  it('ADMIN-SVC-093 — a failure on the mcp_tokens delete (AD12, not try/caught) rolls back the already-run users UPDATE (AD11) too', async () => {
+    const { user } = createUser(testDb);
+    const before = testDb
+      .prepare('SELECT username, password_version FROM users WHERE id = ?')
+      .get(user.id) as { username: string; password_version: number };
+
+    const spy = vi.spyOn(mcpTokensRepo, 'deleteAllForUser').mockRejectedValueOnce(new Error('simulated mcp_tokens failure'));
+
+    await expect(
+      updateUser(String(user.id), { username: 'should-roll-back', password: 'ANewStrongPass123!' }),
+    ).rejects.toThrow('simulated mcp_tokens failure');
+
+    const after = testDb
+      .prepare('SELECT username, password_version FROM users WHERE id = ?')
+      .get(user.id) as { username: string; password_version: number };
+
+    // The users UPDATE (AD11) ran FIRST, inside the SAME uow.transactional
+    // boundary as the failing mcp_tokens delete — proves the TX boundary
+    // survived conversion (not just that each statement individually works):
+    // an uncaught failure anywhere in the block rolls the whole thing back,
+    // including a statement that already "succeeded" earlier in the same TX.
+    expect(after.username).toBe(before.username);
+    expect(after.password_version).toBe(before.password_version);
+
+    spy.mockRestore();
   });
 });

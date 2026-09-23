@@ -1,5 +1,5 @@
 import type { DocumentProviders } from '../entities/DocumentProviders.entity';
-import { type AssertRowKeys } from './_shared/rows';
+import { toRow, type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
 /** DSCTRL2's wider catalog row — id/name/description/icon, no `enabled`/`sort_order` (those only gate/order the read, they are never returned to the client). */
@@ -68,5 +68,46 @@ export class DocumentProvidersRepository extends TrekRepository<DocumentProvider
       { fields: ['id', 'name', 'description', 'icon'], orderBy: { sort_order: 'asc' } },
     );
     return rows.map((r) => ({ id: r.id as string, name: r.name, description: r.description ?? null, icon: r.icon ?? null }));
+  }
+
+  // ---------------------------------------------------------------------
+  // Plan 3i Task 1 (`AdminService` — AD29/AD32/AD35/AD38, admin's
+  // addon-shelf listing + `enabled` toggle — R6: this repository is 3h's
+  // doc-sync task's to own; these four are additive, on top of its three
+  // read shapes above, for admin's reuse).
+  // ---------------------------------------------------------------------
+
+  /**
+   * AD29 (`admin.service.ts#listAddons`) — `SELECT id, name, description,
+   * icon, enabled, sort_order FROM document_providers ORDER BY sort_order,
+   * id`, UNFILTERED (unlike {@link listEnabledCatalog}'s `WHERE enabled =
+   * 1`).
+   */
+  async listAllOrdered(): Promise<DocumentProviderRow[]> {
+    const rows = await this.find({}, { orderBy: { sort_order: 'asc', id: 'asc' } });
+    return rows.map((row) => toRow(row) as DocumentProviderRow);
+  }
+
+  /** AD32 (`admin.service.ts#updateAddon`'s pre-write read) — `SELECT * FROM document_providers WHERE id = ?`. */
+  async findById(id: string): Promise<DocumentProviderRow | null> {
+    const row = await this.findOne({ id });
+    return row ? (toRow(row) as DocumentProviderRow) : null;
+  }
+
+  /**
+   * AD35 (`admin.service.ts#updateAddon`, inside `uow.transactional`, the
+   * Documents-off cascade) — `UPDATE document_providers SET enabled = 0`,
+   * deliberately UNSCOPED (every row, no WHERE). Named `disableAll`, not a
+   * generic `setEnabled` overload that could be called with an
+   * accidentally omitted id (R4), same reasoning as
+   * `PhotoProvidersRepository.disableAll` (AD34).
+   */
+  async disableAll(): Promise<void> {
+    await this.nativeUpdate({}, { enabled: 0 });
+  }
+
+  /** AD38 (`admin.service.ts#updateAddon`, inside `uow.transactional`) — `UPDATE document_providers SET enabled = ? WHERE id = ?`. */
+  async setEnabled(id: string, enabled: number): Promise<void> {
+    await this.nativeUpdate({ id }, { enabled });
   }
 }

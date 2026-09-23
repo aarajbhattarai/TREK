@@ -191,6 +191,52 @@ export interface ResetTargetRow {
   password_version: number;
 }
 
+/** AD1 (`admin.service.ts#listUsers`) — the admin user-list projection. */
+export interface AdminUserListRow {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  avatar: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  last_login: string | null;
+}
+
+/** AD5/AD14 (`admin.service.ts#createUser`/`updateUser`'s post-write re-select), byte-identical text at both sites. */
+export interface AdminUserSummaryRow {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+/** AD16 (`admin.service.ts#resetUserMfa`'s pre-write read). */
+export interface AdminUserMfaRow {
+  id: number;
+  email: string;
+  mfa_enabled: number | null;
+}
+
+/** AD4 (`admin.service.ts#createUser`'s write) — narrower than {@link NewUserRow}: no `first_seen_version`/`login_count`/oidc/avatar columns named, letting the entity's own defaults (`'0.0.0'`/`0`) fill them, the same values the legacy INSERT's omitted columns fell back to via the schema's `DEFAULT`. */
+export interface NewAdminUserRow {
+  username: string;
+  email: string;
+  password_hash: string;
+  role: string;
+}
+
+/** AD11 (`admin.service.ts#updateUser`, inside `uow.transactional`) — the columns the legacy COALESCE-shaped UPDATE can touch; a key the caller omits is left unchanged, the same net effect as binding NULL into `COALESCE(?, column)`. */
+export interface AdminEditPatch {
+  username?: string;
+  email?: string;
+  role?: string;
+  password_hash?: string;
+  password_version?: number;
+}
+
 export class UsersRepository extends TrekRepository<Users> {
   /**
    * **Ruling (Plan 3b Task 1 fix round, supersedes Plan 3a's I1 "`refresh:
@@ -1328,6 +1374,138 @@ export class UsersRepository extends TrekRepository<Users> {
    */
   async clearAirtrailApiKey(id: number): Promise<void> {
     await this.nativeUpdate({ id }, { airtrail_api_key: null });
+  }
+
+  // ---------------------------------------------------------------------
+  // Plan 3i Task 1 (`AdminService` — AD1-AD17, admin's user-CRUD surface).
+  // Every statement not already covered by an existing method above
+  // (`findById` = AD6, `getRole` = AD9, `countAdmins` = AD10, `disableMfa`
+  // = AD17, `findIdAndEmail` = AD15 — all reused as-is, no new method).
+  // ---------------------------------------------------------------------
+
+  /**
+   * AD1 (`listUsers`) — `SELECT id, username, email, role, avatar,
+   * created_at, updated_at, last_login FROM users WHERE COALESCE(is_guest,
+   * 0) = 0 ORDER BY created_at DESC`. `is_guest: 0` is exact parity for the
+   * COALESCE guard (same reasoning as `countNonGuest` above — the column is
+   * `NOT NULL DEFAULT 0`).
+   */
+  async listForAdmin(): Promise<AdminUserListRow[]> {
+    const rows = await this.find(
+      { is_guest: 0 },
+      {
+        fields: ['id', 'username', 'email', 'role', 'avatar', 'created_at', 'updated_at', 'last_login'],
+        orderBy: { created_at: 'desc' },
+      },
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      username: row.username,
+      email: row.email,
+      role: row.role,
+      avatar: row.avatar ?? null,
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+      last_login: row.last_login ?? null,
+    }));
+  }
+
+  /**
+   * AD2 (`createUser`) — `SELECT id FROM users WHERE username = ? AND
+   * COALESCE(is_guest, 0) = 0`. Case-**sensitive** (plain equality, no
+   * `LOWER()`) — distinct from `findIdByUsernameCIAny`'s folded comparison,
+   * which is a genuinely different legacy statement.
+   */
+  async findIdByUsernameExact(username: string): Promise<number | null> {
+    const row = await this.findOne({ username, is_guest: 0 }, { fields: ['id'] });
+    return row?.id ?? null;
+  }
+
+  /** AD3 (`createUser`) — `SELECT id FROM users WHERE email = ? AND COALESCE(is_guest, 0) = 0`. Case-sensitive, same reasoning as {@link findIdByUsernameExact}. */
+  async findIdByEmailExact(email: string): Promise<number | null> {
+    const row = await this.findOne({ email, is_guest: 0 }, { fields: ['id'] });
+    return row?.id ?? null;
+  }
+
+  /**
+   * AD4 (`createUser`'s write) — `INSERT INTO users (username, email,
+   * password_hash, role) VALUES (?, ?, ?, ?)`. Only these four columns are
+   * named, matching the legacy statement's own column list exactly; every
+   * other column (`first_seen_version`, `login_count`, …) is left to the
+   * entity's own default the same way the legacy INSERT left them to the
+   * schema's `DEFAULT` — not reused from {@link insertUser} (AU10/O14),
+   * whose `NewUserRow` requires `first_seen_version` as a caller-supplied
+   * value, a column this statement never named at all. Returns the
+   * generated id only (no re-select) — AD5 is a separate, distinct
+   * statement handled by {@link findAdminSummary}.
+   */
+  async insertAdminCreatedUser(row: NewAdminUserRow): Promise<number> {
+    return await this.insert({
+      username: row.username,
+      email: row.email,
+      password_hash: row.password_hash,
+      role: row.role,
+    });
+  }
+
+  /**
+   * AD5/AD14 (`createUser`'s post-insert re-select, `updateUser`'s
+   * post-update re-select) — `SELECT id, username, email, role, created_at,
+   * updated_at FROM users WHERE id = ?`, byte-identical text at both sites,
+   * one method (D4).
+   */
+  async findAdminSummary(id: number): Promise<AdminUserSummaryRow | null> {
+    const row = await this.findOne({ id }, { fields: ['id', 'username', 'email', 'role', 'created_at', 'updated_at'] });
+    return row
+      ? { id: row.id, username: row.username, email: row.email, role: row.role, created_at: row.created_at ?? null, updated_at: row.updated_at ?? null }
+      : null;
+  }
+
+  /**
+   * AD7 (`updateUser`) — `SELECT id FROM users WHERE username = ? AND id !=
+   * ? AND COALESCE(is_guest, 0) = 0`. Case-**sensitive**, excludes the
+   * user's own row — distinct from `findIdByUsernameCI`'s `LOWER()`-folded,
+   * otherwise identically-shaped statement (UP5's own-username check).
+   */
+  async findIdByUsernameExactExcluding(username: string, excludeId: number): Promise<number | null> {
+    const row = await this.findOne({ username, id: { $ne: excludeId }, is_guest: 0 }, { fields: ['id'] });
+    return row?.id ?? null;
+  }
+
+  /** AD8 (`updateUser`) — `SELECT id FROM users WHERE email = ? AND id != ? AND COALESCE(is_guest, 0) = 0`. Case-sensitive, excludes self, same reasoning as {@link findIdByUsernameExactExcluding}. */
+  async findIdByEmailExactExcluding(email: string, excludeId: number): Promise<number | null> {
+    const row = await this.findOne({ email, id: { $ne: excludeId }, is_guest: 0 }, { fields: ['id'] });
+    return row?.id ?? null;
+  }
+
+  /**
+   * AD11 (`updateUser`, inside `uow.transactional` alongside AD12/AD13) —
+   * `UPDATE users SET username=COALESCE(?,username), email=COALESCE(?,email),
+   * role=COALESCE(?,role), password_hash=COALESCE(?,password_hash),
+   * password_version=COALESCE(?,password_version), updated_at=CURRENT_TIMESTAMP
+   * WHERE id=?`. The legacy binds a NULL parameter for "no change" — a
+   * `nativeUpdate` that simply omits an unchanged key from `patch` has the
+   * identical net effect (coalesceParam: the new value wins when the
+   * caller supplies a key, the existing column wins when it is left out) —
+   * the caller decides which keys to include, the same discipline
+   * `patchProfile` (UP7) already uses for this table. `updated_at` is
+   * ALWAYS stamped, even when `patch` is `{}` — matching the legacy
+   * statement's own unconditional `updated_at = CURRENT_TIMESTAMP` (every
+   * `updateUser` call runs this UPDATE regardless of what changed).
+   */
+  async applyAdminEdit(id: number, patch: AdminEditPatch): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate({ id }, { ...patch, updated_at: currentTimestamp(platform) });
+  }
+
+  /**
+   * AD16 (`resetUserMfa`'s pre-write read) — `SELECT id, email, mfa_enabled
+   * FROM users WHERE id = ?`. Distinct from `getMfaEnabled` (MP2/AU23/AU27),
+   * which selects only `mfa_enabled` for a different caller.
+   */
+  async findIdEmailMfaEnabled(id: number): Promise<AdminUserMfaRow | null> {
+    const row = await this.findOne({ id }, { fields: ['id', 'email', 'mfa_enabled'] });
+    return row ? { id: row.id, email: row.email, mfa_enabled: row.mfa_enabled ?? null } : null;
   }
 }
 

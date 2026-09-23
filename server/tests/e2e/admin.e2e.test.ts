@@ -22,12 +22,25 @@ const { db } = vi.hoisted(() => {
   const tmp = new Database(':memory:');
   tmp.exec('PRAGMA journal_mode = WAL');
   // `users` carries the columns listUsers/createUser/updateUser select, plus the
-  // is_guest flag the #1362 COALESCE guards read.
+  // is_guest flag the #1362 COALESCE guards read. Plan 3i Task 1 (admin's
+  // repository conversion) surfaced the SAME class of drift the
+  // `invite_tokens`/`used_count` comment below already documents: `UsersRepository
+  // .insertAdminCreatedUser` writes through entity metadata (MikroORM's native
+  // insert), which — unlike the legacy raw `INSERT INTO users (username, email,
+  // password_hash, role) VALUES (...)` — also applies every OTHER column's
+  // class-level JS default (`mfa_enabled = 0`, `first_seen_version = '0.0.0'`, …),
+  // even though this repository's own method never names them. Fixed at the
+  // source (the fixture, adding the columns the real migrated schema has), not
+  // worked around in the repository.
   tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0,
     password_hash TEXT, avatar TEXT, is_guest INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME);`);
+    last_login DATETIME, mfa_enabled INTEGER DEFAULT 0, mfa_secret TEXT, mfa_backup_codes TEXT,
+    must_change_password INTEGER DEFAULT 0, synology_skip_ssl INTEGER DEFAULT 0,
+    first_seen_version TEXT DEFAULT '0.0.0', login_count INTEGER DEFAULT 0,
+    immich_auto_upload INTEGER DEFAULT 0, airtrail_allow_insecure_tls INTEGER DEFAULT 0,
+    airtrail_write_enabled INTEGER DEFAULT 0);`);
   tmp.exec(`CREATE TABLE settings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
     key TEXT NOT NULL, value TEXT, UNIQUE(user_id, key));`);
   tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
