@@ -49,11 +49,15 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { TodoService } from '../../../src/nest/todo/todo.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
+import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
 
 let svc: TodoService;
 beforeAll(async () => {
   const uow = await createTestUnitOfWork(testDb);
-  svc = new TodoService(await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow);
+  svc = new TodoService(
+    await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow,
+    await createTestTodoItemsRepo(testDb), await createTestTodoCategoryAssigneesRepo(testDb),
+  );
 });
 
 beforeAll(() => {
@@ -320,6 +324,49 @@ describe('getCategoryAssignees / updateCategoryAssignees', () => {
   });
 });
 
+// ── Plan 3e Task 4 parity: converted read models byte-for-byte against the ──
+// legacy statement text, run raw on the same seeded rows (TD1/TD14).
+
+describe('TodoItemsRepository / TodoCategoryAssigneesRepository — parity', () => {
+  it('TODO-REPO-001: listItems matches TD1 (`SELECT * FROM todo_items WHERE trip_id = ? ORDER BY sort_order ASC, created_at ASC`) run raw, with every nullable column both set and left null', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const full = (await svc.createItem(trip.id, {
+      name: 'Full item', category: 'Cat', due_date: '2026-06-01', description: 'Desc', assigned_user_id: user.id, priority: 5,
+    })) as any;
+    await svc.updateItem(trip.id, full.id, { checked: 1 }, ['checked']);
+
+    // Every nullable column left at its default (null/0).
+    await svc.createItem(trip.id, { name: 'Bare item' });
+
+    const converted = await svc.listItems(trip.id);
+    const legacy = testDb.prepare('SELECT * FROM todo_items WHERE trip_id = ? ORDER BY sort_order ASC, created_at ASC').all(trip.id);
+    expect(converted).toEqual(legacy);
+    expect(converted).toHaveLength(2);
+  });
+
+  it('TODO-REPO-002: updateCategoryAssignees\' TD14 re-select matches the legacy joined statement run raw, with an off-roster id present to prove the silent drop', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+
+    const converted = await svc.updateCategoryAssignees(trip.id, 'Packing', [owner.id, stranger.id, member.id]);
+
+    const legacy = testDb.prepare(`
+      SELECT tca.user_id, u.username, u.avatar
+      FROM todo_category_assignees tca
+      JOIN users u ON tca.user_id = u.id
+      WHERE tca.trip_id = ? AND tca.category_name = ?
+    `).all(trip.id, 'Packing');
+
+    expect(converted).toEqual(legacy);
+    expect((converted as { user_id: number }[]).map((r) => r.user_id).sort()).toEqual([owner.id, member.id].sort());
+  });
+});
+
 // TODO-SVC-021..024 (todo.bridge delegation) were deleted with the bridge —
 // its last consumer, the legacy get_trip_summary registrar in
 // src/mcp/tools/trips.ts, moved to the DI-discovered trips.mcp.ts.
@@ -334,7 +381,10 @@ describe('TodoService.canEdit', () => {
   it('TODO-SVC-090 asks for packing_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
-    const withStub = new TodoService(new DatabaseService(testDb), permissions, new RealtimeService(), await createTestUnitOfWork(testDb));
+    const withStub = new TodoService(
+      new DatabaseService(testDb), permissions, new RealtimeService(), await createTestUnitOfWork(testDb),
+      await createTestTodoItemsRepo(testDb), await createTestTodoCategoryAssigneesRepo(testDb),
+    );
     const trip = { id: 1, user_id: 1 } as never;
 
     expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);
