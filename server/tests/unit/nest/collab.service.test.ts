@@ -87,17 +87,66 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { RateLimitService } from '../../../src/nest/common/rate-limit.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo } from '../../helpers/test-uow';
+import {
+  createTestCollabNotesRepo,
+  createTestCollabMessageReactionsRepo,
+  createTestCollabPollsRepo,
+  createTestCollabPollVotesRepo,
+  createTestCollabLinksRepo,
+  createTestCollabMessagesRepo,
+} from '../../helpers/collab-repos';
+import type { CollabNotesRepository } from '../../../src/db/repositories/CollabNotes.repository';
+import type { CollabMessageReactionsRepository } from '../../../src/db/repositories/CollabMessageReactions.repository';
+import type { CollabPollsRepository } from '../../../src/db/repositories/CollabPolls.repository';
+import type { CollabPollVotesRepository } from '../../../src/db/repositories/CollabPollVotes.repository';
+import type { CollabLinksRepository } from '../../../src/db/repositories/CollabLinks.repository';
+import type { CollabMessagesRepository } from '../../../src/db/repositories/CollabMessages.repository';
 
 const collabFx = makeStorageFixture('files/');
 const rateLimit = new RateLimitService();
 let svc: CollabService;
+// Named bindings (not only inside `svc`), the `files.service.test.ts`
+// `tripFilesRepo`/`fileLinksRepo` shape: the repository-level parity tests
+// below call these directly, and a rollback test can spy on them directly.
+let notesRepo: CollabNotesRepository;
+let messageReactionsRepo: CollabMessageReactionsRepository;
+let pollsRepo: CollabPollsRepository;
+let pollVotesRepo: CollabPollVotesRepository;
+let linksRepo: CollabLinksRepository;
+let messagesRepo: CollabMessagesRepository;
+
+async function buildCollabService(dbs: DatabaseService, storage = collabFx.storage, rl = rateLimit): Promise<CollabService> {
+  return new CollabService(
+    dbs,
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
+    new RealtimeService(),
+    notificationsStub(),
+    storage,
+    rl,
+    await createTestUnitOfWork(testDb),
+    await createTestCollabMessageReactionsRepo(testDb),
+    await createTestCollabNotesRepo(testDb),
+    await createTestCollabPollsRepo(testDb),
+    await createTestCollabPollVotesRepo(testDb),
+    await createTestCollabLinksRepo(testDb),
+    await createTestCollabMessagesRepo(testDb),
+    await createTestTripsRepo(testDb),
+  );
+}
+
 beforeAll(async () => {
-  svc = new CollabService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), collabFx.storage, rateLimit, await createTestUnitOfWork(testDb));
+  svc = await buildCollabService(new DatabaseService(testDb));
+  notesRepo = await createTestCollabNotesRepo(testDb);
+  messageReactionsRepo = await createTestCollabMessageReactionsRepo(testDb);
+  pollsRepo = await createTestCollabPollsRepo(testDb);
+  pollVotesRepo = await createTestCollabPollVotesRepo(testDb);
+  linksRepo = await createTestCollabLinksRepo(testDb);
+  messagesRepo = await createTestCollabMessagesRepo(testDb);
 });
 
 /** A CollabService with its own preview cache and budget, for the tests that fill either. */
-const freshSvc = async () => new CollabService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService(), await createTestUnitOfWork(testDb));
+const freshSvc = async () => buildCollabService(new DatabaseService(testDb), collabFx.storage, new RateLimitService());
 
 beforeAll(() => {
   createTables(testDb);
@@ -688,15 +737,15 @@ describe('hardening', () => {
   it('COLLAB-SVC-034: votePoll switch is atomic — prior vote survives a failed INSERT', async () => {
     const { user1, trip } = setup();
     const dbs = new DatabaseService(testDb);
-    const failing = new CollabService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
+    const failing = await buildCollabService(dbs);
     const poll = await failing.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
     await failing.votePoll(trip.id, poll!.id, user1.id, 0);
 
-    const realRun = dbs.run.bind(dbs);
-    const spy = vi.spyOn(dbs, 'run').mockImplementation((sql: string, ...params: unknown[]) => {
-      if (sql.includes('INSERT INTO collab_poll_votes')) throw new Error('boom');
-      return realRun(sql, ...params);
-    });
+    // Repository-level spy (not `dbs.run`): the write this proof targets now
+    // goes through `pollVotesRepo.insertVote`, not a raw `db.run` call — the
+    // `files.service.test.ts` R2-rollback-test shape (spy on the injected
+    // repository directly).
+    const spy = vi.spyOn(pollVotesRepo, 'insertVote').mockImplementation(() => { throw new Error('boom'); });
     // Single-choice switch: DELETE prior votes, then the INSERT fails — the
     // transaction must roll the DELETE back too.
     await expect(failing.votePoll(trip.id, poll!.id, user1.id, 1)).rejects.toThrow('boom');
@@ -709,16 +758,15 @@ describe('hardening', () => {
   it('COLLAB-SVC-035: deleteNote is atomic — trip_files rows survive a failed note DELETE', async () => {
     const { user1, trip } = setup();
     const dbs = new DatabaseService(testDb);
-    const failing = new CollabService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
+    const failing = await buildCollabService(dbs);
     const note = await failing.createNote(trip.id, user1.id, { title: 'With file' });
     testDb.prepare('INSERT INTO trip_files (trip_id, note_id, filename, original_name) VALUES (?, ?, ?, ?)')
       .run(trip.id, note.id, 'files/a.pdf', 'a.pdf');
 
-    const realRun = dbs.run.bind(dbs);
-    const spy = vi.spyOn(dbs, 'run').mockImplementation((sql: string, ...params: unknown[]) => {
-      if (sql.includes('DELETE FROM collab_notes')) throw new Error('boom');
-      return realRun(sql, ...params);
-    });
+    // Repository-level spy (not `dbs.run`): the row delete this proof targets
+    // now goes through `notesRepo.delete`, the last statement inside
+    // `deleteNote`'s transaction.
+    const spy = vi.spyOn(notesRepo, 'delete').mockImplementation(() => { throw new Error('boom'); });
     await expect(failing.deleteNote(trip.id, note.id)).rejects.toThrow('boom');
     spy.mockRestore();
 
@@ -730,7 +778,7 @@ describe('hardening', () => {
     const { user1, trip } = setup();
     const dbs = new DatabaseService(testDb);
     const failingStorage = { delete: vi.fn().mockRejectedValue(new Error('EACCES')) };
-    const failing = new CollabService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), failingStorage as unknown as import('../../../src/nest/storage/storage.service').StorageService, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
+    const failing = await buildCollabService(dbs, failingStorage as unknown as import('../../../src/nest/storage/storage.service').StorageService);
     const note = await failing.createNote(trip.id, user1.id, { title: 'Sticky file' });
     testDb.prepare('INSERT INTO trip_files (trip_id, note_id, filename, original_name) VALUES (?, ?, ?, ?)')
       .run(trip.id, note.id, 'stuck.pdf', 'stuck.pdf');
@@ -768,5 +816,151 @@ describe('hardening', () => {
     const result = await svc.linkPreview('not a url');
     expect(result).toEqual({ title: null, description: null, image: null, url: 'not a url' });
     expect(mockCheckSsrf).not.toHaveBeenCalled();
+  });
+});
+
+// ── Repository parity (Plan 3e Task 5) ───────────────────────────────────────
+// One full-key `toEqual(<legacy statement run raw on the same seeded rows>)`
+// proof per converted read model, on a fully seeded row (task-5-brief.md's
+// "Tests" section).
+
+describe('repository parity', () => {
+  it('COLLAB-REPO-001: CollabNotesRepository matches the legacy joined SELECTs for a note with attachments', async () => {
+    const { user1, trip } = setup();
+    const note = await svc.createNote(trip.id, user1.id, { title: 'Full note', content: 'Body', category: 'Ideas', color: '#123456', website: 'https://x.example', pinned: true });
+    await svc.addNoteFile(trip.id, note.id, { filename: 'a.pdf', originalname: 'a.pdf', size: 10, mimetype: 'application/pdf' });
+    await svc.addNoteFile(trip.id, note.id, { filename: 'b.png', originalname: 'b.png', size: 20, mimetype: 'image/png' });
+
+    // CB9/CB12/CB20's shared shape.
+    const legacyNote = testDb.prepare('SELECT n.*, u.username, u.avatar FROM collab_notes n JOIN users u ON n.user_id = u.id WHERE n.id = ?').get(note.id);
+    expect(await notesRepo.findWithUser(note.id)).toEqual(legacyNote);
+    expect(await notesRepo.findWithUserInTrip(note.id, trip.id)).toEqual(legacyNote);
+
+    // CB6's narrow attachment projection.
+    const legacyAttachments = testDb.prepare('SELECT id, filename, original_name, file_size, mime_type FROM trip_files WHERE note_id = ? ORDER BY id ASC').all(note.id);
+    expect(await notesRepo.listAttachmentsForNote(note.id)).toEqual(legacyAttachments);
+  });
+
+  it('COLLAB-REPO-002: CollabPollsRepository/CollabPollVotesRepository match the legacy queries for a multiple-choice poll voted on every option', async () => {
+    const { user1, user2, trip } = setup();
+    const poll = await svc.createPoll(trip.id, user1.id, { question: 'Pick', options: ['A', 'B', 'C'], multiple: true });
+    await svc.votePoll(trip.id, poll!.id, user1.id, 0);
+    await svc.votePoll(trip.id, poll!.id, user1.id, 1);
+    await svc.votePoll(trip.id, poll!.id, user2.id, 2);
+    await svc.votePoll(trip.id, poll!.id, user2.id, 0);
+
+    // CB23's poll half.
+    const legacyPoll = testDb.prepare('SELECT p.*, u.username, u.avatar FROM collab_polls p JOIN users u ON p.user_id = u.id WHERE p.id = ?').get(poll!.id);
+    expect(await pollsRepo.findWithUser(poll!.id)).toEqual(legacyPoll);
+
+    // CB24's votes half — every option has at least one vote, including the
+    // multi-select case (user1 voted twice). No ORDER BY on either side, so
+    // both are sorted the same deterministic way before comparing.
+    const sortVotes = (rows: { option_index: number; user_id: number }[]) => [...rows].sort((a, b) => a.option_index - b.option_index || a.user_id - b.user_id);
+    const legacyVotes = testDb.prepare('SELECT v.option_index, v.user_id, u.username, u.avatar FROM collab_poll_votes v JOIN users u ON v.user_id = u.id WHERE v.poll_id = ?').all(poll!.id) as { option_index: number; user_id: number }[];
+    const repoVotes = await pollVotesRepo.listForPoll(poll!.id);
+    expect(sortVotes(repoVotes)).toEqual(sortVotes(legacyVotes));
+    expect(repoVotes).toHaveLength(4);
+  });
+
+  it('COLLAB-REPO-003: CollabMessagesRepository.listForTrip matches the legacy self-joined SELECT for a reply to a soft-deleted message', async () => {
+    const { user1, trip } = setup();
+    const original = await svc.createMessage(trip.id, user1.id, 'Original text');
+    const reply = await svc.createMessage(trip.id, user1.id, 'Reply text', original.message!.id);
+    await svc.deleteMessage(trip.id, original.message!.id, user1.id);
+
+    const legacy = testDb.prepare(`
+      SELECT m.*, u.username, u.avatar,
+        CASE WHEN rm.deleted = 1 THEN '' ELSE rm.text END AS reply_text,
+        ru.username AS reply_username
+      FROM collab_messages m
+      JOIN users u ON m.user_id = u.id
+      LEFT JOIN collab_messages rm ON m.reply_to = rm.id
+      LEFT JOIN users ru ON rm.user_id = ru.id
+      WHERE m.trip_id = ?
+      ORDER BY m.id DESC
+      LIMIT 100
+    `).all(trip.id);
+
+    const repoRows = await messagesRepo.listForTrip(trip.id);
+    expect(repoRows).toEqual(legacy);
+
+    const replyRow = repoRows.find(r => r.id === reply.message!.id)!;
+    expect(replyRow.reply_text).toBe(''); // the quoted message is soft-deleted — blanked, not the raw text.
+    expect(replyRow.reply_username).toBe(user1.username);
+  });
+
+  it('COLLAB-REPO-004: CollabMessageReactionsRepository matches the legacy queries for reactions from several users on several emoji', async () => {
+    const { user1, user2, trip } = setup();
+    const msg = await svc.createMessage(trip.id, user1.id, 'React away');
+    const msgId = msg.message!.id;
+    testDb.prepare('INSERT INTO collab_message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)').run(msgId, user1.id, '👍');
+    testDb.prepare('INSERT INTO collab_message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)').run(msgId, user2.id, '👍');
+    testDb.prepare('INSERT INTO collab_message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)').run(msgId, user2.id, '🎉');
+
+    const sortReactions = (rows: { emoji: string; user_id: number }[]) => [...rows].sort((a, b) => a.emoji.localeCompare(b.emoji) || a.user_id - b.user_id);
+
+    // CB1.
+    const legacySingle = testDb.prepare('SELECT r.emoji, r.user_id, u.username FROM collab_message_reactions r JOIN users u ON r.user_id = u.id WHERE r.message_id = ?').all(msgId) as { emoji: string; user_id: number }[];
+    const repoSingle = await messageReactionsRepo.listForMessage(msgId);
+    expect(sortReactions(repoSingle)).toEqual(sortReactions(legacySingle));
+
+    // CB46 (the batch form `listMessages` uses).
+    const legacyBatch = testDb.prepare('SELECT r.message_id, r.emoji, r.user_id, u.username FROM collab_message_reactions r JOIN users u ON r.user_id = u.id WHERE r.message_id IN (?)').all(msgId) as { emoji: string; user_id: number }[];
+    const repoBatch = await messageReactionsRepo.listForMessages([msgId]);
+    expect(sortReactions(repoBatch)).toEqual(sortReactions(legacyBatch));
+    expect(repoBatch).toHaveLength(3);
+  });
+
+  it('COLLAB-REPO-005: CollabLinksRepository matches the legacy joined SELECTs for a pinned link', async () => {
+    const { user1, trip } = setup();
+    const link = await svc.createLink(trip.id, user1.id, { title: 'Guide', url: 'https://example.com/guide', pinned: true });
+
+    const legacy = testDb.prepare('SELECT l.*, u.username FROM collab_links l JOIN users u ON u.id = l.user_id WHERE l.id = ?').get(link!.id);
+    expect(await linksRepo.findWithUser(link!.id)).toEqual(legacy);
+
+    const legacyList = testDb.prepare('SELECT l.*, u.username FROM collab_links l JOIN users u ON u.id = l.user_id WHERE l.trip_id = ? ORDER BY l.pinned DESC, l.created_at DESC').all(trip.id);
+    expect(await linksRepo.listForTrip(trip.id)).toEqual(legacyList);
+  });
+});
+
+// ── deleteNoteFile IDOR guard (CB21, security-critical) ──────────────────────
+// A mutation proof: each assertion isolates ONE of the three scoping columns
+// (`id`, `note_id`, `trip_id`) by matching the foreign file on the other two —
+// dropping any single column from the guard's query flips that assertion from
+// a refusal to a wrongful success.
+
+describe('deleteNoteFile IDOR guard', () => {
+  it('COLLAB-SEC-001: refuses a file id that resolves under a different note or a different trip', async () => {
+    const { user1, trip } = setup();
+    const otherTrip = createTrip(testDb, user1.id);
+
+    // Two notes in the trip under test, so the `note_id` probe below keeps
+    // `trip_id` constant and only `note_id` differs.
+    const note1 = await svc.createNote(trip.id, user1.id, { title: 'Note 1' });
+    const note2 = await svc.createNote(trip.id, user1.id, { title: 'Note 2' });
+    const file2 = await svc.addNoteFile(trip.id, note2.id, { filename: 'note2.pdf', originalname: 'note2.pdf', size: 1, mimetype: 'application/pdf' });
+
+    // `id` and `trip_id` both match; only `note_id` is wrong (asking for
+    // note1's scope with a file that actually belongs to note2) — red if the
+    // guard's `note_id` column were dropped.
+    expect(await svc.deleteNoteFile(trip.id, note1.id, file2!.file.id)).toBe(false);
+    expect(testDb.prepare('SELECT COUNT(*) as c FROM trip_files WHERE id = ?').get(file2!.file.id)).toEqual({ c: 1 });
+
+    // A note (and its file) that live in a DIFFERENT trip. `id` and `note_id`
+    // both match the real row; only `trip_id` is wrong (the attacker's own
+    // authorized trip, not the one the note/file actually belongs to) — red
+    // if the guard's `trip_id` column were dropped. This is the exact IDOR
+    // the legacy doc comment names: a caller access-checked for `trip` alone
+    // enumerating a foreign note/file id pair.
+    const foreignNote = await svc.createNote(otherTrip.id, user1.id, { title: 'Foreign note' });
+    const foreignFile = await svc.addNoteFile(otherTrip.id, foreignNote.id, { filename: 'foreign.pdf', originalname: 'foreign.pdf', size: 1, mimetype: 'application/pdf' });
+
+    expect(await svc.deleteNoteFile(trip.id, foreignNote.id, foreignFile!.file.id)).toBe(false);
+    expect(testDb.prepare('SELECT COUNT(*) as c FROM trip_files WHERE id = ?').get(foreignFile!.file.id)).toEqual({ c: 1 });
+
+    // Sanity: the SAME file, scoped correctly, does succeed — the guard
+    // isn't just refusing everything.
+    expect(await svc.deleteNoteFile(otherTrip.id, foreignNote.id, foreignFile!.file.id)).toBe(true);
   });
 });
