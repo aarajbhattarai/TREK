@@ -65,6 +65,7 @@ import {
   createTestPlacesRepo,
   createTestTripMembersRepo,
   createTestDayAssignmentsRepo,
+  createTestCategoriesRepo,
   sharedTestOrm,
 } from '../../helpers/test-uow';
 
@@ -112,6 +113,7 @@ beforeAll(async () => {
   await createTestPlaceRatingsRepo(dbs.connection),
   await createTestTripMembersRepo(dbs.connection),
   await createTestDayAssignmentsRepo(dbs.connection),
+  await createTestCategoriesRepo(dbs.connection),
 );
 });
 

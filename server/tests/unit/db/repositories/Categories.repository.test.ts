@@ -224,4 +224,23 @@ describe('CategoriesRepository', () => {
       expect(await categories.findById(gone.id)).toBeNull();
     });
   });
+
+  describe('listIdName (Plan 3c Task 5, PL33 — PlacesService.importKmlPlaces\' folder → category lookup)', () => {
+    it('CATREPO-021: projects only id and name, no ORDER BY guaranteed, including a fresh row', async () => {
+      const created = createCategory(testDb, { name: 'RepoIdName' });
+      const rows = await categories.listIdName();
+      const match = rows.find((r) => r.id === created.id);
+      expect(match).toEqual({ id: created.id, name: 'RepoIdName' });
+      // Only the two columns — no color/icon/user_id/created_at leaking through.
+      expect(match ? Object.keys(match).sort() : []).toEqual(['id', 'name']);
+    });
+
+    it('CATREPO-022: includes every category row, seeded defaults and user-created alike', async () => {
+      const before = await categories.listIdName();
+      const created = createCategory(testDb, { name: 'RepoIdNameTwo' });
+      const after = await categories.listIdName();
+      expect(after.length).toBe(before.length + 1);
+      expect(after.map((r) => r.id)).toContain(created.id);
+    });
+  });
 });

@@ -6,6 +6,7 @@
  * PRIM-GPWT-00x (empty tags/ratings only) nor any other suite exercises.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { TRACK_COLORS } from '@trek/shared';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -529,5 +530,266 @@ describe('PlacesRepository.listForTrip (PL3) — filter fragments', () => {
       searchPattern: '%Central Park%', category: String(cat.id), tag: String(tag.id), assignment: 'assigned',
     });
     expect(rows.map((r) => r.id)).toEqual([winner.id]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 5 — the four importers' `insertPlace` column sets, the
+// colorize read+write transaction, the ftid backfill, and the
+// enrichment/backfill `fillIfEmpty` matrix.
+// ---------------------------------------------------------------------------
+
+describe('PlacesRepository.insertPlace — the four importers\' narrower column sets (PL31/34/38/41), read back inside the same transaction (PL32/35/40/42)', () => {
+  const base = {
+    address: null, category_id: null, price: null, currency: null,
+    place_time: null, end_time: null, duration_minutes: 60, notes: null, image_url: null,
+    google_place_id: null, google_ftid: null, osm_id: null, amap_poi_id: null, website: null,
+    phone: null, transport_mode: 'walking', route_geometry: null, route_color: null,
+    stop_type: null, fill_percent: null,
+  };
+
+  it('PLACEREPO-033 (PL31/PL32, GPX): the 7-column GPX shape is stored, and the read inside the same transaction sees the uncommitted row', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const row = await t.em.transactional(async () => {
+      const id = await places.insertPlace({
+        ...base,
+        trip_id: trip.id, name: 'GPX Waypoint', description: 'from a gpx file',
+        lat: 48.85, lng: 2.35, route_geometry: '[[48.85,2.35],[48.86,2.36]]',
+      });
+      // Same transaction, no commit yet — this read must still see it.
+      return places.findWithTagsAndRatings(id);
+    });
+
+    expect(row).toMatchObject({
+      trip_id: trip.id, name: 'GPX Waypoint', description: 'from a gpx file',
+      lat: 48.85, lng: 2.35, address: null, category_id: null, notes: null,
+      transport_mode: 'walking', route_geometry: '[[48.85,2.35],[48.86,2.36]]',
+      duration_minutes: 60, category: null, tags: [], ratings: [],
+    });
+    // Committed for real, not just visible mid-transaction.
+    expect(testDb.prepare('SELECT name FROM places WHERE trip_id = ?').get(trip.id)).toMatchObject({ name: 'GPX Waypoint' });
+  });
+
+  it('PLACEREPO-033b: a transaction that throws after the insert leaves no row behind — the insert really was uncommitted, not autocommitted ahead of the wrapper', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    await expect(t.em.transactional(async () => {
+      const id = await places.insertPlace({ ...base, trip_id: trip.id, name: 'Rolled back', description: null, lat: 1, lng: 1 });
+      // The uncommitted row is visible to a read inside the same transaction...
+      const seen = await places.findWithTagsAndRatings(id);
+      expect(seen?.name).toBe('Rolled back');
+      throw new Error('force rollback');
+    })).rejects.toThrow('force rollback');
+
+    // ...but never lands once the wrapping transaction rolls back.
+    expect(testDb.prepare('SELECT COUNT(*) as c FROM places WHERE trip_id = ?').get(trip.id)).toMatchObject({ c: 0 });
+  });
+
+  it('PLACEREPO-034 (PL34/PL35, KML): the 8-column KML shape (adds category_id) is stored, read back in the same transaction', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const cat = createCategory(testDb, { name: 'Hiking' });
+
+    const row = await t.em.transactional(async () => {
+      const id = await places.insertPlace({
+        ...base,
+        trip_id: trip.id, name: 'Placemark 1', description: 'a kml placemark',
+        lat: 35.0, lng: 139.0, category_id: cat.id, route_geometry: null,
+      });
+      return places.findWithTagsAndRatings(id);
+    });
+
+    expect(row).toMatchObject({
+      trip_id: trip.id, name: 'Placemark 1', description: 'a kml placemark',
+      lat: 35.0, lng: 139.0, category_id: cat.id, duration_minutes: 60,
+      transport_mode: 'walking', address: null, notes: null,
+      category: { id: cat.id, name: 'Hiking' },
+    });
+  });
+
+  it('PLACEREPO-035 (PL38/PL40, Google list): the 7-column Google shape (notes + google_ftid) is stored, read back in the same transaction', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const row = await t.em.transactional(async () => {
+      const id = await places.insertPlace({
+        ...base,
+        trip_id: trip.id, name: 'Google Place', description: null,
+        lat: 40.7, lng: -74.0, notes: 'a note', google_ftid: '0x1:0x2',
+      });
+      return places.findWithTagsAndRatings(id);
+    });
+
+    expect(row).toMatchObject({
+      trip_id: trip.id, name: 'Google Place', notes: 'a note', google_ftid: '0x1:0x2',
+      lat: 40.7, lng: -74.0, address: null, category_id: null, duration_minutes: 60,
+      transport_mode: 'walking',
+    });
+  });
+
+  it('PLACEREPO-036 (PL41/PL42, Naver list): the 7-column Naver shape (address + notes) is stored, read back in the same transaction', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const row = await t.em.transactional(async () => {
+      const id = await places.insertPlace({
+        ...base,
+        trip_id: trip.id, name: 'Naver Spot', description: null,
+        lat: 37.5, lng: 127.0, address: '123 Some Street', notes: 'a naver note',
+      });
+      return places.findWithTagsAndRatings(id);
+    });
+
+    expect(row).toMatchObject({
+      trip_id: trip.id, name: 'Naver Spot', address: '123 Some Street', notes: 'a naver note',
+      lat: 37.5, lng: 127.0, category_id: null, duration_minutes: 60, transport_mode: 'walking',
+    });
+  });
+});
+
+describe('PlacesRepository.distinctRouteColors / setRouteColor (PL36/PL37)', () => {
+  it('PLACEREPO-037: distinctRouteColors returns only this trip\'s non-null colours, scoped by trip_id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    testDb.prepare("INSERT INTO places (trip_id, name, lat, lng, route_geometry, route_color) VALUES (?, 'A', 1, 1, '[[1,1]]', ?)").run(trip.id, TRACK_COLORS[0]);
+    testDb.prepare("INSERT INTO places (trip_id, name, lat, lng, route_geometry, route_color) VALUES (?, 'B', 1, 1, '[[1,1]]', ?)").run(trip.id, TRACK_COLORS[1]);
+    testDb.prepare("INSERT INTO places (trip_id, name, lat, lng, route_geometry) VALUES (?, 'C', 1, 1, '[[1,1]]')").run(trip.id);
+    testDb.prepare("INSERT INTO places (trip_id, name, lat, lng, route_geometry, route_color) VALUES (?, 'D', 1, 1, '[[1,1]]', ?)").run(other.id, TRACK_COLORS[2]);
+
+    const colors = await places.distinctRouteColors(trip.id);
+    expect(new Set(colors)).toEqual(new Set([TRACK_COLORS[0], TRACK_COLORS[1]]));
+  });
+
+  it('PLACEREPO-038: setRouteColor writes the column without stamping updated_at', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET updated_at = ? WHERE id = ?').run('2020-01-01 00:00:00', place.id);
+
+    await places.setRouteColor(place.id, TRACK_COLORS[3]);
+
+    const row = testDb.prepare('SELECT route_color, updated_at FROM places WHERE id = ?').get(place.id) as { route_color: string; updated_at: string };
+    expect(row.route_color).toBe(TRACK_COLORS[3]);
+    expect(row.updated_at).toBe('2020-01-01 00:00:00');
+  });
+
+  it('PLACEREPO-039 (D6 single-connection race safety): two concurrent colour claims for the same trip never pick the same free colour', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const placeA = createPlace(testDb, trip.id, { name: 'Track A' });
+    const placeB = createPlace(testDb, trip.id, { name: 'Track B' });
+    testDb.prepare("UPDATE places SET route_geometry = '[[1,1]]' WHERE id IN (?, ?)").run(placeA.id, placeB.id);
+
+    // Mirrors PlacesService.colorizeImportedTracks's own PL36+PL37 pairing
+    // EXACTLY: the read AND the write for one claim share ONE transaction —
+    // splitting them (read in one transaction, write in a second, separate
+    // one) is precisely the bug this pairing exists to prevent, and doing
+    // that here would make the test pass for the wrong reason.
+    const claimAndWrite = (placeId: number) => t.em.transactional(async () => {
+      const taken = new Set(await places.distinctRouteColors(trip.id));
+      const free = TRACK_COLORS.find((c) => !taken.has(c));
+      if (!free) throw new Error('palette exhausted');
+      await places.setRouteColor(placeId, free);
+      return free;
+    });
+
+    const [colorA, colorB] = await Promise.all([
+      claimAndWrite(placeA.id),
+      claimAndWrite(placeB.id),
+    ]);
+
+    expect(colorA).not.toBe(colorB);
+    const rows = testDb.prepare('SELECT route_color FROM places WHERE id IN (?, ?)').all(placeA.id, placeB.id) as { route_color: string }[];
+    expect(new Set(rows.map((r) => r.route_color)).size).toBe(2);
+  });
+});
+
+describe('PlacesRepository.backfillFtid (PL39)', () => {
+  it('PLACEREPO-040: stamps google_ftid and updated_at, unscoped by trip (the candidate was already resolved against the trip by findDuplicatePlace)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET updated_at = ? WHERE id = ?').run('2020-01-01 00:00:00', place.id);
+
+    await places.backfillFtid(place.id, '0x9:0x9');
+
+    const row = testDb.prepare('SELECT google_ftid, updated_at FROM places WHERE id = ?').get(place.id) as { google_ftid: string; updated_at: string };
+    expect(row.google_ftid).toBe('0x9:0x9');
+    expect(row.updated_at).not.toBe('2020-01-01 00:00:00');
+  });
+});
+
+describe('PlacesRepository.fillIfEmpty (PL43/PL44/PL46) — three call shapes over one COALESCE-per-column method', () => {
+  it('PLACEREPO-041 (PL43 shape): fills every empty column named in fields, stamps updated_at, and leaves an omitted column untouched', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET phone = ?, updated_at = ? WHERE id = ?').run('+1 555', '2020-01-01 00:00:00', place.id);
+
+    await places.fillIfEmpty(place.id, trip.id, {
+      google_place_id: 'gp1', google_ftid: 'gf1', address: 'addr1', website: 'https://x', phone: 'ignored',
+    });
+
+    const row = testDb.prepare('SELECT google_place_id, google_ftid, address, website, phone, updated_at FROM places WHERE id = ?').get(place.id) as Record<string, string>;
+    expect(row.google_place_id).toBe('gp1');
+    expect(row.google_ftid).toBe('gf1');
+    expect(row.address).toBe('addr1');
+    expect(row.website).toBe('https://x');
+    // Already set — COALESCE keeps the existing value, not the caller's.
+    expect(row.phone).toBe('+1 555');
+    expect(row.updated_at).not.toBe('2020-01-01 00:00:00');
+  });
+
+  it('PLACEREPO-042: a column already set is NOT overwritten; an empty one is filled', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET address = ? WHERE id = ?').run('Existing address', place.id);
+
+    await places.fillIfEmpty(place.id, trip.id, { address: 'New address' });
+
+    expect((testDb.prepare('SELECT address FROM places WHERE id = ?').get(place.id) as { address: string }).address).toBe('Existing address');
+
+    const empty = createPlace(testDb, trip.id, { name: 'No address yet' });
+    await places.fillIfEmpty(empty.id, trip.id, { address: 'First address' });
+    expect((testDb.prepare('SELECT address FROM places WHERE id = ?').get(empty.id) as { address: string }).address).toBe('First address');
+  });
+
+  it('PLACEREPO-043 (PL44 shape): image_url-only', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+
+    await places.fillIfEmpty(place.id, trip.id, { image_url: '/api/maps/place-photo/x/bytes' });
+
+    const row = testDb.prepare('SELECT image_url, google_place_id FROM places WHERE id = ?').get(place.id) as { image_url: string; google_place_id: string | null };
+    expect(row.image_url).toBe('/api/maps/place-photo/x/bytes');
+    // Not touched — the key was never in `fields`, not even COALESCE'd against itself.
+    expect(row.google_place_id).toBeNull();
+  });
+
+  it('PLACEREPO-044 (PL46 shape): address-only', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+
+    await places.fillIfEmpty(place.id, trip.id, { address: '1 Rue de Rivoli' });
+
+    expect((testDb.prepare('SELECT address FROM places WHERE id = ?').get(place.id) as { address: string }).address).toBe('1 Rue de Rivoli');
+  });
+
+  it('PLACEREPO-045: WHERE id = ? AND trip_id = ? scoping — a mismatched trip_id writes nothing', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const otherTrip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+
+    await places.fillIfEmpty(place.id, otherTrip.id, { address: 'Should not land' });
+
+    expect((testDb.prepare('SELECT address FROM places WHERE id = ?').get(place.id) as { address: string | null }).address).toBeNull();
   });
 });

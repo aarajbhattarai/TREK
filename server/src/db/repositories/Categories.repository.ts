@@ -22,6 +22,18 @@ export class CategoriesRepository extends TrekRepository<Categories> {
   }
 
   /**
+   * PL33 (`PlacesService.importKmlPlaces`) — `SELECT id, name FROM
+   * categories`, the id/name-only projection the KML importer folds into
+   * `buildCategoryNameLookup` to resolve a folder name to a category id. No
+   * `ORDER BY` in the legacy statement — none added here.
+   */
+  async listIdName(): Promise<{ id: number; name: string }[]> {
+    return this.qb('c')
+      .select(['c.id', 'c.name'])
+      .execute<{ id: number; name: string }[]>('all', false);
+  }
+
+  /**
    * `SELECT * FROM categories WHERE id = ?` — no owner filter. `user_id`
    * being nullable makes a row *look* ownable, but this legacy statement
    * never scoped by it: any id answers regardless of who created the row.

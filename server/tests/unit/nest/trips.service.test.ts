@@ -92,7 +92,7 @@ import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
-  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo,
+  createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestCategoriesRepo,
 } from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
@@ -173,6 +173,7 @@ beforeAll(async () => {
   await createTestPlaceRatingsRepo(dbs().connection),
   await createTestTripMembersRepo(dbs().connection),
   await createTestDayAssignmentsRepo(dbs().connection),
+  await createTestCategoriesRepo(dbs().connection),
 );
   svc = new TripsService(
   dbs(),

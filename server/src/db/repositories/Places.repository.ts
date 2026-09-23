@@ -1,6 +1,6 @@
 import type { Places } from '../entities/Places.entity';
 import type { Tags } from '../entities/Tags.entity';
-import { absDifference, columnRef, currentTimestamp, lowerTrim } from '../dialect/sql-functions';
+import { absDifference, coalesceParam, columnRef, currentTimestamp, lowerTrim } from '../dialect/sql-functions';
 import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -593,5 +593,126 @@ export class PlacesRepository extends TrekRepository<Places> {
     qb.orderBy({ 'p.created_at': 'desc' });
 
     return qb.execute<PlaceWithCategoryRow[]>('all', false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 5 (`PlacesService` import paths) — every method below is
+  // additive: `insertPlace`/`updatePlace`/`findWithTagsAndRatings`/the
+  // `findDuplicateBy*` trio above are Task 4's, unchanged and reused verbatim
+  // by the four importers (GPX/KML/Google/Naver) this task converts.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * PL36 (`colorizeImportedTracks`'s read half) — `SELECT DISTINCT
+   * route_color AS c FROM places WHERE trip_id = ? AND route_color IS NOT
+   * NULL`. `DISTINCT` via `.select([...], true)` (the same shape
+   * `listForTrip`/PL3 uses for its own `SELECT DISTINCT`), not `$ne: null`
+   * folded into a single-object filter, so the emitted `WHERE` clause reads
+   * in the legacy's own `trip_id = ? AND route_color IS NOT NULL` order.
+   *
+   * Called and its result acted on inside the SAME `uow.transactional(...)`
+   * block `setRouteColor` below writes in (the service's own PL36+PL37
+   * pairing) — read and write share one transaction so two concurrent
+   * imports can never both observe the same set of free colours.
+   */
+  async distinctRouteColors(trip_id: string | number): Promise<string[]> {
+    const rows = await this.qb('p')
+      .select(['p.route_color as c'], true)
+      .where('p.trip_id = ? AND p.route_color IS NOT NULL', [trip_id])
+      .execute<{ c: string }[]>('all', false);
+    return rows.map((r) => r.c);
+  }
+
+  /**
+   * PL37 (`colorizeImportedTracks`'s write half) — `UPDATE places SET
+   * route_color = ? WHERE id = ?`. No `updated_at` stamp — the legacy
+   * statement never wrote one for this column (#776's own deliberate
+   * omission, restated in `PlacesService`'s class docstring), and this
+   * method reproduces exactly that, not the "every write stamps
+   * `updated_at`" shape `updatePlace`/`backfillFtid`/`fillIfEmpty` below
+   * follow.
+   */
+  async setRouteColor(id: number, route_color: string): Promise<void> {
+    await this.nativeUpdate({ id }, { route_color });
+  }
+
+  /**
+   * PL39 (`storeGooglePlaces`'s dedup-backfill half) — `UPDATE places SET
+   * google_ftid = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, unscoped
+   * by `trip_id` (matching the legacy statement exactly — the candidate id
+   * was already resolved against this trip by the `findDuplicatePlace` call
+   * immediately before it).
+   */
+  async backfillFtid(id: number, google_ftid: string): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate({ id }, { google_ftid, updated_at: currentTimestamp(platform) });
+  }
+
+  /**
+   * PL43/PL44/PL46 (`enrichOne`'s two `UPDATE`s and
+   * `backfillMissingAddresses`'s one) — three legacy statements, one shape:
+   * `UPDATE places SET <col> = COALESCE(<col>, ?), ..., updated_at =
+   * CURRENT_TIMESTAMP WHERE id = ? AND trip_id = ?`. One `nativeUpdate` per
+   * CALL, built from whichever of the six columns the caller passes
+   * (`fields`'s keys are all optional — a key left OFF `fields` entirely is
+   * not touched at all, not even COALESCE'd against itself); every key
+   * that IS present renders `COALESCE(<col>, ?)` through `coalesceParam`
+   * (never an inline `raw()`), so a column already holding a value is never
+   * overwritten and an empty one is filled from `fields`'s value.
+   * `updated_at` is stamped unconditionally — all three legacy statements
+   * stamp it, none of them conditionally.
+   *
+   * The three call shapes this serves (Task 5's "×3 shapes"):
+   *  - PL43 (`enrichOne`'s main update) — `google_place_id`, `google_ftid`,
+   *    `address`, `website`, `phone` all at once.
+   *  - PL44 (`enrichOne`'s photo update) — `image_url` alone.
+   *  - PL46 (`backfillMissingAddresses`) — `address` alone.
+   */
+  async fillIfEmpty(id: number, trip_id: number, fields: {
+    google_place_id?: string | null;
+    google_ftid?: string | null;
+    address?: string | null;
+    website?: string | null;
+    phone?: string | null;
+    image_url?: string | null;
+  }): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    const data: {
+      google_place_id?: ReturnType<typeof coalesceParam>;
+      google_ftid?: ReturnType<typeof coalesceParam>;
+      address?: ReturnType<typeof coalesceParam>;
+      website?: ReturnType<typeof coalesceParam>;
+      phone?: ReturnType<typeof coalesceParam>;
+      image_url?: ReturnType<typeof coalesceParam>;
+      updated_at: ReturnType<typeof currentTimestamp>;
+    } = { updated_at: currentTimestamp(platform) };
+    if (fields.google_place_id !== undefined) data.google_place_id = coalesceParam(platform, 'google_place_id', fields.google_place_id);
+    if (fields.google_ftid !== undefined) data.google_ftid = coalesceParam(platform, 'google_ftid', fields.google_ftid);
+    if (fields.address !== undefined) data.address = coalesceParam(platform, 'address', fields.address);
+    if (fields.website !== undefined) data.website = coalesceParam(platform, 'website', fields.website);
+    if (fields.phone !== undefined) data.phone = coalesceParam(platform, 'phone', fields.phone);
+    if (fields.image_url !== undefined) data.image_url = coalesceParam(platform, 'image_url', fields.image_url);
+    await this.nativeUpdate({ id, trip: trip_id }, data);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 7 (`trips.rpc.ts`) — additive (per `task-4-report.md`'s own
+  // note that this method "may not exist"): every column above is Task 4/5's,
+  // unchanged.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RP2 (`trips.rpc.ts::getPlaces`) — `SELECT * FROM places WHERE trip_id = ?
+   * ORDER BY created_at DESC`. The trip's place POOL has no itinerary
+   * position of its own (`day_id`/`order_index` live on `day_assignments`),
+   * so this orders by `created_at` like the REST list does — the RPC
+   * method's own comment (`trips.rpc.ts`).
+   */
+  async listForTripOrdered(trip_id: number): Promise<PlaceRow[]> {
+    return await this.qb('p')
+      .select(['p.*'])
+      .where({ trip: trip_id })
+      .orderBy({ 'p.created_at': 'desc' })
+      .execute<PlaceRow[]>('all', false);
   }
 }

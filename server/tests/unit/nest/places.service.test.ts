@@ -78,7 +78,7 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
@@ -124,6 +124,7 @@ async function makePlacesService(
     await createTestPlaceRatingsRepo(dbs.connection),
     await createTestTripMembersRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
+    await createTestCategoriesRepo(dbs.connection),
   );
 }
 
@@ -1420,6 +1421,29 @@ describe('enrichImportedPlaces', () => {
     expect(row.image_url).toBe('/api/maps/place-photo/ChIJ1/bytes');
   });
 
+  it('PLACE-SVC-060b (PL45) — broadcasts place:updated with socketId: undefined, no exclusion (the importer\'s own client gets the late update)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
+    const broadcastSpy = vi.spyOn(RealtimeService.prototype, 'broadcast');
+
+    const svcWithMaps = await enrichSvc({
+      getMapsKey: vi.fn(() => 'key'),
+      searchPlaces: vi.fn(async () => ({ source: 'google', places: [{ google_place_id: 'ChIJ1', lat: 48.85, lng: 2.35 }] })),
+      getPlacePhoto: vi.fn(async () => ({ photoUrl: null, attribution: null })),
+    } as never);
+
+    await svcWithMaps.enrichImportedPlaces(String(trip.id), user.id, [{ id: place.id, name: 'Bar', lat: 48.85, lng: 2.35 }]);
+
+    expect(broadcastSpy).toHaveBeenCalledTimes(1);
+    const [tripArg, event, payload, socketId] = broadcastSpy.mock.calls[0];
+    expect(tripArg).toBe(String(trip.id));
+    expect(event).toBe('place:updated');
+    expect((payload as { place: { id: number } }).place.id).toBe(place.id);
+    expect(socketId).toBeUndefined();
+    broadcastSpy.mockRestore();
+  });
+
   it('PLACE-SVC-061 — leaves the place alone when no candidate is close enough', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -1716,6 +1740,26 @@ describe('backfillMissingAddresses', () => {
     expect(reverseGeocode).toHaveBeenCalledWith('48.85', '2.35', undefined, { lane: 'background', timeoutMs: 10000 });
     const row = testDb.prepare('SELECT address FROM places WHERE id = ?').get(place.id) as { address: string };
     expect(row.address).toBe('1 Rue de Rivoli, Paris');
+  });
+
+  it('PLACE-SVC-078b (PL47) — broadcasts place:updated with socketId: undefined, no exclusion', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
+    const broadcastSpy = vi.spyOn(RealtimeService.prototype, 'broadcast');
+
+    const reverseGeocode = vi.fn(async () => ({ name: null, address: '1 Rue de Rivoli, Paris' }));
+    await (await backfillSvc(reverseGeocode)).backfillMissingAddresses(String(trip.id), [
+      { id: place.id, name: 'Bar', lat: 48.85, lng: 2.35 },
+    ]);
+
+    expect(broadcastSpy).toHaveBeenCalledTimes(1);
+    const [tripArg, event, payload, socketId] = broadcastSpy.mock.calls[0];
+    expect(tripArg).toBe(String(trip.id));
+    expect(event).toBe('place:updated');
+    expect((payload as { place: { id: number } }).place.id).toBe(place.id);
+    expect(socketId).toBeUndefined();
+    broadcastSpy.mockRestore();
   });
 
   it('PLACE-SVC-079 — never overwrites an address the import or the Google pass already wrote', async () => {

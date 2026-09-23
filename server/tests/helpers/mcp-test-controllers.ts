@@ -223,6 +223,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestPlaceRatingsRepo(dbService.connection),
     await createTestTripMembersRepo(dbService.connection),
     await createTestDayAssignmentsRepo(dbService.connection),
+    await createTestCategoriesRepo(dbService.connection),
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
   const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadRepository(dbService), accommodationsService, await createTestUnitOfWork(dbService.connection));

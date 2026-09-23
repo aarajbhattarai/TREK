@@ -38,11 +38,13 @@ import { Tags } from '../../db/entities/Tags.entity';
 import { PlaceRatings } from '../../db/entities/PlaceRatings.entity';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import { Categories } from '../../db/entities/Categories.entity';
 import type { PlacesRepository, PlaceWithCategoryRow } from '../../db/repositories/Places.repository';
 import type { TagsRepository } from '../../db/repositories/Tags.repository';
 import type { PlaceRatingsRepository } from '../../db/repositories/PlaceRatings.repository';
 import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
+import type { CategoriesRepository } from '../../db/repositories/Categories.repository';
 
 /** Rows a place delete took down with the nights booked there, for the caller to announce. */
 export interface CancelledStays {
@@ -152,6 +154,7 @@ export class PlacesService {
     @InjectRepository(PlaceRatings) private readonly placeRatingsRepo: PlaceRatingsRepository,
     @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
     @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
+    @InjectRepository(Categories) private readonly categoriesRepo: CategoriesRepository,
   ) {}
 
   async verifyTripAccess(tripId: string, userId: number) {
@@ -812,20 +815,51 @@ export class PlacesService {
     if (waypoints.length === 0) return null;
 
     const dedup = await this.buildDedupSet(tripId);
-    const insertStmt = this.dbs.prepare(`
-    INSERT INTO places (trip_id, name, description, lat, lng, transport_mode, route_geometry)
-    VALUES (?, ?, ?, ?, ?, 'walking', ?)
-  `);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
+    // PL31/PL32 — one `insertPlace` call per waypoint. The legacy statement's
+    // narrower 7-column INSERT (trip_id, name, description, lat, lng,
+    // transport_mode='walking' literal, route_geometry) is reproduced as a
+    // typed `insertPlace` partial: the literal becomes a value, and every
+    // column the legacy INSERT omitted takes the same value the DB column
+    // default would have produced (`duration_minutes: 60`, everything else
+    // `null`) — parity by stored row, not by SQL text. Re-selected via
+    // `findWithTagsAndRatings` INSIDE the same transaction the insert ran
+    // in, so the read sees the still-uncommitted row.
     await this.uow.transactional(async () => {
       for (const wp of waypoints) {
         if (isPlaceDuplicate({ name: wp.name, lat: wp.lat, lng: wp.lng }, dedup)) {
           skipped++;
           continue;
         }
-        const result = insertStmt.run(tripId, wp.name, wp.description, wp.lat, wp.lng, wp.routeGeometry || null);
-        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
+        const placeId = await this.placesRepo.insertPlace({
+          trip_id: Number(tripId),
+          name: wp.name,
+          description: wp.description,
+          lat: wp.lat,
+          lng: wp.lng,
+          address: null,
+          category_id: null,
+          price: null,
+          currency: null,
+          place_time: null,
+          end_time: null,
+          duration_minutes: 60,
+          notes: null,
+          image_url: null,
+          google_place_id: null,
+          google_ftid: null,
+          osm_id: null,
+          amap_poi_id: null,
+          website: null,
+          phone: null,
+          transport_mode: 'walking',
+          route_geometry: wp.routeGeometry || null,
+          route_color: null,
+          stop_type: null,
+          fill_percent: null,
+        });
+        const place = (await this.placesRepo.findWithTagsAndRatings(placeId))!;
         created.push(place);
         trackInsertedInDedupSet({ name: wp.name, lat: wp.lat, lng: wp.lng }, dedup);
       }
@@ -879,16 +913,12 @@ export class PlacesService {
       summary.warnings.push(decoded.warning);
     }
 
-    const categories = this.dbs.all<{ id: number; name: string }>('SELECT id, name FROM categories');
+    // PL33 — `CategoriesRepository.listIdName` (Plan 3a's repository).
+    const categories = await this.categoriesRepo.listIdName();
     const categoryLookup = buildCategoryNameLookup(categories);
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let dupCount = 0;
-
-    const insertStmt = this.dbs.prepare(`
-    INSERT INTO places (trip_id, name, description, lat, lng, category_id, transport_mode, route_geometry)
-    VALUES (?, ?, ?, ?, ?, ?, 'walking', ?)
-  `);
 
     await this.uow.transactional(async () => {
       let fallbackIndex = 1;
@@ -928,17 +958,40 @@ export class PlacesService {
 
         const categoryId = resolveCategoryIdForFolder(parsedPlacemark.folderName, categoryLookup);
 
-        const result = insertStmt.run(
-          tripId,
+        // PL34/PL35 — `insertPlace` with the legacy 8-column set (trip_id,
+        // name, description, lat, lng, category_id, transport_mode='walking'
+        // literal, route_geometry); every omitted column takes its DB-default
+        // value. Re-selected via `findWithTagsAndRatings` INSIDE the same
+        // transaction.
+        const placeId = await this.placesRepo.insertPlace({
+          trip_id: Number(tripId),
           name,
-          parsedPlacemark.description,
-          parsedPlacemark.lat,
-          parsedPlacemark.lng,
-          categoryId,
-          parsedPlacemark.routeGeometry,
-        );
+          description: parsedPlacemark.description,
+          lat: parsedPlacemark.lat,
+          lng: parsedPlacemark.lng,
+          address: null,
+          category_id: categoryId,
+          price: null,
+          currency: null,
+          place_time: null,
+          end_time: null,
+          duration_minutes: 60,
+          notes: null,
+          image_url: null,
+          google_place_id: null,
+          google_ftid: null,
+          osm_id: null,
+          amap_poi_id: null,
+          website: null,
+          phone: null,
+          transport_mode: 'walking',
+          route_geometry: parsedPlacemark.routeGeometry,
+          route_color: null,
+          stop_type: null,
+          fill_percent: null,
+        });
 
-        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
+        const place = (await this.placesRepo.findWithTagsAndRatings(placeId))!;
         created.push(place);
         trackInsertedInDedupSet({ name, lat: parsedPlacemark.lat, lng: parsedPlacemark.lng }, dedup);
         summary.createdCount += 1;
@@ -981,22 +1034,19 @@ export class PlacesService {
     const tracks = result?.places?.filter((p) => p.route_geometry && !p.route_color) ?? [];
     if (tracks.length === 0) return;
 
-    // Read and write in one transaction so two concurrent imports cannot both
-    // read the same set of free colours.
+    // PL36+PL37 — read (`distinctRouteColors`) and write (`setRouteColor`) in
+    // ONE transaction so two concurrent imports cannot both read the same set
+    // of free colours.
     await this.uow.transactional(async () => {
-      const taken = new Set(
-        this.dbs.all<{ c: string }>(
-          'SELECT DISTINCT route_color AS c FROM places WHERE trip_id = ? AND route_color IS NOT NULL', tripId,
-        ).map((r) => r.c),
-      );
+      const taken = new Set(await this.placesRepo.distinctRouteColors(tripId));
       const free = TRACK_COLORS.filter((c) => !taken.has(c));
-      tracks.forEach((track, i) => {
+      for (const [i, track] of tracks.entries()) {
         // Free ones first, then wrap through the whole palette — never reuse a
         // free colour twice within the same import.
         const color = i < free.length ? free[i] : TRACK_COLORS[(i - free.length) % TRACK_COLORS.length];
-        this.dbs.run('UPDATE places SET route_color = ? WHERE id = ?', color, track.id);
+        await this.placesRepo.setRouteColor(track.id, color);
         track.route_color = color;
-      });
+      }
     });
   }
 
@@ -1145,11 +1195,6 @@ export class PlacesService {
     places: { name: string; lat: number; lng: number; notes: string | null; googleFtid: string | null }[],
   ): Promise<{ created: PlaceWithTags[]; skipped: number }> {
     const dedup = await this.buildDedupSet(tripId);
-    const insertStmt = this.dbs.prepare(`
-    INSERT INTO places (trip_id, name, lat, lng, notes, google_ftid, transport_mode)
-    VALUES (?, ?, ?, ?, ?, ?, 'walking')
-  `);
-    const updateGoogleFtidStmt = this.dbs.prepare('UPDATE places SET google_ftid = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
     const created: PlaceWithTags[] = [];
     let skipped = 0;
     await this.uow.transactional(async () => {
@@ -1162,14 +1207,47 @@ export class PlacesService {
         const candidate = { name: p.name, lat: p.lat, lng: p.lng, google_ftid: p.googleFtid };
         if (isPlaceDuplicate(candidate, dedup)) {
           const duplicate = await this.findDuplicatePlace(tripId, candidate);
+          // PL39 — `backfillFtid`, unscoped by trip (matching the legacy
+          // statement — `duplicate` was already resolved against this trip).
           if (duplicate && !duplicate.google_ftid && p.googleFtid) {
-            updateGoogleFtidStmt.run(p.googleFtid, duplicate.id);
+            await this.placesRepo.backfillFtid(duplicate.id, p.googleFtid);
           }
           skipped++;
           continue;
         }
-        const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.notes, p.googleFtid);
-        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
+        // PL38/PL40 — `insertPlace` with the legacy 7-column set (trip_id,
+        // name, lat, lng, notes, google_ftid, transport_mode='walking'
+        // literal); every omitted column takes its DB-default value.
+        // Re-selected via `findWithTagsAndRatings` INSIDE the same
+        // transaction.
+        const placeId = await this.placesRepo.insertPlace({
+          trip_id: Number(tripId),
+          name: p.name,
+          description: null,
+          lat: p.lat,
+          lng: p.lng,
+          address: null,
+          category_id: null,
+          price: null,
+          currency: null,
+          place_time: null,
+          end_time: null,
+          duration_minutes: 60,
+          notes: p.notes,
+          image_url: null,
+          google_place_id: null,
+          google_ftid: p.googleFtid,
+          osm_id: null,
+          amap_poi_id: null,
+          website: null,
+          phone: null,
+          transport_mode: 'walking',
+          route_geometry: null,
+          route_color: null,
+          stop_type: null,
+          fill_percent: null,
+        });
+        const place = (await this.placesRepo.findWithTagsAndRatings(placeId))!;
         created.push(place);
         trackInsertedInDedupSet(candidate, dedup);
       }
@@ -1396,20 +1474,46 @@ export class PlacesService {
     }
 
     const dedup = await this.buildDedupSet(tripId);
-    const insertStmt = this.dbs.prepare(`
-    INSERT INTO places (trip_id, name, lat, lng, address, notes, transport_mode)
-    VALUES (?, ?, ?, ?, ?, ?, 'walking')
-  `);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
+    // PL41/PL42 — `insertPlace` with the legacy 7-column set (trip_id, name,
+    // lat, lng, address, notes, transport_mode='walking' literal); every
+    // omitted column takes its DB-default value. Re-selected via
+    // `findWithTagsAndRatings` INSIDE the same transaction.
     await this.uow.transactional(async () => {
       for (const p of places) {
         if (isPlaceDuplicate({ name: p.name, lat: p.lat, lng: p.lng }, dedup)) {
           skipped++;
           continue;
         }
-        const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.address, p.notes);
-        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
+        const placeId = await this.placesRepo.insertPlace({
+          trip_id: Number(tripId),
+          name: p.name,
+          description: null,
+          lat: p.lat,
+          lng: p.lng,
+          address: p.address,
+          category_id: null,
+          price: null,
+          currency: null,
+          place_time: null,
+          end_time: null,
+          duration_minutes: 60,
+          notes: p.notes,
+          image_url: null,
+          google_place_id: null,
+          google_ftid: null,
+          osm_id: null,
+          amap_poi_id: null,
+          website: null,
+          phone: null,
+          transport_mode: 'walking',
+          route_geometry: null,
+          route_color: null,
+          stop_type: null,
+          fill_percent: null,
+        });
+        const place = (await this.placesRepo.findWithTagsAndRatings(placeId))!;
         created.push(place);
         trackInsertedInDedupSet({ name: p.name, lat: p.lat, lng: p.lng }, dedup);
       }
@@ -1466,19 +1570,16 @@ export class PlacesService {
     if (!gpid) return;
     const gftid = trimOrNull(match.google_ftid);
 
-    // COALESCE so enrichment only fills empty columns — never overwrites data the
-    // import already captured (e.g. Naver's address) or anything the user edited.
-    this.dbs.run(
-      `UPDATE places
-     SET google_place_id = COALESCE(google_place_id, ?),
-         google_ftid    = COALESCE(google_ftid, ?),
-         address        = COALESCE(address, ?),
-         website        = COALESCE(website, ?),
-         phone          = COALESCE(phone, ?),
-         updated_at     = CURRENT_TIMESTAMP
-     WHERE id = ? AND trip_id = ?`,
-      gpid, gftid, trimOrNull(match.address), trimOrNull(match.website), trimOrNull(match.phone), place.id, tripId,
-    );
+    // PL43 — `fillIfEmpty`, COALESCE-per-column so enrichment only fills
+    // empty columns — never overwrites data the import already captured
+    // (e.g. Naver's address) or anything the user edited.
+    await this.placesRepo.fillIfEmpty(place.id, Number(tripId), {
+      google_place_id: gpid,
+      google_ftid: gftid,
+      address: trimOrNull(match.address),
+      website: trimOrNull(match.website),
+      phone: trimOrNull(match.phone),
+    });
 
     // Photo is best-effort: Google often has none, in which case getPlacePhoto
     // resolves with photoUrl: null. A missing photo (or a provider outage, which
@@ -1486,18 +1587,17 @@ export class PlacesService {
     try {
       const photo = await this.maps.getPlacePhoto(userId, gpid, place.lat, place.lng, place.name);
       if (photo?.photoUrl) {
-        this.dbs.run(
-          'UPDATE places SET image_url = COALESCE(image_url, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND trip_id = ?',
-          photo.photoUrl, place.id, tripId,
-        );
+        // PL44 — `fillIfEmpty`, the `image_url`-only shape.
+        await this.placesRepo.fillIfEmpty(place.id, Number(tripId), { image_url: photo.photoUrl });
       }
     } catch {
       /* no photo — leave image_url as-is */
     }
 
-    // Push the enriched row to every connected client (no socket exclusion: the
-    // importer's own client should also receive the late update).
-    const updated = await this.dbs.getPlaceWithTags(place.id);
+    // PL45 — push the enriched row to every connected client (no socket
+    // exclusion: the importer's own client should also receive the late
+    // update — `socketId: undefined`, no `X-Socket-Id` to exclude).
+    const updated = await this.placesRepo.findWithTagsAndRatings(place.id);
     if (updated) this.realtime.broadcast(tripId, 'place:updated', { place: updated }, undefined);
   }
 
@@ -1564,11 +1664,11 @@ export class PlacesService {
             timeoutMs: 10000,
           });
           if (!address) continue;
-          this.dbs.run(
-            'UPDATE places SET address = COALESCE(address, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND trip_id = ?',
-            address, place.id, tripId,
-          );
-          const updated = await this.dbs.getPlaceWithTags(place.id);
+          // PL46 — `fillIfEmpty`, the `address`-only shape.
+          await this.placesRepo.fillIfEmpty(place.id, Number(tripId), { address });
+          // PL47 — same broadcast shape as PL45: `socketId: undefined`, no
+          // exclusion.
+          const updated = await this.placesRepo.findWithTagsAndRatings(place.id);
           if (updated) this.realtime.broadcast(tripId, 'place:updated', { place: updated }, undefined);
         } catch (err) {
           console.error(`[Places] address backfill failed for place ${place.id}:`, err instanceof Error ? err.message : err);

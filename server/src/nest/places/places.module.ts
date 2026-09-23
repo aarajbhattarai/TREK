@@ -6,6 +6,7 @@ import { PlaceRatings } from '../../db/entities/PlaceRatings.entity';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import { Trips } from '../../db/entities/Trips.entity';
+import { Categories } from '../../db/entities/Categories.entity';
 import { JourneyDomainModule } from '../journey/journey-domain.module';
 import { PlacesController } from './places.controller';
 import { PlacesService } from './places.service';
@@ -60,8 +61,9 @@ import { MAX_PLACE_IMAGE_SIZE } from '../common/place-image-upload';
     // THIS module (not a sibling domain module's `exports`), matching
     // `AssignmentsDomainModule`'s own `MikroOrmModule.forFeature(...)`
     // precedent: a `forFeature` registration only reaches providers declared
-    // in the SAME module.
-    MikroOrmModule.forFeature([Places, Tags, PlaceRatings, TripMembers, DayAssignments, Trips]),
+    // in the SAME module. Plan 3c Task 5 adds `CategoriesRepository` for
+    // PL33's `importKmlPlaces` folder → category lookup.
+    MikroOrmModule.forFeature([Places, Tags, PlaceRatings, TripMembers, DayAssignments, Trips, Categories]),
   ],
   controllers: [PlacesController],
   providers: [PlacesService, PlacesMcp, PlacesRpc],
