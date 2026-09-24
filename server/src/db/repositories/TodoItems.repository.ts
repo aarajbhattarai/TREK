@@ -98,14 +98,21 @@ export class TodoItemsRepository extends TrekRepository<TodoItems> {
     return await this.kysely<TodoItemsKyselyDB>().selectFrom('todo_items').selectAll().where('id', '=', id as number).executeTakeFirst();
   }
 
-  /** TD5 (`updateItem`'s trip-scoping guard) — `SELECT * FROM todo_items WHERE id = ? AND trip_id = ?`. */
-  async findInTrip(id: number | string, trip_id: number | string): Promise<TodoItemRow | undefined> {
-    return await this.kysely<TodoItemsKyselyDB>().selectFrom('todo_items').selectAll().where('id', '=', id as number).where('trip_id', '=', trip_id as number).executeTakeFirst();
+  /**
+   * TD5 (`updateItem`'s trip-scoping guard) — `SELECT * FROM todo_items
+   * WHERE id = ? AND trip_id = ?`. `id: number` (Plan 4 Task 8b, U6 — the
+   * program's own gate-level id parsing carry: narrowed from `number |
+   * string` now that `TodoController.update`/`.remove` parse `:id` once via
+   * `toRowId` and thread the number down; `trip_id` stays `number | string`,
+   * a separate, still-accepted carry — see `todo.service.ts`'s own note).
+   */
+  async findInTrip(id: number, trip_id: number | string): Promise<TodoItemRow | undefined> {
+    return await this.kysely<TodoItemsKyselyDB>().selectFrom('todo_items').selectAll().where('id', '=', id).where('trip_id', '=', trip_id as number).executeTakeFirst();
   }
 
-  /** TD8 (`deleteItem`'s trip-scoping guard) — `SELECT id FROM todo_items WHERE id = ? AND trip_id = ?`. */
-  async existsInTrip(id: number | string, trip_id: number | string): Promise<{ id: number } | undefined> {
-    return await this.kysely<TodoItemsKyselyDB>().selectFrom('todo_items').select('id').where('id', '=', id as number).where('trip_id', '=', trip_id as number).executeTakeFirst();
+  /** TD8 (`deleteItem`'s trip-scoping guard) — `SELECT id FROM todo_items WHERE id = ? AND trip_id = ?`. `id: number`, same Plan 4 Task 8b narrowing as {@link findInTrip}. */
+  async existsInTrip(id: number, trip_id: number | string): Promise<{ id: number } | undefined> {
+    return await this.kysely<TodoItemsKyselyDB>().selectFrom('todo_items').select('id').where('id', '=', id).where('trip_id', '=', trip_id as number).executeTakeFirst();
   }
 
   /**
@@ -117,7 +124,7 @@ export class TodoItemsRepository extends TrekRepository<TodoItems> {
    * exactly); every other column is a true presence sentinel bound off the
    * legacy `bodyKeys` array (`present = bodyKeys.includes('<col>')`).
    */
-  async update(id: number | string, write: {
+  async update(id: number, write: {
     name?: readonly [present: boolean, value: string];
     checked?: readonly [present: boolean, value: number];
     category?: readonly [present: boolean, value: string | null];
@@ -131,12 +138,12 @@ export class TodoItemsRepository extends TrekRepository<TodoItems> {
       description: string | null; assigned_user_id: number | null; priority: number;
     }>(write);
     if (Object.keys(data).length === 0) return;
-    await this.kysely<TodoItemsKyselyDB>().updateTable('todo_items').set(data).where('id', '=', id as number).execute();
+    await this.kysely<TodoItemsKyselyDB>().updateTable('todo_items').set(data).where('id', '=', id).execute();
   }
 
-  /** TD9 (`deleteItem`) — `DELETE FROM todo_items WHERE id = ?` (no trip scoping in the statement itself — relies on the caller's prior {@link existsInTrip} gate, matching legacy). */
-  async deleteById(id: number | string): Promise<void> {
-    await this.kysely<TodoItemsKyselyDB>().deleteFrom('todo_items').where('id', '=', id as number).execute();
+  /** TD9 (`deleteItem`) — `DELETE FROM todo_items WHERE id = ?` (no trip scoping in the statement itself — relies on the caller's prior {@link existsInTrip} gate, matching legacy). `id: number`, same Plan 4 Task 8b narrowing as {@link findInTrip}. */
+  async deleteById(id: number): Promise<void> {
+    await this.kysely<TodoItemsKyselyDB>().deleteFrom('todo_items').where('id', '=', id).execute();
   }
 
   /** TD10 (`reorderItems`, looped) — `UPDATE todo_items SET sort_order = ? WHERE id = ? AND trip_id = ?`. */

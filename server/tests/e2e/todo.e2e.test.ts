@@ -195,6 +195,23 @@ describe('To-do e2e (real auth guard + real SQL over temp SQLite)', () => {
     expect(res.body).toEqual({ error: 'Item not found' });
   });
 
+  // Plan 4 Task 8b (U6) — :id is now parsed ONCE at the controller gate
+  // (toRowId), so a non-numeric id 404s cleanly through that guard instead
+  // of falling through to the repository and depending on SQLite's
+  // column-affinity CAST to simply not match (the legacy outcome was also a
+  // 404, same status — this pins the gate itself, not just the status).
+  it('404 (not 500) on update with a non-numeric :id', async () => {
+    const res = await request(server).put(`/api/trips/${tripId}/todo/abc`).set('Cookie', sessionCookie(1)).send({ name: 'X' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Item not found' });
+  });
+
+  it('404 (not 500) on delete with a non-numeric :id', async () => {
+    const res = await request(server).delete(`/api/trips/${tripId}/todo/abc`).set('Cookie', sessionCookie(1));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Item not found' });
+  });
+
   it('200 on reorder, persisting the new sort_order', async () => {
     const a = insertItem(tripId, 'A', { sort_order: 0 });
     const b = insertItem(tripId, 'B', { sort_order: 1 });

@@ -54,7 +54,7 @@ export class TodoRpc {
     const actor = this.guards.requireActor(ctx, 'todo');
     await this.guards.requireTripEdit(tripId, actor, TODO_EDIT_ACTION);
     const input = asPayload(params.input);
-    const updated = await this.todos.updateItem(String(tripId), String(todoId), input as never, Object.keys(input));
+    const updated = await this.todos.updateItem(String(tripId), todoId, input as never, Object.keys(input));
     if (!updated) throw new ForbiddenResource(`no todo ${todoId} on trip ${tripId}`);
     this.realtime.broadcast(tripId, 'todo:updated', { item: updated }, undefined);
     return updated;
@@ -66,7 +66,7 @@ export class TodoRpc {
     const todoId = num(params.todoId, 'todoId');
     const actor = this.guards.requireActor(ctx, 'todo');
     await this.guards.requireTripEdit(tripId, actor, TODO_EDIT_ACTION);
-    if (!(await this.todos.deleteItem(String(tripId), String(todoId)))) {
+    if (!(await this.todos.deleteItem(String(tripId), todoId))) {
       throw new ForbiddenResource(`no todo ${todoId} on trip ${tripId}`);
     }
     this.realtime.broadcast(tripId, 'todo:deleted', { itemId: todoId }, undefined);

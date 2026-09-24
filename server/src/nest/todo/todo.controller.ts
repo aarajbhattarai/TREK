@@ -16,6 +16,7 @@ import { TodoCreateItemDto, TodoUpdateItemDto, TodoReorderDto, TodoCategoryAssig
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { RequirePermission, TripAccessGuard } from '../permissions/trip-access.guard';
+import { toRowId } from '../common/row-id';
 
 /**
  * /api/trips/:tripId/todo — trip-scoped task list.
@@ -77,12 +78,20 @@ export class TodoController {
     @Body() body: TodoUpdateItemDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
+    // Plan 4 Task 8b (U6) — :id is parsed ONCE here (toRowId, not Number():
+    // rule 15's NaN-into-SQL trap), and the parsed number is what
+    // updateItem uses below, instead of the raw string reaching the
+    // repository and relying on SQLite's affinity CAST to match it.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Item not found' }, 404);
+    }
     const { name, checked, category, due_date, description, assigned_user_id, priority } = body;
     // bodyKeys carries which keys the request actually provided (the null-clear
     // protocol); the parsed body only ever holds known schema keys.
     const updated = await this.todo.updateItem(
       tripId,
-      id,
+      itemId,
       // checked arrives as boolean or legacy 0/1 — normalize to the 0/1 the SQL binds.
       { name, checked: checked === undefined ? undefined : checked ? 1 : 0, category, due_date, description, assigned_user_id, priority },
       Object.keys(body),
@@ -102,10 +111,15 @@ export class TodoController {
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!(await this.todo.deleteItem(tripId, id))) {
+    // Plan 4 Task 8b (U6) — same single gate-level parse as update above.
+    const itemId = toRowId(id);
+    if (itemId === null) {
       throw new HttpException({ error: 'Item not found' }, 404);
     }
-    this.todo.broadcast(tripId, 'todo:deleted', { itemId: Number(id) }, socketId);
+    if (!(await this.todo.deleteItem(tripId, itemId))) {
+      throw new HttpException({ error: 'Item not found' }, 404);
+    }
+    this.todo.broadcast(tripId, 'todo:deleted', { itemId }, socketId);
     return { success: true };
   }
 

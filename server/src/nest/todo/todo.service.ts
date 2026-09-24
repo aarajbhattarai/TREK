@@ -76,9 +76,22 @@ export class TodoService {
     return this.todoItemsRepo.findById(id);
   }
 
+  /**
+   * `id: number` (Plan 4 Task 8b, U6 — program rule 21's gate-level id
+   * parsing carry: `TodoController.update` now parses `:id` once via
+   * `toRowId` and threads the number here, instead of the raw route string
+   * reaching `TodoItemsRepository.findInTrip`/`.update` and relying on
+   * SQLite's column-affinity CAST to match it; `todos.rpc.ts`'s `num()` and
+   * `todo.mcp.ts`'s Zod-typed `itemId` were already real numbers). `tripId`
+   * stays `string | number` — a separate, still-accepted carry (the trip id
+   * is gated for ACCESS by `TripAccessGuard`, not threaded as a parsed
+   * number to every downstream call — see `places.service.ts
+   * #verifyTripAccess`'s own docstring, Plan 4's 23c292f2f, for why that
+   * second parse is out of scope here too).
+   */
   async updateItem(
     tripId: string | number,
-    id: string | number,
+    id: number,
     data: { name?: string; checked?: number; category?: string | null; due_date?: string | null; description?: string | null; assigned_user_id?: number | null; priority?: number | null },
     bodyKeys: string[]
   ) {
@@ -98,7 +111,8 @@ export class TodoService {
     return this.todoItemsRepo.findById(id);
   }
 
-  async deleteItem(tripId: string | number, id: string | number): Promise<boolean> {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link updateItem}. */
+  async deleteItem(tripId: string | number, id: number): Promise<boolean> {
     const item = await this.todoItemsRepo.existsInTrip(id, tripId);
     if (!item) return false;
 
