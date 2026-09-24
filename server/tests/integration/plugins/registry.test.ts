@@ -30,6 +30,7 @@ import { Plugins } from '../../../src/db/entities/Plugins.entity';
 import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
 import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
 import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 import { PluginRegistryService, RegistryError, __clearRegistryCacheForTests } from '../../../src/nest/plugins/registry/registry.service';
 import type { ManifestPreview } from '../../../src/nest/plugins/registry/registry.service';
@@ -100,7 +101,7 @@ beforeEach(() => {
   t.clear();
   __clearRegistryCacheForTests();
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => REGISTRY }) as unknown as Response));
-  svc = new PluginRegistryService(t.repo(Plugins), t.repo(PluginActions), t.repo(PluginSettingsFields), t.repo(PluginErrorLog));
+  svc = new PluginRegistryService(t.repo(Plugins), t.repo(PluginActions), t.repo(PluginSettingsFields), t.repo(PluginErrorLog), new UnitOfWork(t.em));
 });
 afterEach(() => {
   vi.unstubAllGlobals();

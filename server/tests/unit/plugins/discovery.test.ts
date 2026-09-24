@@ -20,6 +20,7 @@ import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
 import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
 import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
 import { discoverPlugins, type DiscoveryRepos } from '../../../src/nest/plugins/install/discovery';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -36,7 +37,7 @@ function writePlugin(id: string, manifest: Record<string, unknown>, extra?: () =
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  repos = { plugins: t.repo(Plugins), actions: t.repo(PluginActions), settingsFields: t.repo(PluginSettingsFields), errorLog: t.repo(PluginErrorLog) };
+  repos = { plugins: t.repo(Plugins), actions: t.repo(PluginActions), settingsFields: t.repo(PluginSettingsFields), errorLog: t.repo(PluginErrorLog), uow: new UnitOfWork(t.em) };
 });
 beforeEach(() => {
   resetTestDb(testDb);

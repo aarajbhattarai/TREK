@@ -8,15 +8,24 @@ import type { PluginsRepository } from '../../../db/repositories/Plugins.reposit
 import type { PluginActionsRepository } from '../../../db/repositories/PluginActions.repository';
 import type { PluginSettingsFieldsRepository } from '../../../db/repositories/PluginSettingsFields.repository';
 import type { PluginErrorLogRepository } from '../../../db/repositories/PluginErrorLog.repository';
+import type { UnitOfWork } from '../../database/unit-of-work';
 
 /** `discoverPlugins`/`upsert`'s repository set — "swap the parameter type" (plan3j-inputs.md
  * §0): the raw `BetterSqlite3.Database` parameter becomes this bundle of the four
- * repositories the scan actually writes through. */
+ * repositories the scan actually writes through, plus the `UnitOfWork` `upsert`
+ * uses to make its own delete-then-reinsert pairs (DI5–DI8, Plan 4 Task 8a)
+ * atomic. Optional, not required: both call sites' own `uow` is itself
+ * `@Optional()` (Nest always injects it in the real app; only a hand-built
+ * partial-DI-graph test instance omits it — the same "boot must never block
+ * app init" defensiveness this file's own callers already apply elsewhere) —
+ * `upsert` runs the pairs sequentially, un-transacted, exactly as before,
+ * when it is absent, rather than refusing to discover at all. */
 export interface DiscoveryRepos {
   plugins: PluginsRepository;
   actions: PluginActionsRepository;
   settingsFields: PluginSettingsFieldsRepository;
   errorLog: PluginErrorLogRepository;
+  uow?: UnitOfWork;
 }
 
 /**
@@ -97,30 +106,45 @@ async function upsert(repos: DiscoveryRepos, m: PluginManifest): Promise<void> {
     await repos.plugins.insertManifest({ id: m.id, ...manifestRow });
   }
 
-  // Refresh the settings-page action descriptors from the manifest.
-  await repos.actions.deleteAllForPlugin(m.id);
-  await repos.actions.insertActions(
-    m.id,
-    m.actions.map((a, i) => ({ action_key: a.key, label: a.label, hint: a.hint ?? null, danger: a.danger ? 1 : 0, scope: a.scope, sort_order: i })),
-  );
+  // Refresh the settings-page action and settings-field descriptors from the
+  // manifest. DI5–DI8 (Plan 4 Task 8a — a deliberate behaviour change, named
+  // for the user): each pair used to run its own delete then its own
+  // re-insert with no transaction spanning them, so a crash between the two
+  // (of either pair) left that plugin with an EMPTY actions or settings-field
+  // set until the next discovery run, rather than its previous (still valid)
+  // rows. Wrapped in one `uow.transactional` (when a `uow` is available —
+  // see `DiscoveryRepos.uow`'s own docstring) so a discovery refresh for a
+  // single plugin's descriptors is now all-or-nothing: either both pairs land
+  // or neither does, and the plugin keeps its prior rows on any failure.
+  const refreshDescriptors = async (): Promise<void> => {
+    await repos.actions.deleteAllForPlugin(m.id);
+    await repos.actions.insertActions(
+      m.id,
+      m.actions.map((a, i) => ({ action_key: a.key, label: a.label, hint: a.hint ?? null, danger: a.danger ? 1 : 0, scope: a.scope, sort_order: i })),
+    );
 
-  // Refresh the settings-field descriptors from the manifest.
-  await repos.settingsFields.deleteAllForPlugin(m.id);
-  await repos.settingsFields.insertFields(
-    m.id,
-    m.settings.map((f, i) => ({
-      field_key: f.key,
-      label: f.label ?? f.key,
-      input_type: f.input_type ?? 'text',
-      placeholder: f.placeholder ?? null,
-      hint: f.hint ?? null,
-      required: f.required ? 1 : 0,
-      secret: f.secret ? 1 : 0,
-      scope: f.scope ?? 'instance',
-      options: f.options ? JSON.stringify(f.options) : null,
-      oauth_config: f.oauth ? JSON.stringify(f.oauth) : null,
-      default_value: f.default === undefined ? null : JSON.stringify(f.default),
-      sort_order: i,
-    })),
-  );
+    await repos.settingsFields.deleteAllForPlugin(m.id);
+    await repos.settingsFields.insertFields(
+      m.id,
+      m.settings.map((f, i) => ({
+        field_key: f.key,
+        label: f.label ?? f.key,
+        input_type: f.input_type ?? 'text',
+        placeholder: f.placeholder ?? null,
+        hint: f.hint ?? null,
+        required: f.required ? 1 : 0,
+        secret: f.secret ? 1 : 0,
+        scope: f.scope ?? 'instance',
+        options: f.options ? JSON.stringify(f.options) : null,
+        oauth_config: f.oauth ? JSON.stringify(f.oauth) : null,
+        default_value: f.default === undefined ? null : JSON.stringify(f.default),
+        sort_order: i,
+      })),
+    );
+  };
+  if (repos.uow) {
+    await repos.uow.transactional(refreshDescriptors);
+  } else {
+    await refreshDescriptors();
+  }
 }

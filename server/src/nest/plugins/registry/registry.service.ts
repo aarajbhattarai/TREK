@@ -10,7 +10,7 @@ import { safeDownload, sha256Matches } from '../install/safe-fetch';
 import { verifyAuthorSignature, SignatureError } from '../install/verify-signature';
 import { pluginCodeDir, pluginsCodeRoot, pluginsDataRoot } from '../paths';
 import { clearUpdateBlock, isSignatureCode, setUpdateBlock, RETRUSTABLE_CODE } from '../signature-status';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { Plugins } from '../../../db/entities/Plugins.entity';
 import type { PluginsRepository } from '../../../db/repositories/Plugins.repository';
@@ -20,6 +20,7 @@ import { PluginSettingsFields } from '../../../db/entities/PluginSettingsFields.
 import type { PluginSettingsFieldsRepository } from '../../../db/repositories/PluginSettingsFields.repository';
 import { PluginErrorLog } from '../../../db/entities/PluginErrorLog.entity';
 import type { PluginErrorLogRepository } from '../../../db/repositories/PluginErrorLog.repository';
+import { UnitOfWork } from '../../database/unit-of-work';
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -182,10 +183,17 @@ export class PluginRegistryService {
     @InjectRepository(PluginActions) private readonly pluginActions: PluginActionsRepository,
     @InjectRepository(PluginSettingsFields) private readonly pluginSettingsFields: PluginSettingsFieldsRepository,
     @InjectRepository(PluginErrorLog) private readonly pluginErrorLog: PluginErrorLogRepository,
+    // Plan 4 Task 8a: DiscoveryRepos now needs a `UnitOfWork` so `discoverPlugins`'s
+    // own upsert can wrap its delete-then-reinsert pairs atomically (DI5-DI8).
+    // `@Optional()` matches `PluginRuntimeService`'s own precedent for the same
+    // reason: a hand-built test instance that never exercises discovery need not
+    // construct one — `discoveryRepos` below throws if one is actually needed.
+    @Optional() private readonly uow?: UnitOfWork,
   ) {}
 
   private get discoveryRepos(): DiscoveryRepos {
-    return { plugins: this.plugins, actions: this.pluginActions, settingsFields: this.pluginSettingsFields, errorLog: this.pluginErrorLog };
+    if (!this.uow) throw new Error('UnitOfWork not provided — tests that exercise plugin discovery must pass one');
+    return { plugins: this.plugins, actions: this.pluginActions, settingsFields: this.pluginSettingsFields, errorLog: this.pluginErrorLog, uow: this.uow };
   }
 
   /**
