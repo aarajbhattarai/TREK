@@ -1004,3 +1004,39 @@ describe('TripsRepository.countTripsAndDaysForUser (AT42, AtlasService#getTravel
     expect(await trips.countTripsAndDaysForUser(stranger.id)).toEqual({ trips: 0, days: 0 });
   });
 });
+
+// Plan 4 final review m5 (carry 5): `findPublicForShare` had no test reference
+// at all. Full-key parity against the legacy SH7 statement run raw on the same
+// connection — every column, a NULL-heavy row next to a filled one, a missing id.
+describe('TripsRepository.findPublicForShare (SH7)', () => {
+  const LEGACY_SH7 = 'SELECT id, title, description, start_date, end_date, cover_image, currency FROM trips WHERE id = ?';
+
+  it('TRIPREPO-067: byte-identical to the legacy statement for a fully filled trip and for a NULL-heavy one', async () => {
+    const { user } = createUser(testDb);
+    const filled = createTrip(testDb, user.id, { title: 'Filled', description: 'All columns set', start_date: '2026-10-01', end_date: '2026-10-03' });
+    testDb.prepare('UPDATE trips SET cover_image = ?, currency = ?, is_archived = 1 WHERE id = ?').run('/uploads/covers/a.jpg', 'CHF', filled.id);
+    const sparse = createTrip(testDb, user.id, { title: 'Sparse' });
+    testDb.prepare('UPDATE trips SET currency = NULL WHERE id = ?').run(sparse.id);
+
+    for (const trip of [filled, sparse]) {
+      const legacy = testDb.prepare(LEGACY_SH7).get(trip.id);
+      expect(await trips.findPublicForShare(trip.id)).toEqual(legacy);
+    }
+    expect(await trips.findPublicForShare(filled.id)).toEqual({
+      id: filled.id,
+      title: 'Filled',
+      description: 'All columns set',
+      start_date: '2026-10-01',
+      end_date: '2026-10-03',
+      cover_image: '/uploads/covers/a.jpg',
+      currency: 'CHF',
+    });
+  });
+
+  it('TRIPREPO-068: an id with no trip is undefined, as the legacy .get() is', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(testDb.prepare(LEGACY_SH7).get(trip.id + 1000)).toBeUndefined();
+    expect(await trips.findPublicForShare(trip.id + 1000)).toBeUndefined();
+  });
+});
