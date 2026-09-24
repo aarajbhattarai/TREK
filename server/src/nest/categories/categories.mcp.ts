@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { createCategoryRequestSchema, updateCategoryRequestSchema } from '@trek/shared';
 import { DatabaseService } from '../database/database.service';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
-import { isDemoUserId } from '../common/demo-write';
+import { DemoService } from '../common/demo.service';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
 import { adminRequired } from '../../mcp/tools/_shared';
 import { CategoriesService } from './categories.service';
@@ -33,23 +33,21 @@ import { CategoriesService } from './categories.service';
 export class CategoriesMcp {
   constructor(
     private readonly categories: CategoriesService,
-    // Carve-out (task-6-review-parity.md M3, mirroring addons.service.ts's own
-    // — see that file's docstring): this domain's own reads/writes are all
-    // repository-backed below; `DatabaseService` stays injected purely to
-    // feed `isDemoUser`'s `isDemoUserId(env, db, userId)`, whose
-    // `SELECT email FROM users WHERE id = ?` lives in
-    // `common/demo-write.ts` (nest/auth/nest/users, not this domain's plan).
-    // `UsersRepository.getEmail` already issues that identical statement —
-    // converting `demo-write.ts` to it is a deferred follow-up
-    // (`deferred.md`), not this plan's.
+    // Plan 3i Task 3: `isDemoUser` now goes through the injected
+    // `DemoService` below, not `DatabaseService`/`RuntimeEnvService`
+    // directly — this domain's own reads/writes are all repository-backed
+    // (unrelated to `db`/`env`, kept injected here only because removing
+    // them is a constructor-arity change this task's file scope does not
+    // cover; see `task-3-report.md`).
     private readonly db: DatabaseService,
     private readonly env: RuntimeEnvService,
     private readonly guards: McpToolGuardsService,
+    private readonly demo: DemoService,
   ) {}
 
-  /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
+  /** Plan 3i Task 3: the AuthService.isDemoUser check via the injected DemoService (common/demo.service.ts), not the free-function demo-write.ts helper. */
   private async isDemoUser(userId: number): Promise<boolean> {
-    return await isDemoUserId(this.env, this.db, userId);
+    return await this.demo.isDemoUserId(userId);
   }
 
   @Tool({

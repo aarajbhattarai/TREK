@@ -4,8 +4,19 @@ import path from 'path';
 import { pipeline } from 'node:stream/promises';
 import { readEnv } from '../../app-config';
 import fs from 'fs';
+// R1 (Plan 3i Task 3): the ONLY remaining `better-sqlite3` use in this file —
+// a SEPARATE, freshly-opened, read-only connection over an UPLOADED,
+// UNTRUSTED file during restore (BK3/BK4 below), never the app's own
+// connection. It has no ORM binding by design: the file being probed is not
+// yet known to even be a valid SQLite database, so standing up a full ORM
+// instance to validate it would add machinery the raw, read-only open
+// doesn't need. This file keeps its scoped ESLint allow-list entry
+// (`eslint.config.mjs`) for exactly this import — see that entry's own
+// comment for the full ruling.
 import Database from 'better-sqlite3';
-import { db, closeDb, reinitialize } from '../../db/database';
+import { RequestContext } from '@mikro-orm/core';
+import { closeDb, reinitialize } from '../../db/database';
+import { MaintenanceRepository } from '../../db/repositories/MaintenanceRepository';
 import { VALID_INTERVALS } from './auto-backup.settings';
 import { invalidatePermissionsCache } from '../permissions/permissions-cache';
 import { pluginsCodeRoot, pluginsDataRoot } from '../plugins/paths';
@@ -180,7 +191,15 @@ export async function createBackup(storage: StorageService, prefix: 'backup' | '
   const stagingDir = path.join(spoolDir, `staging-${prefix}-${timestamp}`);
 
   try {
-    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch (e) {}
+    // BK1 (R1): PRAGMA wal_checkpoint(TRUNCATE), rendered text pinned,
+    // through the shared MaintenanceRepository.walCheckpoint() — the SAME
+    // method demo-reset.ts's resetDemoUser/saveBaseline use, on the ORM's
+    // own bound driver connection rather than the legacy `db` proxy. Still
+    // best-effort: the swallowing try/catch matches the legacy shape.
+    try {
+      const em = RequestContext.getEntityManager();
+      if (em) await new MaintenanceRepository(em).walCheckpoint();
+    } catch (e) {}
 
     // Enumerate the archived categories up front (the archiver reads entries
     // lazily during finalize(), so the promise executor below must stay
@@ -215,6 +234,37 @@ export async function createBackup(storage: StorageService, prefix: 'backup' | '
       }
     }
 
+    // BK2 (R1): VACUUM INTO '<path>', rendered text pinned, through the
+    // shared MaintenanceRepository.vacuumInto() — computed HERE, before the
+    // promise executor below, for the same reason the uploadEntries
+    // enumeration above already is: the archiver reads entries lazily during
+    // finalize(), so the executor itself must stay synchronous, and
+    // `await`ing the snapshot requires an async boundary the executor
+    // (constructed with a plain, non-async callback) cannot have. The
+    // fallback-to-live-file behaviour on failure is unchanged — only WHERE
+    // the async snapshot attempt runs, not what it does.
+    const dbPath = path.join(dataDir, 'travel.db');
+    const dbExists = fs.existsSync(dbPath);
+    let dbToArchive = dbPath;
+    if (dbExists) {
+      // Archive a point-in-time snapshot, not the live file. The archiver reads entries
+      // lazily during finalize(), so a WAL auto-checkpoint writing pages back into
+      // travel.db mid-stream would tear the archived copy — and the -wal that would make
+      // it recoverable isn't in the zip. VACUUM INTO takes a consistent snapshot even
+      // under concurrent writes — the same guarantee the plugin DBs get below.
+      try {
+        if (fs.existsSync(dbSnap)) fs.rmSync(dbSnap, { force: true });
+        const em = RequestContext.getEntityManager();
+        if (!em) throw new Error('no EntityManager available for VACUUM INTO');
+        await new MaintenanceRepository(em).vacuumInto(dbSnap);
+        dbToArchive = dbSnap;
+      } catch (e) {
+        // Snapshot failed (disk/lock/missing context) — fall back to the
+        // checkpointed live file rather than drop the core DB from the
+        // backup entirely.
+      }
+    }
+
     await new Promise<void>((resolve, reject) => {
       const output = fs.createWriteStream(zipSpool);
       const archive = archiver('zip', { zlib: { level: 9 } });
@@ -229,22 +279,7 @@ export async function createBackup(storage: StorageService, prefix: 'backup' | '
 
       archive.pipe(output);
 
-      const dbPath = path.join(dataDir, 'travel.db');
-      if (fs.existsSync(dbPath)) {
-        // Archive a point-in-time snapshot, not the live file. The archiver reads entries
-        // lazily during finalize(), so a WAL auto-checkpoint writing pages back into
-        // travel.db mid-stream would tear the archived copy — and the -wal that would make
-        // it recoverable isn't in the zip. VACUUM INTO takes a consistent snapshot even
-        // under concurrent writes — the same guarantee the plugin DBs get below.
-        let dbToArchive = dbPath;
-        try {
-          if (fs.existsSync(dbSnap)) fs.rmSync(dbSnap, { force: true });
-          db.exec(`VACUUM INTO '${dbSnap.replaceAll("'", "''")}'`);
-          dbToArchive = dbSnap;
-        } catch (e) {
-          // Snapshot failed (disk/lock) — fall back to the checkpointed live file rather
-          // than drop the core DB from the backup entirely.
-        }
+      if (dbExists) {
         archive.file(dbToArchive, { name: 'travel.db' });
       }
 
@@ -436,6 +471,10 @@ export async function restoreFromZip(storage: StorageService, zipPath: string): 
       return { success: false, error: 'Invalid backup: travel.db not found', status: 400 };
     }
 
+    // BK3/BK4 (R1): stay raw, by design — a SEPARATE, freshly-opened,
+    // read-only connection over the UPLOADED, UNTRUSTED file, never the
+    // app's own connection/ORM. This is the file's one remaining
+    // `better-sqlite3` use (see the import comment at the top of this file).
     let uploadedDb: InstanceType<typeof Database> | null = null;
     try {
       uploadedDb = new Database(extractedDb, { readonly: true });

@@ -42,7 +42,11 @@ function makeService(w: Wiring = {}) {
   };
   const env = {} as never;
   const dbs = {} as never;
-  const svc = new PluginMcpToolsService(hooks as never, runtime as never, env, dbs);
+  // Plan 3i Task 3: DemoService, stubbed the same shape the removed
+  // vi.mock('.../common/demo-write', ...) provided — isDemoUserId() reads
+  // the module-level `demoUser` flag at call time.
+  const demo = { isDemoUserId: () => Promise.resolve(demoUser) } as never;
+  const svc = new PluginMcpToolsService(hooks as never, runtime as never, env, dbs, demo);
   return { svc, hooks, runtime, callTool };
 }
 
@@ -50,7 +54,6 @@ let pluginsOn = true;
 let demoUser = false;
 
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled: () => pluginsOn }));
-vi.mock('../../../src/nest/common/demo-write', () => ({ isDemoUserId: () => demoUser }));
 
 beforeEach(() => {
   pluginsOn = true;
@@ -181,11 +184,12 @@ describe('invoking a tool', () => {
     expect(res.content[0].text).toContain('upstream 503');
   });
 
-  it('MCPTOOLS-014: refuses in demo mode without ever reaching the plugin', async () => {
+  it('MCPTOOLS-014: refuses in demo mode without ever reaching the plugin, via the injected DemoService (Plan 3i Task 3 survivor site), with the exact canned refusal body', async () => {
     demoUser = true;
     const { svc, callTool } = makeService();
     const res = await invoke(svc);
     expect(res.isError).toBe(true);
+    expect(res.content).toEqual([{ type: 'text', text: 'Write operations are disabled in demo mode.' }]);
     expect(callTool).not.toHaveBeenCalled();
   });
 

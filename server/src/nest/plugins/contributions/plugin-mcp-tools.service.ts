@@ -14,7 +14,7 @@ import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@
 
 import { DatabaseService } from '../../database/database.service';
 import { RuntimeEnvService } from '../../app-config/runtime-env.service';
-import { isDemoUserId } from '../../common/demo-write';
+import { DemoService } from '../../common/demo.service';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
 import { PluginRuntimeService } from '../plugin-runtime.service';
@@ -56,6 +56,7 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
     private readonly runtime: PluginRuntimeService,
     private readonly env: RuntimeEnvService,
     private readonly dbs: DatabaseService,
+    private readonly demo: DemoService,
   ) {}
 
   // The sink lives here rather than on PluginRuntimeService because the source
@@ -157,7 +158,9 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
     if (!pluginsEnabled()) return errorResult('Plugins are disabled on this server.');
     // The plugins domain's first demo gate. The child has none of its own, and
     // the ~40 isDemoUser checks elsewhere are per-handler, so it belongs here.
-    if (await isDemoUserId(this.env, this.dbs, ctx.userId)) return demoDenied();
+    // Plan 3i Task 3: via the injected DemoService, not the free-function
+    // demo-write.ts helper.
+    if (await this.demo.isDemoUserId(ctx.userId)) return demoDenied();
 
     try {
       const raw = await this.hooks.callMcpTool(pluginId, { name, args: args ?? {} }, ctx.userId);

@@ -176,7 +176,15 @@ export default tseslint.config(
       // The plugin sandbox opens its own per-plugin database files, deliberately
       // outside the app's ORM and connection.
       'src/nest/plugins/host/plugin-data.service.ts',
-      // Backup/restore operates on database FILES, not on rows.
+      // R1 (Plan 3i Task 3): backup.impl.ts's live-connection statements
+      // (a WAL checkpoint, a VACUUM INTO snapshot) convert onto
+      // MaintenanceRepository — this allow-list entry now covers ONLY the
+      // untrusted-upload-file probe in restoreFromZip (an integrity check +
+      // a required-table check run against a SEPARATE, freshly-opened,
+      // read-only connection over an uploaded file, never the app's own
+      // connection or ORM). A permanent, intentional exception — see
+      // task-3-report.md / the plan's R1 ruling — not debt for a later plan
+      // to close.
       'src/nest/backup/backup.impl.ts',
       // Demo-mode seeding, and the legacy schema/migration/seed scripts the test
       // suite still builds its throwaway databases from (guarded by

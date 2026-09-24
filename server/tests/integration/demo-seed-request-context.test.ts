@@ -73,9 +73,9 @@ vi.mock('../../src/db/database', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/db/database')>();
   return {
     ...actual,
-    runDemoSeed: (): void => {
+    runDemoSeed: async (): Promise<void> => {
       contextSeenOnEntry.push(RequestContext.currentRequestContext() !== undefined);
-      return actual.runDemoSeed();
+      return await actual.runDemoSeed();
     },
   };
 });

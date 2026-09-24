@@ -7,7 +7,7 @@ import {
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
 import { z } from 'zod';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
-import { isDemoUserId } from '../common/demo-write';
+import { DemoService } from '../common/demo.service';
 import { ADDON_IDS } from '../../addons';
 import { noAccess, permissionDenied } from '../../mcp/tools/_shared';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
@@ -93,11 +93,12 @@ export class BudgetMcp {
     private readonly uow: UnitOfWork,
     @InjectRepository(Places) private readonly places: PlacesRepository,
     @InjectRepository(Trips) private readonly trips: TripsRepository,
+    private readonly demo: DemoService,
   ) {}
 
-  /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
+  /** Plan 3i Task 3: the AuthService.isDemoUser check via the injected DemoService (common/demo.service.ts), not the free-function demo-write.ts helper. */
   private async isDemoUser(userId: number): Promise<boolean> {
-    return await isDemoUserId(this.env, this.db, userId);
+    return await this.demo.isDemoUserId(userId);
   }
 
   /**

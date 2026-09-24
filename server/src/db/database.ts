@@ -81,11 +81,21 @@ const db = new Proxy({} as Database.Database, {
  * resolve once the category seeder has run. Called from the schema bootstrap in
  * `db/orm.ts`, immediately after the seeders.
  */
-function runDemoSeed(): void {
+// Plan 3i Task 3: `seedDemoData` converted onto `DemoRepository` (an
+// EntityManager-backed repository), so it is `async` now and no longer takes
+// the raw `db` handle — it resolves its EntityManager itself via
+// `RequestContext.getEntityManager()`, which `runSchemaBootstrap`'s existing
+// `withRequestContext(orm, () => runDemoSeed())` wrap (`db/orm.ts:59`)
+// already populates by the time this runs. `runDemoSeed` awaits it now too:
+// previously both were fully synchronous, so the try/catch below already
+// caught everything before this function returned; without the `await` a
+// rejected promise from `seedDemoData` would become an unhandled rejection
+// instead of the `[Demo] Seed error:` log line this catch has always produced.
+async function runDemoSeed(): Promise<void> {
   if (!readEnv().demo.enabled) return;
   try {
     const { seedDemoData } = require('../demo/demo-seed');
-    seedDemoData(_db);
+    await seedDemoData();
   } catch (err: unknown) {
     console.error('[Demo] Seed error:', err instanceof Error ? err.message : err);
   }

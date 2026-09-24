@@ -77,6 +77,7 @@ import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { AuthMcp } from '../../../src/nest/auth/auth.mcp';
+import { DemoService } from '../../../src/nest/common/demo.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
@@ -178,6 +179,7 @@ beforeAll(async () => {
   await createTestUnitOfWork(promptDbs().connection),
   await createTestPlacesRepo(promptDbs().connection),
   await createTestTripsRepo(promptDbs().connection),
+  new DemoService(new RuntimeEnvService(), promptEm),
 );
   tripPromptsMcp = new TripPromptsMcp(tripsStub, readModelStub, promptPackingService, addonsStub);
 });

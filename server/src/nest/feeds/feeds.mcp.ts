@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getAppUrl } from '../../app-config';
 import { DatabaseService } from '../database/database.service';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
-import { isDemoUserId } from '../common/demo-write';
+import { DemoService } from '../common/demo.service';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
 import { noAccess, permissionDenied } from '../../mcp/tools/_shared';
 import { FeedsService } from './feeds.service';
@@ -38,11 +38,12 @@ export class FeedsMcp {
     private readonly db: DatabaseService,
     private readonly env: RuntimeEnvService,
     private readonly guards: McpToolGuardsService,
+    private readonly demo: DemoService,
   ) {}
 
-  /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
+  /** Plan 3i Task 3: the AuthService.isDemoUser check via the injected DemoService (common/demo.service.ts), not the free-function demo-write.ts helper. */
   private async isDemoUser(userId: number): Promise<boolean> {
-    return await isDemoUserId(this.env, this.db, userId);
+    return await this.demo.isDemoUserId(userId);
   }
 
   /**

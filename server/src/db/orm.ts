@@ -43,20 +43,21 @@ export async function runSchemaBootstrap(orm: AnyOrm): Promise<void> {
   // Demo data depends on the seeded categories (hard-coded ids under an FK), so
   // it can only run once the seeders above have.
   //
-  // Plan 3c Task 0b (R9): `runDemoSeed` itself stays raw better-sqlite3 today
-  // (`demo-seed.ts`'s own docstring: "the domain phase that gives demo
-  // seeding a repository read must wrap it in withRequestContext then") — but
-  // wrapping the call HERE, the one place `runSchemaBootstrap` already has
-  // `orm` in scope, covers BOTH of its real call sites at once
-  // (`bootstrap.ts`'s initial boot and `attachOrm`'s restore hook below, both
-  // of which only ever reach `runDemoSeed` through this function) with no
-  // second wrapper to keep in sync. A synchronous `fn` stays synchronous
-  // through `withRequestContext`/`RequestContext.create`, so this changes
-  // nothing about what `runDemoSeed` does today — only that a repository read
-  // added to it later already has a valid context, so Plan 3i's demo
-  // conversion never meets a second C1 (task-6-review-parity.md's boot-sweep
-  // finding).
-  withRequestContext(orm, () => runDemoSeed());
+  // Plan 3c Task 0b (R9): wrapping the call HERE, the one place
+  // `runSchemaBootstrap` already has `orm` in scope, covers BOTH of
+  // `runDemoSeed`'s real call sites at once (`bootstrap.ts`'s initial boot
+  // and `attachOrm`'s restore hook below, both of which only ever reach
+  // `runDemoSeed` through this function) with no second wrapper to keep in
+  // sync.
+  //
+  // Plan 3i Task 3: `runDemoSeed` (and `seedDemoData` beneath it, converted
+  // onto `DemoRepository`) is `async` now — this call is awaited so a
+  // rejection surfaces here rather than becoming an unhandled promise
+  // rejection, and so the seed genuinely completes before
+  // `runSchemaBootstrap` (and therefore `buildApp()`/this hook's own
+  // restore path) returns to its caller, the same completion guarantee the
+  // fully-synchronous version had by construction.
+  await withRequestContext(orm, () => runDemoSeed());
 }
 
 /**

@@ -22,6 +22,7 @@ import { BudgetModule } from './budget/budget.module';
 import { CategoriesModule } from './categories/categories.module';
 import { CollabModule } from './collab/collab.module';
 import { CollectionsModule } from './collections/collections.module';
+import { DemoModule } from './common/demo.module';
 import { IdempotencyCleanupJob } from './common/idempotency-cleanup.job';
 import { IdempotencyInterceptor } from './common/idempotency.interceptor';
 import { ManagedGuard } from './common/managed.guard';
@@ -91,6 +92,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
   imports: [
     AppConfigModule,
     DatabaseModule,
+    DemoModule,
     RealtimeModule,
     RealtimeGatewayModule,
     SchedulingModule,

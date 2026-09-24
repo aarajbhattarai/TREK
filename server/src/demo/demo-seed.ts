@@ -1,26 +1,27 @@
 import bcrypt from 'bcryptjs';
-import Database from 'better-sqlite3';
 import { readEnv } from '../app-config';
 import { DEMO_PASS } from '../nest/common/demo';
+import { DemoRepository, type NewDemoPlaceRow } from '../db/repositories/DemoRepository';
 // Static like in demo-reset.job.ts: the module top is inert, everything that
 // touches the database happens inside the functions.
-import { saveBaseline, hasBaseline } from './demo-reset';
+import { saveBaseline, hasBaseline, requireEntityManager } from './demo-reset';
 
 // D6 (task-2-review.md's controller ruling / non-HTTP caller table): this runs
 // from `runSchemaBootstrap` before `app.init()`, outside any request context, but
-// it is all raw `better-sqlite3` through the `db` param passed in — no
-// InjectRepository/global-EM read — so there is nothing to wrap yet. The domain
-// phase that gives demo seeding a repository read must wrap it in
-// withRequestContext then.
-function seedDemoData(db: Database.Database): { adminId: number; demoId: number } {
+// `runSchemaBootstrap` already wraps the whole call in `withRequestContext`
+// (`db/orm.ts:59`) — `requireEntityManager()` below resolves that same fork via
+// `RequestContext.getEntityManager()`, the static accessor the wrap populates.
+async function seedDemoData(): Promise<{ adminId: number; demoId: number }> {
+  const demo = new DemoRepository(requireEntityManager());
   const ADMIN_USER = readEnv().demo.adminUser;
   const ADMIN_EMAIL = readEnv().demo.adminEmailRaw || 'admin@trek.app';
   const ADMIN_PASS = readEnv().demo.adminPass;
   const DEMO_EMAIL = 'demo@trek.app';
 
   // Create admin user if not exists
-  let admin = db.prepare('SELECT id FROM users WHERE email = ?').get(ADMIN_EMAIL) as { id: number } | undefined;
-  if (!admin) {
+  const existingAdmin = await demo.findUserByEmail(ADMIN_EMAIL);
+  let adminId: number;
+  if (!existingAdmin) {
     if (!readEnv().demo.adminPassSet) {
       // The default is published in the docs and in this file, so an operator who
       // never set DEMO_ADMIN_PASS is handing out an admin account. Say so loudly;
@@ -31,78 +32,64 @@ function seedDemoData(db: Database.Database): { adminId: number; demoId: number 
       );
     }
     const hash = bcrypt.hashSync(ADMIN_PASS, 10);
-    const r = db.prepare('INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)').run(ADMIN_USER, ADMIN_EMAIL, hash, 'admin');
-    admin = { id: Number(r.lastInsertRowid) };
+    adminId = await demo.createUser({ username: ADMIN_USER, email: ADMIN_EMAIL, password_hash: hash, role: 'admin' });
     console.log('[Demo] Admin user created');
   } else {
-    admin.id = Number(admin.id);
+    adminId = existingAdmin.id;
   }
 
   // Create demo user if not exists
-  let demo = db.prepare('SELECT id FROM users WHERE email = ?').get(DEMO_EMAIL) as { id: number } | undefined;
-  if (!demo) {
+  const existingDemo = await demo.findUserByEmail(DEMO_EMAIL);
+  let demoId: number;
+  if (!existingDemo) {
     const hash = bcrypt.hashSync(DEMO_PASS, 10);
-    const r = db.prepare('INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)').run('demo', DEMO_EMAIL, hash, 'user');
-    demo = { id: Number(r.lastInsertRowid) };
+    demoId = await demo.createUser({ username: 'demo', email: DEMO_EMAIL, password_hash: hash, role: 'user' });
     console.log('[Demo] Demo user created');
   } else {
-    demo.id = Number(demo.id);
+    demoId = existingDemo.id;
   }
 
   // Disable registration in demo mode
-  db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('allow_registration', 'false')").run();
+  await demo.setAllowRegistrationFalse();
 
   // Check if admin already has example trips
-  const adminTrips = db.prepare('SELECT COUNT(*) as count FROM trips WHERE user_id = ?').get(admin.id) as { count: number };
-  if (adminTrips.count > 0) {
+  const adminTripCount = await demo.countTripsByUser(adminId);
+  if (adminTripCount > 0) {
     console.log('[Demo] Example trips already exist, ensuring demo membership');
-    ensureDemoMembership(db, admin.id, demo.id);
-    return { adminId: admin.id, demoId: demo.id };
+    await ensureDemoMembership(demo, adminId, demoId);
+    return { adminId, demoId };
   }
 
   console.log('[Demo] Seeding example trips...');
-  seedExampleTrips(db, admin.id, demo.id);
+  await seedExampleTrips(demo, adminId, demoId);
 
   // Auto-save baseline after first seed
   if (!hasBaseline()) {
-    saveBaseline();
+    await saveBaseline();
   }
 
-  return { adminId: admin.id, demoId: demo.id };
+  return { adminId, demoId };
 }
 
-function ensureDemoMembership(db: Database.Database, adminId: number, demoId: number): void {
-  const trips = db.prepare('SELECT id FROM trips WHERE user_id = ?').all(adminId) as { id: number }[];
-  const insertMember = db.prepare('INSERT OR IGNORE INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)');
-  for (const trip of trips) {
-    insertMember.run(trip.id, demoId, adminId);
+async function ensureDemoMembership(demo: DemoRepository, adminId: number, demoId: number): Promise<void> {
+  const tripIds = await demo.listTripIdsByUser(adminId);
+  for (const tripId of tripIds) {
+    await demo.addTripMember(tripId, demoId, adminId);
   }
 }
 
-function seedExampleTrips(db: Database.Database, adminId: number, demoId: number): void {
-  const insertTrip = db.prepare('INSERT INTO trips (user_id, title, description, start_date, end_date, currency) VALUES (?, ?, ?, ?, ?, ?)');
-  const insertDay = db.prepare('INSERT INTO days (trip_id, day_number, date) VALUES (?, ?, ?)');
-  const insertPlace = db.prepare('INSERT INTO places (trip_id, name, lat, lng, address, category_id, place_time, duration_minutes, notes, image_url, google_place_id, website, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  const insertAssignment = db.prepare('INSERT INTO day_assignments (day_id, place_id, order_index) VALUES (?, ?, ?)');
-  const insertPacking = db.prepare('INSERT INTO packing_items (trip_id, name, checked, category, sort_order, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
-  const insertBudget = db.prepare('INSERT INTO budget_items (trip_id, category, name, total_price, persons, note) VALUES (?, ?, ?, ?, ?, ?)');
-  const insertReservation = db.prepare('INSERT INTO reservations (trip_id, day_id, title, reservation_time, confirmation_number, status, type, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-  const insertMember = db.prepare('INSERT OR IGNORE INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)');
-  const insertNote = db.prepare('INSERT INTO day_notes (day_id, trip_id, text, time, icon, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
-
+async function seedExampleTrips(demo: DemoRepository, adminId: number, demoId: number): Promise<void> {
   // Category IDs: 1=Hotel, 2=Restaurant, 3=Attraction, 5=Transport, 7=Bar/Cafe, 8=Beach, 9=Nature, 6=Entertainment
 
   // --- Trip 1: Tokyo & Kyoto ---
-  const trip1 = insertTrip.run(adminId, 'Tokyo & Kyoto', 'Two weeks in Japan — from the neon-lit streets of Tokyo to the serene temples of Kyoto.', '2026-04-15', '2026-04-21', 'JPY');
-  const t1 = Number(trip1.lastInsertRowid);
+  const t1 = await demo.insertTrip(adminId, 'Tokyo & Kyoto', 'Two weeks in Japan — from the neon-lit streets of Tokyo to the serene temples of Kyoto.', '2026-04-15', '2026-04-21', 'JPY');
 
   const t1days: number[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = insertDay.run(t1, i + 1, `2026-04-${15 + i}`);
-    t1days.push(Number(d.lastInsertRowid));
+    t1days.push(await demo.insertDay(t1, i + 1, `2026-04-${15 + i}`));
   }
 
-  const t1places: [number, string, number, number, string, number, string, number, string, string | null, string | null, string | null, string | null][] = [
+  const t1places: NewDemoPlaceRow[] = [
     [t1, 'Hotel Shinjuku Granbell', 35.6938, 139.7035, '2-14-5 Kabukicho, Shinjuku City, Tokyo 160-0021, Japan', 1, '15:00', 60, 'Check-in from 3 PM. Steps from Shinjuku Station.', null, 'ChIJdaGEJBeMGGARYgt8sLBv6lM', 'https://www.grfranbellhotel.jp/shinjuku/', '+81 3-5155-2666'],
     [t1, 'Senso-ji Temple', 35.7148, 139.7967, '2 Chome-3-1 Asakusa, Taito City, Tokyo 111-0032, Japan', 3, '09:00', 90, 'Oldest temple in Tokyo. Fewer tourists in the early morning.', null, 'ChIJ8T1GpMGOGGARDYGSgpoOdfg', 'https://www.senso-ji.jp/', '+81 3-3842-0181'],
     [t1, 'Shibuya Crossing', 35.6595, 139.7004, '2 Chome-2-1 Dogenzaka, Shibuya City, Tokyo 150-0043, Japan', 3, '18:00', 45, 'World\'s busiest pedestrian crossing. Most impressive at night.', null, 'ChIJLyzOhmyLGGARMKWbl5z6wGg', null, null],
@@ -118,32 +105,33 @@ function seedExampleTrips(db: Database.Database, adminId: number, demoId: number
     [t1, 'Gion District', 35.0037, 135.7755, 'Gionmachi Minamigawa, Higashiyama Ward, Kyoto 605-0074, Japan', 3, '17:00', 120, 'Historic geisha district. Best chance of spotting a maiko in the evening.', null, 'ChIJ7WWWjfYJAWARGqEHAfXIzgQ', null, null],
   ];
 
-  const t1pIds = t1places.map(p => Number(insertPlace.run(...p).lastInsertRowid));
+  const t1pIds: number[] = [];
+  for (const p of t1places) t1pIds.push(await demo.insertPlace(p));
 
   // Day 1: Hotel Check-in, Shibuya
-  insertAssignment.run(t1days[0], t1pIds[0], 0);
-  insertAssignment.run(t1days[0], t1pIds[2], 1);
-  insertNote.run(t1days[0], t1, 'Pick up Pocket WiFi at airport', '13:00', 'Info', 0.5);
+  await demo.insertDayAssignment(t1days[0], t1pIds[0], 0);
+  await demo.insertDayAssignment(t1days[0], t1pIds[2], 1);
+  await demo.insertDayNote(t1days[0], t1, 'Pick up Pocket WiFi at airport', '13:00', 'Info', 0.5);
   // Day 2: Tsukiji, Senso-ji, Akihabara
-  insertAssignment.run(t1days[1], t1pIds[3], 0);
-  insertAssignment.run(t1days[1], t1pIds[1], 1);
-  insertAssignment.run(t1days[1], t1pIds[5], 2);
+  await demo.insertDayAssignment(t1days[1], t1pIds[3], 0);
+  await demo.insertDayAssignment(t1days[1], t1pIds[1], 1);
+  await demo.insertDayAssignment(t1days[1], t1pIds[5], 2);
   // Day 3: Meiji Shrine, free afternoon
-  insertAssignment.run(t1days[2], t1pIds[4], 0);
-  insertNote.run(t1days[2], t1, 'Explore Harajuku after the shrine', '12:00', 'MapPin', 1);
+  await demo.insertDayAssignment(t1days[2], t1pIds[4], 0);
+  await demo.insertDayNote(t1days[2], t1, 'Explore Harajuku after the shrine', '12:00', 'MapPin', 1);
   // Day 4: Shinkansen to Kyoto, Hotel
-  insertAssignment.run(t1days[3], t1pIds[6], 0);
-  insertAssignment.run(t1days[3], t1pIds[7], 1);
-  insertNote.run(t1days[3], t1, 'Sit on right side for Mt. Fuji views!', '08:30', 'Train', 0.5);
+  await demo.insertDayAssignment(t1days[3], t1pIds[6], 0);
+  await demo.insertDayAssignment(t1days[3], t1pIds[7], 1);
+  await demo.insertDayNote(t1days[3], t1, 'Sit on right side for Mt. Fuji views!', '08:30', 'Train', 0.5);
   // Day 5: Fushimi Inari, Nishiki Market
-  insertAssignment.run(t1days[4], t1pIds[8], 0);
-  insertAssignment.run(t1days[4], t1pIds[11], 1);
+  await demo.insertDayAssignment(t1days[4], t1pIds[8], 0);
+  await demo.insertDayAssignment(t1days[4], t1pIds[11], 1);
   // Day 6: Kinkaku-ji, Arashiyama
-  insertAssignment.run(t1days[5], t1pIds[9], 0);
-  insertAssignment.run(t1days[5], t1pIds[10], 1);
+  await demo.insertDayAssignment(t1days[5], t1pIds[9], 0);
+  await demo.insertDayAssignment(t1days[5], t1pIds[10], 1);
   // Day 7: Gion
-  insertAssignment.run(t1days[6], t1pIds[12], 0);
-  insertNote.run(t1days[6], t1, 'Last evening — farewell dinner at Pontocho Alley', '19:00', 'Star', 1);
+  await demo.insertDayAssignment(t1days[6], t1pIds[12], 0);
+  await demo.insertDayNote(t1days[6], t1, 'Last evening — farewell dinner at Pontocho Alley', '19:00', 'Star', 1);
 
   // Packing
   const t1packing: [string, number, string, number][] = [
@@ -153,35 +141,33 @@ function seedExampleTrips(db: Database.Database, adminId: number, demoId: number
     ['Sunscreen', 0, 'Toiletries', 6], ['Travel first aid kit', 0, 'Toiletries', 7],
     ['Pocket WiFi confirmation', 1, 'Electronics', 8], ['Yen cash', 0, 'Documents', 9],
   ];
-  t1packing.forEach(p => insertPacking.run(t1, ...p));
+  for (const [name, checked, category, sortOrder] of t1packing) await demo.insertPackingItem(t1, name, checked, category, sortOrder);
 
   // Budget
-  insertBudget.run(t1, 'Accommodation', 'Hotel Shinjuku (3 nights)', 67500, 2, 'Double room');
-  insertBudget.run(t1, 'Accommodation', 'Hotel Granvia Kyoto (4 nights)', 102000, 2, 'Superior room');
-  insertBudget.run(t1, 'Transport', 'Flights FRA-NRT return', 180000, 2, 'Lufthansa direct');
-  insertBudget.run(t1, 'Transport', 'Japan Rail Pass (7 days)', 57000, 2, 'Ordinary');
-  insertBudget.run(t1, 'Food', 'Daily food budget', 52500, 2, 'Approx. 7,500 JPY/day');
-  insertBudget.run(t1, 'Activities', 'Temple entries & experiences', 18000, 2, null);
+  await demo.insertBudgetItem(t1, 'Accommodation', 'Hotel Shinjuku (3 nights)', 67500, 2, 'Double room');
+  await demo.insertBudgetItem(t1, 'Accommodation', 'Hotel Granvia Kyoto (4 nights)', 102000, 2, 'Superior room');
+  await demo.insertBudgetItem(t1, 'Transport', 'Flights FRA-NRT return', 180000, 2, 'Lufthansa direct');
+  await demo.insertBudgetItem(t1, 'Transport', 'Japan Rail Pass (7 days)', 57000, 2, 'Ordinary');
+  await demo.insertBudgetItem(t1, 'Food', 'Daily food budget', 52500, 2, 'Approx. 7,500 JPY/day');
+  await demo.insertBudgetItem(t1, 'Activities', 'Temple entries & experiences', 18000, 2, null);
 
   // Reservations. reservation_time carries the full date, the way the booking
   // form writes it: a bare clock time is a different shape, and readers that
   // compare the column against a timestamp cannot tell the two apart (#1934).
-  insertReservation.run(t1, t1days[0], 'Hotel Shinjuku Check-in', '2026-04-15T15:00', 'SG-2026-78432', 'confirmed', 'hotel', 'Shinjuku, Tokyo');
-  insertReservation.run(t1, t1days[3], 'Shinkansen Tokyo → Kyoto', '2026-04-18T08:30', 'JR-NOZOMI-445', 'confirmed', 'transport', 'Tokyo Station');
+  await demo.insertReservation(t1, t1days[0], 'Hotel Shinjuku Check-in', '2026-04-15T15:00', 'SG-2026-78432', 'confirmed', 'hotel', 'Shinjuku, Tokyo');
+  await demo.insertReservation(t1, t1days[3], 'Shinkansen Tokyo → Kyoto', '2026-04-18T08:30', 'JR-NOZOMI-445', 'confirmed', 'transport', 'Tokyo Station');
 
-  insertMember.run(t1, demoId, adminId);
+  await demo.addTripMember(t1, demoId, adminId);
 
   // --- Trip 2: Barcelona Long Weekend ---
-  const trip2 = insertTrip.run(adminId, 'Barcelona Long Weekend', 'Gaudi, tapas, and Mediterranean vibes — a long weekend in the Catalan capital.', '2026-05-21', '2026-05-24', 'EUR');
-  const t2 = Number(trip2.lastInsertRowid);
+  const t2 = await demo.insertTrip(adminId, 'Barcelona Long Weekend', 'Gaudi, tapas, and Mediterranean vibes — a long weekend in the Catalan capital.', '2026-05-21', '2026-05-24', 'EUR');
 
   const t2days: number[] = [];
   for (let i = 0; i < 4; i++) {
-    const d = insertDay.run(t2, i + 1, `2026-05-${21 + i}`);
-    t2days.push(Number(d.lastInsertRowid));
+    t2days.push(await demo.insertDay(t2, i + 1, `2026-05-${21 + i}`));
   }
 
-  const t2places: [number, string, number, number, string, number, string, number, string, string | null, string | null, string | null, string | null][] = [
+  const t2places: NewDemoPlaceRow[] = [
     [t2, 'W Barcelona', 41.3686, 2.1920, 'Placa de la Rosa dels Vents 1, 08039 Barcelona, Spain', 1, '14:00', 60, 'Right on the beach. Rooftop bar with panoramic views!', null, 'ChIJKfj5C8yjpBIRCPC3RPI0JO4', 'https://www.marriott.com/hotels/travel/bcnwh-w-barcelona/', '+34 932 95 28 00'],
     [t2, 'Sagrada Familia', 41.4036, 2.1744, 'C/ de Mallorca, 401, 08013 Barcelona, Spain', 3, '10:00', 120, 'Gaudi\'s masterpiece. Book tickets online in advance — sells out fast!', null, 'ChIJk_s92NyipBIRUMnDG8Kq2Js', 'https://sagradafamilia.org/', '+34 932 08 04 14'],
     [t2, 'Park Guell', 41.4145, 2.1527, '08024 Barcelona, Spain', 3, '09:00', 90, 'Mosaic terrace with city views. Book early for the Monumental Zone.', null, 'ChIJ4eQMeOmipBIRb65JRUzGE8k', 'https://parkguell.barcelona/', '+34 934 09 18 31'],
@@ -192,50 +178,50 @@ function seedExampleTrips(db: Database.Database, adminId: number, demoId: number
     [t2, 'El Born & Tapas', 41.3856, 2.1825, 'El Born, 08003 Barcelona, Spain', 7, '20:00', 120, 'Trendy neighborhood with the best tapas bars. Try Cal Pep or El Xampanyet!', null, 'ChIJNY56dxuipBIRbqjSczmLvIA', null, null],
   ];
 
-  const t2pIds = t2places.map(p => Number(insertPlace.run(...p).lastInsertRowid));
+  const t2pIds: number[] = [];
+  for (const p of t2places) t2pIds.push(await demo.insertPlace(p));
 
   // Day 1: Arrival, Beach, El Born
-  insertAssignment.run(t2days[0], t2pIds[0], 0);
-  insertAssignment.run(t2days[0], t2pIds[4], 1);
-  insertAssignment.run(t2days[0], t2pIds[7], 2);
+  await demo.insertDayAssignment(t2days[0], t2pIds[0], 0);
+  await demo.insertDayAssignment(t2days[0], t2pIds[4], 1);
+  await demo.insertDayAssignment(t2days[0], t2pIds[7], 2);
   // Day 2: Sagrada Familia, Casa Batllo, La Boqueria
-  insertAssignment.run(t2days[1], t2pIds[1], 0);
-  insertAssignment.run(t2days[1], t2pIds[6], 1);
-  insertAssignment.run(t2days[1], t2pIds[3], 2);
-  insertNote.run(t2days[1], t2, 'Tickets already booked for 10:00 AM slot', '09:30', 'Ticket', 0.5);
+  await demo.insertDayAssignment(t2days[1], t2pIds[1], 0);
+  await demo.insertDayAssignment(t2days[1], t2pIds[6], 1);
+  await demo.insertDayAssignment(t2days[1], t2pIds[3], 2);
+  await demo.insertDayNote(t2days[1], t2, 'Tickets already booked for 10:00 AM slot', '09:30', 'Ticket', 0.5);
   // Day 3: Park Guell, Gothic Quarter
-  insertAssignment.run(t2days[2], t2pIds[2], 0);
-  insertAssignment.run(t2days[2], t2pIds[5], 1);
+  await demo.insertDayAssignment(t2days[2], t2pIds[2], 0);
+  await demo.insertDayAssignment(t2days[2], t2pIds[5], 1);
   // Day 4: Beach morning, departure
-  insertAssignment.run(t2days[3], t2pIds[4], 0);
-  insertNote.run(t2days[3], t2, 'Flight departs at 18:30 — leave hotel by 15:00', '14:00', 'Plane', 1);
+  await demo.insertDayAssignment(t2days[3], t2pIds[4], 0);
+  await demo.insertDayNote(t2days[3], t2, 'Flight departs at 18:30 — leave hotel by 15:00', '14:00', 'Plane', 1);
 
   // Packing
-  ['Passport', 'Sunscreen SPF50', 'Swimwear', 'Sunglasses', 'Comfortable sandals', 'Beach towel'].forEach((name, i) => {
-    insertPacking.run(t2, name, 0, i < 1 ? 'Documents' : 'Summer', i);
-  });
+  const t2packingNames = ['Passport', 'Sunscreen SPF50', 'Swimwear', 'Sunglasses', 'Comfortable sandals', 'Beach towel'];
+  for (let i = 0; i < t2packingNames.length; i++) {
+    await demo.insertPackingItem(t2, t2packingNames[i], 0, i < 1 ? 'Documents' : 'Summer', i);
+  }
 
   // Budget
-  insertBudget.run(t2, 'Accommodation', 'W Barcelona (3 nights)', 780, 2, 'Sea View Room');
-  insertBudget.run(t2, 'Transport', 'Flights BER-BCN return', 180, 2, 'Eurowings');
-  insertBudget.run(t2, 'Food', 'Restaurants & tapas', 300, 2, 'Approx. 75 EUR/day');
-  insertBudget.run(t2, 'Activities', 'Sagrada Familia + Park Guell + Casa Batllo', 95, 2, 'Online tickets');
+  await demo.insertBudgetItem(t2, 'Accommodation', 'W Barcelona (3 nights)', 780, 2, 'Sea View Room');
+  await demo.insertBudgetItem(t2, 'Transport', 'Flights BER-BCN return', 180, 2, 'Eurowings');
+  await demo.insertBudgetItem(t2, 'Food', 'Restaurants & tapas', 300, 2, 'Approx. 75 EUR/day');
+  await demo.insertBudgetItem(t2, 'Activities', 'Sagrada Familia + Park Guell + Casa Batllo', 95, 2, 'Online tickets');
 
-  insertReservation.run(t2, t2days[1], 'Sagrada Familia Entry', '2026-05-22T10:00', 'SF-2026-11234', 'confirmed', 'activity', 'Eixample, Barcelona');
+  await demo.insertReservation(t2, t2days[1], 'Sagrada Familia Entry', '2026-05-22T10:00', 'SF-2026-11234', 'confirmed', 'activity', 'Eixample, Barcelona');
 
-  insertMember.run(t2, demoId, adminId);
+  await demo.addTripMember(t2, demoId, adminId);
 
   // --- Trip 3: New York City ---
-  const trip3 = insertTrip.run(adminId, 'New York City', 'The city that never sleeps — iconic landmarks, world-class food, and Broadway lights.', '2026-09-18', '2026-09-22', 'USD');
-  const t3 = Number(trip3.lastInsertRowid);
+  const t3 = await demo.insertTrip(adminId, 'New York City', 'The city that never sleeps — iconic landmarks, world-class food, and Broadway lights.', '2026-09-18', '2026-09-22', 'USD');
 
   const t3days: number[] = [];
   for (let i = 0; i < 5; i++) {
-    const d = insertDay.run(t3, i + 1, `2026-09-${18 + i}`);
-    t3days.push(Number(d.lastInsertRowid));
+    t3days.push(await demo.insertDay(t3, i + 1, `2026-09-${18 + i}`));
   }
 
-  const t3places: [number, string, number, number, string, number, string, number, string, string | null, string | null, string | null, string | null][] = [
+  const t3places: NewDemoPlaceRow[] = [
     [t3, 'The Plaza Hotel', 40.7645, -73.9744, '768 5th Ave, New York, NY 10019, USA', 1, '15:00', 60, 'Iconic luxury hotel on Central Park. The lobby alone is worth a visit.', null, 'ChIJYbISlAVYwokRn6ORbSPV0xk', 'https://www.theplazany.com/', '+1 212-759-3000'],
     [t3, 'Statue of Liberty', 40.6892, -74.0445, 'Liberty Island, New York, NY 10004, USA', 3, '09:00', 180, 'Book crown access tickets months in advance. Ferry from Battery Park.', null, 'ChIJPTacEpBQwokRKwIlDXelxkA', 'https://www.nps.gov/stli/', '+1 212-363-3200'],
     [t3, 'Central Park', 40.7829, -73.9654, 'Central Park, New York, NY 10024, USA', 9, '10:00', 120, 'Bethesda Fountain, Bow Bridge, and Strawberry Fields. Rent bikes!', null, 'ChIJ4zGFAZpYwokRGUGph3Mf37k', 'https://www.centralparknyc.org/', null],
@@ -249,27 +235,28 @@ function seedExampleTrips(db: Database.Database, adminId: number, demoId: number
     [t3, 'Broadway Show', 40.7590, -73.9845, 'Broadway, Manhattan, NY 10019, USA', 6, '20:00', 150, 'Can\'t visit NYC without seeing a show. Book TKTS booth for discounts.', null, 'ChIJMYQhxFtYwokR7cJBcNqfKDY', null, null],
   ];
 
-  const t3pIds = t3places.map(p => Number(insertPlace.run(...p).lastInsertRowid));
+  const t3pIds: number[] = [];
+  for (const p of t3places) t3pIds.push(await demo.insertPlace(p));
 
   // Day 1: Arrival, Times Square, Broadway
-  insertAssignment.run(t3days[0], t3pIds[0], 0);
-  insertAssignment.run(t3days[0], t3pIds[3], 1);
-  insertAssignment.run(t3days[0], t3pIds[10], 2);
+  await demo.insertDayAssignment(t3days[0], t3pIds[0], 0);
+  await demo.insertDayAssignment(t3days[0], t3pIds[3], 1);
+  await demo.insertDayAssignment(t3days[0], t3pIds[10], 2);
   // Day 2: Statue of Liberty, Brooklyn Bridge, Joe's Pizza
-  insertAssignment.run(t3days[1], t3pIds[1], 0);
-  insertAssignment.run(t3days[1], t3pIds[5], 1);
-  insertAssignment.run(t3days[1], t3pIds[7], 2);
-  insertNote.run(t3days[1], t3, 'First ferry at 8:30 AM — arrive early at Battery Park', '08:00', 'Ship', 0.5);
+  await demo.insertDayAssignment(t3days[1], t3pIds[1], 0);
+  await demo.insertDayAssignment(t3days[1], t3pIds[5], 1);
+  await demo.insertDayAssignment(t3days[1], t3pIds[7], 2);
+  await demo.insertDayNote(t3days[1], t3, 'First ferry at 8:30 AM — arrive early at Battery Park', '08:00', 'Ship', 0.5);
   // Day 3: Central Park, Met Museum, Top of the Rock sunset
-  insertAssignment.run(t3days[2], t3pIds[2], 0);
-  insertAssignment.run(t3days[2], t3pIds[6], 1);
-  insertAssignment.run(t3days[2], t3pIds[8], 2);
+  await demo.insertDayAssignment(t3days[2], t3pIds[2], 0);
+  await demo.insertDayAssignment(t3days[2], t3pIds[6], 1);
+  await demo.insertDayAssignment(t3days[2], t3pIds[8], 2);
   // Day 4: Empire State Building, Chelsea Market, shopping
-  insertAssignment.run(t3days[3], t3pIds[4], 0);
-  insertAssignment.run(t3days[3], t3pIds[9], 1);
-  insertNote.run(t3days[3], t3, 'SoHo and 5th Avenue shopping in the afternoon', '14:00', 'ShoppingBag', 1.5);
+  await demo.insertDayAssignment(t3days[3], t3pIds[4], 0);
+  await demo.insertDayAssignment(t3days[3], t3pIds[9], 1);
+  await demo.insertDayNote(t3days[3], t3, 'SoHo and 5th Avenue shopping in the afternoon', '14:00', 'ShoppingBag', 1.5);
   // Day 5: Free morning, departure
-  insertNote.run(t3days[4], t3, 'Flight departs JFK at 17:00 — last bagel at Russ & Daughters!', '10:00', 'Plane', 0);
+  await demo.insertDayNote(t3days[4], t3, 'Flight departs JFK at 17:00 — last bagel at Russ & Daughters!', '10:00', 'Plane', 0);
 
   // Packing
   const t3packing: [string, number, string, number][] = [
@@ -278,20 +265,20 @@ function seedExampleTrips(db: Database.Database, adminId: number, demoId: number
     ['Light jacket', 0, 'Clothing', 4], ['Portable charger', 0, 'Electronics', 5],
     ['Camera', 0, 'Electronics', 6], ['Subway card (OMNY)', 0, 'Transport', 7],
   ];
-  t3packing.forEach(p => insertPacking.run(t3, ...p));
+  for (const [name, checked, category, sortOrder] of t3packing) await demo.insertPackingItem(t3, name, checked, category, sortOrder);
 
   // Budget
-  insertBudget.run(t3, 'Accommodation', 'The Plaza Hotel (4 nights)', 2400, 2, 'Park View Room');
-  insertBudget.run(t3, 'Transport', 'Flights FRA-JFK return', 850, 2, 'United Airlines');
-  insertBudget.run(t3, 'Food', 'Daily food budget', 500, 2, 'Approx. 100 USD/day');
-  insertBudget.run(t3, 'Activities', 'Statue of Liberty + Empire State + Top of the Rock + Met', 180, 2, 'CityPASS');
-  insertBudget.run(t3, 'Entertainment', 'Broadway show tickets', 300, 2, 'Hamilton or Wicked');
+  await demo.insertBudgetItem(t3, 'Accommodation', 'The Plaza Hotel (4 nights)', 2400, 2, 'Park View Room');
+  await demo.insertBudgetItem(t3, 'Transport', 'Flights FRA-JFK return', 850, 2, 'United Airlines');
+  await demo.insertBudgetItem(t3, 'Food', 'Daily food budget', 500, 2, 'Approx. 100 USD/day');
+  await demo.insertBudgetItem(t3, 'Activities', 'Statue of Liberty + Empire State + Top of the Rock + Met', 180, 2, 'CityPASS');
+  await demo.insertBudgetItem(t3, 'Entertainment', 'Broadway show tickets', 300, 2, 'Hamilton or Wicked');
 
-  insertReservation.run(t3, t3days[0], 'The Plaza Hotel Check-in', '2026-09-18T15:00', 'PZ-2026-55891', 'confirmed', 'hotel', '768 5th Ave, New York');
-  insertReservation.run(t3, t3days[0], 'Broadway Show', '2026-09-18T20:00', 'BW-HAM-2026-1192', 'pending', 'activity', 'Richard Rodgers Theatre');
-  insertReservation.run(t3, t3days[1], 'Statue of Liberty Ferry', '2026-09-19T08:30', 'SOL-2026-3347', 'confirmed', 'transport', 'Battery Park');
+  await demo.insertReservation(t3, t3days[0], 'The Plaza Hotel Check-in', '2026-09-18T15:00', 'PZ-2026-55891', 'confirmed', 'hotel', '768 5th Ave, New York');
+  await demo.insertReservation(t3, t3days[0], 'Broadway Show', '2026-09-18T20:00', 'BW-HAM-2026-1192', 'pending', 'activity', 'Richard Rodgers Theatre');
+  await demo.insertReservation(t3, t3days[1], 'Statue of Liberty Ferry', '2026-09-19T08:30', 'SOL-2026-3347', 'confirmed', 'transport', 'Battery Park');
 
-  insertMember.run(t3, demoId, adminId);
+  await demo.addTripMember(t3, demoId, adminId);
 
   console.log('[Demo] 3 example trips seeded and shared with demo user');
 }

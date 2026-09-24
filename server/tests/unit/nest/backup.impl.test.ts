@@ -55,7 +55,27 @@ const dbMock = vi.hoisted(() => ({
   isOwner: vi.fn(),
 }));
 
+// Plan 3i Task 3 (R1): BK1/BK2 (the WAL checkpoint, the VACUUM INTO
+// snapshot) now go through MaintenanceRepository, resolved via
+// RequestContext.getEntityManager() — a real static accessor this unit-test
+// file does not mock (it boots neither a real MikroORM nor a real Nest
+// request), so it genuinely returns `undefined` here, the same as it would
+// for any caller outside a request context. `maintenanceRepoMock` proves the
+// NEGATIVE: the two `if (em)`/`if (!em) throw` guards correctly detect the
+// missing context and take the best-effort/fallback path WITHOUT ever
+// constructing MaintenanceRepository — not a spy standing in for a real
+// snapshot (that positive case is `MaintenanceRepository.test.ts`'s own
+// unit coverage, plus the real ORM/request-context boot in
+// `tests/e2e/backup.e2e.test.ts`).
+const maintenanceRepoMock = vi.hoisted(() => ({
+  walCheckpoint: vi.fn().mockResolvedValue(undefined),
+  vacuumInto: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../../src/db/database', () => dbMock);
+vi.mock('../../../src/db/repositories/MaintenanceRepository', () => ({
+  MaintenanceRepository: vi.fn().mockImplementation(() => maintenanceRepoMock),
+}));
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a'.repeat(64),
@@ -497,17 +517,21 @@ describe('BACKUP-036 createBackup', () => {
     expect(archiverInstanceMock.directory).toHaveBeenCalledWith(expect.stringContaining('/stub/spool/plugins-snap-backup-'), 'plugins-data');
   });
 
-  it('BACKUP-036b — WAL checkpoint error is swallowed (non-critical)', async () => {
-    // db.exec throws on WAL checkpoint
-    dbMock.db.exec.mockImplementationOnce(() => { throw new Error('WAL checkpoint failed'); });
+  it('BACKUP-036b — a missing request context (no EntityManager) is swallowed, best-effort, same as a WAL checkpoint failure (non-critical)', async () => {
+    // Plan 3i Task 3: BK1 resolves RequestContext.getEntityManager() — a
+    // real, unmocked static accessor here — which is genuinely `undefined`
+    // outside a request context (this suite boots no Nest app), so
+    // MaintenanceRepository is never even constructed; the backup must still
+    // succeed either way, matching the legacy `db.exec` throw case's own
+    // "should not throw" guarantee.
     fsMock.existsSync.mockReturnValue(false);
     setupArchiveSuccess();
     const storage = stubStorage({ stat: statOf(512) });
 
-    // Should not throw even though WAL checkpoint failed
     const result = await createBackup(storage);
     expect(result).toHaveProperty('filename');
     expect(result.size).toBe(512);
+    expect(maintenanceRepoMock.walCheckpoint).not.toHaveBeenCalled();
   });
 
   it('BACKUP-036c — archiver error cleans up the spool staging, skips put and re-throws', async () => {
@@ -530,18 +554,30 @@ describe('BACKUP-036 createBackup', () => {
     expect(fsMock.rmSync).toHaveBeenCalledWith(expect.stringContaining('zip-build-backup-'), { force: true });
   });
 
-  it('BACKUP-036d — includes travel.db when it exists, snapshotted into the spool', async () => {
+  it('BACKUP-036d — includes travel.db when it exists; falls back to archiving the live file when no EntityManager is available for the VACUUM INTO snapshot', async () => {
+    // Plan 3i Task 3 (R1): the positive "snapshots into the spool" case (a
+    // real EntityManager, VACUUM INTO succeeding) is `MaintenanceRepository
+    // .test.ts`'s own unit coverage (MAINTREPO-002/003) plus the real
+    // request-context boot in `tests/e2e/backup.e2e.test.ts` — this
+    // heavily-mocked unit-test file boots no Nest app, so
+    // RequestContext.getEntityManager() is genuinely `undefined` here,
+    // exercising the SAME fallback path a real disk/lock VACUUM INTO
+    // failure would: MaintenanceRepository is never constructed, and the
+    // checkpointed live file is archived instead of a missing snapshot.
     fsMock.existsSync.mockImplementation((p: string) => String(p).endsWith('travel.db'));
     setupArchiveSuccess();
     const storage = stubStorage({ stat: statOf(1024) });
 
     await createBackup(storage);
 
-    // the core DB is snapshotted (VACUUM INTO) and archived under the name travel.db
-    expect(dbMock.db.exec).toHaveBeenCalledWith(expect.stringContaining('VACUUM INTO'));
+    expect(maintenanceRepoMock.vacuumInto).not.toHaveBeenCalled();
     expect(archiverInstanceMock.file).toHaveBeenCalledWith(
-      expect.stringContaining('/stub/spool/travel-snap-backup-'),
-      { name: 'travel.db' }
+      expect.stringMatching(/travel\.db$/),
+      { name: 'travel.db' },
+    );
+    expect(archiverInstanceMock.file).not.toHaveBeenCalledWith(
+      expect.stringContaining('travel-snap-backup-'),
+      expect.anything(),
     );
   });
 
@@ -617,7 +653,7 @@ describe('BACKUP-036 createBackup', () => {
     );
   });
 
-  it('BACKUP-036i — the auto-backup prefix names both the zip and its scratch snapshots', async () => {
+  it('BACKUP-036i — the auto-backup prefix names the zip (the scratch snapshot naming, `travel-snap-auto-backup-*`, is MaintenanceRepository.test.ts\'s own coverage)', async () => {
     // The scheduler passes 'auto-backup' so retention and the admin panel can
     // still tell scheduled archives apart by filename.
     fsMock.existsSync.mockImplementation((p: string) => String(p).endsWith('travel.db'));
@@ -627,8 +663,12 @@ describe('BACKUP-036 createBackup', () => {
     const result = await createBackup(storage, 'auto-backup');
 
     expect(result.filename).toMatch(/^auto-backup-.*\.zip$/);
+    // No real EntityManager in this unit-test file (see BACKUP-036d) — the
+    // VACUUM INTO snapshot falls back to the live file, same as the default
+    // prefix's case; the auto-backup-specific behaviour this test pins is
+    // the zip/put naming, not the (unreachable here) snapshot path.
     expect(archiverInstanceMock.file).toHaveBeenCalledWith(
-      expect.stringContaining('travel-snap-auto-backup-'),
+      expect.stringMatching(/travel\.db$/),
       { name: 'travel.db' },
     );
     expect(storage.put).toHaveBeenCalledWith('backups', result.filename, {

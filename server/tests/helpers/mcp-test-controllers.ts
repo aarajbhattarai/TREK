@@ -15,6 +15,7 @@ import { CategoriesMcp } from '../../src/nest/categories/categories.mcp';
 import { CategoriesService } from '../../src/nest/categories/categories.service';
 import { CollabMcp } from '../../src/nest/collab/collab.mcp';
 import { CollabService } from '../../src/nest/collab/collab.service';
+import { DemoService } from '../../src/nest/common/demo.service';
 import { RateLimitService } from '../../src/nest/common/rate-limit.service';
 import { CollectionsMcp } from '../../src/nest/collections/collections.mcp';
 import { CollectionsService } from '../../src/nest/collections/collections.service';
@@ -192,6 +193,10 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // through it now, not through `db/database.ts`'s deleted free functions.
   const mcpOrm = await createTestOrm(db);
   const dbService = new DatabaseService(db, mcpOrm.em);
+  // Plan 3i Task 3: DemoService, hand-built for the 4 *.mcp.ts controllers
+  // below that used to take `isDemoUserId(env, db, userId)` as a free
+  // function and now inject DemoService instead.
+  const demoService = new DemoService(new RuntimeEnvService(), mcpOrm.em);
   const generalStorage = makeStorageFixture('').storage;
   const appSettings = (await createTestOrm(dbService.connection)).repo(AppSettings);
   const auditLogRepo = mcpOrm.repo(AuditLog);
@@ -383,14 +388,14 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   return createTestRegistry(
     [
       new TagsMcp(new TagsService(await createTestTagsRepo(dbService.connection)), authService),
-      new CategoriesMcp(new CategoriesService(await createTestCategoriesRepo(dbService.connection)), dbService, new RuntimeEnvService(), guards),
+      new CategoriesMcp(new CategoriesService(await createTestCategoriesRepo(dbService.connection)), dbService, new RuntimeEnvService(), guards, demoService),
       // The weather and airport tools left the legacy mapsWeather registrar.
       new WeatherMcp(new WeatherService()),
       new AirportsMcp(),
       new AuthMcp(),
       new TodoMcp(todoService, authService, addonsService, guards),
       new PackingMcp(packingService, authService, addonsService, guards),
-      new BudgetMcp(budgetService, exchangeRatesService, dbService, new RuntimeEnvService(), new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), addonsService, guards, await createTestUnitOfWork(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestTripsRepo(dbService.connection)),
+      new BudgetMcp(budgetService, exchangeRatesService, dbService, new RuntimeEnvService(), new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), addonsService, guards, await createTestUnitOfWork(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestTripsRepo(dbService.connection), demoService),
       new ReservationsMcp(reservationsService, daysService, budgetService, authService, assignmentsService, guards),
       new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService), authService, guards),
       new DaysMcp(daysService, authService, guards),
@@ -434,8 +439,8 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new TripsMcp(tripsService, todoService, collabService, authService, calendarService, membersService, readModelService, addonsService, guards),
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
       new ShareMcp(new ShareService(new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection), ...(await shareServiceRepoArgs(dbService.connection))), authService, guards),
-      new FeedsMcp(new FeedsService(await createTestTripsRepo(dbService.connection), usersRepo, calendarService), dbService, new RuntimeEnvService(), guards),
-      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo)),
+      new FeedsMcp(new FeedsService(await createTestTripsRepo(dbService.connection), usersRepo, calendarService), dbService, new RuntimeEnvService(), guards, demoService),
+      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo), demoService),
       new MapsMcp(mapsService),
       new PlacesMcp(placesService, mapsService, await createTestTripsRepo(dbService.connection), authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(

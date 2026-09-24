@@ -47,10 +47,11 @@ import { CategoriesMcp } from '../../../src/nest/categories/categories.mcp';
 import { CategoriesService } from '../../../src/nest/categories/categories.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
+import { DemoService } from '../../../src/nest/common/demo.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { McpToolGuardsService } from '../../../src/nest/mcp-shared/mcp-tool-guards.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, sharedTestOrm } from '../../helpers/test-uow';
 
 beforeAll(() => {
   createTables(testDb);
@@ -82,11 +83,13 @@ async function withHarness(
 const categoriesDb = new DatabaseService(testDb);
 let categoriesMcp: CategoriesMcp;
 beforeAll(async () => {
+  const categoriesEm = (await sharedTestOrm(categoriesDb.connection)).em;
   categoriesMcp = new CategoriesMcp(
   new CategoriesService(await createTestCategoriesRepo(categoriesDb.connection)),
   categoriesDb,
   new RuntimeEnvService(),
   new McpToolGuardsService(categoriesDb, new PermissionsService(await createTestAppSettingsRepo(categoriesDb.connection), await createTestUnitOfWork(categoriesDb.connection)), new RealtimeService()),
+  new DemoService(new RuntimeEnvService(), categoriesEm),
 );
 });
 
