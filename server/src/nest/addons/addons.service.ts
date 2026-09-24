@@ -31,18 +31,19 @@ import type { UsersRepository } from '../../db/repositories/Users.repository';
  * sub-features are opt-out (`!== 'false'`, default ON). Reads are uncached
  * per-call repository calls so admin toggles stay immediately visible.
  *
- * `DatabaseService` stays injected (Plan 3a Task 4) purely as a passthrough
- * for `transit-provider.ts`'s readTransitProvider/writeTransitProvider
- * (nest/transit, not one of this plan's six domains — its own conversion is
- * a later phase). It does not read/write through `this.db` in THIS file —
- * every `app_settings`/`addons`/`photo_providers`/`photo_provider_fields`
- * site this service itself used to touch is repository-backed below — so this
- * is the same kind of carve-out `permissions`' two guard delegations are: `grep
- * DatabaseService src/nest/addons` still finds this constructor parameter and
- * its import, not a raw query. `instance-api-keys.ts`'s resolveApiKey
- * (nest/settings, Task 5) no longer needs it: `googleKeySource` below passes
- * this service's own already-injected `AppSettingsRepository` plus a
- * `UsersRepository` Task 5 added here for exactly that.
+ * `DatabaseService` was injected (Plan 3a Task 4) purely as a passthrough for
+ * `transit-provider.ts`'s readTransitProvider/writeTransitProvider. Plan 4
+ * Task 1 converted those two functions to take an `AppSettingsRepository`
+ * instead, so this service now passes its own already-injected
+ * `AppSettingsRepository` (the same one `googleKeySource` below already
+ * uses) — `this.dbs` is no longer read anywhere in this file. The
+ * constructor parameter itself stays (rather than being removed) because
+ * `tests/integration/plugins/boot-registry-order.test.ts` hand-constructs
+ * this class with a trailing `DatabaseService` argument and is a
+ * concurrently-owned file this task does not touch (Plan 3j fix-wave
+ * territory, `tests/integration/plugins/**`); removing the parameter here
+ * would need editing that file in the same change. Safe to drop as dead-param
+ * cleanup once that file is free.
  */
 @Injectable()
 export class AddonsService {
@@ -258,10 +259,10 @@ export class AddonsService {
   }
 
   async getTransitProvider(userId = 0) {
-    return { provider: await readTransitProvider(this.dbs), googleKeySource: await this.googleKeySource(userId) };
+    return { provider: await readTransitProvider(this.appSettings), googleKeySource: await this.googleKeySource(userId) };
   }
 
   async updateTransitProvider(provider: TransitProvider, userId = 0) {
-    return { provider: await writeTransitProvider(this.dbs, provider), googleKeySource: await this.googleKeySource(userId) };
+    return { provider: await writeTransitProvider(this.appSettings, provider), googleKeySource: await this.googleKeySource(userId) };
   }
 }

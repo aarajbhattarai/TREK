@@ -380,3 +380,37 @@ describe('TripMembersRepository.listRawUsernameAndDisplayName (RP3)', () => {
     expect((await tripMembers.listRawUsernameAndDisplayName(String(trip.id))).map((r) => r.id)).toEqual([member.id]);
   });
 });
+
+describe('TripMembersRepository.clearInvitedBy (Plan 4 Task 1, UC4)', () => {
+  it('TMEMREPO-029: nulls invited_by on every row the departing user invited, across trips, leaving other rows untouched', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: departing } = createUser(testDb, { username: 'departing' });
+    const { user: other } = createUser(testDb, { username: 'other' });
+    const tripA = createTrip(testDb, owner.id);
+    const tripB = createTrip(testDb, owner.id);
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripA.id, other.id, departing.id);
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripB.id, owner.id, departing.id);
+    // Control row: invited by someone else entirely — must survive untouched.
+    const { user: controlMember } = createUser(testDb, { username: 'control-member' });
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripA.id, controlMember.id, owner.id);
+
+    await tripMembers.clearInvitedBy(departing.id);
+
+    const rows = testDb.prepare('SELECT trip_id, user_id, invited_by FROM trip_members ORDER BY trip_id, user_id').all();
+    expect(rows).toEqual([
+      { trip_id: tripA.id, user_id: other.id, invited_by: null },
+      { trip_id: tripA.id, user_id: controlMember.id, invited_by: owner.id },
+      { trip_id: tripB.id, user_id: owner.id, invited_by: null },
+    ]);
+  });
+
+  it('TMEMREPO-030: a user who never invited anyone is a no-op', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+
+    await expect(tripMembers.clearInvitedBy(999999)).resolves.toBeUndefined();
+    expect((testDb.prepare('SELECT invited_by FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, member.id) as { invited_by: number | null }).invited_by).toBeNull();
+  });
+});

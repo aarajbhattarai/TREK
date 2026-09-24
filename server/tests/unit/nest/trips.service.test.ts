@@ -17,12 +17,10 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -37,10 +35,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     isOwner: (tripId: any, userId: number) =>
       !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -50,8 +48,7 @@ const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
 vi.mock('../../../src/websocket', () => ({ broadcast }));
 // notifyInvite fires a notification via a dynamic import — keep it out of unit scope
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation, createPlace, createDay, createDayAssignment, createDayNote, addTripMember } from '../../helpers/factories';
 import { MAX_TRIP_DAYS } from '@trek/shared';
@@ -142,7 +139,6 @@ import { createTestCollectionPlacesRepo } from '../../helpers/test-uow';
 let dbsEm: import('@mikro-orm/core').EntityManager | undefined;
 const dbs = () => new DatabaseService(testDb, dbsEm);
 
-
 // Same collaborator set the container hands PlacesService (see places.service.test.ts).
 // Only the read-model aggregation reaches into places here, but the photo cache,
 // Unsplash and journey domain are real instances over the same in-memory DB
@@ -155,15 +151,12 @@ const dbs = () => new DatabaseService(testDb, dbsEm);
 let photoCache: PlacePhotoCacheService;
 const coversFx = makeStorageFixture('covers/');
 
-
 let accommodationsSvc: Awaited<ReturnType<typeof makeAccommodationsService>>;
 let createAccommodation: (...args: Parameters<typeof accommodationsSvc.createAccommodation>) => ReturnType<typeof accommodationsSvc.createAccommodation>;
 beforeAll(async () => {
   accommodationsSvc = await makeAccommodationsService(testDb);
   createAccommodation = (...args) => accommodationsSvc.createAccommodation(...args);
 });
-
-
 
 let budgetSvc: BudgetService;
 let daysSvc: DaysService;
@@ -243,7 +236,7 @@ beforeAll(async () => {
   await createTestUnitOfWork(dbs().connection),
   (await sharedTestOrm(testDb)).em,
 );
-  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
   readModelSvc = new TripReadModelService(
   await createTestTripsRepo(dbs().connection), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
   new PackingService(
@@ -280,12 +273,6 @@ beforeAll(async () => {
     await createTestBudgetItemsRepo(dbs().connection),
   ),
 );
-});
-
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
 });
 
 beforeEach(() => {

@@ -10,8 +10,13 @@ import {
 } from '@nestjs/websockets';
 import type { IncomingMessage } from 'node:http';
 import type { WebSocketServer } from 'ws';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../database/database.service';
 import { EphemeralTokenService } from '../auth/ephemeral-token.service';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { User } from '../../types';
 import { logError } from '../audit/audit-log.logger';
 import {
@@ -58,6 +63,10 @@ export class RealtimeGateway
   private heartbeat: ReturnType<typeof setInterval> | null = null;
 
   constructor(
+    // Stays injected for `handleJoin`'s `this.db.canAccessTrip` delegate —
+    // the facade-inline sweep (Plan 4 Task 2/3) is a separate task; this
+    // class's raw `users`/`app_settings` reads converted below (Plan 4
+    // Task 1) are unrelated to that delegate call.
     private readonly db: DatabaseService,
     private readonly tokens: EphemeralTokenService,
     /*
@@ -66,6 +75,8 @@ export class RealtimeGateway
      * is a second thing to keep in step with the REST routes.
      */
     private readonly journeys: JourneyDomainService,
+    @InjectRepository(Users) private readonly users: UsersRepository,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
   ) {}
 
   afterInit(server: WebSocketServer): void {
@@ -114,10 +125,7 @@ export class RealtimeGateway
         return;
       }
 
-      const row = this.db.get<User & { password_version?: number }>(
-        'SELECT id, username, email, role, mfa_enabled, password_version FROM users WHERE id = ?',
-        consumed.userId,
-      );
+      const row = await this.users.findForWsHandshake(consumed.userId);
       if (!row) {
         socket.close(4001, 'User not found');
         return;
@@ -136,8 +144,7 @@ export class RealtimeGateway
 
       // Don't leak password_version beyond the handshake.
       const { password_version: _pv, ...user } = row;
-      const requireMfa =
-        this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'require_mfa'")?.value === 'true';
+      const requireMfa = (await this.appSettings.getValue('require_mfa')) === 'true';
       const mfaOk = user.mfa_enabled === 1 || user.mfa_enabled === true;
       if (requireMfa && !mfaOk) {
         socket.close(4403, 'MFA required');

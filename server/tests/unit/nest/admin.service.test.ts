@@ -14,12 +14,10 @@ import { ADDON_IDS, MCP_GATED_ADDON_IDS } from '../../../src/addons';
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -28,10 +26,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => null,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -54,8 +52,7 @@ vi.mock('../../../src/demo/demo-reset', () => ({
   saveBaseline: vi.fn(),
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createUserWithMfa, createAdmin, createInviteToken } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
@@ -131,7 +128,7 @@ let auditLogRepo: AuditLogRepository;
 beforeAll(async () => {
   webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(dbs.connection));
   permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
-  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection));
   auth = new AuthService(
     permissions, new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)), webauthn, userCleanup, new MailerService(await createTestUsersRepo(dbs.connection), await createTestSettingsRepo(dbs.connection), await createTestAppSettingsRepo(dbs.connection)), new EphemeralTokenService(), new AllowedFileTypesService(await createTestAppSettingsRepo(dbs.connection)), await createTestUnitOfWork(dbs.connection),
     await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),
@@ -179,11 +176,6 @@ const getGithubReleases = (perPage?: string, page?: string) => svc.getGithubRele
 const checkVersion = () => svc.checkVersion();
 const listAddons = () => svc.listAddons();
 const updateAddon = (id: string, d: Parameters<AdminService['updateAddon']>[1]) => svc.updateAddon(id, d);
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   resetTestDb(testDb);
@@ -702,7 +694,6 @@ describe('admin quirk fixes (post-fold)', () => {
     const row = testDb.prepare('SELECT username FROM users WHERE id = ?').get(user.id) as { username: string };
     expect(row.username).toBe(user.username);
   });
-
 
 });
 

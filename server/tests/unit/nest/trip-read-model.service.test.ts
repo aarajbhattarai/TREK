@@ -12,12 +12,10 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -32,10 +30,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     isOwner: (tripId: any, userId: number) =>
       !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -44,8 +42,7 @@ vi.mock('../../../src/config', () => ({
 const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
 vi.mock('../../../src/websocket', () => ({ broadcast }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
@@ -177,7 +174,7 @@ beforeAll(async () => {
   await createTestBudgetItemsRepo(dbs().connection),
   await createTestCollectionPlacesRepo(dbs().connection),
 );
-  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
 });
 
 const buildReadModel = async (tripsRepo: TripsRepository, roster: TripMembersService = membersSvc) =>
@@ -223,11 +220,6 @@ let tripsRepo: TripsRepository;
 beforeAll(async () => {
   tripsRepo = await createTestTripsRepo(dbs().connection);
   svc = await buildReadModel(tripsRepo);
-});
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
 });
 
 beforeEach(() => {

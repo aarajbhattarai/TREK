@@ -331,3 +331,25 @@ describe('DaysRepository.insertDayCopy (TP39)', () => {
     expect(row).toEqual({ date: null, notes: null, title: null });
   });
 });
+
+describe('DaysRepository.listForPublicApi (Plan 4 Task 1, public-api.service.ts::buildDays)', () => {
+  it('DAYREPO-027: id/day_number/date/title/notes only, ordered by day_number, scoped to the trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const day2 = createDay(testDb, trip.id, { day_number: 2, date: '2026-06-02' });
+    const day1 = createDay(testDb, trip.id, { day_number: 1, date: '2026-06-01' });
+    createDay(testDb, other.id, { day_number: 1 });
+
+    const legacy = testDb.prepare('SELECT id, day_number, date, title, notes FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(trip.id);
+    const rows = await days.listForPublicApi(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([day1.id, day2.id]);
+  });
+
+  it('DAYREPO-028: empty array for a trip with no days', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await days.listForPublicApi(trip.id)).toEqual([]);
+  });
+});

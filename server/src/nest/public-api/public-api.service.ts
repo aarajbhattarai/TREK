@@ -16,6 +16,14 @@ import { Trips } from '../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { Reservations } from '../../db/entities/Reservations.entity';
 import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository, PublicApiAssignedPlaceRow } from '../../db/repositories/Places.repository';
+import { DayNotes } from '../../db/entities/DayNotes.entity';
+import type { DayNotesRepository } from '../../db/repositories/DayNotes.repository';
+import { BucketList } from '../../db/entities/BucketList.entity';
+import type { BucketListRepository } from '../../db/repositories/BucketList.repository';
 import { DatabaseService } from '../database/database.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
 
@@ -37,6 +45,12 @@ import { TripMembershipService } from '../trip-membership/trip-membership.servic
  * The child queries are scoped by `trip_id` in SQL rather than by filtering a
  * wider result set, so a bug in the include handling cannot widen what a caller
  * sees; at worst it returns less.
+ *
+ * Plan 4 Task 1: the four raw `this.db.all(...)` reads (days, places,
+ * day-notes, bucket-list) moved onto `DaysRepository`/`PlacesRepository`/
+ * `DayNotesRepository`/`BucketListRepository` — `DatabaseService` stays
+ * injected purely for `getTrip`'s `canAccessTrip` delegate (Plan 4 Task
+ * 2/3's facade-inline sweep, not this task's).
  */
 @Injectable()
 export class PublicApiService {
@@ -45,6 +59,10 @@ export class PublicApiService {
     private readonly membership: TripMembershipService,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
     @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(Days) private readonly daysRepo: DaysRepository,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(DayNotes) private readonly dayNotesRepo: DayNotesRepository,
+    @InjectRepository(BucketList) private readonly bucketListRepo: BucketListRepository,
   ) {}
 
   /** Every trip the token's owner may read, newest first, without itineraries. */
@@ -103,11 +121,7 @@ export class PublicApiService {
    * trips for the same rows.
    */
   private async buildDays(tripId: number, include: PublicApiInclude[], dayFields: boolean): Promise<PublicApiDay[]> {
-    const days = this.db.all<DayRow>(
-      `SELECT id, day_number, date, title, notes
-         FROM days WHERE trip_id = ? ORDER BY day_number ASC`,
-      tripId,
-    );
+    const days = await this.daysRepo.listForPublicApi(tripId);
     if (days.length === 0) return [];
 
     const placesByDay = include.includes('places') ? await this.placesByDay(tripId) : new Map();
@@ -141,29 +155,12 @@ export class PublicApiService {
    * the shortlist below.
    */
   private async placesByDay(tripId: number): Promise<Map<number, PublicApiPlace[]>> {
-    const rows = this.db.all<PlaceRow>(
-      `SELECT da.day_id,
-              p.name, p.address, p.lat, p.lng, p.place_time, p.end_time,
-              p.duration_minutes, p.notes, p.transport_mode,
-              c.name AS category
-         FROM day_assignments da
-         JOIN places p ON p.id = da.place_id
-         LEFT JOIN categories c ON c.id = p.category_id
-        WHERE p.trip_id = ?
-          AND da.accommodation_id IS NULL
-        ORDER BY da.day_id ASC, da.order_index ASC`,
-      tripId,
-    );
-    return groupBy(rows, (r: PlaceRow) => r.day_id, toPlace);
+    const rows = await this.placesRepo.listAssignedForPublicApi(tripId);
+    return groupBy<PublicApiAssignedPlaceRow, PublicApiPlace>(rows, (r) => r.day_id, toPlace);
   }
 
   private async dayNotesByDay(tripId: number): Promise<Map<number, PublicApiDayNote[]>> {
-    const rows = this.db.all<DayNoteRow>(
-      `SELECT day_id, text, time
-         FROM day_notes WHERE trip_id = ?
-        ORDER BY day_id ASC, sort_order ASC`,
-      tripId,
-    );
+    const rows = await this.dayNotesRepo.listForPublicApi(tripId);
     return groupBy(rows, (r) => r.day_id, (r) => ({
       text: r.text,
       time: r.time ?? null,
@@ -247,12 +244,7 @@ export class PublicApiService {
    * answers change when an unrelated toggle moves is a key nobody can build on.
    */
   async listBucketList(userId: number): Promise<PublicApiBucketListItem[]> {
-    const rows = this.db.all<BucketListRow>(
-      `SELECT name, lat, lng, country_code, notes, target_date
-         FROM bucket_list WHERE user_id = ?
-        ORDER BY created_at DESC, id DESC`,
-      userId,
-    );
+    const rows = await this.bucketListRepo.listForPublicApi(userId);
     return rows.map((r) => ({
       name: r.name,
       lat: r.lat ?? null,

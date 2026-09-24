@@ -16,7 +16,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GoogleTransitProvider, clearGoogleTransitCache } from '../../../src/nest/transit/google-transit.provider';
 import { decodePolyline, encodePolyline } from '../../../src/nest/transit/transit.helpers';
 import { TransitService } from '../../../src/nest/transit/transit.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
@@ -32,36 +31,25 @@ vi.mock('../../../src/app-config', async (importOriginal) => {
 
 const fetchMock = vi.fn();
 
-/** app_settings reads only — the transit provider name and the instance Places key. */
-function stubDb(settings: Record<string, string | undefined>): DatabaseService {
-  return {
-    get: (_sql: string, ...params: unknown[]) => {
-      const value = settings[String(params[0])];
-      return value === undefined ? undefined : { value };
-    },
-    run: () => undefined,
-  } as unknown as DatabaseService;
-}
-
 const GOOGLE_SETTINGS = { transit_provider: 'google', maps_api_key: 'test-key' };
 
 /**
- * resolveKey (google-transit.provider.ts) now reads AppSettingsRepository/
+ * resolveKey (google-transit.provider.ts) reads AppSettingsRepository/
  * UsersRepository directly (instance-api-keys.ts's resolveApiKey, Plan 3a
- * Task 5) instead of a raw `this.database.get(...)` call through the stub
- * above. `stubDb`'s settings object already carries exactly the instance-tier
- * value every test here configures, so `appSettingsStub.getValue` wraps it
- * directly; the per-user fallback tier was never exercised by this file even
- * before this conversion (the old stub's `.get` matched on the bound
- * parameter, and none of these cases seed a per-user row), so it always
- * answers null.
+ * Task 5); isActive's own `readTransitProvider` call does too, since Plan 4
+ * Task 1 — both go through the SAME `appSettingsStub` below now that
+ * `GoogleTransitProvider` no longer takes a `DatabaseService` at all. The
+ * settings object already carries exactly the instance-tier value every test
+ * here configures, so `appSettingsStub.getValue` wraps it directly; the
+ * per-user fallback tier was never exercised by this file (none of these
+ * cases seed a per-user row), so it always answers null.
  */
 function makeProvider(settings: Record<string, string | undefined>): GoogleTransitProvider {
   const appSettingsStub = {
     getValue: async (key: string) => settings[key] ?? null,
   } as unknown as AppSettingsRepository;
   const usersStub = { getApiKeyColumn: async () => null } as unknown as UsersRepository;
-  return new GoogleTransitProvider(stubDb(settings), appSettingsStub, usersStub);
+  return new GoogleTransitProvider(appSettingsStub, usersStub);
 }
 
 beforeEach(() => {

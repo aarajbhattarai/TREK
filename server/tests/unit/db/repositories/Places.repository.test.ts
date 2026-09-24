@@ -1217,3 +1217,42 @@ describe('PlacesRepository.setImageUrlIfUnset (MAP9)', () => {
     expect((testDb.prepare('SELECT image_url FROM places WHERE id = ?').get(placeB.id) as { image_url: string }).image_url).toBe('/uploads/photo-cache/both.jpg');
   });
 });
+
+describe('PlacesRepository.listAssignedForPublicApi (Plan 4 Task 1, public-api.service.ts::placesByDay)', () => {
+  it('PLACEREPO-030: day_id + place fields + category name, scoped to the trip, ordered by day then order_index — a booked-night stop is excluded', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const category = createCategory(testDb, { name: 'Museum' });
+    const dayA = createDay(testDb, trip.id);
+    const dayB = createDay(testDb, trip.id);
+    const placeA1 = createPlace(testDb, trip.id, { name: 'A-first', category_id: category.id });
+    const placeA2 = createPlace(testDb, trip.id, { name: 'A-second' });
+    testDb.prepare('UPDATE places SET category_id = NULL WHERE id = ?').run(placeA2.id); // no category, not the factory's default
+    const placeB1 = createPlace(testDb, trip.id, { name: 'B-first' });
+    const hotelPlace = createPlace(testDb, trip.id, { name: 'Hotel' });
+    createDayAssignment(testDb, dayA.id, placeA2.id, { order_index: 5 });
+    createDayAssignment(testDb, dayA.id, placeA1.id, { order_index: 1 });
+    createDayAssignment(testDb, dayB.id, placeB1.id, { order_index: 0 });
+    // A booked-night stop: da.accommodation_id IS NOT NULL, must be excluded.
+    testDb.prepare('INSERT INTO day_assignments (day_id, place_id, order_index, accommodation_id) VALUES (?, ?, 0, 999)').run(dayA.id, hotelPlace.id);
+    // Unassigned place in the same trip — never a candidate at all.
+    createPlace(testDb, trip.id, { name: 'Unassigned' });
+    // A place assigned on a DIFFERENT trip — must not leak in.
+    const otherDay = createDay(testDb, other.id);
+    createDayAssignment(testDb, otherDay.id, createPlace(testDb, other.id, { name: 'Elsewhere' }).id);
+
+    const rows = await places.listAssignedForPublicApi(trip.id);
+
+    expect(rows.map((r) => r.name)).toEqual(['A-first', 'A-second', 'B-first']);
+    expect(rows[0]).toMatchObject({ day_id: dayA.id, name: 'A-first', category: 'Museum' });
+    expect(rows[1]).toMatchObject({ day_id: dayA.id, name: 'A-second', category: null });
+    expect(rows[2]).toMatchObject({ day_id: dayB.id, name: 'B-first' });
+  });
+
+  it('PLACEREPO-031: empty array when nothing is assigned', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await places.listAssignedForPublicApi(trip.id)).toEqual([]);
+  });
+});

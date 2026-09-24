@@ -6,42 +6,41 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
-const { testDb, dbMock, broadcastMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {} }, broadcastMock: vi.fn() };
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db, closeDb: () => {}, reinitialize: () => {} };
 });
-
-vi.mock('../../../src/db/database', () => dbMock);
+const { broadcastMock } = vi.hoisted(() => ({ broadcastMock: vi.fn() }));
 vi.mock('../../../src/websocket', () => ({ broadcast: broadcastMock }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
+
 import { createUser } from '../../helpers/factories';
 import { McpToolGuardsService } from '../../../src/nest/mcp-shared/mcp-tool-guards.service';
 import { McpSharedModule } from '../../../src/nest/mcp-shared/mcp-shared.module';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 let svc: McpToolGuardsService;
 beforeAll(async () => {
-  svc = new McpToolGuardsService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new RealtimeService());
+  // Plan 4 Task 1 constructor-ripple: the trip `user_id` and user `role`
+  // reads moved off `DatabaseService` onto `TripsRepository`/`UsersRepository`.
+  svc = new McpToolGuardsService(
+    await createTestTripsRepo(testDb),
+    await createTestUsersRepo(testDb),
+    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    new RealtimeService(),
+  );
 });
 
 function createTrip(ownerId: number): number {
   const r = testDb.prepare("INSERT INTO trips (user_id, title) VALUES (?, 'T')").run(ownerId);
   return Number(r.lastInsertRowid);
 }
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   vi.clearAllMocks();

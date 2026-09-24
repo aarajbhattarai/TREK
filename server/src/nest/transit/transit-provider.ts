@@ -1,5 +1,5 @@
 import { TRANSIT_PROVIDERS, type TransitProvider } from '@trek/shared';
-import type { DatabaseService } from '../database/database.service';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 
 /**
  * Which backend answers /api/transit (#1699), stored as one `app_settings` row.
@@ -8,6 +8,12 @@ import type { DatabaseService } from '../database/database.service';
  * precedent) because two modules need the value and neither should own the
  * other: AddonsService writes it from the admin panel, TransitService reads it
  * per request. One reader, one writer, one key — no mirrored copy.
+ *
+ * Plan 4 Task 1: both functions take an `AppSettingsRepository` instead of a
+ * `DatabaseService` — the exact single-key `ON CONFLICT(key) DO UPDATE` shape
+ * `AppSettingsRepository.setValue` already established for this table (3i's
+ * inventory note on the two distinct `app_settings` upsert shapes — this file
+ * used the `ON CONFLICT` spelling, not `INSERT OR REPLACE`, preserved as-is).
  */
 export const TRANSIT_PROVIDER_SETTING = 'transit_provider';
 
@@ -23,16 +29,12 @@ function isTransitProvider(value: unknown): value is TransitProvider {
  * this one does not know, resolves to Transitous. The alternative is billing an
  * admin's Google key because a string did not parse.
  */
-export async function readTransitProvider(db: DatabaseService): Promise<TransitProvider> {
-  const row = db.get<{ value: string | null }>('SELECT value FROM app_settings WHERE key = ?', TRANSIT_PROVIDER_SETTING);
-  return isTransitProvider(row?.value) ? row.value : DEFAULT_TRANSIT_PROVIDER;
+export async function readTransitProvider(appSettings: AppSettingsRepository): Promise<TransitProvider> {
+  const value = await appSettings.getValue(TRANSIT_PROVIDER_SETTING);
+  return isTransitProvider(value) ? value : DEFAULT_TRANSIT_PROVIDER;
 }
 
-export async function writeTransitProvider(db: DatabaseService, provider: TransitProvider): Promise<TransitProvider> {
-  db.run(
-    `INSERT INTO app_settings (key, value) VALUES (?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-    TRANSIT_PROVIDER_SETTING, provider
-  );
+export async function writeTransitProvider(appSettings: AppSettingsRepository, provider: TransitProvider): Promise<TransitProvider> {
+  await appSettings.setValue(TRANSIT_PROVIDER_SETTING, provider);
   return provider;
 }

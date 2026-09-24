@@ -943,3 +943,22 @@ describe('TripsRepository.findDatesById (DTR1)', () => {
     expect(await trips.findDatesById(999999)).toBeUndefined();
   });
 });
+
+describe('TripsRepository.listIdTitleOrderedByTitle (Plan 4 Task 1, RI2)', () => {
+  it('TRIPREPO-064: id/title only, case-insensitively ordered by title, matching the legacy statement byte-for-byte', async () => {
+    const { user } = createUser(testDb);
+    createTrip(testDb, user.id, { title: 'zulu' });
+    createTrip(testDb, user.id, { title: 'Alpha' });
+    createTrip(testDb, user.id, { title: 'bravo' });
+
+    const legacy = testDb
+      .prepare('SELECT id, title FROM trips ORDER BY title COLLATE NOCASE ASC')
+      .all();
+
+    expect(await trips.listIdTitleOrderedByTitle()).toEqual(legacy);
+  });
+
+  it('TRIPREPO-065: empty array when there are no trips', async () => {
+    expect(await trips.listIdTitleOrderedByTitle()).toEqual([]);
+  });
+});

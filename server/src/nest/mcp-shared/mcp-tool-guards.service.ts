@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { PermissionsService } from '../permissions/permissions.service';
 import { RealtimeService } from '../realtime/realtime.service';
 
@@ -11,11 +15,18 @@ import { RealtimeService } from '../realtime/realtime.service';
  * ordinary Nest providers, so they inject this instead. The pure result
  * helpers (noAccess/permissionDenied/adminRequired and the
  * src/nest-mcp re-exports) stay in _shared.ts — they carry no dependencies.
+ *
+ * Plan 4 Task 1: the trip's `user_id` and both `role` reads moved off
+ * `DatabaseService` onto `TripsRepository.getOwnerId`/`UsersRepository
+ * .getRole` — both already existed with the exact narrow column set this
+ * class needs (a trip-ownership lookup and a role lookup are each used by
+ * several other domains already converted).
  */
 @Injectable()
 export class McpToolGuardsService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
   ) {}
@@ -67,16 +78,14 @@ export class McpToolGuardsService {
    * on `tripId`.
    */
   async hasTripPermission(action: string, tripId: number | string, userId: number): Promise<boolean> {
-    const trip = this.db.get<{ user_id?: number }>('SELECT user_id FROM trips WHERE id = ?', tripId);
-    if (!trip) return false;
-    const userRow = this.db.get<{ role?: string }>('SELECT role FROM users WHERE id = ?', userId);
-    const tripOwnerId = typeof trip.user_id === 'number' ? trip.user_id : null;
-    return this.permissions.checkPermission(action, userRow?.role ?? 'user', tripOwnerId, userId, tripOwnerId !== userId);
+    const tripOwnerId = await this.trips.getOwnerId(tripId);
+    if (tripOwnerId === null) return false;
+    const role = await this.users.getRole(userId);
+    return this.permissions.checkPermission(action, role ?? 'user', tripOwnerId, userId, tripOwnerId !== userId);
   }
 
   /** True when the user has the global admin role (mirrors REST `user.role === 'admin'` gates). */
   async isAdminUser(userId: number): Promise<boolean> {
-    const userRow = this.db.get<{ role?: string }>('SELECT role FROM users WHERE id = ?', userId);
-    return userRow?.role === 'admin';
+    return (await this.users.getRole(userId)) === 'admin';
   }
 }

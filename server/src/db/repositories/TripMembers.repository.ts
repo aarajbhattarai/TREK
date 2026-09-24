@@ -290,4 +290,22 @@ export class TripMembersRepository extends TrekRepository<TripMembers> {
       .where('m.trip_id = ?', [trip_id])
       .execute<{ id: number; username: string; display_name: string | null; avatar: string | null }[]>('all', false);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 4 Task 1 (UC4, `user-cleanup.service.ts::cleanupUserReferences`) —
+  // additive: the table's own Plan 3c ownership, mis-filed by an earlier
+  // ledger under Plan 3g/3j and left unconverted.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * UC4 — `UPDATE trip_members SET invited_by = NULL WHERE invited_by = ?`
+   * (GDPR erasure: severs every membership row's reference to a user being
+   * deleted, without deleting the membership itself). Filtered and set
+   * through `invitedByRef`, the real joined-column relation property —
+   * `invited_by` itself is the `persist(false)` mirror `addIgnoringConflict`'s
+   * docstring above already names.
+   */
+  async clearInvitedBy(userId: number): Promise<void> {
+    await this.nativeUpdate({ invitedByRef: userId }, { invitedByRef: null });
+  }
 }

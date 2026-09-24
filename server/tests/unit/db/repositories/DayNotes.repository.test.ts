@@ -174,3 +174,105 @@ describe('DayNotesRepository.insertNoteCopy (TP71)', () => {
     expect(row).toEqual({ day_id: day.id, trip_id: trip.id, text: 'Copied note', time: '09:00', icon: '🎒', sort_order: 5, color: null });
   });
 });
+
+describe('DayNotesRepository.listByDayAndTrip (Plan 4 Task 1, day-notes.service.ts::list)', () => {
+  it('NOTEREPO-012: scoped to BOTH day and trip, ordered by sort_order then created_at', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const otherDay = createDay(testDb, trip.id);
+    const second = createDayNote(testDb, day.id, trip.id, { sort_order: 5 });
+    const first = createDayNote(testDb, day.id, trip.id, { sort_order: 1 });
+    createDayNote(testDb, otherDay.id, trip.id);
+
+    const legacy = testDb.prepare('SELECT * FROM day_notes WHERE day_id = ? AND trip_id = ? ORDER BY sort_order ASC, created_at ASC').all(day.id, trip.id);
+    const rows = await notes.listByDayAndTrip(day.id, trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([first.id, second.id]);
+  });
+
+  it('NOTEREPO-013: a day with no notes returns []', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    expect(await notes.listByDayAndTrip(day.id, trip.id)).toEqual([]);
+  });
+});
+
+describe('DayNotesRepository.findByIdDayTrip (Plan 4 Task 1, day-notes.service.ts::getNote)', () => {
+  it('NOTEREPO-014: found only under its own id/day/trip triple', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const otherDay = createDay(testDb, trip.id);
+    const note = createDayNote(testDb, day.id, trip.id, { text: 'Lunch' });
+
+    expect(await notes.findByIdDayTrip(note.id, day.id, trip.id)).toEqual(note);
+    expect(await notes.findByIdDayTrip(note.id, otherDay.id, trip.id)).toBeUndefined();
+    expect(await notes.findByIdDayTrip(note.id, day.id, trip.id + 1)).toBeUndefined();
+  });
+});
+
+describe('DayNotesRepository.updateNote (Plan 4 Task 1, day-notes.service.ts::update)', () => {
+  it('NOTEREPO-015: updates every bound column and returns the re-selected row', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const note = createDayNote(testDb, day.id, trip.id, { text: 'Lunch', time: '12:00', icon: '🍜', sort_order: 2 });
+
+    const updated = await notes.updateNote(note.id, { text: 'Dinner', time: '19:00', icon: '🍣', sort_order: 3, color: '#2563eb' });
+
+    expect(updated).toMatchObject({ id: note.id, text: 'Dinner', time: '19:00', icon: '🍣', sort_order: 3, color: '#2563eb' });
+    expect(testDb.prepare('SELECT text, time, icon, sort_order, color FROM day_notes WHERE id = ?').get(note.id))
+      .toEqual({ text: 'Dinner', time: '19:00', icon: '🍣', sort_order: 3, color: '#2563eb' });
+  });
+
+  it('NOTEREPO-016: undefined for an id that does not exist', async () => {
+    expect(await notes.updateNote(999999, { text: 'x', time: null, icon: null, sort_order: null, color: null })).toBeUndefined();
+  });
+});
+
+describe('DayNotesRepository.deleteById (Plan 4 Task 1, day-notes.service.ts::remove)', () => {
+  it('NOTEREPO-017: deletes by bare id', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const note = createDayNote(testDb, day.id, trip.id);
+
+    await notes.deleteById(note.id);
+
+    expect(testDb.prepare('SELECT id FROM day_notes WHERE id = ?').get(note.id)).toBeUndefined();
+  });
+
+  it('NOTEREPO-018: deleting an id that does not exist is a no-op, not an error', async () => {
+    await expect(notes.deleteById(999999)).resolves.toBeUndefined();
+  });
+});
+
+describe('DayNotesRepository.listForPublicApi (Plan 4 Task 1, public-api.service.ts::dayNotesByDay)', () => {
+  it('NOTEREPO-019: day_id/text/time only, ordered by day_id then sort_order, scoped to the trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const dayA = createDay(testDb, trip.id);
+    const dayB = createDay(testDb, trip.id);
+    createDayNote(testDb, dayB.id, trip.id, { text: 'B-second', sort_order: 5 });
+    createDayNote(testDb, dayA.id, trip.id, { text: 'A-first', sort_order: 1 });
+    createDayNote(testDb, dayB.id, trip.id, { text: 'B-first', sort_order: 1 });
+    createDayNote(testDb, createDay(testDb, other.id).id, other.id, { text: 'Not this trip' });
+
+    const rows = await notes.listForPublicApi(trip.id);
+
+    expect(rows).toEqual([
+      { day_id: dayA.id, text: 'A-first', time: null },
+      { day_id: dayB.id, text: 'B-first', time: null },
+      { day_id: dayB.id, text: 'B-second', time: null },
+    ]);
+  });
+
+  it('NOTEREPO-020: empty array for a trip with no notes', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await notes.listForPublicApi(trip.id)).toEqual([]);
+  });
+});

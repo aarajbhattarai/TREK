@@ -15,6 +15,8 @@ import { Journeys } from '../../db/entities/Journeys.entity';
 import { JourneyEntries } from '../../db/entities/JourneyEntries.entity';
 import { JourneyContributors } from '../../db/entities/JourneyContributors.entity';
 import { ShareTokens } from '../../db/entities/ShareTokens.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { TokensModule } from '../tokens/tokens.module';
 import { AuthPublicController } from './auth-public.controller';
 import { AuthController } from './auth.controller';
@@ -95,8 +97,14 @@ import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
     // McpTokens/OauthTokens above (owned by `nest/journey`, registered here
     // for THIS module's own `@InjectRepository` params). ShareTokens: Plan
     // 3h Task 6's own addition, the SAME cross-domain shape — UC6's
-    // `share_tokens` erasure delete (owned by `nest/share`).
-    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens, BudgetItems, JourneyShareTokens, Journeys, JourneyEntries, JourneyContributors, ShareTokens])],
+    // `share_tokens` erasure delete (owned by `nest/share`). Trips: Plan 4
+    // Task 1 — `RegistrationInvitesService`'s RI2/RI3 reads, converted off
+    // `DatabaseService` onto `TripsRepository` now that it exists (Plan 3c).
+    // TripMembers: Plan 4 Task 1, the SAME cross-domain shape as
+    // JourneyShareTokens/ShareTokens above — `UserCleanupService
+    // .cleanupUserReferences`'s UC4 erasure update (owned by
+    // `nest/trip-membership`).
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens, BudgetItems, JourneyShareTokens, Journeys, JourneyEntries, JourneyContributors, ShareTokens, Trips, TripMembers])],
   controllers: [AuthPublicController, AuthController, PasskeyController],
   providers: [AuthService, UserProfileService, RegistrationInvitesService, PasskeyService, UserCleanupService, WebauthnConfigService, AuthMcp],
   exports: [AuthService, RegistrationInvitesService, PasskeyService, UserCleanupService],

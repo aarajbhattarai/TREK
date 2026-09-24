@@ -349,4 +349,30 @@ export class DaysRepository extends TrekRepository<Days> {
     }
     return empty;
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 4 Task 1 (`public-api.service.ts::buildDays`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * `SELECT id, day_number, date, title, notes FROM days WHERE trip_id = ?
+   * ORDER BY day_number ASC` — the same shape {@link listPlanDays} already
+   * establishes for this table, a narrower column set.
+   */
+  async listForPublicApi(trip_id: number): Promise<PublicApiDayProjectionRow[]> {
+    return await this.qb('d')
+      .select(['d.id', 'd.day_number', 'd.date', 'd.title', 'd.notes'])
+      .where({ trip: trip_id })
+      .orderBy({ day_number: 'asc' })
+      .execute<PublicApiDayProjectionRow[]>('all', false);
+  }
+}
+
+/** {@link DaysRepository.listForPublicApi}'s projection. */
+export interface PublicApiDayProjectionRow {
+  id: number;
+  day_number: number;
+  date: string | null;
+  title: string | null;
+  notes: string | null;
 }

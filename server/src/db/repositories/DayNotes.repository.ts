@@ -118,4 +118,92 @@ export class DayNotesRepository extends TrekRepository<DayNotes> {
       sort_order: input.sort_order,
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 4 Task 1 (`day-notes.service.ts`) — additive: the remaining raw
+  // `this.dbs.all/get/run` statements ruling 8 mis-filed as already clean.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * `day-notes.service.ts::list` — `SELECT * FROM day_notes WHERE day_id = ?
+   * AND trip_id = ? ORDER BY sort_order ASC, created_at ASC`. Raw-bind
+   * (`number | string`, D4's T5 escape hatch, `DaysRepository.existsInTrip`'s
+   * precedent): the legacy statement binds the route's raw params with no
+   * `Number()`/`toRowId` conversion of its own.
+   */
+  async listByDayAndTrip(day_id: number | string, trip_id: number | string): Promise<DayNoteRow[]> {
+    return await this.qb('n')
+      .select(['n.*'])
+      .where('n.day_id = ? AND n.trip_id = ?', [day_id, trip_id])
+      .orderBy({ sort_order: 'asc', created_at: 'asc' })
+      .execute<DayNoteRow[]>('all', false);
+  }
+
+  /**
+   * `day-notes.service.ts::getNote` — `SELECT * FROM day_notes WHERE id = ?
+   * AND day_id = ? AND trip_id = ?`. Same raw-bind seam as
+   * {@link listByDayAndTrip}.
+   */
+  async findByIdDayTrip(id: number | string, day_id: number | string, trip_id: number | string): Promise<DayNoteRow | undefined> {
+    return await this.qb('n')
+      .select(['n.*'])
+      .where('n.id = ? AND n.day_id = ? AND n.trip_id = ?', [id, day_id, trip_id])
+      .execute<DayNoteRow | undefined>('get', false);
+  }
+
+  /**
+   * `day-notes.service.ts::update` — `UPDATE day_notes SET text = ?, time =
+   * ?, icon = ?, sort_order = ?, color = ? WHERE id = ?` then the same
+   * `SELECT * FROM day_notes WHERE id = ?` re-select {@link createNote} uses.
+   * Every field is required (the caller — `DayNotesService.update` —
+   * already resolves each one's `fields.x !== undefined ? fields.x :
+   * current.x` fallback, same shape as `createNote`'s docstring).
+   */
+  async updateNote(id: number | string, fields: {
+    text: string;
+    time: string | null;
+    icon: string | null;
+    sort_order: number | null;
+    color: string | null;
+  }): Promise<DayNoteRow | undefined> {
+    await this.qb('n')
+      .update({ text: fields.text, time: fields.time, icon: fields.icon, sort_order: fields.sort_order, color: fields.color })
+      .where('n.id = ?', [id])
+      .execute('run');
+    return await this.qb('n')
+      .select(['n.*'])
+      .where('n.id = ?', [id])
+      .execute<DayNoteRow | undefined>('get', false);
+  }
+
+  /** `day-notes.service.ts::remove` — `DELETE FROM day_notes WHERE id = ?`. */
+  async deleteById(id: number | string): Promise<void> {
+    await this.qb('n')
+      .delete()
+      .where('n.id = ?', [id])
+      .execute('run');
+  }
+
+  /**
+   * `public-api.service.ts::dayNotesByDay` — `SELECT day_id, text, time FROM
+   * day_notes WHERE trip_id = ? ORDER BY day_id ASC, sort_order ASC`. Kysely:
+   * `day_id` is a `persist(false)` mirror of the `day` relation
+   * (`DayNotes.entity.ts`) and is PROJECTED here, so a bare `qb().select([...])`
+   * would silently drop it (the `ShareTokensRepository`/`CollectionPlacesRepository`
+   * class-docstring trap).
+   */
+  async listForPublicApi(trip_id: number): Promise<{ day_id: number; text: string; time: string | null }[]> {
+    return await this.kysely<DayNotesPublicApiKyselyDB>()
+      .selectFrom('day_notes')
+      .select(['day_id', 'text', 'time'])
+      .where('trip_id', '=', trip_id)
+      .orderBy('day_id', 'asc')
+      .orderBy('sort_order', 'asc')
+      .execute();
+  }
+}
+
+/** {@link DayNotesRepository.listForPublicApi}'s narrow `day_notes` shape. */
+interface DayNotesPublicApiKyselyDB {
+  day_notes: { day_id: number; trip_id: number; text: string; time: string | null; sort_order: number | null };
 }

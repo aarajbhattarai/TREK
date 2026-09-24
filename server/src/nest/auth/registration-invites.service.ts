@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import crypto from 'crypto';
-import { DatabaseService } from '../database/database.service';
 import { InviteTokens } from '../../db/entities/InviteTokens.entity';
 import type { InviteTokensRepository } from '../../db/repositories/InviteTokens.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { toRowId } from '../common/row-id';
 
 /**
@@ -22,19 +23,17 @@ import { toRowId } from '../common/row-id';
  * another domain's SQL.
  *
  * Plan 3b Task 3: `invite_tokens` reads/writes go through
- * `InviteTokensRepository` (RI1, RI4–RI7). RI2/RI3 (`trips`) stay on
- * `DatabaseService` — `trips` is `nest/trips`' table, not this domain's, and
- * Plan 3c is the one that builds a `TripsRepository`; building a shim one
- * here would be exactly the "manual synchronization" this migration exists
- * to remove (same carve-out shape as Plan 3a's `addons.service.ts`
- * `listTripsForInvite`/`createInvite`'s trip-binding validation, documented
- * at the inventory's §6).
+ * `InviteTokensRepository` (RI1, RI4–RI7). RI2/RI3 (`trips`) went through
+ * `DatabaseService` until Plan 4 Task 1: `trips` is `nest/trips`' table, not
+ * this domain's, and the carve-out was pending `TripsRepository`'s
+ * existence — it now exists (Plan 3c) and both reads are additive methods
+ * on it (`listIdTitleOrderedByTitle`/`existsById`).
  */
 @Injectable()
 export class RegistrationInvitesService {
   constructor(
-    private readonly db: DatabaseService,
     @InjectRepository(InviteTokens) private readonly inviteTokens: InviteTokensRepository,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   /** RI1 — `InviteTokensRepository.listWithCreatorAndTrip()`'s joined projection. */
@@ -44,10 +43,10 @@ export class RegistrationInvitesService {
 
   /**
    * Trips an admin can bind an invite to — id + title only, for the picker
-   * (#1402). RI2 — stays raw on `DatabaseService` (see the class docstring).
+   * (#1402). RI2 — `TripsRepository.listIdTitleOrderedByTitle()`.
    */
   async listTripsForInvite() {
-    return this.db.all('SELECT id, title FROM trips ORDER BY title COLLATE NOCASE ASC');
+    return this.trips.listIdTitleOrderedByTitle();
   }
 
   async createInvite(
@@ -63,11 +62,12 @@ export class RegistrationInvitesService {
 
     // Optional trip binding: only persist a trip that actually exists, so a stale
     // or forged id can never bind (and never auto-adds anyone on registration).
-    // RI3 — stays raw on `DatabaseService` (see the class docstring).
+    // RI3 — `TripsRepository.existsById()`, the same bare `SELECT id FROM
+    // trips WHERE id = ?` existence probe.
     let tripId: number | null = null;
     if (data.trip_id != null && String(data.trip_id).trim() !== '') {
       const parsed = Number.parseInt(String(data.trip_id));
-      if (!Number.isInteger(parsed) || !this.db.get('SELECT id FROM trips WHERE id = ?', parsed)) {
+      if (!Number.isInteger(parsed) || !(await this.trips.existsById(parsed))) {
         // Used to bind null silently, handing back a plain registration invite
         // the admin never asked for.
         return { error: 'Trip not found', status: 404 };

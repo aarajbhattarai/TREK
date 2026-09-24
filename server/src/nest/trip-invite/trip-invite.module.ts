@@ -1,5 +1,6 @@
 import { RateLimitModule } from '../common/rate-limit.module';
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { TripInviteLinkController, TripInviteController } from './trip-invite.controller';
 import { TripInviteService } from './trip-invite.service';
 import { TripInviteMcp } from './trip-invite.mcp';
@@ -10,14 +11,17 @@ import { RealtimeModule } from '../realtime/realtime.module';
 import { AuditModule } from '../audit/audit.module';
 import { TripMembershipModule } from '../trip-membership/trip-membership.module';
 import { DemoModule } from '../common/demo.module';
+import { TripInviteTokens } from '../../db/entities/TripInviteTokens.entity';
 
 @Module({
   // The last four carry TripInviteMcp: McpSharedModule for the RBAC check the
   // controller does inline, and the three @Global modules it injects out of
   // (DemoModule added Plan 3i Task 4 fix wave — TripInviteMcp injects
   // DemoService), which a graph assembled without AppModule (the e2e harness)
-  // must instantiate itself.
-  imports: [RateLimitModule, PermissionsModule, AuditModule, TripMembershipModule, McpSharedModule, AppConfigModule, RealtimeModule, DemoModule],
+  // must instantiate itself. TripInviteTokens: Plan 4 Task 1 —
+  // TripInviteService's own TripInviteTokensRepository, replacing its raw
+  // `this.dbs.get/run` statements.
+  imports: [RateLimitModule, PermissionsModule, AuditModule, TripMembershipModule, McpSharedModule, AppConfigModule, RealtimeModule, DemoModule, MikroOrmModule.forFeature([TripInviteTokens])],
   controllers: [TripInviteLinkController, TripInviteController],
   providers: [TripInviteService, TripInviteMcp],
 })

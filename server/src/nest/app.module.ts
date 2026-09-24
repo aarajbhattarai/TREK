@@ -3,6 +3,7 @@ import mikroOrmConfig from '../mikro-orm.config';
 import { AppSettings } from '../db/entities/AppSettings.entity';
 import { Users } from '../db/entities/Users.entity';
 import { WebauthnCredentials } from '../db/entities/WebauthnCredentials.entity';
+import { IdempotencyKeys } from '../db/entities/IdempotencyKeys.entity';
 import { McpModule } from '../nest-mcp';
 import { AccommodationsModule } from './accommodations/accommodations.module';
 import { AddonsModule } from './addons/addons.module';
@@ -165,8 +166,11 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
     // that needs `forFeature` for its three repositories; `Users` is not
     // otherwise global (JwtAuthGuard and friends inject `EntityManager`
     // instead precisely to avoid needing this everywhere — see their own
-    // docstrings).
-    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials]),
+    // docstrings). IdempotencyKeys: Plan 4 Task 1 — IdempotencyInterceptor/
+    // IdempotencyCleanupJob are ALSO registered directly here (common/ has
+    // no module of its own), so this is the one place their repository's
+    // `forFeature` needs to live too.
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, IdempotencyKeys]),
   ],
   providers: [
     // Default-deny: a route is authenticated unless it carries @Public() or

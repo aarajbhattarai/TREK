@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { readEnv } from '../../app-config';
-import { DatabaseService } from '../database/database.service';
 import { toApiLang } from '../maps/maps.helpers';
 import { resolveApiKey, type ApiKeySource } from '../settings/instance-api-keys';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
@@ -240,7 +239,6 @@ function stopFrom(stop: GoogleStop | undefined, fallback: GoogleLatLng | undefin
 @Injectable()
 export class GoogleTransitProvider {
   constructor(
-    private readonly database: DatabaseService,
     @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
   ) {}
@@ -256,7 +254,7 @@ export class GoogleTransitProvider {
    * on an install that flipped the switch before pasting a key.
    */
   async isActive(userId: number): Promise<boolean> {
-    if ((await readTransitProvider(this.database)) !== 'google') return false;
+    if ((await readTransitProvider(this.appSettings)) !== 'google') return false;
     return !!(await this.resolveKey(userId)).key;
   }
 

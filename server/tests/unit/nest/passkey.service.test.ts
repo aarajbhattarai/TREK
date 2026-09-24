@@ -17,12 +17,10 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   // Passkeys are trip-free, so the trip-access helpers are inert stubs.
   const mock = {
     db,
@@ -32,10 +30,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => undefined,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -71,9 +69,8 @@ const { swMock } = vi.hoisted(() => ({
 }));
 vi.mock('@simplewebauthn/server', () => swMock);
 
+import { db as testDb } from '../../../src/db/database';
 import jwtLib from 'jsonwebtoken';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
@@ -135,7 +132,7 @@ beforeAll(async () => {
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   new TripMembershipService(await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb)),
   new WebauthnConfigService(await createTestAppSettingsRepo(testDb)),
-  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
+  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
   mailerStub,
   new EphemeralTokenService(),
   new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)), await createTestUnitOfWork(testDb),
@@ -157,11 +154,6 @@ const CFG = { rpID: 'trek.example.com', rpName: 'TREK', origins: ['https://trek.
 // The unconfigured fallback resolve() yields when APP_URL is unset (#2147).
 const LOCALHOST_CFG = { rpID: 'localhost', rpName: 'TREK', origins: ['http://localhost:5173', 'http://localhost:3001'], explicitOrigins: false };
 const NOT_CONFIGURED_ERROR = 'Passkey login is not configured for this server.';
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   vi.clearAllMocks();

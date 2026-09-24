@@ -947,6 +947,32 @@ export class TripsRepository extends TrekRepository<Trips> {
       .where({ id })
       .execute<{ start_date: string | null; end_date: string | null } | undefined>('get', false);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 4 Task 1 (`registration-invites.service.ts::listTripsForInvite`) —
+  // additive, per the class's own docstring pointing at this precondition
+  // ("Plan 3c is the one that builds a TripsRepository") now being met.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * RI2 — `SELECT id, title FROM trips ORDER BY title COLLATE NOCASE ASC`
+   * (the admin invite dialog's trip picker). Kysely, `PlacesRepository
+   * .listImportable`'s precedent: `ORDER BY … COLLATE NOCASE` is Kysely's
+   * own `OrderByItemBuilder.collate('nocase')`, a portable Kysely builder
+   * API, not a raw SQLite fragment — no `sql-functions.ts` helper needed.
+   */
+  async listIdTitleOrderedByTitle(): Promise<{ id: number; title: string }[]> {
+    return await this.kysely<TripIdTitleKyselyDB>()
+      .selectFrom('trips')
+      .select(['id', 'title'])
+      .orderBy('title', (ob) => ob.collate('nocase').asc())
+      .execute();
+  }
+}
+
+/** {@link TripsRepository.listIdTitleOrderedByTitle}'s narrow `trips` shape. */
+interface TripIdTitleKyselyDB {
+  trips: { id: number; title: string };
 }
 
 /** {@link TripsRepository.lastStartedTrip}'s narrow `trips`/`trip_members` shape. */

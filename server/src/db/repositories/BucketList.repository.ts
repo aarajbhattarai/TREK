@@ -296,4 +296,36 @@ export class BucketListRepository extends TrekRepository<BucketList> {
       .where('lng', '<=', lngMax)
       .execute();
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 4 Task 1 (`public-api.service.ts::listBucketList`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * `SELECT name, lat, lng, country_code, notes, target_date FROM bucket_list
+   * WHERE user_id = ? ORDER BY created_at DESC, id DESC`. Deliberately NOT
+   * {@link listForUser} (which `SELECT *`s and orders by `created_at DESC`
+   * only, no `id` tiebreak, for the Atlas UI's own list) — a genuinely
+   * different legacy statement on the same table (rule 2), not a variant
+   * worth merging.
+   */
+  async listForPublicApi(userId: number): Promise<PublicApiBucketListItemRow[]> {
+    return await this.readDb()
+      .selectFrom('bucket_list')
+      .select(['name', 'lat', 'lng', 'country_code', 'notes', 'target_date'])
+      .where('user_id', '=', userId)
+      .orderBy('created_at', 'desc')
+      .orderBy('id', 'desc')
+      .execute();
+  }
+}
+
+/** {@link BucketListRepository.listForPublicApi}'s projection. */
+export interface PublicApiBucketListItemRow {
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  country_code: string | null;
+  notes: string | null;
+  target_date: string | null;
 }

@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import crypto from 'crypto';
 import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import type { TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
+import { TripInviteTokens } from '../../db/entities/TripInviteTokens.entity';
+import type { TripInviteTokensRepository } from '../../db/repositories/TripInviteTokens.repository';
 import type { User } from '../../types';
 
 type Trip = TripAccess;
@@ -26,6 +29,11 @@ export interface TripInviteInfo {
  * immediately invalidates the old URL. Trip access and the 'share_manage'
  * permission mirror the public share link exactly (the invite link lives next
  * to it in the Share area).
+ *
+ * Plan 4 Task 1: `get`/`createOrRotate`/`remove`/`resolve` moved off
+ * `DatabaseService` onto `TripInviteTokensRepository` — `DatabaseService`
+ * stays injected purely for `verifyTripAccess`'s `canAccessTrip` delegate
+ * (Plan 4 Task 2/3's facade-inline sweep, not this task's).
  */
 @Injectable()
 export class TripInviteService {
@@ -34,6 +42,7 @@ export class TripInviteService {
     private readonly permissions: PermissionsService,
     private readonly membership: TripMembershipService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(TripInviteTokens) private readonly tripInviteTokens: TripInviteTokensRepository,
   ) {}
 
   async verifyTripAccess(tripId: string, userId: number) {
@@ -46,10 +55,7 @@ export class TripInviteService {
 
   /** The current invite link for a trip, or null if none exists. */
   async get(tripId: string | number): Promise<TripInviteInfo | null> {
-    const row = this.dbs.get<{ token: string; expires_at: string | null; created_at: string }>(
-      'SELECT token, expires_at, created_at FROM trip_invite_tokens WHERE trip_id = ?',
-      tripId,
-    );
+    const row = await this.tripInviteTokens.findInfoByTrip(tripId);
     return row ? { token: row.token, expires_at: row.expires_at, created_at: row.created_at } : null;
   }
 
@@ -70,17 +76,11 @@ export class TripInviteService {
     // can't interleave between them (the trip_id UNIQUE constraint would turn
     // that into a spurious 500).
     return await this.uow.transactional(async () => {
-      const existing = this.dbs.get('SELECT id FROM trip_invite_tokens WHERE trip_id = ?', tripId);
+      const existing = await this.tripInviteTokens.existsForTrip(tripId);
       if (existing) {
-        this.dbs.run(
-          'UPDATE trip_invite_tokens SET token = ?, expires_at = ?, created_by = ?, created_at = CURRENT_TIMESTAMP WHERE trip_id = ?',
-          token, expiresAt, createdBy, tripId,
-        );
+        await this.tripInviteTokens.updateForTrip(tripId, { token, expires_at: expiresAt, created_by: createdBy });
       } else {
-        this.dbs.run(
-          'INSERT INTO trip_invite_tokens (trip_id, token, created_by, expires_at) VALUES (?, ?, ?, ?)',
-          tripId, token, createdBy, expiresAt,
-        );
+        await this.tripInviteTokens.insertForTrip({ trip_id: tripId, token, created_by: createdBy, expires_at: expiresAt });
       }
       return (await this.get(tripId))!;
     });
@@ -88,7 +88,7 @@ export class TripInviteService {
 
   /** Remove the trip's invite link entirely (disable). */
   async remove(tripId: string | number): Promise<void> {
-    this.dbs.run('DELETE FROM trip_invite_tokens WHERE trip_id = ?', tripId);
+    await this.tripInviteTokens.deleteByTrip(tripId);
   }
 
   /**
@@ -98,13 +98,7 @@ export class TripInviteService {
    * caller never reaches this (the endpoint is JWT-guarded).
    */
   async resolve(token: string): Promise<{ trip_id: number; title: string } | null> {
-    const row = this.dbs.get<{ trip_id: number; title: string; expires_at: string | null }>(
-      `SELECT t.id AS trip_id, t.title AS title, ti.expires_at AS expires_at
-       FROM trip_invite_tokens ti
-       JOIN trips t ON ti.trip_id = t.id
-       WHERE ti.token = ?`,
-      token,
-    );
+    const row = await this.tripInviteTokens.resolveTokenToTrip(token);
     if (!row) return null;
     // Check expiry in JS, not SQL: expires_at is stored as an ISO-8601 string
     // (…T…Z) which does not compare lexicographically against SQLite's

@@ -53,8 +53,9 @@ import type { JourneyShareTokensRepository } from '../../../src/db/repositories/
 import type { JourneysRepository } from '../../../src/db/repositories/Journeys.repository';
 import type { JourneyEntriesRepository } from '../../../src/db/repositories/JourneyEntries.repository';
 import type { JourneyContributorsRepository } from '../../../src/db/repositories/JourneyContributors.repository';
+import type { TripMembersRepository } from '../../../src/db/repositories/TripMembers.repository';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTripMembersRepo, sharedTestOrm } from '../../helpers/test-uow';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourneyContributorsRepo } from '../../helpers/journey-repos';
@@ -77,7 +78,10 @@ beforeAll(async () => {
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
   svc = new UserCleanupService(
-    dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection),
+    dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection),
+    // Plan 4 Task 1 constructor-ripple: UC4's repository.
+    await createTestTripMembersRepo(dbs.connection),
+    await createTestBudgetItemsRepo(dbs.connection),
     // Plan 3g Task 4 constructor-ripple: UC7-10's repositories.
     await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection),
     await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
@@ -178,11 +182,13 @@ describe('erasePluginUserData', () => {
     const slim = new (require('better-sqlite3'))(':memory:');
     slim.exec('CREATE TABLE users (id INTEGER PRIMARY KEY)');
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
-    // `erasePluginUserData` (this test's only call) never reaches `budgetItemsRepo`
-    // (UC5's own method) or the Plan 3g Task 4 journey repositories (UC7-10) —
-    // stubs are enough, and the slim schema has no journey tables to bind against.
+    // `erasePluginUserData` (this test's only call) never reaches `tripMembersRepo`
+    // (UC4), `budgetItemsRepo` (UC5's own method) or the Plan 3g Task 4 journey
+    // repositories (UC7-10) — stubs are enough, and the slim schema has no
+    // trip_members/journey tables to bind against.
     const slimSvc = new UserCleanupService(
-      new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim), {} as unknown as BudgetItemsRepository,
+      new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim),
+      {} as unknown as TripMembersRepository, {} as unknown as BudgetItemsRepository,
       {} as unknown as JourneyShareTokensRepository, {} as unknown as JourneysRepository,
       {} as unknown as JourneyEntriesRepository, {} as unknown as JourneyContributorsRepository,
       // Plan 3h Task 6: a real repository (never a stub cast — `erasePluginUserData`
@@ -320,7 +326,9 @@ describe('deleteUserCompletely', () => {
     const deleteByIdSpy = vi.spyOn(usersRepo, 'deleteById').mockRejectedValue(new Error('boom'));
     try {
       await expect(new UserCleanupService(
-        dbs, budget, await createTestUnitOfWork(testDb), usersRepo, await createTestBudgetItemsRepo(testDb),
+        dbs, budget, await createTestUnitOfWork(testDb), usersRepo,
+        await createTestTripMembersRepo(testDb),
+        await createTestBudgetItemsRepo(testDb),
         await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb),
         await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb),
         await createTestShareTokensRepo(testDb),

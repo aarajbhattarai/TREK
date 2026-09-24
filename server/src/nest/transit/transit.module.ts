@@ -20,9 +20,12 @@ import { Users } from '../../db/entities/Users.entity';
  *
  * MikroOrmModule.forFeature([AppSettings, Users]): GoogleTransitProvider
  * passes its own AppSettingsRepository/UsersRepository to
- * instance-api-keys.ts's resolveApiKey now (Plan 3a Task 5) — everything else
- * in this domain (transit-provider.ts included) is still raw SQL through
- * DatabaseService (transit's own conversion is a later plan).
+ * instance-api-keys.ts's resolveApiKey (Plan 3a Task 5) and, since Plan 4
+ * Task 1, to `transit-provider.ts`'s `readTransitProvider`/
+ * `writeTransitProvider` too — the SAME `AppSettingsRepository` this module
+ * already registers. `transit.mcp.ts`'s remaining `DatabaseService`
+ * injection is unrelated: it is the `canAccessTrip` delegate (Plan 4
+ * Task 2/3's facade-inline sweep, not this plan's).
  */
 @Module({
   // DaysModule + ReservationsModule: TransitMcp's create_transit_journey injects both.

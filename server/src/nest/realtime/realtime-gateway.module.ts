@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { RealtimeGateway } from './realtime.gateway';
 import { EphemeralTokenModule } from '../auth/ephemeral-token.module';
 import { JourneyDomainModule } from '../journey/journey-domain.module';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { Users } from '../../db/entities/Users.entity';
 
 /**
  * The transport, kept out of RealtimeModule on purpose.
@@ -19,8 +22,10 @@ import { JourneyDomainModule } from '../journey/journey-domain.module';
  */
 @Module({
   // JourneyDomainModule for the book rooms: who may open a journey is asked
-  // of the same service the REST routes ask.
-  imports: [EphemeralTokenModule, JourneyDomainModule],
+  // of the same service the REST routes ask. Users/AppSettings: Plan 4 Task
+  // 1 — the handshake's password-version and require_mfa reads, moved off
+  // DatabaseService onto UsersRepository/AppSettingsRepository.
+  imports: [EphemeralTokenModule, JourneyDomainModule, MikroOrmModule.forFeature([Users, AppSettings])],
   providers: [RealtimeGateway],
 })
 export class RealtimeGatewayModule {}

@@ -202,17 +202,22 @@ describe('applyPlatformUploads', () => {
       expect(res.statusCode).toBe(401);
     });
 
-    // R1/R5 (Plan 3h Task 6): the share-token half of this handler now reads
-    // through `ShareTokensRepository.findTripIdByToken` — `orm.em.getRepository
-    // (ShareTokens)` inside the SAME `withRequestContext` wrap `applyPlatformUploads`
-    // already uses for the JWT half — so these cases seed REAL rows in
-    // `uploadsTestDb` (bound to `uploadsOrm.orm`) rather than mocking
-    // `db.prepare`'s return value the way the (still-unconverted) sibling
-    // `photos` read below continues to. `photoStmt` stays a `db.prepare` mock
-    // (untouched domain) throughout.
+    // R1/R5 (Plan 3h Task 6, R1 (Plan 4 Task 1)): both the share-token lookup
+    // AND the sibling `photos` read now go through the SAME real ORM
+    // (`ShareTokensRepository.findTripIdByToken` / `PhotosRepository
+    // .findTripIdByFilename`, `orm.em.getRepository(...)` inside the SAME
+    // `withRequestContext` wrap `applyPlatformUploads` already uses) — so
+    // every case here seeds REAL rows in `uploadsTestDb` (bound to
+    // `uploadsOrm.orm`) rather than mocking `db.prepare`'s return value; the
+    // `h.dbPrepare` stub is dead for this whole describe block now.
     function insertShareToken(tripId: number, userId: number, token: string, expiresAt: string | null = null) {
       uploadsTestDb.prepare('INSERT INTO share_tokens (trip_id, token, created_by, expires_at) VALUES (?, ?, ?, ?)')
         .run(tripId, token, userId, expiresAt);
+    }
+
+    function insertPhoto(tripId: number, filename: string) {
+      uploadsTestDb.prepare('INSERT INTO photos (trip_id, filename, original_name) VALUES (?, ?, ?)')
+        .run(tripId, filename, filename);
     }
 
     it('401 when a share token does not cover the photo trip', async () => {
@@ -222,9 +227,9 @@ describe('applyPlatformUploads', () => {
       insertShareToken(otherTrip.id, user.id, 'share-mismatch');
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      insertPhoto(photoTrip.id, 'photo-mismatch.jpg');
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-mismatch' } }, res, next);
+      await photoHandler()({ params: { filename: 'photo-mismatch.jpg' }, headers: {}, query: { token: 'share-mismatch' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
@@ -233,9 +238,9 @@ describe('applyPlatformUploads', () => {
       const photoTrip = createTrip(uploadsTestDb, user.id);
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      insertPhoto(photoTrip.id, 'photo-unknown-token.jpg');
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'never-issued' } }, res, next);
+      await photoHandler()({ params: { filename: 'photo-unknown-token.jpg' }, headers: {}, query: { token: 'never-issued' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
@@ -246,9 +251,9 @@ describe('applyPlatformUploads', () => {
       uploadsTestDb.prepare('DELETE FROM share_tokens WHERE token = ?').run('share-revoked');
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      insertPhoto(photoTrip.id, 'photo-revoked.jpg');
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-revoked' } }, res, next);
+      await photoHandler()({ params: { filename: 'photo-revoked.jpg' }, headers: {}, query: { token: 'share-revoked' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
@@ -258,9 +263,9 @@ describe('applyPlatformUploads', () => {
       insertShareToken(photoTrip.id, user.id, 'share-expired', '2020-01-01 00:00:00');
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      insertPhoto(photoTrip.id, 'photo-expired.jpg');
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-expired' } }, res, next);
+      await photoHandler()({ params: { filename: 'photo-expired.jpg' }, headers: {}, query: { token: 'share-expired' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
@@ -270,9 +275,9 @@ describe('applyPlatformUploads', () => {
       insertShareToken(photoTrip.id, user.id, 'share-CaseSensitive');
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      insertPhoto(photoTrip.id, 'photo-case.jpg');
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-casesensitive' } }, res, next);
+      await photoHandler()({ params: { filename: 'photo-case.jpg' }, headers: {}, query: { token: 'share-casesensitive' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
@@ -282,9 +287,9 @@ describe('applyPlatformUploads', () => {
       insertShareToken(photoTrip.id, user.id, 'share-nul');
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      insertPhoto(photoTrip.id, 'photo-nul.jpg');
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-nul\0extra' } }, res, next);
+      await photoHandler()({ params: { filename: 'photo-nul.jpg' }, headers: {}, query: { token: 'share-nul\0extra' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
@@ -295,14 +300,14 @@ describe('applyPlatformUploads', () => {
       h.exists.mockResolvedValue(true);
       h.sendToResponse.mockResolvedValue(undefined);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      insertPhoto(photoTrip.id, 'photo-valid.jpg');
       const res = makeRes();
       await photoHandler()(
-        { params: { filename: 'a.jpg' }, headers: { authorization: 'Bearer share-valid' }, query: {} },
+        { params: { filename: 'photo-valid.jpg' }, headers: { authorization: 'Bearer share-valid' }, query: {} },
         res,
         next,
       );
-      expect(h.sendToResponse).toHaveBeenCalledWith('photos', 'a.jpg', res);
+      expect(h.sendToResponse).toHaveBeenCalledWith('photos', 'photo-valid.jpg', res);
     });
 
     it('404 when the object vanishes between the exists check and the send', async () => {

@@ -1,8 +1,10 @@
 import { CallHandler, ExecutionContext, HttpException, Injectable, NestInterceptor } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { Request, Response } from 'express';
 import { Observable, from, of } from 'rxjs';
 import { finalize, mergeAll, switchMap } from 'rxjs/operators';
-import { DatabaseService } from '../database/database.service';
+import { IdempotencyKeys } from '../../db/entities/IdempotencyKeys.entity';
+import type { IdempotencyKeysRepository, IdempotencyResponseRow } from '../../db/repositories/IdempotencyKeys.repository';
 
 /**
  * Replaces the `applyIdempotency` middleware the Express `authenticate` ran on
@@ -30,6 +32,17 @@ import { DatabaseService } from '../database/database.service';
  *
  * Capturing wraps `res.json`, so 204 / `res.end()` responses are not cached —
  * matching the Express wrapper, which only fires on `res.json`.
+ *
+ * Plan 4 Task 1: `lookup`/the `res.json` capture moved off `DatabaseService`
+ * onto `IdempotencyKeysRepository` — both are now genuinely async repository
+ * calls, not a synchronous `better-sqlite3` read/write wrapped in a Promise.
+ * Program rule 11 names THIS file as the "check then act" race the async
+ * conversion opens up: the `inFlight` claim used to be race-free only because
+ * `lookup` resolved inside the same macrotask as the call that checked it. Now
+ * that `lookup` genuinely awaits, the claim is taken BEFORE the first await —
+ * see `intercept`'s own comment — so a second concurrent request for the same
+ * key always finds the first request's in-flight promise and waits, rather
+ * than racing it to an empty `inFlight` map.
  */
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -38,20 +51,15 @@ const MAX_CACHED_BODY_BYTES = 256 * 1024;
 
 /**
  * (user, method, path, key) of every request currently running, resolved when it
- * answers. In memory rather than a reservation row on purpose: better-sqlite3 is
- * synchronous and the whole overlap lives inside one process, so a crash cannot
- * leave a key wedged for the table's 30-day TTL.
+ * answers. In memory rather than a reservation row on purpose: the process
+ * that claims a signature is always the one that releases it, so a crash
+ * cannot leave a key wedged for the table's 30-day TTL.
  */
 const inFlight = new Map<string, Promise<void>>();
 
-interface IdempotencyRow {
-  status_code: number;
-  response_body: string;
-}
-
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(@InjectRepository(IdempotencyKeys) private readonly idempotencyKeys: IdempotencyKeysRepository) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
     const req = context.switchToHttp().getRequest<Request & { user?: { id: number } }>();
@@ -71,9 +79,6 @@ export class IdempotencyInterceptor implements NestInterceptor {
       throw new HttpException({ error: 'X-Idempotency-Key exceeds maximum length of 128 characters' }, 400);
     }
 
-    const existing = await this.lookup(key, userId, req);
-    if (existing) return this.replay(existing, res);
-
     const signature = `${userId}|${req.method}|${req.path}|${key}`;
     const pending = inFlight.get(signature);
     if (pending !== undefined) {
@@ -87,7 +92,27 @@ export class IdempotencyInterceptor implements NestInterceptor {
       );
     }
 
-    return await this.run(signature, key, userId, req, res, next);
+    // Claim the signature BEFORE the first `await` below (rule 11). Two
+    // requests for the same key that both reach here concurrently must not
+    // both see "nothing is in flight" — `lookup` is a real repository read
+    // now, so it can genuinely yield the event loop, and a claim taken only
+    // after it resolves would leave the exact window between two `awaits`
+    // that overlapping replays exploited before the in-flight map existed.
+    // Claiming here, synchronously, means the SECOND request always finds
+    // the `pending` branch above instead.
+    const release = this.claim(signature);
+    try {
+      const existing = await this.lookup(key, userId, req);
+      if (existing) {
+        release();
+        return this.replay(existing, res);
+      }
+    } catch (err) {
+      release();
+      throw err;
+    }
+
+    return this.execute(key, userId, req, res, next, release);
   }
 
   /**
@@ -105,66 +130,77 @@ export class IdempotencyInterceptor implements NestInterceptor {
   ): Promise<Observable<unknown>> {
     const stored = await this.lookup(key, userId, req);
     if (stored) return this.replay(stored, res);
-    return await this.run(signature, key, userId, req, res, next);
+    const release = this.claim(signature);
+    return this.execute(key, userId, req, res, next, release);
+  }
+
+  /**
+   * Reserve `signature` in the in-flight map and hand back its release. Split
+   * out from `execute` so `intercept` can call it synchronously, before its
+   * own first `await` — see the class docstring and `intercept`'s comment.
+   */
+  private claim(signature: string): () => void {
+    let done!: () => void;
+    inFlight.set(signature, new Promise<void>((resolve) => { done = resolve; }));
+    let released = false;
+    // Idempotent: whichever of the two paths below gets there first releases the
+    // waiter, and the other one is a no-op.
+    return () => {
+      if (released) return;
+      released = true;
+      inFlight.delete(signature);
+      done();
+    };
   }
 
   /**
    * Scope the lookup by method + path as well as user, so the same key replayed
    * against a different endpoint can't return an unrelated cached body.
    */
-  private async lookup(key: string, userId: number, req: Request): Promise<IdempotencyRow | undefined> {
-    return this.database.get<IdempotencyRow>(
-      'SELECT status_code, response_body FROM idempotency_keys WHERE key = ? AND user_id = ? AND method = ? AND path = ?',
-      key, userId, req.method, req.path,
-    );
+  private async lookup(key: string, userId: number, req: Request): Promise<IdempotencyResponseRow | null> {
+    return this.idempotencyKeys.findResponse(key, userId, req.method, req.path);
   }
 
-  private replay(row: IdempotencyRow, res: Response): Observable<unknown> {
+  private replay(row: IdempotencyResponseRow, res: Response): Observable<unknown> {
     res.status(row.status_code);
     return of(JSON.parse(row.response_body));
   }
 
-  private async run(
-    signature: string,
+  private execute(
     key: string,
     userId: number,
     req: Request,
     res: Response,
     next: CallHandler,
-  ): Promise<Observable<unknown>> {
+    release: () => void,
+  ): Observable<unknown> {
     const originalJson = res.json.bind(res);
-    const database = this.database;
-
-    let done!: () => void;
-    inFlight.set(signature, new Promise<void>((resolve) => { done = resolve; }));
-    let released = false;
-    // Idempotent: whichever of the two paths below gets there first releases the
-    // waiter, and the other one is a no-op.
-    const release = () => {
-      if (released) return;
-      released = true;
-      inFlight.delete(signature);
-      done();
-    };
+    const idempotencyKeys = this.idempotencyKeys;
 
     res.json = function (body: unknown): Response {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         try {
           const serialized = JSON.stringify(body);
           if (serialized.length <= MAX_CACHED_BODY_BYTES) {
-            database.run(
-              `INSERT OR IGNORE INTO idempotency_keys (key, user_id, method, path, status_code, response_body, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              key, userId, req.method, req.path, res.statusCode, serialized, Math.floor(Date.now() / 1000),
-            );
+            // Fire-and-forget, not awaited: `res.json` is Express's synchronous
+            // override contract (it must return `Response` for the caller to
+            // keep chaining), and the store write's own errors are already
+            // non-fatal (below) — same shape as the legacy synchronous
+            // `database.run` this replaces, just genuinely async underneath.
+            void idempotencyKeys
+              .insertIfAbsent({
+                key, user_id: userId, method: req.method, path: req.path,
+                status_code: res.statusCode, response_body: serialized,
+                created_at: Math.floor(Date.now() / 1000),
+              })
+              .catch(() => { /* Non-fatal: if storage fails, the request still succeeds. */ })
+              .finally(release);
+            return originalJson(body);
           }
         } catch {
           // Non-fatal: if storage fails, the request still succeeds.
         }
       }
-      // Release here, not in finalize: this is the point the row exists, and a
-      // waiter woken any earlier looks the key up, misses, and runs the handler
-      // a second time - the duplicate write the key is meant to prevent.
       // Release here, not in finalize: this is the point the row exists, and a
       // waiter woken any earlier looks the key up, misses, and runs the handler
       // a second time - the duplicate write the key is meant to prevent.

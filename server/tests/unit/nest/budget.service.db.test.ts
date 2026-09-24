@@ -9,12 +9,10 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -23,10 +21,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => null,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -52,8 +50,7 @@ vi.mock('../../../src/nest/budget/exchange-rates.service', () => ({
   },
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember } from '../../helpers/factories';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
@@ -80,8 +77,6 @@ import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourney
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
 import { BudgetItemMembers } from '../../../src/db/entities/BudgetItemMembers.entity';
 
-
-
 // Guest fixtures come from TripMembersService since the trip split (they were on
 // TripsService before, and on the deleted services/tripService before that);
 // deleteGuest routes through the SAME BudgetService domain SQL
@@ -94,7 +89,6 @@ import { BudgetItemMembers } from '../../../src/db/entities/BudgetItemMembers.en
 // now, not through `db/database.ts`'s deleted free functions.
 let dbsEm: import('@mikro-orm/core').EntityManager | undefined;
 const dbs = () => new DatabaseService(testDb, dbsEm);
-
 
 let budget: BudgetService;
 let membersSvc: TripMembersService;
@@ -121,7 +115,7 @@ beforeAll(async () => {
   membersSvc = new TripMembersService(
   dbs(),
   budget,
-  new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
+  new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
   notificationsStub(),
@@ -132,11 +126,6 @@ beforeAll(async () => {
 );
   createGuest = (...args) => membersSvc.createGuest(...args);
   deleteGuest = (...args) => membersSvc.deleteGuest(...args);
-});
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
 });
 
 beforeEach(() => {

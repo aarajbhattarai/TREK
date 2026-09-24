@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { DayNotesController } from './day-notes.controller';
 import { DayNotesService } from './day-notes.service';
 import { DayNotesMcp } from './day-notes.mcp';
@@ -8,20 +9,27 @@ import { AuthModule } from '../auth/auth.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { PluginGuardsModule } from '../plugins/host/plugin-guards.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
+import { DayNotes } from '../../db/entities/DayNotes.entity';
+import { Days } from '../../db/entities/Days.entity';
 
 /**
  * Day notes. Its own domain rather than a second file set inside days/, which
  * carried two fachlichkeiten with a full controller/service/mcp/rpc/dto each.
  *
- * Deliberately unconnected to DaysModule in both directions: `dayExists` is raw
- * SQL on `days` here, and DaysService reads `day_notes` the same way. Wiring the
- * modules to each other would buy nothing and cost a cycle.
+ * Deliberately unconnected to DaysModule in both directions: `dayExists` goes
+ * through `DaysRepository.existsInTrip` via this module's own `forFeature`
+ * registration (Plan 4 Task 1), not through `DaysModule`/`DaysService`, and
+ * `DaysService` reads `day_notes` through its own `DayNotesRepository`
+ * injection the same way. Wiring the modules to each other would buy
+ * nothing and cost a cycle.
  *
  * AuthModule is only for DayNotesMcp's demo-user gate, PluginGuardsModule only
  * for DayNotesRpc.
  */
 @Module({
-  imports: [McpSharedModule, PermissionsModule, AuthModule, RealtimeModule, PluginGuardsModule],
+  // DayNotes/Days: Plan 4 Task 1 — DayNotesService's own DayNotesRepository/
+  // DaysRepository.existsInTrip, replacing its raw `this.dbs.all/get/run`.
+  imports: [McpSharedModule, PermissionsModule, AuthModule, RealtimeModule, PluginGuardsModule, MikroOrmModule.forFeature([DayNotes, Days])],
   controllers: [DayNotesController],
   providers: [DayNotesService, DayNotesMcp, DayNotesRpc],
   exports: [DayNotesService],

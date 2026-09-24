@@ -91,6 +91,7 @@ import {
   createTestUsersRepo,
 } from './test-uow';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
+import { Addons } from '../../src/db/entities/Addons.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
 import { Plugins } from '../../src/db/entities/Plugins.entity';
@@ -248,7 +249,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestTripsRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
     await createTestReservationEndpointsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection),
   );
-  const dayNotes = new DayNotesService(dbs, permissions, realtime);
+  const dayNotes = new DayNotesService(dbs, permissions, realtime, await createTestDayNotesRepo(dbs.connection), await createTestDaysRepo(dbs.connection));
   const assignments = new AssignmentsService(
     dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
@@ -260,7 +261,9 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   );
   const membership = new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection));
   const notifications = await makeNotificationsService(dbs, realtime);
-  const llmConfig = new LlmConfigResolver(new SettingsService(await createTestUnitOfWork(dbs.connection), appSettings, await createTestSettingsRepo(dbs.connection)), dbs, addons);
+  // Plan 4 Task 1 constructor-ripple: LlmConfigResolver's addon-row read
+  // moved off DatabaseService onto AddonsRepository.
+  const llmConfig = new LlmConfigResolver(new SettingsService(await createTestUnitOfWork(dbs.connection), appSettings, await createTestSettingsRepo(dbs.connection)), (await sharedTestOrm(dbs.connection)).repo(Addons), addons);
   const pluginOrm = await sharedTestOrm(dbs.connection);
   const oauth = new PluginOAuthService(pluginOrm.repo(Plugins), pluginOrm.repo(PluginOauthTokens), pluginOrm.repo(PluginOauthState), pluginOrm.repo(PluginSettingsFields));
   const accommodations = new AccommodationsService(
@@ -289,7 +292,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   // After accommodations: a hotel booking writes the stay's day stop through it.
   const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection)), accommodations, await createTestUnitOfWork(dbs.connection), await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection), await createTestReservationDayPositionsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection), await createTestDaysRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestDayAssignmentsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection), (await sharedTestOrm(dbs.connection)).em);
-  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo, await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
+  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo, await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
   // Plan 3j Task 1 — PluginGuards' own role lookup (PG3/PG4) now goes
   // through UsersRepository.getRole; `usersRepo` above is the same
   // sharedTestOrm-backed repository every other service in this file uses.

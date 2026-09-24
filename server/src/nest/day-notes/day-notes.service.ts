@@ -1,15 +1,26 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { NOTE_COLORS, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import type { DayNote, User } from '../../types';
 import { DatabaseService, type TripAccess } from '../database/database.service';
+import { DayNotes } from '../../db/entities/DayNotes.entity';
+import type { DayNotesRepository } from '../../db/repositories/DayNotes.repository';
+import { Days } from '../../db/entities/Days.entity';
+import type { DaysRepository } from '../../db/repositories/Days.repository';
 
 /**
  * Day-notes domain service — the legacy dayNoteService SQL folded in over
  * the injected DatabaseService (byte-identical statements and
  * coercions). Trip access rides DatabaseService.canAccessTrip; the 'day_edit'
  * permission reuses the legacy check.
+ *
+ * Plan 4 Task 1: the seven `day_notes`/`days` reads/writes below moved off
+ * `DatabaseService` onto `DayNotesRepository`/`DaysRepository.existsInTrip`
+ * (`DatabaseService` stays injected purely for `verifyTripAccess`'s
+ * `canAccessTrip` delegate — Plan 4 Task 2/3's facade-inline sweep, not this
+ * task's).
  */
 /**
  * Only a colour the palette actually offers reaches the column (#1629).
@@ -31,6 +42,8 @@ export class DayNotesService {
     private readonly dbs: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
+    @InjectRepository(DayNotes) private readonly dayNotes: DayNotesRepository,
+    @InjectRepository(Days) private readonly days: DaysRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number): Promise<TripAccess | undefined> {
@@ -46,42 +59,46 @@ export class DayNotesService {
   }
 
   async list(dayId: string | number, tripId: string | number) {
-    return this.dbs.all(
-      'SELECT * FROM day_notes WHERE day_id = ? AND trip_id = ? ORDER BY sort_order ASC, created_at ASC',
-      dayId, tripId,
-    );
+    return this.dayNotes.listByDayAndTrip(dayId, tripId);
   }
 
   async dayExists(dayId: string | number, tripId: string | number) {
-    return this.dbs.get('SELECT id FROM days WHERE id = ? AND trip_id = ?', dayId, tripId);
+    return this.days.existsInTrip(dayId, tripId);
   }
 
   async getNote(id: string | number, dayId: string | number, tripId: string | number) {
-    return this.dbs.get<DayNote>('SELECT * FROM day_notes WHERE id = ? AND day_id = ? AND trip_id = ?', id, dayId, tripId);
+    return this.dayNotes.findByIdDayTrip(id, dayId, tripId);
   }
 
   async create(dayId: string | number, tripId: string | number, text: string, time?: string | null, icon?: string | null, sortOrder?: number, color?: string | null) {
-    const result = this.dbs.run(
-      'INSERT INTO day_notes (day_id, trip_id, text, time, icon, sort_order, color) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      dayId, tripId, text.trim(), time || null, icon || '📝', sortOrder ?? 9999, normalizeNoteColor(color),
-    );
-    return this.dbs.get('SELECT * FROM day_notes WHERE id = ?', result.lastInsertRowid);
+    // `dayId`/`tripId` bind raw (D4's T5 escape hatch, matching the legacy
+    // statement's own no-conversion bind) — `createNote`'s column set wants
+    // numbers, but every real caller here already passes an id that matched
+    // a route/permission check earlier in the request; `Number(...)` mirrors
+    // that seam exactly (same shape `TripMembersRepository.addIgnoringConflict`'s
+    // docstring documents for an INSERT-shaped write behind a raw-bind guard).
+    return this.dayNotes.createNote({
+      day_id: Number(dayId),
+      trip_id: Number(tripId),
+      text: text.trim(),
+      time: time || null,
+      icon: icon || '📝',
+      sort_order: sortOrder ?? 9999,
+      color: normalizeNoteColor(color),
+    });
   }
 
   async update(id: string | number, current: DayNote, fields: { text?: string; time?: string | null; icon?: string | null; sort_order?: number; color?: string | null }) {
-    this.dbs.run(
-      'UPDATE day_notes SET text = ?, time = ?, icon = ?, sort_order = ?, color = ? WHERE id = ?',
-      fields.text !== undefined ? fields.text.trim() : current.text,
-      fields.time !== undefined ? fields.time : current.time,
-      fields.icon !== undefined ? fields.icon : current.icon,
-      fields.sort_order !== undefined ? fields.sort_order : current.sort_order,
-      fields.color !== undefined ? normalizeNoteColor(fields.color) : (current.color ?? null),
-      id,
-    );
-    return this.dbs.get('SELECT * FROM day_notes WHERE id = ?', id);
+    return this.dayNotes.updateNote(id, {
+      text: fields.text !== undefined ? fields.text.trim() : current.text,
+      time: fields.time !== undefined ? fields.time : current.time,
+      icon: fields.icon !== undefined ? fields.icon : current.icon,
+      sort_order: fields.sort_order !== undefined ? fields.sort_order : current.sort_order,
+      color: fields.color !== undefined ? normalizeNoteColor(fields.color) : (current.color ?? null),
+    });
   }
 
   async remove(id: string | number): Promise<void> {
-    this.dbs.run('DELETE FROM day_notes WHERE id = ?', id);
+    await this.dayNotes.deleteById(id);
   }
 }

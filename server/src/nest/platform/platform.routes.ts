@@ -4,7 +4,6 @@ import type { EntityManager } from '@mikro-orm/core';
 
 import { readEnv } from '../../app-config';
 import { verifyJwtAndLoadUser } from '../auth/jwt-verify';
-import { db } from '../../db/database';
 import { withRequestContext } from '../database/request-context';
 import { StorageService } from '../storage/storage.service';
 import { StorageInvalidKeyError, StorageNotFoundError, type StorageCategory } from '../storage/storage.types';
@@ -12,6 +11,8 @@ import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { ShareTokens } from '../../db/entities/ShareTokens.entity';
 import type { ShareTokensRepository } from '../../db/repositories/ShareTokens.repository';
+import { Photos } from '../../db/entities/Photos.entity';
+import type { PhotosRepository } from '../../db/repositories/Photos.repository';
 
 // Platform / transport routes extracted verbatim from createApp() (app.ts) so they can be
 // mounted on either the legacy Express app or the NestJS Express instance (strangler A6/A8).
@@ -76,7 +77,7 @@ export function storageStaticHandler(storage: StorageService, category: StorageC
   };
 }
 
-async function servePhoto(storage: StorageService, req: Request, res: Response, users: UsersRepository, shareTokens: ShareTokensRepository): Promise<void> {
+async function servePhoto(storage: StorageService, req: Request, res: Response, users: UsersRepository, shareTokens: ShareTokensRepository, photos: PhotosRepository): Promise<void> {
   const safeName = path.basename(req.params.filename);
   // Parity: after basename(), the old resolve()+startsWith guard could only
   // fire when the remaining segment was '..' — keep that exact 403.
@@ -113,7 +114,7 @@ async function servePhoto(storage: StorageService, req: Request, res: Response, 
 
   // Share-token path: require the token to cover the exact trip the
   // photo belongs to. Expired tokens fall through to 401.
-  const photo = db.prepare('SELECT trip_id FROM photos WHERE filename = ?').get(safeName) as { trip_id: number } | undefined;
+  const photo = await photos.findTripIdByFilename(safeName);
   if (!photo) {
     res.status(401).send('Authentication required');
     return;
@@ -141,23 +142,23 @@ async function servePhoto(storage: StorageService, req: Request, res: Response, 
  * `ShareTokensRepository.findTripIdByToken` the SAME way (Plan 3h Task 6, R1
  * — the plan's single highest-severity finding: this branch ran unconverted,
  * against the legacy `db` proxy, for three plans after the JWT half above
- * was fixed). Both `orm.em.getRepository(Users)` and
- * `orm.em.getRepository(ShareTokens)` are resolved inside the arrow passed
- * to `withRequestContext` below: `orm.em` is the global, context-resolving
- * EntityManager, and MikroORM's repository object holds a reference to that
- * same proxy rather than a snapshot, so a query issued through it later
- * resolves whatever `AsyncLocalStorage` context is active AT QUERY TIME —
- * not at the moment `getRepository()` was called. What actually gates this
- * is `withRequestContext` wrapping the whole `servePhoto(...)` call (both
- * repository reads included): removing the wrapper entirely reproduces Task
- * 0's `ValidationError: Using global EntityManager instance...` (verified
- * directly — mutation-proof in `task-1-report.md`), exactly the failure
- * `PHOTOCTX-002`/`SEAM-002` guard against. The sibling `photos` table read
- * (`db.prepare('SELECT trip_id FROM photos ...')`, a few lines into
- * `servePhoto` below) stays on the legacy `db` proxy — a different domain's
- * table, not this plan's — but its `trip_id` MATCH against the converted
- * `share` read is the handler's whole authorization and is untouched: only
- * the `share_tokens` lookup itself moved, not the comparison built on it.
+ * was fixed). The sibling `photos` table read (Plan 4 Task 1) now goes
+ * through `PhotosRepository.findTripIdByFilename` the same way — its
+ * `trip_id` MATCH against the converted `share` read is the handler's whole
+ * authorization and is untouched, only the read itself moved off the legacy
+ * `db` proxy. `orm.em.getRepository(Users)`, `orm.em.getRepository
+ * (ShareTokens)` and `orm.em.getRepository(Photos)` are all resolved inside
+ * the arrow passed to `withRequestContext` below: `orm.em` is the global,
+ * context-resolving EntityManager, and MikroORM's repository object holds a
+ * reference to that same proxy rather than a snapshot, so a query issued
+ * through it later resolves whatever `AsyncLocalStorage` context is active
+ * AT QUERY TIME — not at the moment `getRepository()` was called. What
+ * actually gates this is `withRequestContext` wrapping the whole
+ * `servePhoto(...)` call (every repository read included): removing the
+ * wrapper entirely reproduces Task 0's `ValidationError: Using global
+ * EntityManager instance...` (verified directly — mutation-proof in
+ * `task-1-report.md`), exactly the failure `PHOTOCTX-002`/`SEAM-002` guard
+ * against.
  *
  * Optional at the type level only, the same shape `TrekWsAdapter` uses for
  * its own D6 wrapper (`src/nest/realtime/trek-ws.adapter.ts`): `bootstrap.ts`
@@ -202,7 +203,7 @@ export function applyPlatformUploads(app: express.Application, storage: StorageS
       next(new Error('applyPlatformUploads: no MikroORM available to build a request context for /uploads/photos/*'));
       return;
     }
-    return withRequestContext(orm, () => servePhoto(storage, req, res, orm.em.getRepository(Users), orm.em.getRepository(ShareTokens))).catch(next);
+    return withRequestContext(orm, () => servePhoto(storage, req, res, orm.em.getRepository(Users), orm.em.getRepository(ShareTokens), orm.em.getRepository(Photos))).catch(next);
   });
 
   // Block direct access to /uploads/files

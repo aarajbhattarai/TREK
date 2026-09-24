@@ -6,19 +6,16 @@
  * case, which would leak into the ADMIN-SVC-* suite. The notification path runs
  * for real against the temp db's notifications table.
  */
-import { runMigrations } from '../../../src/db/migrations';
-import { createTables } from '../../../src/db/schema';
 import { __clearVersionCacheForTests } from '../../../src/nest/admin/admin.helpers';
 import { createAdmin } from '../../helpers/factories';
 import { resetTestDb } from '../../helpers/test-db';
 
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -27,10 +24,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => null,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -41,6 +38,7 @@ vi.mock('../../../src/websocket', () => ({ broadcastToUser: vi.fn() }));
 vi.mock('../../../src/mcp', () => ({ revokeUserSessions: vi.fn(), invalidateMcpSessions: vi.fn() }));
 vi.mock('../../../src/mcp/sessionManager', () => ({ revokeUserSessions: vi.fn(), revokeUserSessionsForClient: vi.fn() }));
 
+import { db as testDb } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
@@ -105,7 +103,7 @@ let svc: AdminService;
 beforeAll(async () => {
   webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(dbs.connection));
   permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
-  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection));
   auth = new AuthService(
     permissions, new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)), webauthn, userCleanup, new MailerService(await createTestUsersRepo(dbs.connection), await createTestSettingsRepo(dbs.connection), await createTestAppSettingsRepo(dbs.connection)), new EphemeralTokenService(), new AllowedFileTypesService(await createTestAppSettingsRepo(dbs.connection)), await createTestUnitOfWork(dbs.connection),
     await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),
@@ -165,11 +163,6 @@ function getLastNotifiedVersion(): string | undefined {
 function getNotificationCount(): number {
   return (testDb.prepare('SELECT COUNT(*) as c FROM notifications').get() as { c: number }).c;
 }
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   resetTestDb(testDb);

@@ -51,11 +51,17 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { DayNotesService } from '../../../src/nest/day-notes/day-notes.service';
 import type { DayNote } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestDayNotesRepo, createTestDaysRepo } from '../../helpers/test-uow';
 
 let svc: DayNotesService;
 beforeAll(async () => {
-  svc = new DayNotesService(await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+  svc = new DayNotesService(
+    await createTestDatabaseService(testDb),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
+    new RealtimeService(),
+    await createTestDayNotesRepo(testDb),
+    await createTestDaysRepo(testDb),
+  );
 });
 
 beforeAll(() => {
@@ -288,7 +294,7 @@ describe('DayNotesService.canEdit', () => {
   it('DAYNOTE-SVC-090 asks for day_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
-    const withStub = new DayNotesService(new DatabaseService(testDb), permissions, new RealtimeService());
+    const withStub = new DayNotesService(new DatabaseService(testDb), permissions, new RealtimeService(), await createTestDayNotesRepo(testDb), await createTestDaysRepo(testDb));
     const trip = { id: 1, user_id: 1 } as never;
 
     expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);

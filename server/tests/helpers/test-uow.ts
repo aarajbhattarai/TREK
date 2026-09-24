@@ -26,6 +26,12 @@ import { PasswordResetTokens } from '../../src/db/entities/PasswordResetTokens.e
 import type { PasswordResetTokensRepository } from '../../src/db/repositories/PasswordResetTokens.repository';
 import { Trips } from '../../src/db/entities/Trips.entity';
 import type { TripsRepository } from '../../src/db/repositories/Trips.repository';
+import { IdempotencyKeys } from '../../src/db/entities/IdempotencyKeys.entity';
+import type { IdempotencyKeysRepository } from '../../src/db/repositories/IdempotencyKeys.repository';
+import { TripInviteTokens } from '../../src/db/entities/TripInviteTokens.entity';
+import type { TripInviteTokensRepository } from '../../src/db/repositories/TripInviteTokens.repository';
+import { Photos } from '../../src/db/entities/Photos.entity';
+import type { PhotosRepository } from '../../src/db/repositories/Photos.repository';
 import { TripMembers } from '../../src/db/entities/TripMembers.entity';
 import type { TripMembersRepository } from '../../src/db/repositories/TripMembers.repository';
 import { Places } from '../../src/db/entities/Places.entity';
@@ -659,5 +665,44 @@ export function createTestCollectionPlaceRatingsRepo(db: Database.Database): Pro
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(CollectionPlaceRatings));
   collectionPlaceRatingsRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 4 Task 1 — the orphaned raw-SQL conversions: `IdempotencyKeysRepository`
+// (`idempotency.interceptor.ts`/`idempotency-cleanup.ts`), `TripInviteTokensRepository`
+// (`trip-invite.service.ts`) and `PhotosRepository` (`platform.routes.ts`'s
+// pre-init `servePhoto` handler) for hand-constructed services/tests. Same
+// memoisation-per-handle pattern as every helper above.
+// ---------------------------------------------------------------------------
+
+const idempotencyKeysRepoPerHandle = new WeakMap<Database.Database, Promise<IdempotencyKeysRepository>>();
+const tripInviteTokensRepoPerHandle = new WeakMap<Database.Database, Promise<TripInviteTokensRepository>>();
+const photosRepoPerHandle = new WeakMap<Database.Database, Promise<PhotosRepository>>();
+
+/** The `IdempotencyKeysRepository` a hand-constructed `IdempotencyInterceptor`/`IdempotencyCleanupJob` needs. */
+export function createTestIdempotencyKeysRepo(db: Database.Database): Promise<IdempotencyKeysRepository> {
+  const existing = idempotencyKeysRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(IdempotencyKeys));
+  idempotencyKeysRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `TripInviteTokensRepository` a hand-constructed `TripInviteService` needs. */
+export function createTestTripInviteTokensRepo(db: Database.Database): Promise<TripInviteTokensRepository> {
+  const existing = tripInviteTokensRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(TripInviteTokens));
+  tripInviteTokensRepoPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `PhotosRepository` `platform.routes.ts`'s pre-init `servePhoto` handler needs. */
+export function createTestPhotosRepo(db: Database.Database): Promise<PhotosRepository> {
+  const existing = photosRepoPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Photos));
+  photosRepoPerHandle.set(db, pending);
   return pending;
 }

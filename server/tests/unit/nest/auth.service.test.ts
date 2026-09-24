@@ -13,12 +13,10 @@
 // vi.hoisted: build the real in-memory DB and the module mock before any import
 // ---------------------------------------------------------------------------
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -32,10 +30,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     isOwner: (tripId: any, userId: number) =>
       !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -60,9 +58,8 @@ vi.mock('../../../src/mcp/sessionManager', () => ({ revokeUserSessions: vi.fn() 
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
+import { db as testDb } from '../../../src/db/database';
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, createInviteToken, createTrip, createPlace, createReservation } from '../../helpers/factories';
 import { AuthService } from '../../../src/nest/auth/auth.service';
@@ -88,6 +85,7 @@ import {
   createTestUnitOfWork,
   createTestAppSettingsRepo,
   createTestUsersRepo,
+  createTestTripMembersRepo,
   createTestMcpTokensRepo,
   createTestInviteTokensRepo,
   createTestOauthTokensRepo,
@@ -119,7 +117,7 @@ beforeAll(async () => {
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   membershipStub,
   new WebauthnConfigService(await createTestAppSettingsRepo(testDb)),
-  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
+  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
   mailerStub,
   new EphemeralTokenService(),
   new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)), await createTestUnitOfWork(testDb),
@@ -132,11 +130,6 @@ beforeAll(async () => {
 // ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => resetTestDb(testDb));
 
@@ -1077,7 +1070,6 @@ describe('ephemeral + demo helpers', () => {
     vi.unstubAllEnvs();
   });
 });
-
 
 // ---------------------------------------------------------------------------
 // Quirk fixes after the DI fold (trailing fix(server) commit): AUTH-DB-089+.

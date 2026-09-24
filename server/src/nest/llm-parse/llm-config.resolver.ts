@@ -1,7 +1,9 @@
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
 import { AddonsService } from '../addons/addons.service';
 import { decryptLlmApiKey, LLM_PROVIDERS, type LlmProvider, type ResolvedLlmConfig } from './llm-config';
-import { DatabaseService } from '../database/database.service';
+import { Addons } from '../../db/entities/Addons.entity';
+import type { AddonsRepository } from '../../db/repositories/Addons.repository';
 import { SettingsService } from '../settings/settings.service';
 import { Injectable } from '@nestjs/common';
 
@@ -11,14 +13,19 @@ function asProvider(v: unknown): LlmProvider | null {
 
 /**
  * Resolves the effective LLM config for a user, gated by the addon. Injectable
- * (settings come from SettingsService); the addon-row read and the addon gate
- * still go through the legacy db/adminService seams until their waves migrate.
+ * (settings come from SettingsService).
+ *
+ * Plan 4 Task 1: the addon-row read moved off `DatabaseService` onto
+ * `AddonsRepository.findById` — the same shape `admin.service.ts`'s own
+ * LLM-addon config read already established (3a/3i's precedent: `config` is
+ * a `p.json()` column, so the repository hands back an already-parsed
+ * object, never a JSON string needing its own `JSON.parse`).
  */
 @Injectable()
 export class LlmConfigResolver {
   constructor(
     private readonly settings: SettingsService,
-    private readonly dbService: DatabaseService,
+    @InjectRepository(Addons) private readonly addonsRepo: AddonsRepository,
     private readonly addons: AddonsService,
   ) {}
 
@@ -34,17 +41,9 @@ export class LlmConfigResolver {
   }
 
   private async readInstanceConfig(): Promise<ResolvedLlmConfig | null> {
-    const row = this.dbService.get<{ config?: string } | undefined>(
-      'SELECT config FROM addons WHERE id = ?',
-      ADDON_IDS.LLM_PARSING,
-    );
-    if (!row?.config) return null;
-    let cfg: Record<string, unknown>;
-    try {
-      cfg = JSON.parse(row.config || '{}');
-    } catch {
-      return null;
-    }
+    const row = await this.addonsRepo.findById(ADDON_IDS.LLM_PARSING);
+    const cfg = row?.config;
+    if (!cfg) return null;
     const provider = asProvider(cfg.provider);
     const model = typeof cfg.model === 'string' ? cfg.model.trim() : '';
     if (!provider || !model) return null;

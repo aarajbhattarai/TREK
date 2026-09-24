@@ -124,7 +124,7 @@ import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
-  createTestTripMembersRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
+  createTestTripMembersRepo, createTestTripInviteTokensRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo, createTestRoadtripDayTracksRepo,
   createTestPlaceDetailsCacheRepo,
   createTestReservationsRepo,
@@ -214,14 +214,16 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // old shape, so `membership` and `webauthn` held the wrong objects and
   // userCleanup/mailer/tokens were undefined.
   const realtimeService = new RealtimeService();
-  const guards = new McpToolGuardsService(dbService, permissionsService, realtimeService);
+  // Plan 4 Task 1 constructor-ripple: the trip `user_id`/user `role` reads
+  // moved off `DatabaseService` onto `TripsRepository`/`UsersRepository`.
+  const guards = new McpToolGuardsService(mcpOrm.repo(Trips), usersRepo, permissionsService, realtimeService);
   const exchangeRatesService = new ExchangeRatesService();
   const budgetService = new BudgetService(dbService, permissionsService, exchangeRatesService, realtimeService, await createTestUnitOfWork(dbService.connection), ...(await budgetRepoArgs(dbService.connection)));
   const authService = new AuthService(
     permissionsService,
     new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)),
     new WebauthnConfigService(appSettings),
-    new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo, await createTestBudgetItemsRepo(dbService.connection), await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection), await createTestShareTokensRepo(dbService.connection)),
+    new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo, await createTestTripMembersRepo(dbService.connection), await createTestBudgetItemsRepo(dbService.connection), await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection), await createTestShareTokensRepo(dbService.connection)),
     new MailerService(usersRepo, settingsRepo, appSettings),
     new EphemeralTokenService(),
     new AllowedFileTypesService(appSettings), await createTestUnitOfWork(dbService.connection),
@@ -320,7 +322,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
   const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection)), accommodationsService, await createTestUnitOfWork(dbService.connection), await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection), await createTestReservationDayPositionsRepo(dbService.connection), await createTestDayAccommodationsRepo(dbService.connection), await createTestDaysRepo(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestDayAssignmentsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), await createTestUsersRepo(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestBudgetItemsRepo(dbService.connection));
-  const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo, await createTestBudgetItemsRepo(dbService.connection), await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection), await createTestShareTokensRepo(dbService.connection)), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), usersRepo);
+  const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo, await createTestTripMembersRepo(dbService.connection), await createTestBudgetItemsRepo(dbService.connection), await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection), await createTestShareTokensRepo(dbService.connection)), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), usersRepo);
   const tripsService = new TripsService(
     dbService,
     reservationsService,
@@ -397,7 +399,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new PackingMcp(packingService, authService, addonsService, guards),
       new BudgetMcp(budgetService, exchangeRatesService, dbService, new RuntimeEnvService(), new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), addonsService, guards, await createTestUnitOfWork(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestTripsRepo(dbService.connection), demoService),
       new ReservationsMcp(reservationsService, daysService, budgetService, authService, assignmentsService, guards),
-      new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService), authService, guards),
+      new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService, await createTestDayNotesRepo(dbService.connection), await createTestDaysRepo(dbService.connection)), authService, guards),
       new DaysMcp(daysService, authService, guards),
       new RoadtripMcp(
         new RoadtripService(
@@ -440,7 +442,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
       new ShareMcp(new ShareService(new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection), ...(await shareServiceRepoArgs(dbService.connection))), authService, guards),
       new FeedsMcp(new FeedsService(await createTestTripsRepo(dbService.connection), usersRepo, calendarService), dbService, new RuntimeEnvService(), guards, demoService),
-      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo), demoService),
+      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), await createTestUnitOfWork(dbService.connection), await createTestTripInviteTokensRepo(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo), demoService),
       new MapsMcp(mapsService),
       new PlacesMcp(placesService, mapsService, await createTestTripsRepo(dbService.connection), authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(
@@ -466,7 +468,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
         // (`findUsernameEmail`, UM11's precedent) added in its place.
         usersRepo, authService, addonsService,
       ),
-      new TransitMcp(new TransitService(new GoogleTransitProvider(dbService, appSettings, usersRepo)), daysService, reservationsService, dbService, authService, guards),
+      new TransitMcp(new TransitService(new GoogleTransitProvider(appSettings, usersRepo)), daysService, reservationsService, dbService, authService, guards),
       new AtlasMcp(new AtlasService(
         await createTestBucketListRepo(dbService.connection), await createTestHiddenCountriesRepo(dbService.connection),
         await createTestHiddenRegionsRepo(dbService.connection), await createTestVisitedCountriesRepo(dbService.connection),

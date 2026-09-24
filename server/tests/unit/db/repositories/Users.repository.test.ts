@@ -112,6 +112,20 @@ describe('UsersRepository', () => {
     expect(await users.findByIdWithPasswordVersion(999999)).toBeNull();
   });
 
+  it('USERSREPO-009b: findForWsHandshake (Plan 4 Task 1, realtime.gateway.ts) reads id/username/email/role/mfa_enabled/password_version', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET password_version = 3, mfa_enabled = 1 WHERE id = ?').run(user.id);
+    const row = await users.findForWsHandshake(user.id);
+    expect(row).toEqual({ id: user.id, username: user.username, email: user.email, role: 'user', mfa_enabled: 1, password_version: 3 });
+    expect(await users.findForWsHandshake(999999)).toBeNull();
+  });
+
+  it('USERSREPO-009c: findForWsHandshake reports mfa_enabled as null, not 0, for a user who never had it set (Plan 4 Task 1)', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET mfa_enabled = NULL WHERE id = ?').run(user.id);
+    expect((await users.findForWsHandshake(user.id))?.mfa_enabled).toBeNull();
+  });
+
   it('USERSREPO-010: getPasswordVersion reads password_version, null for a missing user', async () => {
     const { user } = createUser(testDb);
     expect(await users.getPasswordVersion(user.id)).toBe(0);

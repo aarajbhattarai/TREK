@@ -40,7 +40,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { TripMembershipService } from '../../../src/nest/trip-membership/trip-membership.service';
 import { TripInviteService } from '../../../src/nest/trip-invite/trip-invite.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo, createTestTripInviteTokensRepo } from '../../helpers/test-uow';
 
 // One DatabaseService over the shared in-memory handle, so every collaborator
 // reads and writes the same rows.
@@ -48,7 +48,13 @@ const dbs = new DatabaseService(testDb);
 let svc: TripInviteService;
 beforeAll(async () => {
   const uow = await createTestUnitOfWork(dbs.connection);
-  svc = new TripInviteService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), uow), new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)), uow);
+  svc = new TripInviteService(
+    dbs,
+    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), uow),
+    new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)),
+    uow,
+    await createTestTripInviteTokensRepo(dbs.connection),
+  );
 });
 
 beforeAll(() => { createTables(testDb); runMigrations(testDb); });

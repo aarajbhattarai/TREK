@@ -173,6 +173,16 @@ export interface UserWithPasswordVersion {
   password_version: number;
 }
 
+/** `realtime.gateway.ts#handleConnection`'s WS-handshake row (Plan 4 Task 1). */
+export interface UserWsHandshakeRow {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  mfa_enabled: number | boolean | null;
+  password_version: number;
+}
+
 /** `AuthService.requestPasswordReset` (AU36). */
 export interface PasswordResetLookup {
   id: number;
@@ -302,6 +312,33 @@ export class UsersRepository extends TrekRepository<Users> {
       { fields: ['id', 'username', 'email', 'role', 'password_version'] },
     );
     return row ? { id: row.id, username: row.username, email: row.email, role: row.role, password_version: row.password_version } : null;
+  }
+
+  /**
+   * `SELECT id, username, email, role, mfa_enabled, password_version FROM
+   * users WHERE id = ?` (`realtime.gateway.ts#handleConnection`, Plan 4 Task
+   * 1). Same construction as {@link findByIdWithPasswordVersion} above (the
+   * canonical password-version read this class already establishes) plus
+   * `mfa_enabled`, which the WS handshake's own MFA gate also needs from the
+   * SAME row the legacy statement read — kept as one narrowed read rather
+   * than two separate repository calls, so a user deleted between two calls
+   * can't split what was one atomic check under the legacy raw statement.
+   */
+  async findForWsHandshake(id: number): Promise<UserWsHandshakeRow | null> {
+    const row = await this.findOne(
+      { id },
+      { fields: ['id', 'username', 'email', 'role', 'mfa_enabled', 'password_version'] },
+    );
+    return row
+      ? {
+          id: row.id,
+          username: row.username,
+          email: row.email,
+          role: row.role,
+          mfa_enabled: row.mfa_enabled ?? null,
+          password_version: row.password_version,
+        }
+      : null;
   }
 
   // ---------------------------------------------------------------------

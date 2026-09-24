@@ -25,15 +25,14 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, createTrip, createInviteToken } from '../../helpers/factories';
 import { RegistrationInvitesService } from '../../../src/nest/auth/registration-invites.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
-import { createTestInviteTokensRepo } from '../../helpers/test-uow';
+import { createTestInviteTokensRepo, createTestTripsRepo } from '../../helpers/test-uow';
 
 let svc: RegistrationInvitesService;
 
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new RegistrationInvitesService(new DatabaseService(testDb), await createTestInviteTokensRepo(testDb));
+  svc = new RegistrationInvitesService(await createTestInviteTokensRepo(testDb), await createTestTripsRepo(testDb));
 });
 beforeEach(() => { resetTestDb(testDb); vi.clearAllMocks(); });
 afterAll(() => { testDb.close(); });

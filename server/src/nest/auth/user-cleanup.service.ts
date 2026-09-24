@@ -10,6 +10,8 @@ import { pluginsDataRoot } from '../plugins/paths';
 import { UnitOfWork } from '../database/unit-of-work';
 import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
 import { JourneyShareTokens } from '../../db/entities/JourneyShareTokens.entity';
@@ -42,6 +44,8 @@ export class UserCleanupService {
     private readonly budget: BudgetService,
     private readonly uow: UnitOfWork,
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
+    // Plan 4 Task 1 (UC4 only) — the table's own Plan 3c ownership.
+    @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
     // Plan 3e Task 2 (budget) — additive, UC5 only.
     @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
     // Plan 3g Task 4 (UC7-10) — the genuinely-journey GDPR-erasure deletes.
@@ -101,9 +105,10 @@ export class UserCleanupService {
   /**
    * UC4–UC10: `trip_members` (`nest/trip-membership`, Plan 3c) and
    * `budget_items` (`nest/budget`, Plan 3e) are owned by domains outside
-   * this plan, so UC4 stays a raw `DatabaseService` call (Plan 3b Task 5
-   * ruling; inventory §6) — UC5 is already converted (`budgetItemsRepo
-   * .clearPaidByUser`). `share_tokens` (UC6) belongs to `nest/share`
+   * this file's own domain — UC4 was mis-filed as "Plan 3g's" by an earlier
+   * ledger and stayed raw past that plan's close; it converts here (Plan 4
+   * Task 1) onto `TripMembersRepository.clearInvitedBy` — UC5 is already
+   * converted (`budgetItemsRepo.clearPaidByUser`). `share_tokens` (UC6) belongs to `nest/share`
    * (trip-level share links) and converts here (Plan 3h Task 6, R10) onto
    * `ShareTokensRepository.deleteByCreator` — **DISTINCT from
    * `ShareService`'s own `remove()`**, which deletes `WHERE trip_id = ?`, a
@@ -117,7 +122,7 @@ export class UserCleanupService {
    * unchanged.
    */
   private async cleanupUserReferences(userId: number): Promise<void> {
-    this.db.run('UPDATE trip_members SET invited_by = NULL WHERE invited_by = ?', userId); // UC4 — Plan 3c
+    await this.tripMembersRepo.clearInvitedBy(userId); // UC4 — converted (Plan 4 Task 1)
     await this.budgetItemsRepo.clearPaidByUser(userId); // UC5 — Plan 3e Task 2, converted.
     await this.budget.removeUserFromBudgetItems(userId);
     await this.shareTokensRepo.deleteByCreator(userId); // UC6 — converted (Plan 3h Task 6)

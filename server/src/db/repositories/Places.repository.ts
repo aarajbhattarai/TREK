@@ -1224,6 +1224,66 @@ export class PlacesRepository extends TrekRepository<Places> {
       { image_url, updated_at: currentTimestamp(platform) },
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 4 Task 1 (`public-api.service.ts::placesByDay`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * `SELECT da.day_id, p.name, p.address, p.lat, p.lng, p.place_time,
+   * p.end_time, p.duration_minutes, p.notes, p.transport_mode, c.name AS
+   * category FROM day_assignments da JOIN places p ON p.id = da.place_id
+   * LEFT JOIN categories c ON c.id = p.category_id WHERE p.trip_id = ? AND
+   * da.accommodation_id IS NULL ORDER BY da.day_id ASC, da.order_index ASC`.
+   * Kysely — the SAME cross-table-read escape hatch `ReservationsRepository
+   * .listUnplannedPlacesForPublicApi`'s precedent (3d Task 4) uses for this
+   * exact `public-api.service.ts` surface; landed on `PlacesRepository`
+   * rather than grouped there because the projection is place-shaped, per
+   * this domain plan's own ruling.
+   */
+  async listAssignedForPublicApi(trip_id: number): Promise<PublicApiAssignedPlaceRow[]> {
+    const rows = await this.kysely<PublicApiAssignedPlacesKyselyDB>()
+      .selectFrom('day_assignments as da')
+      .innerJoin('places as p', 'p.id', 'da.place_id')
+      .leftJoin('categories as c', 'c.id', 'p.category_id')
+      .select([
+        'da.day_id',
+        'p.name', 'p.address', 'p.lat', 'p.lng', 'p.place_time', 'p.end_time',
+        'p.duration_minutes', 'p.notes', 'p.transport_mode', 'c.name as category',
+      ])
+      .where('p.trip_id', '=', trip_id)
+      .where('da.accommodation_id', 'is', null)
+      .orderBy('da.day_id', 'asc')
+      .orderBy('da.order_index', 'asc')
+      .execute();
+    return rows as PublicApiAssignedPlaceRow[];
+  }
+}
+
+/** {@link PlacesRepository.listAssignedForPublicApi}'s projection. */
+export interface PublicApiAssignedPlaceRow {
+  day_id: number;
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  place_time: string | null;
+  end_time: string | null;
+  duration_minutes: number | null;
+  notes: string | null;
+  transport_mode: string | null;
+  category: string | null;
+}
+
+/** {@link PlacesRepository.listAssignedForPublicApi}'s narrow `day_assignments`/`places`/`categories` shape. */
+interface PublicApiAssignedPlacesKyselyDB {
+  day_assignments: { day_id: number; place_id: number; accommodation_id: number | null; order_index: number | null };
+  places: {
+    id: number; trip_id: number; name: string; address: string | null; lat: number | null; lng: number | null;
+    place_time: string | null; end_time: string | null; duration_minutes: number | null; notes: string | null;
+    transport_mode: string | null; category_id: number | null;
+  };
+  categories: { id: number; name: string };
 }
 
 /** {@link PlacesRepository.listImportable}'s row shape (CL45). */
