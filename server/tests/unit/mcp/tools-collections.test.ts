@@ -12,28 +12,14 @@
  * unconditionally while REST and the plugin host gated; the port fixed that).
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import { db as testDb } from '../../../src/db/database';
 
-const { testDb, dbMock, broadcastToUser } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const broadcastToUser = vi.fn();
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: (tripId: number | string, userId: number) =>
-      db.prepare(`SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)`).get(userId, tripId, userId),
-    isOwner: (tripId: number | string, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
-  };
-  return { testDb: db, dbMock: mock, broadcastToUser };
+const { broadcastToUser } = vi.hoisted(() => ({ broadcastToUser: vi.fn() }));
+
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -42,8 +28,6 @@ vi.mock('../../../src/config', () => ({
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser }));
 const { notifSend } = vi.hoisted(() => ({ notifSend: vi.fn().mockResolvedValue(undefined) }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { createUser, createTrip, createPlace, createCategory } from '../../helpers/factories';
 import { createMcpHarness, parseToolResult, type McpHarness } from '../../helpers/mcp-harness';
 import { ADDON_IDS } from '../../../src/addons';
@@ -66,8 +50,6 @@ function clearCollections() {
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   // The collections addon is seeded DISABLED by default and every tool rides
   // the `when:` addon gate (post-fold quirk fix) — enable it for the suite.
   testDb.prepare('UPDATE addons SET enabled = 1 WHERE id = ?').run(ADDON_IDS.COLLECTIONS);

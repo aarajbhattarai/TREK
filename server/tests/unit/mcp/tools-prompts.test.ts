@@ -8,31 +8,18 @@
  * cases used to sidestep that by calling the callbacks directly.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
+import { db as testDb } from '../../../src/db/database';
+import { CAN_ACCESS_TRIP_SQL } from '../../helpers/db-mock';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { Client } from '@modelcontextprotocol/sdk/client/index';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory';
 import { ErrorCode } from '@modelcontextprotocol/sdk/types';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: (tripId: any, userId: number) =>
-      db.prepare(`SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)`).get(userId, tripId, userId),
-    isOwner: (tripId: any, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
-  };
-  return { testDb: db, dbMock: mock };
-});
 
-vi.mock('../../../src/db/database', () => dbMock);
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
+});
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -61,8 +48,6 @@ const { mockGetTripSummary } = vi.hoisted(() => ({
 // The prompts read the summary through the injected read model (readModelStub
 // below wraps the same controllable mock) — trips.bridge is deleted.
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember, createPackingItem, createBudgetItem } from '../../helpers/factories';
 import { createTestRegistry } from '../../../src/nest-mcp';
@@ -88,7 +73,7 @@ import type { TodoService } from '../../../src/nest/todo/todo.service';
 import type { CollabService } from '../../../src/nest/collab/collab.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo, sharedTestOrm, createTestPlacesRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo, createTestUsersRepo, sharedTestOrm, createTestPlacesRepo } from '../../helpers/test-uow';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
 import {
   createTestPackingItemsRepo,
@@ -105,7 +90,7 @@ import type { EntityManager } from '@mikro-orm/core';
 // exercise it through a hand-built registry over a stub TripsService whose
 // getTripSummary is the same controllable mock the legacy path used.
 const tripsStub = {
-  canAccessTrip: (tripId: number, userId: number) => dbMock.canAccessTrip(tripId, userId),
+  canAccessTrip: (tripId: number, userId: number) => testDb.prepare(CAN_ACCESS_TRIP_SQL).get(userId, tripId, userId),
 } as unknown as TripsService;
 // getTripSummary moved to TripReadModelService with the trip split; the mock is
 // the same controllable one, one constructor slot further along.
@@ -140,7 +125,7 @@ let budgetMcp: BudgetMcp;
 let tripPromptsMcp: TripPromptsMcp;
 beforeAll(async () => {
   promptEm = (await sharedTestOrm(testDb)).em;
-  promptGuards = new McpToolGuardsService(promptDbs(), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+  promptGuards = new McpToolGuardsService(await createTestTripsRepo(testDb), await createTestUsersRepo(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
   tripsMcp = new TripsMcp(
   tripsStub,
   { listItems: () => [] } as unknown as TodoService,
@@ -184,11 +169,6 @@ beforeAll(async () => {
   tripPromptsMcp = new TripPromptsMcp(tripsStub, readModelStub, promptPackingService, addonsStub);
 });
 const authMcp = new AuthMcp();
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   resetTestDb(testDb);

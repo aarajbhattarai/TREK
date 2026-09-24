@@ -14,27 +14,13 @@
  * registerTools), so `withTools` must stay on even for resource reads.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
+import { db as testDb } from '../../../src/db/database';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: (tripId: any, userId: number) =>
-      db.prepare(`SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)`).get(userId, tripId, userId),
-    isOwner: (tripId: any, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
-  };
-  return { testDb: db, dbMock: mock };
+
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -46,8 +32,6 @@ vi.mock('../../../src/websocket', () => ({ broadcast: broadcastMock }));
 
 // share_vacay_calendar fires a user notification after inserting; stub it out
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { setAddonEnabled } from '../../helpers/test-db';
@@ -72,11 +56,6 @@ const schoolRegionsSpy = vi.spyOn(VacayService.prototype, 'getSchoolHolidayRegio
 });
 const schoolHolidaysSpy = vi.spyOn(VacayService.prototype, 'getSchoolHolidays').mockResolvedValue({
   data: [{ name: 'Sommerferien', startDate: '2025-07-28', endDate: '2025-09-08' }],
-});
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
 });
 
 beforeEach(() => {
@@ -975,7 +954,7 @@ describe('Tool: decline_vacay_invite', () => {
       await h.client.callTool({ name: 'send_vacay_invite', arguments: { targetUserId: invitee.id } });
     });
     await withHarness(invitee.id, async (h) => {
-      const result = await h.client.callTool({ name: 'decline_vacay_invite', arguments: { planId: testDb.prepare('SELECT plan_id FROM vacay_plan_members WHERE user_id = ?').get(invitee.id)!.plan_id } });
+      const result = await h.client.callTool({ name: 'decline_vacay_invite', arguments: { planId: (testDb.prepare('SELECT plan_id FROM vacay_plan_members WHERE user_id = ?').get(invitee.id) as { plan_id: number }).plan_id } });
       const data = parseToolResult(result) as any;
       expect(data.success).toBe(true);
     });

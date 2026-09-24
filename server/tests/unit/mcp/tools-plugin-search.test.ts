@@ -3,34 +3,18 @@
  * contributions/plugin-search.mcp.ts), the MCP counterpart of GET /api/plugin-search.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { db as testDb } from '../../../src/db/database';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA foreign_keys = ON');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: (tripId: number, userId: number) =>
-      db
-        .prepare(
-          'SELECT t.id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)',
-        )
-        .get(userId, tripId, userId),
-    isOwner: (tripId: number, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
-  };
-  return { testDb: db, dbMock: mock };
-});
 
 const { broadcastMock, pluginsEnabled } = vi.hoisted(() => ({
   broadcastMock: vi.fn(),
   pluginsEnabled: vi.fn(() => true),
 }));
 
-vi.mock('../../../src/db/database', () => dbMock);
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
+});
 vi.mock('../../../src/websocket', () => ({ broadcast: broadcastMock }));
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
@@ -40,8 +24,6 @@ vi.mock('../../../src/config', () => ({
 // The admin kill switch reads live env; drive it from the test instead of the process.
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
-import { runMigrations } from '../../../src/db/migrations';
-import { createTables } from '../../../src/db/schema';
 import { createUser } from '../../helpers/factories';
 import { createMcpHarness, parseToolResult, type McpHarness } from '../../helpers/mcp-harness';
 import { resetTestDb } from '../../helpers/test-db';
@@ -49,11 +31,6 @@ import { PluginHooks } from '../../../src/nest/plugins/plugin-hooks.service';
 
 const providersOfMock = vi.spyOn(PluginHooks.prototype, 'providersOf');
 const searchPlacesMock = vi.spyOn(PluginHooks.prototype, 'searchPlaces');
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   resetTestDb(testDb);
