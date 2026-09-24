@@ -1,5 +1,6 @@
 import mikroOrmConfig from '../mikro-orm.config';
 import { registerReinitializeHook, runDemoSeed } from './database';
+import { baselineLegacyInstall } from './legacy-baseline';
 import { withRequestContext } from '../nest/database/request-context';
 import type { AnyEntity, EntityClass, EntityManager, EntitySchema, IDatabaseDriver, MikroORM } from '@mikro-orm/core';
 import type { Migrator } from '@mikro-orm/migrations';
@@ -31,6 +32,10 @@ type AnyOrm = MikroORM<
 /** Migrate to head, then seed. Safe to call again — both halves are idempotent. */
 export async function runSchemaBootstrap(orm: AnyOrm): Promise<void> {
   const migrator = orm.config.getExtension('@mikro-orm/migrator') as Migrator;
+  // A database the retired positional runner migrated has no migrator rows yet;
+  // record what it already has first, or the run below replays the whole history
+  // over it (see legacy-baseline.ts). A no-op on every other database.
+  await baselineLegacyInstall(orm.em.getConnection(), migrator);
   const pending = await migrator.getPending();
   if (pending.length > 0) {
     console.log(`[DB] Applying ${pending.length} pending migration(s)`);
