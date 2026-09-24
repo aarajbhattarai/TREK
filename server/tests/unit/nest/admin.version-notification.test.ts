@@ -81,7 +81,7 @@ import { PhotoProviderFields } from '../../../src/db/entities/PhotoProviderField
 import { DocumentProviders } from '../../../src/db/entities/DocumentProviders.entity';
 import { TripFiles } from '../../../src/db/entities/TripFiles.entity';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
-import { createTestShareTokensRepo } from '../../helpers/share-repos';
+import { createTestShareTokensRepo, createTestPluginsRepo, createTestPluginUserErasureQueueRepo } from '../../helpers/share-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourneyContributorsRepo } from '../../helpers/journey-repos';
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
@@ -103,7 +103,7 @@ let svc: AdminService;
 beforeAll(async () => {
   webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(dbs.connection));
   permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
-  userCleanup = new UserCleanupService(dbs, new BudgetService(permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection), await createTestPluginsRepo(dbs.connection), await createTestPluginUserErasureQueueRepo(dbs.connection));
   auth = new AuthService(
     permissions, new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)), webauthn, userCleanup, new MailerService(await createTestUsersRepo(dbs.connection), await createTestSettingsRepo(dbs.connection), await createTestAppSettingsRepo(dbs.connection)), new EphemeralTokenService(), new AllowedFileTypesService(await createTestAppSettingsRepo(dbs.connection)), await createTestUnitOfWork(dbs.connection),
     await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),

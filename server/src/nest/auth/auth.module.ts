@@ -17,6 +17,8 @@ import { JourneyContributors } from '../../db/entities/JourneyContributors.entit
 import { ShareTokens } from '../../db/entities/ShareTokens.entity';
 import { Trips } from '../../db/entities/Trips.entity';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
+import { Plugins } from '../../db/entities/Plugins.entity';
+import { PluginUserErasureQueue } from '../../db/entities/PluginUserErasureQueue.entity';
 import { TokensModule } from '../tokens/tokens.module';
 import { AuthPublicController } from './auth-public.controller';
 import { AuthController } from './auth.controller';
@@ -103,8 +105,13 @@ import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
     // TripMembers: Plan 4 Task 1, the SAME cross-domain shape as
     // JourneyShareTokens/ShareTokens above — `UserCleanupService
     // .cleanupUserReferences`'s UC4 erasure update (owned by
-    // `nest/trip-membership`).
-    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens, BudgetItems, JourneyShareTokens, Journeys, JourneyEntries, JourneyContributors, ShareTokens, Trips, TripMembers])],
+    // `nest/trip-membership`). Plugins/PluginUserErasureQueue: Plan 4 Task
+    // 8a, the SAME cross-domain shape again — `UserCleanupService
+    // .erasePluginUserData`'s UC2/UC3 erasure-enqueue half (owned by
+    // `nest/plugins`), narrowed off the Plan 3b Task 5 "stays raw" ruling to
+    // share `enqueueHookUserDataErasures` with `PluginRuntimeService
+    // .enqueueUserErasure` rather than re-implementing the same filter twice.
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens, BudgetItems, JourneyShareTokens, Journeys, JourneyEntries, JourneyContributors, ShareTokens, Trips, TripMembers, Plugins, PluginUserErasureQueue])],
   controllers: [AuthPublicController, AuthController, PasskeyController],
   providers: [AuthService, UserProfileService, RegistrationInvitesService, PasskeyService, UserCleanupService, WebauthnConfigService, AuthMcp],
   exports: [AuthService, RegistrationInvitesService, PasskeyService, UserCleanupService],

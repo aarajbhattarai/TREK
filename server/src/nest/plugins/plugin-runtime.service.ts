@@ -57,6 +57,7 @@ import { ForbiddenResource } from './host/rpc-host';
 import { removePluginData } from './host/plugin-data.service';
 import { isKnownPermission } from './protocol/envelope';
 import { discoverPlugins, type DiscoveryRepos } from './install/discovery';
+import { enqueueHookUserDataErasures } from './user-erasure-enqueue';
 import { parseJsonText, parseManifest, parseMcpToolCapabilities } from './install/manifest';
 import { scanForNativeBinaries } from './install/native-scan';
 import { devLinkEnabled, DEV_LINK_SOURCE } from './dev-link';
@@ -502,11 +503,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   private async enqueueUserErasure(userId: number): Promise<void> {
     try {
       const rows = await this.plugins.listIdsAndPermissions();
-      for (const r of rows) {
-        let perms: unknown;
-        try { perms = JSON.parse(r.permissions ?? '[]'); } catch { perms = []; }
-        if (Array.isArray(perms) && perms.includes('hook:user-data')) await this.pluginUserErasureQueue.insertIgnore(r.id, userId);
-      }
+      await enqueueHookUserDataErasures(this.pluginUserErasureQueue, rows, userId); // Plan 4 Task 8a — shared with UserCleanupService.erasePluginUserData
     } catch {
       /* enqueue is best-effort; a later sweep reconciles from whatever landed */
     }

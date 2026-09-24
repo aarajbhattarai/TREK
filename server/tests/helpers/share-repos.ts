@@ -8,6 +8,10 @@ import { createTestPackingItemsRepo } from './packing-repos';
 import { createTestCollabMessagesRepo } from './collab-repos';
 import { ShareTokens } from '../../src/db/entities/ShareTokens.entity';
 import type { ShareTokensRepository } from '../../src/db/repositories/ShareTokens.repository';
+import { Plugins } from '../../src/db/entities/Plugins.entity';
+import type { PluginsRepository } from '../../src/db/repositories/Plugins.repository';
+import { PluginUserErasureQueue } from '../../src/db/entities/PluginUserErasureQueue.entity';
+import type { PluginUserErasureQueueRepository } from '../../src/db/repositories/PluginUserErasureQueue.repository';
 import type { ReservationsRepository } from '../../src/db/repositories/Reservations.repository';
 import type { TripsRepository } from '../../src/db/repositories/Trips.repository';
 import type { DaysRepository } from '../../src/db/repositories/Days.repository';
@@ -34,6 +38,21 @@ import type { CollabMessagesRepository } from '../../src/db/repositories/CollabM
  */
 export function createTestShareTokensRepo(db: Database.Database): Promise<ShareTokensRepository> {
   return sharedTestOrm(db).then((t) => t.repo(ShareTokens));
+}
+
+/**
+ * Plan 4 Task 8a — `UserCleanupService.erasePluginUserData`'s UC2/UC3
+ * erasure-enqueue half, converted off `DatabaseService` onto these two
+ * repositories (shared with `PluginRuntimeService.enqueueUserErasure` via
+ * `enqueueHookUserDataErasures`). Same `sharedTestOrm` factory shape as
+ * `createTestShareTokensRepo` above.
+ */
+export function createTestPluginsRepo(db: Database.Database): Promise<PluginsRepository> {
+  return sharedTestOrm(db).then((t) => t.repo(Plugins));
+}
+
+export function createTestPluginUserErasureQueueRepo(db: Database.Database): Promise<PluginUserErasureQueueRepository> {
+  return sharedTestOrm(db).then((t) => t.repo(PluginUserErasureQueue));
 }
 
 /**

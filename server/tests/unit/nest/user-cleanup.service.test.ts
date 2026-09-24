@@ -60,7 +60,7 @@ import { budgetRepoArgs } from '../../helpers/budget-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourneyContributorsRepo } from '../../helpers/journey-repos';
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
-import { createTestShareTokensRepo } from '../../helpers/share-repos';
+import { createTestShareTokensRepo, createTestPluginsRepo, createTestPluginUserErasureQueueRepo } from '../../helpers/share-repos';
 
 const dbs = new DatabaseService(testDb);
 
@@ -87,6 +87,9 @@ beforeAll(async () => {
     await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
     // Plan 3h Task 6 constructor-ripple: UC6's repository.
     await createTestShareTokensRepo(dbs.connection),
+    // Plan 4 Task 8a constructor-ripple: UC2/UC3's repositories.
+    await createTestPluginsRepo(dbs.connection),
+    await createTestPluginUserErasureQueueRepo(dbs.connection),
   );
 });
 
@@ -195,6 +198,13 @@ describe('erasePluginUserData', () => {
       // never touches it, but MikroORM's entity metadata does not require the
       // physical table to exist to construct the repository object itself).
       await createTestShareTokensRepo(slim),
+      // Plan 4 Task 8a: also real repositories, not stubs — `erasePluginUserData`
+      // DOES call into these two (UC2/UC3), and this test's whole point is that
+      // the query against the missing table throws and is caught, the same
+      // "table absent (slim schema)" outer try/catch as before, not a
+      // constructor-time failure.
+      await createTestPluginsRepo(slim),
+      await createTestPluginUserErasureQueueRepo(slim),
     );
 
     await expect(slimSvc.erasePluginUserData(1)).resolves.toBeUndefined();
@@ -332,6 +342,7 @@ describe('deleteUserCompletely', () => {
         await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb),
         await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb),
         await createTestShareTokensRepo(testDb),
+        await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb),
       ).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
 
       expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeDefined();

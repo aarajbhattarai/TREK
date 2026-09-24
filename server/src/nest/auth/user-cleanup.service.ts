@@ -24,6 +24,11 @@ import { JourneyContributors } from '../../db/entities/JourneyContributors.entit
 import type { JourneyContributorsRepository } from '../../db/repositories/JourneyContributors.repository';
 import { ShareTokens } from '../../db/entities/ShareTokens.entity';
 import type { ShareTokensRepository } from '../../db/repositories/ShareTokens.repository';
+import { Plugins } from '../../db/entities/Plugins.entity';
+import type { PluginsRepository } from '../../db/repositories/Plugins.repository';
+import { PluginUserErasureQueue } from '../../db/entities/PluginUserErasureQueue.entity';
+import type { PluginUserErasureQueueRepository } from '../../db/repositories/PluginUserErasureQueue.repository';
+import { enqueueHookUserDataErasures } from '../plugins/user-erasure-enqueue';
 
 /**
  * Account erasure — everything that has to happen around `DELETE FROM users`
@@ -55,6 +60,10 @@ export class UserCleanupService {
     @InjectRepository(JourneyContributors) private readonly journeyContributorsRepo: JourneyContributorsRepository,
     // Plan 3h Task 6 (UC6, R10) — the genuinely-share GDPR-erasure delete.
     @InjectRepository(ShareTokens) private readonly shareTokensRepo: ShareTokensRepository,
+    // Plan 4 Task 8a — UC2/UC3's erasure-enqueue half only (see erasePluginUserData's
+    // own docstring for why this narrows the Plan 3b Task 5 "stays raw" ruling).
+    @InjectRepository(Plugins) private readonly pluginsRepo: PluginsRepository,
+    @InjectRepository(PluginUserErasureQueue) private readonly pluginUserErasureQueueRepo: PluginUserErasureQueueRepository,
   ) {}
 
   /**
@@ -68,27 +77,34 @@ export class UserCleanupService {
    * Best-effort per table so a slimmed-down schema (some tests) can't fail the user
    * deletion itself.
    *
-   * UC1 (`plugin_user_config`/`plugin_oauth_tokens`/`plugin_oauth_state`),
-   * UC2 (`plugins`) and UC3 (`plugin_user_erasure_queue`) stay raw
-   * `DatabaseService` calls — every one of these tables is owned by
+   * UC1 (`plugin_user_config`/`plugin_oauth_tokens`/`plugin_oauth_state`)
+   * stays a raw `DatabaseService` call — that table trio is owned by
    * `nest/plugins`, which lands in Plan 3j, not this plan (Plan 3b Task 5
    * ruling; inventory §6 "the single largest 'stays raw' carve-out in Plan
-   * 3b"). Only `DELETE FROM users` below (UC11) is this domain's own and
-   * converts.
+   * 3b"), and nothing about this method's OTHER half needs it converted.
+   *
+   * UC2 (`plugins`) and UC3 (`plugin_user_erasure_queue`) — the erasure-
+   * ENQUEUE half — narrow that ruling (Plan 4 Task 8a): this method's queue
+   * writes were an independent re-implementation of the exact same
+   * `SELECT id, permissions FROM plugins` + `hook:user-data` filter +
+   * `INSERT OR IGNORE` that `PluginRuntimeService.enqueueUserErasure` (the
+   * `emitUserDeleted` sink's post-commit half — every account-deletion call
+   * site fires BOTH) already ran a second time for the very same user.
+   * Converted onto `PluginsRepository`/`PluginUserErasureQueueRepository` so
+   * both paths can share `enqueueHookUserDataErasures` (Plan 4 Task 8a) —
+   * ONE implementation of the filter, not two silently drifting copies. The
+   * orphan-directory scan below (a plugin uninstalled with its data
+   * retained) has no equivalent on the `enqueueUserErasure` side and is kept
+   * here, now via the same repository.
    */
   async erasePluginUserData(userId: number): Promise<void> {
     for (const table of ['plugin_user_config', 'plugin_oauth_tokens', 'plugin_oauth_state']) {
       try { this.db.run(`DELETE FROM ${table} WHERE user_id = ?`, userId); } catch { /* table absent (slim schema) */ } // UC1 — Plan 3j
     }
     try {
-      const rows = this.db.all<{ id: string; permissions: string | null }>('SELECT id, permissions FROM plugins'); // UC2 — Plan 3j
+      const rows = await this.pluginsRepo.listIdsAndPermissions(); // UC2 — Plan 4 Task 8a
       const installed = new Set(rows.map((r) => r.id));
-      const insert = this.db.prepare('INSERT OR IGNORE INTO plugin_user_erasure_queue (plugin_id, user_id) VALUES (?, ?)'); // UC3 — Plan 3j
-      for (const r of rows) {
-        let perms: unknown;
-        try { perms = JSON.parse(r.permissions ?? '[]'); } catch { perms = []; }
-        if (Array.isArray(perms) && perms.includes('hook:user-data')) insert.run(r.id, userId);
-      }
+      await enqueueHookUserDataErasures(this.pluginUserErasureQueueRepo, rows, userId); // UC3 — Plan 4 Task 8a
       // Also enqueue for plugins UNINSTALLED with their data retained (deleteData=false):
       // their data dir still holds the user's rows and a same-id reinstall would re-adopt
       // them. No permissions record survives uninstall, so we can't check hook:user-data —
@@ -96,7 +112,7 @@ export class UserCleanupService {
       // that id is reinstalled + active (erasure delivery is a duty, not grant-gated).
       try {
         for (const entry of fs.readdirSync(pluginsDataRoot(), { withFileTypes: true })) {
-          if (entry.isDirectory() && !installed.has(entry.name)) insert.run(entry.name, userId);
+          if (entry.isDirectory() && !installed.has(entry.name)) await this.pluginUserErasureQueueRepo.insertIgnore(entry.name, userId);
         }
       } catch { /* no plugin data root yet */ }
     } catch { /* plugins / queue table absent (slim schema) */ }
