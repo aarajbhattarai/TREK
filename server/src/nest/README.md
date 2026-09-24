@@ -34,8 +34,10 @@ remains as the platform underneath `@nestjs/platform-express`.
   unified, photo-resolver, thumbnails, trek-photo cache), journey, journeyShare
   — see the migration recipe below.
 - **Foundation (BE-Phase 1, complete):** the eight stateless helpers moved to
-  `common/`; every trip-access check routes through `DatabaseService`
-  (`services/tripAccess.ts` and the dead `middleware/tripAccess.ts` are gone);
+  `common/`; every trip-access check routes through a repository
+  (`services/tripAccess.ts` and the dead `middleware/tripAccess.ts` are gone;
+  `DatabaseService`, the facade BE-Phase 1 originally routed this through, was
+  itself retired by the later ORM migration — see the root/server `CLAUDE.md`);
   `queryHelpers` and `tripMembership` are providers; every cron is a domain
   `*.job.ts` provider on `scheduling/CronRegistrarService` (`src/scheduler.ts`
   is deleted).
@@ -103,8 +105,9 @@ tools, which never pass through an HTTP guard. In the five domains piloted for
   middleware, which is deleted; this is the only implementation.
 - `common/` — the stateless helpers (`avatarUrl`, `conflictResult`, `demo`,
   `passwordPolicy`, `timezoneService`, `cookie`, `rowShape`, `geo`, `crypto/`).
-  Free functions, not providers: `db/migrations.ts` imports them from outside the
-  container and could not inject one. `geo.ts` holds the two haversines; there
+  Free functions, not providers: the numbered migrations in `db/migrations/`
+  (e.g. the plaintext-secret encryption steps) and `demo/demo-seed.ts` import
+  them from outside the container and could not inject one. `geo.ts` holds the two haversines; there
   were three implementations of the metre variant, differing by one clamp, and
   the clamped form is the one kept — `asin` of a value a hair over 1 is NaN, and
   a NaN distance silently fails every comparison it feeds instead of throwing.
@@ -169,9 +172,10 @@ tools, which never pass through an HTTP guard. In the five domains piloted for
     entries into one and drop the stricter of the two.
 - `realtime/` — the /ws transport, as a Nest gateway.
   - `realtime.gateway.ts` owns the connection lifecycle and the handshake, with
-    `DatabaseService` and `EphemeralTokenService` injected instead of imported.
-    It replaced `setupWebSocket(server)`, which index.ts kicked off with a
-    dynamic import after listen().
+    `TripsRepository`/`UsersRepository`/`AppSettingsRepository` and
+    `EphemeralTokenService` injected instead of imported (Plan 4 converted it
+    off the deleted `DatabaseService`). It replaced `setupWebSocket(server)`,
+    which index.ts kicked off with a dynamic import after listen().
   - `ws-state.ts` holds the socket registry, and that is **module state on
     purpose**. The no-Nest test harnesses build `new RealtimeService()`
     outside the container and 115 test files `vi.mock` the `src/websocket`
@@ -507,6 +511,13 @@ unit test → module registered in `app.module.ts` → **then** decommission the
 service (separate step) → frontend points at the typed contract (Frontend Track).
 
 ## Migrating a legacy `src/services/*` service into its Nest module (recipe)
+
+**Historical record.** `src/services/` finished emptying in 2026-08 (see above);
+the numbered steps below describe how each fold was actually done at the time,
+including its `DatabaseService` construction — a deliberate changelog, not a
+recipe to follow for new code. `DatabaseService` itself is gone (ORM migration
+Plan 4): a service now takes the repositories it needs plus `UnitOfWork` for
+transactions, per the root and server `CLAUDE.md`'s DB sections.
 
 Pilot: **tags** (`services/tagService.ts` → `nest/tags/tags.service.ts` +
 `nest/tags/tags.bridge.ts`); categories followed the same shape (and piloted the
