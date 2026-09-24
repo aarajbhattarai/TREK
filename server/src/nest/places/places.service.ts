@@ -189,10 +189,26 @@ export class PlacesService {
    * writes behind this gate (`toRowId(tripId) ?? -1`) then refused, or sent
    * a bare `NaN` into `TripsRepository.findAccessible`'s raw bind and 500'd
    * (fixed program-wide at the platform too — see `NulSafeSqlitePlatform`).
-   * Parsing ONCE, here, and returning the parsed `tid` for every downstream
-   * call to reuse (never re-parsing) closes both: a non-canonical trip id
-   * now answers this gate's own 404 before any read or write runs, and every
-   * write behind it shares the exact id the gate authorised.
+   * Parsing here answers this gate's own 404 before any read or write runs.
+   *
+   * **The returned `tid` is NOT threaded to every downstream call, despite
+   * an earlier version of this docstring claiming it was** (Plan 4 Task 8a,
+   * L-2 — confirmed false by reading every call site, not assumed): `.tid`
+   * has exactly one reader today, `PlacesController.requireTrip` itself
+   * (`places.controller.ts:122`), which discards it — `requireTrip` returns
+   * the WHOLE `trip` object to its 13 callers, none of which read `.tid`
+   * off it; every one instead passes the ORIGINAL raw `tripId` string on to
+   * the write/read method it calls next (`create(tripId, …)`,
+   * `importGpx(tripId, …)`, …), which `toRowId`-parses it AGAIN itself.
+   * That second parse is not a bug this gate can close by itself: those
+   * same methods are also called directly by `places.mcp.ts` (an entry
+   * point with no `requireTrip` gate at all — its own `tripId: number`
+   * input is re-stringified, `String(tripId)`, to call them), so each
+   * method owns its own id validation regardless of which entry point
+   * reached it, and `tid` alone cannot remove that. Threading it all the
+   * way through would mean giving every one of those methods a second,
+   * number-only call shape for the REST path to use instead of its shared
+   * string-taking one — a real refactor, out of this gate's own scope.
    */
   async verifyTripAccess(tripId: string, userId: number): Promise<(TripAccess & { tid: number }) | undefined> {
     const tid = toRowId(tripId);
