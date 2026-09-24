@@ -233,6 +233,11 @@ export class JourneyPhotosRepository extends TrekRepository<JourneyPhotos> {
       .select((eb) => eb.fn.max<number | null>('sort_order').as('m'))
       .where('journey_id', '=', journeyId)
       .executeTakeFirst();
+    // Plan 4 Task 8b: `row?.` is unreachable — an unqualified, ungrouped
+    // `MAX(...)` always returns exactly one row, so `executeTakeFirst()`
+    // can't actually miss here. Kept for type-shape symmetry with
+    // `executeTakeFirst()`'s `| undefined` return type, same accepted class
+    // as `OauthClients:147`. `row.m` itself genuinely can be `null`.
     return row?.m ?? null;
   }
 

@@ -46,6 +46,12 @@ export class VacayEntriesRepository extends TrekRepository<VacayEntries> {
       .where('date', '>=', start)
       .where('date', '<', end)
       .executeTakeFirst();
+    // Plan 4 Task 8b: both `row?.` AND `?? 0` are unreachable here — an
+    // unqualified, ungrouped `COALESCE(SUM(...), 0)` always returns exactly
+    // one row with a non-null value (the `COALESCE` already resolves the
+    // "no matching rows" case to `0` at the SQL level). Kept for type-shape
+    // symmetry with `executeTakeFirst()`'s `| undefined` return type, same
+    // accepted class as `OauthClients:147`.
     return row?.used ?? 0;
   }
 
@@ -60,6 +66,9 @@ export class VacayEntriesRepository extends TrekRepository<VacayEntries> {
       .where('date', '<', end)
       .where('kind', '=', 'comp')
       .executeTakeFirst();
+    // Plan 4 Task 8b: same unreachable `row?.`/`?? 0` shape as {@link
+    // sumFraction} above — `COALESCE(SUM(...), 0)` never returns a NULL
+    // value or a missing row for an unqualified, ungrouped aggregate.
     return row?.used ?? 0;
   }
 

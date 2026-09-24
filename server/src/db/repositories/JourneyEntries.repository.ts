@@ -232,6 +232,14 @@ export class JourneyEntriesRepository extends TrekRepository<JourneyEntries> {
       .where('journey_id', '=', journeyId)
       .where('entry_date', '=', entryDate)
       .executeTakeFirst();
+    // Plan 4 Task 8b: `row?.` is unreachable — an unqualified, ungrouped
+    // `MAX(...)` always returns exactly one row (NULL `m` when nothing
+    // matches, never zero rows), so `executeTakeFirst()` can't actually miss
+    // here. Kept for type-shape symmetry with `executeTakeFirst()`'s
+    // `| undefined` return type (same accepted class as `OauthClients:147`
+    // — see that file's own docstring for the precedent), not dead by
+    // mistake. `row.m` itself genuinely can be `null` (no matching rows),
+    // so the `?? null` is real, not defensive filler.
     return row?.m ?? null;
   }
 
@@ -434,6 +442,11 @@ export class JourneyEntriesRepository extends TrekRepository<JourneyEntries> {
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .where('jt.journey_id', '=', journeyId)
       .executeTakeFirst();
+    // Plan 4 Task 8b: both `row?.` AND `?? 0` are unreachable here — an
+    // unqualified, ungrouped `COUNT(*)` always returns exactly one row, and
+    // `COUNT` itself never returns `NULL` (zero matches is a real `0`, not
+    // an absent row). Kept for type-shape symmetry with `executeTakeFirst()`
+    // `| undefined` return type, same accepted class as `OauthClients:147`.
     return row?.n ?? 0;
   }
 
