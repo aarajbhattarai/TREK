@@ -220,6 +220,35 @@ describe('trip feed token lifecycle', () => {
     // Proven directly at the repository too — the affected count IS the 0-row signal.
     expect(await tripsRepo.setFeedTokenIfReachable(trip.id, stranger.id, mintedToken)).toBe(0);
   });
+
+  // R7 (task-7-review.md L4 / 3d ledger's carry): FD1 (`getFeedTokenIfReachable`,
+  // the "does one exist" check) and FD2 (`setFeedTokenIfReachable`, the write)
+  // are two un-transacted statements. Two concurrent `generateTripToken` calls
+  // for the same reachable trip with no existing token both read "none" at
+  // FD1, so both mint a DISTINCT token, and both write — the last write wins
+  // (FD2 is an unconditional UPDATE, not a conflict-checked upsert), so only
+  // one of the two minted URLs ever resolves. Pinning today's actual outcome
+  // (same class as `roadtrip.service.test.ts`'s R7 vias pin), not a fix.
+  it('R7: two concurrent generateTripToken calls both mint, but only the last write survives — the other caller\'s URL never resolves (unserialized FD1-then-FD2)', async () => {
+    const { user, trip } = seedTrip(); // no token yet
+
+    const [r1, r2] = await Promise.all([
+      svc.generateTripToken(trip.id, user.id, BASE),
+      svc.generateTripToken(trip.id, user.id, BASE),
+    ]);
+
+    const token1 = r1.feed_url.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
+    const token2 = r2.feed_url.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
+    // FD1 saw no token for either caller, so two distinct tokens were minted.
+    expect(token1).not.toBe(token2);
+
+    const stored = (testDb.prepare('SELECT feed_token FROM trips WHERE id = ?').get(trip.id) as { feed_token: string | null }).feed_token;
+    expect([token1, token2]).toContain(stored);
+    const loser = stored === token1 ? token2 : token1;
+    // The loser's URL is well-formed, but resolves nothing.
+    expect(await svc.buildTripIcs(loser)).toBeNull();
+    expect(await svc.buildTripIcs(stored!)).not.toBeNull();
+  });
 });
 
 // ── User (all-trips) feed token ───────────────────────────────────────────────

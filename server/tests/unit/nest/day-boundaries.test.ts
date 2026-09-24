@@ -103,6 +103,31 @@ it('REST changes broadcast the complete state and exclude the saving socket', as
   expect(await controller.remove(String(tripA.id), 1)).toEqual({ boundaries: [] });
 });
 
+// R7 (task-7-review.md L4 / 3d ledger's carry): `save`'s ownership check
+// (RB2 `belongs`) and its upsert (RB3) are two un-transacted statements, the
+// same class of race as `roadtrip.service.test.ts`'s R7 vias pin. Both
+// concurrent callers pass their own `belongs` check independently (neither
+// references the other's write), then race on `upsertBoundary`'s single
+// `ON CONFLICT (trip, day_number) DO UPDATE` — that statement is atomic, so
+// the row can never end up a hybrid of the two payloads; exactly one caller's
+// fraction survives. Pinning today's actual outcome, not a fix.
+it('R7: two concurrent saves for the same day_number both succeed; the upsert leaves one caller\'s row intact, never a hybrid (unserialized belongs-check-then-upsert)', async () => {
+  const { service, tripA, fromId, toId } = setup();
+  const boundaryA = { day_number: 1, from_assignment_id: fromId, to_assignment_id: toId, fraction: 0.25 };
+  const boundaryB = { day_number: 1, from_assignment_id: fromId, to_assignment_id: toId, fraction: 0.75 };
+
+  const results = await Promise.allSettled([
+    service.save(tripA.id, boundaryA),
+    service.save(tripA.id, boundaryB),
+  ]);
+
+  expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
+  const rows = await service.list(tripA.id);
+  // No duplicate row from the race, and no hybrid of the two fractions.
+  expect(rows).toHaveLength(1);
+  expect([0.25, 0.75]).toContain(rows[0].fraction);
+});
+
 it('MCP checks demo, trip access and edit permission before saving', async () => {
   const s = setup();
   const ctx = { userId: 1 } as McpContext;
