@@ -306,14 +306,14 @@ describe('TripMembersRepository.addIgnoringConflict / remove (TM8/TM14/TM15, sec
     await expect(tripMembers.remove(trip.id, 999999)).resolves.toBeUndefined();
   });
 
-  it('TMEMREPO-023: remove binds a string trip id raw, the same seam rosterUserIds/listUserIdsByTrip document', async () => {
-    const { user: owner } = createUser(testDb);
-    const { user: member } = createUser(testDb);
-    const trip = createTrip(testDb, owner.id);
-    addTripMember(testDb, trip.id, member.id);
-    await tripMembers.remove(String(trip.id), member.id);
-    expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, member.id)).toBeUndefined();
-  });
+  // TMEMREPO-023 used to pin remove's `number | string` raw-bind seam on
+  // `trip_id` (`remove(String(trip.id), ...)`) — retired by Plan 4 Task 8a's
+  // narrowing to `trip_id: number` (its own docstring covers why: its last
+  // raw-string caller, TripMembersController.removeMember, now parses its
+  // route param once itself). `String(trip.id)` no longer typechecks
+  // against `remove`'s signature, so there is nothing left to pin here.
+  // `user_id` keeps its own raw bind (TMEMREPO-024 below), a different,
+  // still-live seam — see remove's own docstring.
 });
 
 // Rule 15's exact trap, caught on a compiled boot (`DELETE /api/trips/:id/

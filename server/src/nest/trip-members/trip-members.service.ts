@@ -170,7 +170,14 @@ export class TripMembersService {
     };
   }
 
-  async removeMember(tripId: string | number, targetUserId: number): Promise<void> {
+  /**
+   * `tripId: number` (Plan 4 Task 8a — narrowed from `string | number`):
+   * every caller now passes an already-parsed id — `trips.rpc.ts`'s `num()`,
+   * `trips.mcp.ts`'s Zod-typed tool input, and `TripMembersController
+   * .removeMember`'s own `toRowId` parse (added alongside this narrowing,
+   * the route's one remaining raw-string caller).
+   */
+  async removeMember(tripId: number, targetUserId: number): Promise<void> {
     await this.tripMembersRepo.remove(tripId, targetUserId);
   }
 
@@ -202,15 +209,15 @@ export class TripMembersService {
 
     // Task 9 fix wave (B-L4 / A-L1): all THREE writes below now take
     // `trip.id` — the real `number` `findIdTitleOwner` already resolved
-    // above, not the route's raw `tripId` string. The comment this replaces
+    // above, not the route's raw `tripId` string. The comment this replaced
     // claimed "`Number(tripId)` at the two writes below", but only
     // `addIgnoringConflict` (which requires a real `Primary<Trips>`) ever
-    // did that; `setOwner`/`remove` kept binding the unconverted string —
-    // not a live divergence (both repository methods document and test
-    // that raw-bind seam for their OTHER callers, so their signatures stay
-    // `number | string`), but the letter of rule 21 says one id, parsed
-    // once, threaded everywhere — and `trip.id` is already sitting right
-    // here, already proven to be the real row.
+    // did that; `setOwner`/`remove` used to keep binding the unconverted
+    // string for their OTHER callers' sake. Plan 4 Task 8a narrowed both to
+    // `number` (their last raw-string caller, `TripMembersController
+    // .removeMember`, now parses once itself) — the letter of rule 21 says
+    // one id, parsed once, threaded everywhere, and `trip.id` is already
+    // sitting right here, already proven to be the real row.
     await this.uow.transactional(async () => {
       await this.tripsRepo.setOwner(trip.id, newOwnerId);
       // The new owner is no longer a plain member…

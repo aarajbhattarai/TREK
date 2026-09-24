@@ -309,16 +309,16 @@ export class TripsRepository extends TrekRepository<Trips> {
   /**
    * `UPDATE trips SET user_id = ? WHERE id = ?` (`trip-members.service.ts:196`,
    * TM13) — security-sensitive: the ownership handover itself, the first of
-   * `transferOwnership`'s three transactional statements. `qb().update()`
-   * rather than `nativeUpdate`: `nativeUpdate`'s typed `FilterQuery` rejects
-   * a `string` against `id`'s branded `number` type the same way `find`'s
-   * does, and `trip_id` here is still the route's unconverted string.
+   * `transferOwnership`'s three transactional statements. `trip_id: number`
+   * (Plan 4 Task 8a, narrowed from `number | string`): its one production
+   * caller already passes `trip.id`, the real row `findIdTitleOwner`
+   * resolved earlier in the same transaction, never the route's raw string
+   * (see `transferOwnership`'s own comment on why). `nativeUpdate`, typed
+   * filter throughout — nothing here needs the raw-bind escape hatch any
+   * more.
    */
-  async setOwner(trip_id: number | string, user_id: number): Promise<void> {
-    await this.qb('t')
-      .update({ user: user_id })
-      .where('t.id = ?', [trip_id])
-      .execute('run');
+  async setOwner(trip_id: number, user_id: number): Promise<void> {
+    await this.nativeUpdate({ id: trip_id }, { user: user_id });
   }
 
   /**

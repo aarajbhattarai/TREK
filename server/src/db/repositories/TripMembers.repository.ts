@@ -231,12 +231,16 @@ export class TripMembersRepository extends TrekRepository<TripMembers> {
    * `DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?`
    * (`trip-members.service.ts:166`, TM8 `removeMember`; `:198`, TM14
    * `transferOwnership`'s "no longer a plain member" step —
-   * security-sensitive). Raw-bind on BOTH `trip_id` and `user_id` — not just
-   * `trip_id` (D4's T5 escape hatch, the same `number | string` seam
-   * `rosterUserIds`/`listUserIdsByTrip` above preserve): `TripMembersController
-   * .removeMember` still does a bare `Number.parseInt(userId)` on the route's
-   * `:userId` before calling this, unvalidated (rule 15's exact trap — a
-   * non-numeric id parses to `NaN`).
+   * security-sensitive). `trip_id: number` (Plan 4 Task 8a, narrowed from
+   * `number | string` — its last raw-string caller,
+   * `TripMembersController.removeMember`, now parses its route param once
+   * itself before calling this), so `trip_id` is a typed `.where({ trip:
+   * trip_id })` filter below; `user_id` stays a raw `m.user_id = ?`
+   * placeholder — NOT the same seam, a different reason entirely:
+   * `TripMembersController.removeMember` still does a bare
+   * `Number.parseInt(userId)` on the route's `:userId`, unvalidated (rule
+   * 15's exact trap — a non-numeric id parses to `NaN`), and a typed filter
+   * cannot carry a `NaN` through this ORM layer intact (see below).
    *
    * **`Number.isFinite` guard, checked directly against a compiled boot, not
    * assumed:** a typed `.andWhere({ user: user_id })` filter renders `NaN` as
@@ -257,11 +261,11 @@ export class TripMembersRepository extends TrekRepository<TripMembers> {
    * that, byte for byte, since neither the typed filter nor the raw
    * placeholder route can pass `NaN` through the ORM layer intact.
    */
-  async remove(trip_id: number | string, user_id: number): Promise<void> {
+  async remove(trip_id: number, user_id: number): Promise<void> {
     if (!Number.isFinite(user_id)) return;
     await this.qb('m')
       .delete()
-      .where('m.trip_id = ?', [trip_id])
+      .where({ trip: trip_id })
       .andWhere('m.user_id = ?', [user_id])
       .execute('run');
   }

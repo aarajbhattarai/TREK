@@ -193,13 +193,12 @@ describe('TripsRepository — TripMembersService / TripReadModelService (Plan 3c
     expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(newOwner.id);
   });
 
-  it('TRIPREPO-018: setOwner binds a string trip id raw — the same seam its docstring documents', async () => {
-    const { user: owner } = createUser(testDb);
-    const { user: newOwner } = createUser(testDb);
-    const trip = createTrip(testDb, owner.id);
-    await trips.setOwner(String(trip.id), newOwner.id);
-    expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(newOwner.id);
-  });
+  // TRIPREPO-018 used to pin setOwner's `number | string` raw-bind seam
+  // (`setOwner(String(trip.id), ...)`) — retired by Plan 4 Task 8a's
+  // narrowing to `trip_id: number` (its own docstring covers why: its one
+  // production caller already passes a real `trip.id` number, never the
+  // route's raw string). `String(trip.id)` no longer typechecks against
+  // `setOwner`'s signature, so there is nothing left to pin here.
 
   describe('findRaw (TR-B, shared with TripsService.getRaw once Task 7 lands)', () => {
     it('TRIPREPO-019: every scalar column comes back, feed_token included (the JS strip is the caller\'s job)', async () => {

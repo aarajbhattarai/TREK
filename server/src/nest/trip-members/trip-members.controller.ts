@@ -21,6 +21,7 @@ import { RequireTripOwner, TripOwnerGuard } from '../permissions/trip-owner.guar
 import { getClientIp } from '../audit/client-ip';
 import { AuditService } from '../audit/audit.service';
 import { NotFoundError, ValidationError } from '../common/domain-errors';
+import { toRowId } from '../common/row-id';
 import { TripAddMemberDto, TripTransferOwnershipDto, TripCreateGuestDto, TripRenameGuestDto } from '../trips/trips.dto';
 
 /**
@@ -80,7 +81,16 @@ export class TripMembersController {
 
   @Delete(':id/members/:userId')
   async removeMember(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string) {
-    const access = await this.roster.canAccessTrip(id, user.id);
+    // Plan 4 Task 8a — parsed ONCE here (toRowId, not Number(): rule 15's
+    // NaN-into-SQL trap), and the parsed number is what both the access
+    // check and the removal itself use below — this route has no class-level
+    // TripAccessGuard (this controller's own docstring explains why), so it
+    // owns this parse itself rather than inheriting the guard's.
+    const tripId = toRowId(id);
+    if (tripId === null) {
+      throw new HttpException({ error: 'Trip not found' }, 404);
+    }
+    const access = await this.roster.canAccessTrip(tripId, user.id);
     if (!access) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
@@ -88,7 +98,7 @@ export class TripMembersController {
     if (targetId !== user.id && !(await this.roster.can('member_manage', user.role, access.user_id, user.id, access.user_id !== user.id))) {
       throw new HttpException({ error: 'No permission to remove members' }, 403);
     }
-    await this.roster.removeMember(id, targetId);
+    await this.roster.removeMember(tripId, targetId);
     return { success: true };
   }
 
