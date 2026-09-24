@@ -158,10 +158,10 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
-  const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
+  const budget = new BudgetService(permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
   const addons = await createTestAddonsService(dbs.connection, dbs);
   const queryHelpers = new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection));
-  const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection), await createTestTodoItemsRepo(dbs.connection), await createTestTodoCategoryAssigneesRepo(dbs.connection), await createTestTripsRepo(dbs.connection));
+  const todos = new TodoService(permissions, realtime, await createTestUnitOfWork(dbs.connection), await createTestTodoItemsRepo(dbs.connection), await createTestTodoCategoryAssigneesRepo(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection));
   const packing = new PackingService(
     dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection),
     await createTestPackingItemsRepo(dbs.connection), await createTestPackingItemContributorsRepo(dbs.connection), await createTestPackingBagsRepo(dbs.connection),
@@ -266,7 +266,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const pluginOrm = await sharedTestOrm(dbs.connection);
   const oauth = new PluginOAuthService(pluginOrm.repo(Plugins), pluginOrm.repo(PluginOauthTokens), pluginOrm.repo(PluginOauthState), pluginOrm.repo(PluginSettingsFields));
   const accommodations = new AccommodationsService(
-    dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
+    permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
     await createTestTripsRepo(dbs.connection),
     await createTestDayAccommodationsRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),

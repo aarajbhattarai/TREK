@@ -41,7 +41,6 @@ vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
 const mockRates = { getRates: vi.fn() };
 
 import { BudgetService } from '../../../src/nest/budget/budget.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import type { BudgetItem, BudgetItemMember, BudgetItemPayer } from '../../../src/types';
@@ -105,7 +104,6 @@ const tripsRepoStub = {
 } as unknown as import('../../../src/db/repositories/Trips.repository').TripsRepository;
 
 const budget = new BudgetService(
-  new DatabaseService(mockDb.db as unknown as Database.Database),
   permissionsStub,
   mockRates as unknown as ExchangeRatesService,
   new RealtimeService(),
@@ -118,6 +116,7 @@ const budget = new BudgetService(
   {} as unknown as import('../../../src/db/repositories/Reservations.repository').ReservationsRepository,
   {} as unknown as import('../../../src/db/repositories/Places.repository').PlacesRepository,
   tripsRepoStub,
+  {} as unknown as import('../../../src/db/repositories/TripMembers.repository').TripMembersRepository,
 );
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

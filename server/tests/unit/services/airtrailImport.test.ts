@@ -44,7 +44,7 @@ async function makeImportService(): Promise<AirtrailImportService> {
     realtime,
     new ReservationsService(
       permissions,
-      new BudgetService(dbs(), permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection))),
+      new BudgetService(permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection))),
       realtime,
       notificationsStub(),
       new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)),

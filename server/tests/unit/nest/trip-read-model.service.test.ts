@@ -136,7 +136,7 @@ beforeAll(async () => {
     await createTestPlacesRepo(dbs().connection),
     await createTestCollectionPlacesRepo(dbs().connection),
   );
-  budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
+  budgetSvc = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
   daysSvc = new DaysService(
     new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
     new RealtimeService(),
@@ -196,11 +196,14 @@ const buildReadModel = async (tripsRepo: TripsRepository, roster: TripMembersSer
     ),
     placesSvc,
     new TodoService(
-      dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection),
+      new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection),
       await createTestTodoItemsRepo(dbs().connection), await createTestTodoCategoryAssigneesRepo(dbs().connection),
       // Plan 4 Task 2 — TodoService's own canAccessTrip delegate is now
       // TripsRepository.findAccessible, a new trailing constructor param.
       await createTestTripsRepo(dbs().connection),
+      // Plan 4 Task 3 — DatabaseService.rosterUserIds inlined onto
+      // TripMembersRepository.rosterUserIds directly.
+      await createTestTripMembersRepo(dbs().connection),
     ),
     new FilesService(
       // Plan 4 Task 2 — FilesService's own canAccessTrip delegate is now

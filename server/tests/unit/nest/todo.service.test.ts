@@ -41,11 +41,10 @@ vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { TodoService } from '../../../src/nest/todo/todo.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestTripsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo } from '../../helpers/test-uow';
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
 
 let svc: TodoService;
@@ -54,11 +53,14 @@ beforeAll(async () => {
   const uow = await createTestUnitOfWork(testDb);
   todoItemsRepoDirect = await createTestTodoItemsRepo(testDb);
   svc = new TodoService(
-    await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow,
+    new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow,
     todoItemsRepoDirect, await createTestTodoCategoryAssigneesRepo(testDb),
     // Plan 4 Task 2 — TodoService's own canAccessTrip delegate is now
     // TripsRepository.findAccessible, a new trailing constructor param.
     await createTestTripsRepo(testDb),
+    // Plan 4 Task 3 — DatabaseService.rosterUserIds inlined onto
+    // TripMembersRepository.rosterUserIds directly.
+    await createTestTripMembersRepo(testDb),
   );
 });
 
@@ -397,9 +399,9 @@ describe('TodoService.canEdit', () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
     const withStub = new TodoService(
-      new DatabaseService(testDb), permissions, new RealtimeService(), await createTestUnitOfWork(testDb),
+      permissions, new RealtimeService(), await createTestUnitOfWork(testDb),
       await createTestTodoItemsRepo(testDb), await createTestTodoCategoryAssigneesRepo(testDb),
-      await createTestTripsRepo(testDb),
+      await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb),
     );
     const trip = { id: 1, user_id: 1 } as never;
 

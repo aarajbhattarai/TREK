@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { sharedTestOrm, createTestReservationsRepo, createTestPlacesRepo, createTestTripsRepo } from './test-uow';
+import { sharedTestOrm, createTestReservationsRepo, createTestPlacesRepo, createTestTripsRepo, createTestTripMembersRepo } from './test-uow';
 import { createTestBudgetItemsRepo } from './files-repos';
 import { BudgetItemMembers } from '../../src/db/entities/BudgetItemMembers.entity';
 import type { BudgetItemMembersRepository } from '../../src/db/repositories/BudgetItemMembers.repository';
@@ -13,6 +13,7 @@ import type { BudgetItemsRepository } from '../../src/db/repositories/BudgetItem
 import type { ReservationsRepository } from '../../src/db/repositories/Reservations.repository';
 import type { PlacesRepository } from '../../src/db/repositories/Places.repository';
 import type { TripsRepository } from '../../src/db/repositories/Trips.repository';
+import type { TripMembersRepository } from '../../src/db/repositories/TripMembers.repository';
 
 /**
  * Plan 3e Task 2 (budget) test-only repository factories, bound to a suite's
@@ -44,16 +45,18 @@ export function createTestBudgetCategoryOrderRepo(db: Database.Database): Promis
 }
 
 /**
- * The 8 repository arguments `BudgetService`'s constructor appends after
+ * The 9 repository arguments `BudgetService`'s constructor appends after
  * `uow` (`budgetItemsRepo`, `budgetItemMembersRepo`, `budgetItemPayersRepo`,
  * `budgetSettlementsRepo`, `budgetCategoryOrderRepo`, `reservationsRepo`,
- * `placesRepo`, `tripsRepo`), built over the SAME connection in one call —
- * every hand-built `new BudgetService(...)` test call site spreads this
- * (`...(await budgetRepoArgs(conn))`) instead of repeating all 8 factories.
+ * `placesRepo`, `tripsRepo`, `tripMembersRepo` — Plan 4 Task 3's own,
+ * appended last when `rosterUserIds` inlined off `DatabaseService`), built
+ * over the SAME connection in one call — every hand-built
+ * `new BudgetService(...)` test call site spreads this
+ * (`...(await budgetRepoArgs(conn))`) instead of repeating all 9 factories.
  */
 export async function budgetRepoArgs(db: Database.Database): Promise<[
   BudgetItemsRepository, BudgetItemMembersRepository, BudgetItemPayersRepository, BudgetSettlementsRepository,
-  BudgetCategoryOrderRepository, ReservationsRepository, PlacesRepository, TripsRepository,
+  BudgetCategoryOrderRepository, ReservationsRepository, PlacesRepository, TripsRepository, TripMembersRepository,
 ]> {
   return [
     await createTestBudgetItemsRepo(db),
@@ -64,5 +67,6 @@ export async function budgetRepoArgs(db: Database.Database): Promise<[
     await createTestReservationsRepo(db),
     await createTestPlacesRepo(db),
     await createTestTripsRepo(db),
+    await createTestTripMembersRepo(db),
   ];
 }

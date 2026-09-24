@@ -337,7 +337,7 @@ describe('Settlement tools', () => {
 
     const dbService = new DatabaseService(testDb);
     const controller = new BudgetController(
-      new BudgetService(dbService, new PermissionsService(await createTestAppSettingsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbService.connection), ...(await budgetRepoArgs(dbService.connection))),
+      new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbService.connection), ...(await budgetRepoArgs(dbService.connection))),
     );
     const rest = await controller.settlement(
       { id: user.id } as User,

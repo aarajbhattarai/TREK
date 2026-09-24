@@ -218,7 +218,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // moved off `DatabaseService` onto `TripsRepository`/`UsersRepository`.
   const guards = new McpToolGuardsService(mcpOrm.repo(Trips), usersRepo, permissionsService, realtimeService);
   const exchangeRatesService = new ExchangeRatesService();
-  const budgetService = new BudgetService(dbService, permissionsService, exchangeRatesService, realtimeService, await createTestUnitOfWork(dbService.connection), ...(await budgetRepoArgs(dbService.connection)));
+  const budgetService = new BudgetService(permissionsService, exchangeRatesService, realtimeService, await createTestUnitOfWork(dbService.connection), ...(await budgetRepoArgs(dbService.connection)));
   const authService = new AuthService(
     permissionsService,
     new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)),
@@ -243,7 +243,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestReservationEndpointsRepo(dbService.connection),
     await createTestDayAccommodationsRepo(dbService.connection),
   );
-  const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection), await createTestTodoItemsRepo(dbService.connection), await createTestTodoCategoryAssigneesRepo(dbService.connection), await createTestTripsRepo(dbService.connection));
+  const todoService = new TodoService(permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection), await createTestTodoItemsRepo(dbService.connection), await createTestTodoCategoryAssigneesRepo(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection));
   const packingService = new PackingService(
     dbService, permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection),
     await createTestPackingItemsRepo(dbService.connection), await createTestPackingItemContributorsRepo(dbService.connection), await createTestPackingBagsRepo(dbService.connection),
@@ -292,7 +292,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestRoadtripViasRepo(dbService.connection),
   );
   const accommodationsService = new AccommodationsService(
-    dbService, permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection),
+    permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection),
     await createTestTripsRepo(dbService.connection),
     await createTestDayAccommodationsRepo(dbService.connection),
     await createTestDayAssignmentsRepo(dbService.connection),
@@ -397,7 +397,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new AuthMcp(),
       new TodoMcp(todoService, authService, addonsService, guards),
       new PackingMcp(packingService, authService, addonsService, guards),
-      new BudgetMcp(budgetService, exchangeRatesService, dbService, new RuntimeEnvService(), new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), addonsService, guards, await createTestUnitOfWork(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestTripsRepo(dbService.connection), demoService),
+      new BudgetMcp(budgetService, exchangeRatesService, new RuntimeEnvService(), new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), addonsService, guards, await createTestUnitOfWork(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestTripsRepo(dbService.connection), demoService, await createTestTripMembersRepo(dbService.connection)),
       new ReservationsMcp(reservationsService, daysService, budgetService, authService, assignmentsService, guards),
       new DayNotesMcp(new DayNotesService(await createTestTripsRepo(dbService.connection), permissionsService, realtimeService, await createTestDayNotesRepo(dbService.connection), await createTestDaysRepo(dbService.connection)), authService, guards),
       new DaysMcp(daysService, authService, guards),

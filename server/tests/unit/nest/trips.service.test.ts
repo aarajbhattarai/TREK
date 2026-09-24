@@ -173,7 +173,7 @@ beforeAll(async () => {
     await createTestPlacesRepo(dbs().connection),
     await createTestCollectionPlacesRepo(dbs().connection),
   );
-  budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
+  budgetSvc = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
   daysSvc = new DaysService(
     new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
     new RealtimeService(),
@@ -255,9 +255,10 @@ beforeAll(async () => {
   ),
   placesSvc,
   new TodoService(
-  dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection),
+  new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection),
   await createTestTodoItemsRepo(dbs().connection), await createTestTodoCategoryAssigneesRepo(dbs().connection),
   await createTestTripsRepo(dbs().connection),
+  await createTestTripMembersRepo(dbs().connection),
   ),
   new FilesService(
     // Plan 4 Task 2 — FilesService's own canAccessTrip delegate is now

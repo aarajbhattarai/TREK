@@ -30,9 +30,11 @@ import {
  * why this is a helper and not five copies across the suites.
  *
  * Plan 3c Task 0b: the `DatabaseService` built here needs a real
- * `EntityManager` now — `AccommodationsService.stampLodging` reaches
- * `getPlaceWithTags`, which is `PlacesRepository.findWithTagsAndRatings`
- * (not `db/database.ts`'s deleted free function).
+ * `EntityManager` now (its `.connection` backs every repository factory
+ * below, and `JourneyDomainService` still takes a full `DatabaseService`).
+ * `AccommodationsService` itself no longer holds one (Plan 4 Task 3 —
+ * `stampLodging`'s old `getPlaceWithTags` delegate is
+ * `PlacesRepository.findWithTagsAndRatings` directly now).
  */
 export async function makeAccommodationsService(conn: Database): Promise<AccommodationsService> {
   return accommodationsOver(new DatabaseService(conn, (await sharedTestOrm(conn)).em));
@@ -68,10 +70,11 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
     await createTestRoadtripViasRepo(dbs.connection),
   );
   return new AccommodationsService(
-    dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
+    permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
     // Plan 4 Task 2 — AccommodationsService's own canAccessTrip delegate is now
-    // TripsRepository.findAccessible; `dbs` itself stays (still needed for
-    // stampLodging's getPlaceWithTags).
+    // TripsRepository.findAccessible. Plan 4 Task 3 — stampLodging's
+    // getPlaceWithTags is PlacesRepository.findWithTagsAndRatings directly
+    // (`placesRepo` below, already injected); `dbs` no longer needed here.
     await createTestTripsRepo(dbs.connection),
     await createTestDayAccommodationsRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),

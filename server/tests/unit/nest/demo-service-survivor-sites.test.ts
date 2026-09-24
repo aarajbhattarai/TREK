@@ -49,7 +49,7 @@ describe('Plan 3i Task 3 — isDemoUserId survivor sites: exact refusal body per
   });
 
   it('DEMO-SURVIVOR-004 (budget.mcp.ts): create_budget_item refuses byte-for-byte in demo mode', async () => {
-    const mcp = new BudgetMcp(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, demoBlocked);
+    const mcp = new BudgetMcp(stub, stub, stub, stub, stub, stub, stub, stub, stub, demoBlocked, stub);
     const res = await mcp.createBudgetItem({ tripId: 1, name: 'Test', total_price: 10 }, ctx);
     expect(res).toEqual(DEMO_REFUSAL);
   });

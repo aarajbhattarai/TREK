@@ -22,8 +22,6 @@ vi.mock('../../../src/db/database', () => ({
   getPlaceWithTags: () => null,
   isOwner: () => false,
 }));
-import { db as dbConn } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 
 const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
@@ -48,6 +46,7 @@ import type { BudgetCategoryOrderRepository } from '../../../src/db/repositories
 import type { ReservationsRepository } from '../../../src/db/repositories/Reservations.repository';
 import type { PlacesRepository } from '../../../src/db/repositories/Places.repository';
 import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import type { TripMembersRepository } from '../../../src/db/repositories/TripMembers.repository';
 
 /**
  * There is no database behind this suite — every statement is served by the
@@ -73,9 +72,12 @@ const reservationsRepoStub = {
   getFull: async (id: number) => dbMock.prepare().get(id),
 } as unknown as ReservationsRepository;
 
-function svc(db: DatabaseService = new DatabaseService(dbConn), tripsRepo: TripsRepository = {} as unknown as TripsRepository) {
+function svc(
+  tripMembersRepo: TripMembersRepository = {} as unknown as TripMembersRepository,
+  tripsRepo: TripsRepository = {} as unknown as TripsRepository,
+) {
   return new BudgetService(
-    db, permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub,
+    permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub,
     {} as unknown as BudgetItemsRepository,
     {} as unknown as BudgetItemMembersRepository,
     {} as unknown as BudgetItemPayersRepository,
@@ -84,6 +86,7 @@ function svc(db: DatabaseService = new DatabaseService(dbConn), tripsRepo: Trips
     reservationsRepoStub,
     {} as unknown as PlacesRepository,
     tripsRepo,
+    tripMembersRepo,
   );
 }
 
@@ -191,17 +194,13 @@ describe('BudgetService', () => {
     // anything, so the roster lookup has to answer for these to reach the write
     // at all. Users 1 and 2 are the two parties every case here settles between.
     //
-    // Plan 3c Task 0b: `DatabaseService.rosterUserIds` is `TripMembersRepository
-    // .rosterUserIds` now (not `this.conn`/the `dbMock._stmt.all` prepare stub,
-    // which no longer intercepts it) — a real `DatabaseService` (so its other
-    // methods, still served by the `dbMock._stmt` prepare stub, keep working)
-    // with `rosterUserIds` spied directly, same fix as `verifyTripAccess`'s
+    // Plan 4 Task 3: `DatabaseService.rosterUserIds` inlined onto
+    // `TripMembersRepository.rosterUserIds` directly — a stub repository
+    // with `rosterUserIds` mocked directly, same fix as `verifyTripAccess`'s
     // test above.
-    const rosterHas = (...userIds: number[]) => {
-      const db = new DatabaseService(dbConn);
-      vi.spyOn(db, 'rosterUserIds').mockResolvedValue(new Set(userIds));
-      return db;
-    };
+    const rosterHas = (...userIds: number[]) => ({
+      rosterUserIds: vi.fn().mockResolvedValue(new Set(userIds)),
+    } as unknown as TripMembersRepository);
 
     it('createSettlement freezes the FX rate (await) before the raw insert', async () => {
       const s = svc(rosterHas(1, 2));

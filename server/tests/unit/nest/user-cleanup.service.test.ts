@@ -76,7 +76,7 @@ beforeAll(async () => {
   vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
   vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
-  budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
+  budget = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
   svc = new UserCleanupService(
     dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection),
     // Plan 4 Task 1 constructor-ripple: UC4's repository.

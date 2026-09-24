@@ -105,7 +105,6 @@ beforeAll(async () => {
   budgetItemPayersRepoDirect = await createTestBudgetItemPayersRepo(testDb);
   budgetSettlementsRepoDirect = await createTestBudgetSettlementsRepo(testDb);
   budget = new BudgetService(
-  dbs(),
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   new ExchangeRatesService(),
   new RealtimeService(),

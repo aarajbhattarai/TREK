@@ -154,9 +154,8 @@ beforeAll(async () => {
   );
   packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
   budgetMcp = new BudgetMcp(
-  new BudgetService(promptDbs(), new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection), ...(await budgetRepoArgs(promptDbs().connection))),
+  new BudgetService(new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection), ...(await budgetRepoArgs(promptDbs().connection))),
   new ExchangeRatesService(),
-  promptDbs(),
   new RuntimeEnvService(),
   new TripMembershipService(await createTestTripsRepo(promptDbs().connection), await createTestTripMembersRepo(promptDbs().connection)),
   addonsStub,
@@ -165,6 +164,7 @@ beforeAll(async () => {
   await createTestPlacesRepo(promptDbs().connection),
   await createTestTripsRepo(promptDbs().connection),
   new DemoService(new RuntimeEnvService(), promptEm),
+  await createTestTripMembersRepo(promptDbs().connection),
 );
   tripPromptsMcp = new TripPromptsMcp(tripsStub, readModelStub, promptPackingService, addonsStub);
 });
