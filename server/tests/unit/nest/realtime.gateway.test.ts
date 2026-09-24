@@ -36,7 +36,7 @@ import {
   type TrekWebSocket,
 } from '../../../src/nest/realtime/ws-state';
 import { emitPluginEvent } from '../../../src/plugin-event-sink';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import type { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -66,8 +66,8 @@ function socket(): FakeSocket {
 
 const rows = new Map<string, unknown>();
 const db = {
-  canAccessTrip: (tripId: number) => tripId === 7,
-} as unknown as DatabaseService;
+  findAccessible: (tripId: number) => tripId === 7,
+} as unknown as TripsRepository;
 
 const users = {
   findForWsHandshake: vi.fn(async () => rows.get('user') ?? null),

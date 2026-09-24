@@ -45,7 +45,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { TodoService } from '../../../src/nest/todo/todo.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestTripsRepo } from '../../helpers/test-uow';
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
 
 let svc: TodoService;
@@ -56,6 +56,9 @@ beforeAll(async () => {
   svc = new TodoService(
     await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow,
     todoItemsRepoDirect, await createTestTodoCategoryAssigneesRepo(testDb),
+    // Plan 4 Task 2 — TodoService's own canAccessTrip delegate is now
+    // TripsRepository.findAccessible, a new trailing constructor param.
+    await createTestTripsRepo(testDb),
   );
 });
 
@@ -396,6 +399,7 @@ describe('TodoService.canEdit', () => {
     const withStub = new TodoService(
       new DatabaseService(testDb), permissions, new RealtimeService(), await createTestUnitOfWork(testDb),
       await createTestTodoItemsRepo(testDb), await createTestTodoCategoryAssigneesRepo(testDb),
+      await createTestTripsRepo(testDb),
     );
     const trip = { id: 1, user_id: 1 } as never;
 

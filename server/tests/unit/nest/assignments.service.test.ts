@@ -74,7 +74,9 @@ beforeAll(async () => {
   const dbs = await createTestDatabaseService(testDb);
   const realtime = new RealtimeService();
   svc = new AssignmentsService(
-    dbs,
+    // Plan 4 Task 2 — AssignmentsService's own canAccessTrip delegate is now
+    // TripsRepository.findAccessible, in the same constructor slot.
+    await createTestTripsRepo(dbs.connection),
     new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
     realtime,
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),

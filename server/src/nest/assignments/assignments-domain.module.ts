@@ -11,6 +11,7 @@ import { Days } from '../../db/entities/Days.entity';
 import { Places } from '../../db/entities/Places.entity';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 
 /**
  * The assignments SERVICE, split from the controller/MCP/RPC surfaces (the
@@ -37,7 +38,7 @@ import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
     QueryHelpersModule,
     JourneyDomainModule,
     RealtimeModule,
-    MikroOrmModule.forFeature([DayAssignments, AssignmentParticipants, Days, Places, TripMembers, RoadtripVias]),
+    MikroOrmModule.forFeature([DayAssignments, AssignmentParticipants, Days, Places, TripMembers, RoadtripVias, Trips]),
   ],
   providers: [AssignmentsService],
   exports: [AssignmentsService],

@@ -5,9 +5,9 @@ import { XMLValidator } from 'fast-xml-parser';
 import { TRACK_COLORS, placeMatchStrategies, type PlaceMatchCandidate } from '@trek/shared';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import { DatabaseService } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { UnitOfWork } from '../database/unit-of-work';
-import type { PlaceWithTags } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { MapsService, GOOGLE_SHORT_HOSTS, isGoogleMapsHost } from '../maps/maps.service';
 import { isDirectionsUrl, parseDirectionsUrl } from './maps-dir.helpers';
@@ -40,7 +40,7 @@ import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import { Categories } from '../../db/entities/Categories.entity';
 import { Trips } from '../../db/entities/Trips.entity';
-import type { PlacesRepository, PlaceWithCategoryRow } from '../../db/repositories/Places.repository';
+import type { PlacesRepository, PlaceWithCategoryRow, PlaceWithTagsRow as PlaceWithTags } from '../../db/repositories/Places.repository';
 import type { TagsRepository } from '../../db/repositories/Tags.repository';
 import type { PlaceRatingsRepository } from '../../db/repositories/PlaceRatings.repository';
 import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
@@ -134,7 +134,8 @@ export interface PlaceUpdateInput {
  * (a place on the equator lost its coordinates). Every other `x || null` is
  * string-valued, where empty-string-means-absent is the intended reading.
  *
- * Trip access rides DatabaseService.canAccessTrip;
+ * Trip access rides TripsRepository.findAccessible (Plan 4 Task 2 — off
+ * DatabaseService.canAccessTrip);
  * mutations use 'place_edit'. Pure helpers and the frozen XML parsers live in
  * places.helpers.ts. Nothing outside the Nest container consumes this domain
  * any more, so there is no places.bridge.ts: the MCP surface is the
@@ -144,6 +145,13 @@ export interface PlaceUpdateInput {
 @Injectable()
 export class PlacesService {
   constructor(
+    // `dbs` field is unused by this class's own code (canAccessTrip below
+    // reuses `tripsRepo`) but is kept in this exact constructor slot: an
+    // in-flight Task 5c file (`tests/unit/services/conflictUpdate.test.ts`,
+    // uncommitted at this task's start, out of this task's file-ownership
+    // window) still hand-constructs `PlacesService` positionally with a
+    // `DatabaseService` here — dropping the param would break that file
+    // without being able to fix it. Safe to drop once that file lands.
     private readonly dbs: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
@@ -189,7 +197,10 @@ export class PlacesService {
   async verifyTripAccess(tripId: string, userId: number): Promise<(TripAccess & { tid: number }) | undefined> {
     const tid = toRowId(tripId);
     if (tid === null) return undefined;
-    const access = await this.dbs.canAccessTrip(tid, userId);
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
+    // gone: this reuses the TripsRepository already injected for other
+    // reads and calls findAccessible.
+    const access = await this.tripsRepo.findAccessible(tid, userId);
     if (!access) return undefined;
     return { ...access, tid };
   }

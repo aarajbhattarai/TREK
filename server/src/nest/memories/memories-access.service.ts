@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { decrypt_api_key } from '../common/crypto/apiKeyCrypto';
-import { DatabaseService } from '../database/database.service';
 import { fail, success, type ServiceResult } from './memories.helpers';
 import { toRowId } from '../common/row-id';
 import { TripPhotos } from '../../db/entities/TripPhotos.entity';
@@ -37,14 +36,13 @@ import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhoto
  * -contributor logic inline for its own reasons, composing it with the
  * trip-photo check in one method; a service-to-service dependency here
  * would be a bigger structural change than a survivor cleanup is scoped
- * for). `DatabaseService` stays injected for the `canAccessTrip` primitive
- * (a cross-cutting primitive, not a per-domain SQL statement this plan
- * converts).
+ * for). Plan 4 Task 2 — the `canAccessTrip` primitive is now
+ * `TripsRepository.findAccessible`, reusing the `trips` repository already
+ * injected below; `DatabaseService` is gone from this file entirely.
  */
 @Injectable()
 export class MemoriesAccessService {
   constructor(
-    private readonly db: DatabaseService,
     @InjectRepository(TripPhotos) private readonly tripPhotos: TripPhotosRepository,
     @InjectRepository(TrekPhotos) private readonly trekPhotos: TrekPhotosRepository,
     @InjectRepository(TripAlbumLinks) private readonly tripAlbumLinks: TripAlbumLinksRepository,
@@ -86,7 +84,7 @@ export class MemoriesAccessService {
     if (!sharedAsset) {
       return false;
     }
-    return !!(await this.db.canAccessTrip(tripId, requestingUserId));
+    return !!(await this.trips.findAccessible(tripId, requestingUserId));
   }
 
   // ── Unified photo access check (trek_photos based) ──────────────────────
@@ -131,7 +129,7 @@ export class MemoriesAccessService {
   // ── Album link syncing ──────────────────────────────────────────────────
 
   async getAlbumIdFromLink(tripId: string, linkId: string, userId: number): Promise<ServiceResult<string>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) return fail('Trip not found or access denied', 404);
 
     try {
@@ -150,7 +148,7 @@ export class MemoriesAccessService {
   }
 
   async getAlbumLinkForSync(tripId: string, linkId: string, userId: number): Promise<ServiceResult<{ albumId: string; passphrase?: string }>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) return fail('Trip not found or access denied', 404);
 
     try {

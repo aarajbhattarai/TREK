@@ -11,6 +11,7 @@ import { PluginGuardsModule } from '../plugins/host/plugin-guards.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
 import { DayNotes } from '../../db/entities/DayNotes.entity';
 import { Days } from '../../db/entities/Days.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 
 /**
  * Day notes. Its own domain rather than a second file set inside days/, which
@@ -29,7 +30,7 @@ import { Days } from '../../db/entities/Days.entity';
 @Module({
   // DayNotes/Days: Plan 4 Task 1 — DayNotesService's own DayNotesRepository/
   // DaysRepository.existsInTrip, replacing its raw `this.dbs.all/get/run`.
-  imports: [McpSharedModule, PermissionsModule, AuthModule, RealtimeModule, PluginGuardsModule, MikroOrmModule.forFeature([DayNotes, Days])],
+  imports: [McpSharedModule, PermissionsModule, AuthModule, RealtimeModule, PluginGuardsModule, MikroOrmModule.forFeature([DayNotes, Days, Trips])],
   controllers: [DayNotesController],
   providers: [DayNotesService, DayNotesMcp, DayNotesRpc],
   exports: [DayNotesService],

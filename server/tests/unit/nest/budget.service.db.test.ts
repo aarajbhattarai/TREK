@@ -113,7 +113,6 @@ beforeAll(async () => {
   ...(await budgetRepoArgs(testDb)),
 );
   membersSvc = new TripMembersService(
-  dbs(),
   budget,
   new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),

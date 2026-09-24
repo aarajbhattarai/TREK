@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import crypto from 'crypto';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
-import type { TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { PermissionsService } from '../permissions/permissions.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
 import { TripInviteTokens } from '../../db/entities/TripInviteTokens.entity';
@@ -31,14 +32,18 @@ export interface TripInviteInfo {
  * to it in the Share area).
  *
  * Plan 4 Task 1: `get`/`createOrRotate`/`remove`/`resolve` moved off
- * `DatabaseService` onto `TripInviteTokensRepository` — `DatabaseService`
- * stays injected purely for `verifyTripAccess`'s `canAccessTrip` delegate
- * (Plan 4 Task 2/3's facade-inline sweep, not this task's).
+ * `DatabaseService` onto `TripInviteTokensRepository`. Plan 4 Task 2:
+ * `verifyTripAccess`'s `canAccessTrip` delegate is now
+ * `TripsRepository.findAccessible` directly — `DatabaseService` is gone
+ * from this file entirely.
  */
 @Injectable()
 export class TripInviteService {
   constructor(
-    private readonly dbs: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly (same constructor slot) and
+    // calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly permissions: PermissionsService,
     private readonly membership: TripMembershipService,
     private readonly uow: UnitOfWork,
@@ -46,7 +51,7 @@ export class TripInviteService {
   ) {}
 
   async verifyTripAccess(tripId: string, userId: number) {
-    return await this.dbs.canAccessTrip(tripId, userId);
+    return await this.trips.findAccessible(tripId, userId);
   }
 
   async canManage(trip: Trip, user: User): Promise<boolean> {

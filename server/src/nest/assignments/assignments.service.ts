@@ -3,7 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { chronoOrder, type RoadtripVia, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { isEmptyReanchoring, reanchorByStopOrder } from '@trek/shared/roadtrip';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { formatAssignmentWithPlace } from '../common/rowShape';
@@ -17,6 +17,8 @@ import { AssignmentParticipants } from '../../db/entities/AssignmentParticipants
 import type { AssignmentParticipantsRepository } from '../../db/repositories/AssignmentParticipants.repository';
 import { Days } from '../../db/entities/Days.entity';
 import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { Places } from '../../db/entities/Places.entity';
 import type { PlacesRepository } from '../../db/repositories/Places.repository';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
@@ -95,7 +97,9 @@ function sortMinutes(time: string | null): number | null {
 @Injectable()
 export class AssignmentsService {
   constructor(
-    private readonly dbs: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly and calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly queryHelpers: QueryHelpersService,
@@ -110,7 +114,7 @@ export class AssignmentsService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return await this.dbs.canAccessTrip(Number(tripId), userId);
+    return await this.trips.findAccessible(Number(tripId), userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {

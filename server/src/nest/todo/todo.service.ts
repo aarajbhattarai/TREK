@@ -10,6 +10,8 @@ import { TodoItems } from '../../db/entities/TodoItems.entity';
 import type { TodoItemsRepository } from '../../db/repositories/TodoItems.repository';
 import { TodoCategoryAssignees } from '../../db/entities/TodoCategoryAssignees.entity';
 import type { TodoCategoryAssigneesRepository } from '../../db/repositories/TodoCategoryAssignees.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 type Trip = TripAccess;
 
@@ -34,10 +36,14 @@ export class TodoService {
     private readonly uow: UnitOfWork,
     @InjectRepository(TodoItems) private readonly todoItemsRepo: TodoItemsRepository,
     @InjectRepository(TodoCategoryAssignees) private readonly todoCategoryAssigneesRepo: TodoCategoryAssigneesRepository,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
+    // gone: this injects TripsRepository directly. `db` stays injected for
+    // `rosterUserIds` (Task 3's own).
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return await this.db.canAccessTrip(tripId, userId);
+    return await this.tripsRepo.findAccessible(tripId, userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {

@@ -27,6 +27,7 @@ import { Places } from '../../db/entities/Places.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import { Users } from '../../db/entities/Users.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 
 @Module({
   imports: [
@@ -50,7 +51,7 @@ import { Users } from '../../db/entities/Users.entity';
     // `findTripId` reads and FL28's `UsersRepository.getEmail` (the entity
     // classes only, never the owning module — the `AccommodationsDomainModule`
     // precedent).
-    MikroOrmModule.forFeature([TripFiles, FileLinks, Reservations, Places, DayAssignments, BudgetItems, Users]),
+    MikroOrmModule.forFeature([TripFiles, FileLinks, Reservations, Places, DayAssignments, BudgetItems, Users, Trips]),
     // AuthModule + McpSharedModule feed FilesMcp's demo and RBAC guards. Neither is
     // @Global, and AuthModule reaches this domain only through the leaf
     // AllowedFileTypesModule, so importing it here stays cycle-free.

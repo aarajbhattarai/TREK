@@ -5,6 +5,7 @@ import { EphemeralTokenModule } from '../auth/ephemeral-token.module';
 import { JourneyDomainModule } from '../journey/journey-domain.module';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
 import { Users } from '../../db/entities/Users.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 
 /**
  * The transport, kept out of RealtimeModule on purpose.
@@ -24,8 +25,10 @@ import { Users } from '../../db/entities/Users.entity';
   // JourneyDomainModule for the book rooms: who may open a journey is asked
   // of the same service the REST routes ask. Users/AppSettings: Plan 4 Task
   // 1 — the handshake's password-version and require_mfa reads, moved off
-  // DatabaseService onto UsersRepository/AppSettingsRepository.
-  imports: [EphemeralTokenModule, JourneyDomainModule, MikroOrmModule.forFeature([Users, AppSettings])],
+  // DatabaseService onto UsersRepository/AppSettingsRepository. Trips: Plan 4
+  // Task 2 — handleJoin's own canAccessTrip delegate, now TripsRepository
+  // directly.
+  imports: [EphemeralTokenModule, JourneyDomainModule, MikroOrmModule.forFeature([Users, AppSettings, Trips])],
   providers: [RealtimeGateway],
 })
 export class RealtimeGatewayModule {}

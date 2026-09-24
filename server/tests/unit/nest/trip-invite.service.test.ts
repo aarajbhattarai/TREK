@@ -49,7 +49,9 @@ let svc: TripInviteService;
 beforeAll(async () => {
   const uow = await createTestUnitOfWork(dbs.connection);
   svc = new TripInviteService(
-    dbs,
+    // Plan 4 Task 2 — TripInviteService's own canAccessTrip delegate is now
+    // TripsRepository.findAccessible, in the same constructor slot.
+    await createTestTripsRepo(dbs.connection),
     new PermissionsService(await createTestAppSettingsRepo(dbs.connection), uow),
     new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)),
     uow,

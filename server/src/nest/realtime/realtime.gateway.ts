@@ -11,12 +11,13 @@ import {
 import type { IncomingMessage } from 'node:http';
 import type { WebSocketServer } from 'ws';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService } from '../database/database.service';
 import { EphemeralTokenService } from '../auth/ephemeral-token.service';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { User } from '../../types';
 import { logError } from '../audit/audit-log.logger';
 import {
@@ -63,11 +64,10 @@ export class RealtimeGateway
   private heartbeat: ReturnType<typeof setInterval> | null = null;
 
   constructor(
-    // Stays injected for `handleJoin`'s `this.db.canAccessTrip` delegate —
-    // the facade-inline sweep (Plan 4 Task 2/3) is a separate task; this
-    // class's raw `users`/`app_settings` reads converted below (Plan 4
-    // Task 1) are unrelated to that delegate call.
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly (same constructor slot) and
+    // calls findAccessible from `handleJoin`.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly tokens: EphemeralTokenService,
     /*
      * For the book rooms, and injected rather than reimplemented: who may open
@@ -185,7 +185,7 @@ export class RealtimeGateway
     // platform now renders a bound `NaN` as `NULL` too (`NulSafeSqlitePlatform`),
     // so this guard is defence in depth, not the only fix.
     const tripId = Number(message.tripId);
-    if (!Number.isFinite(tripId) || !(await this.db.canAccessTrip(tripId, user.id))) {
+    if (!Number.isFinite(tripId) || !(await this.trips.findAccessible(tripId, user.id))) {
       return { type: 'error', message: 'Access denied' };
     }
     joinRoom(socket, tripId);

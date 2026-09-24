@@ -57,8 +57,8 @@ vi.mock('../../../src/nest/auth/ephemeral-tokens', () => ({ consumeEphemeralToke
 import type { Request } from 'express';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember, createPlace, createReservation, createDay, createDayAssignment, setAppSetting, createCollabNote } from '../../helpers/factories';
-import { DatabaseService, type TripAccess } from '../../../src/nest/database/database.service';
-import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestReservationsRepo, createTestPlacesRepo, createTestDayAssignmentsRepo } from '../../helpers/test-uow';
+import type { TripAccess } from '../../../src/db/repositories/Trips.repository';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestReservationsRepo, createTestPlacesRepo, createTestDayAssignmentsRepo, createTestTripsRepo } from '../../helpers/test-uow';
 import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import type { TripFilesRepository } from '../../../src/db/repositories/TripFiles.repository';
 import type { FileLinksRepository } from '../../../src/db/repositories/FileLinks.repository';
@@ -107,7 +107,7 @@ beforeAll(async () => {
   tripFilesRepo = await createTestTripFilesRepo(testDb);
   fileLinksRepo = await createTestFileLinksRepo(testDb);
   svc = new FilesService(
-    new DatabaseService(testDb),
+    await createTestTripsRepo(testDb),
     permissionsStub,
     new RealtimeService(),
     new EphemeralTokenService(),
@@ -126,16 +126,11 @@ beforeAll(async () => {
 beforeEach(async () => {
   resetTestDb(testDb);
   vi.clearAllMocks();
-  // Plan 3c Task 0b: `svc`'s `DatabaseService` is constructed in `beforeAll`,
-  // before any `beforeEach` can resolve a real `EntityManager` — spied
-  // directly on that instance, routed to a real `DatabaseService` built
-  // with one. Re-applied every test (not `beforeAll`) because `afterEach`
-  // below `vi.restoreAllMocks()`s it away after each one.
-  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
-  vi.spyOn(svc['db'] as DatabaseService, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
-  vi.spyOn(svc['db'] as DatabaseService, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
-  vi.spyOn(svc['db'] as DatabaseService, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
-  vi.spyOn(svc['db'] as DatabaseService, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
+  // Plan 4 Task 2: unlike the old `DatabaseService` (which threw without an
+  // `EntityManager` and needed a per-test respy), `svc`'s `TripsRepository`
+  // (built in `beforeAll` via `createTestTripsRepo`) already carries a real,
+  // working `EntityManager` and reads bypass the identity map (rule 14), so
+  // no per-test re-pointing is needed — the old spy dance is gone.
 });
 
 afterEach(() => {

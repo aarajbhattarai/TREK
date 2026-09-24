@@ -12,15 +12,18 @@ import { AddonsModule } from '../addons/addons.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
 import { TodoItems } from '../../db/entities/TodoItems.entity';
 import { TodoCategoryAssignees } from '../../db/entities/TodoCategoryAssignees.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 
 /** To-do domain (S3 — Phase 2 trip sub-domain). Registered in AppModule.
  *  Exports TodoService for in-container consumers (TripsService bundle).
- *  `MikroOrmModule.forFeature([TodoItems, TodoCategoryAssignees])` (Plan 3e
- *  Task 4) registers `TodoItemsRepository`/`TodoCategoryAssigneesRepository`
- *  for `TodoService`'s `@InjectRepository` constructor params — the
- *  `CollabModule`/`FilesModule` precedent. */
+ *  `MikroOrmModule.forFeature([TodoItems, TodoCategoryAssignees, Trips])`
+ *  (Plan 3e Task 4) registers `TodoItemsRepository`/
+ *  `TodoCategoryAssigneesRepository` for `TodoService`'s `@InjectRepository`
+ *  constructor params — the `CollabModule`/`FilesModule` precedent. `Trips`
+ *  (Plan 4 Task 2): `verifyTripAccess`'s own canAccessTrip delegate, now
+ *  TripsRepository directly. */
 @Module({
-  imports: [MikroOrmModule.forFeature([TodoItems, TodoCategoryAssignees]), McpSharedModule, PermissionsModule, AuthModule, RealtimeModule, PluginGuardsModule, AddonsModule],
+  imports: [MikroOrmModule.forFeature([TodoItems, TodoCategoryAssignees, Trips]), McpSharedModule, PermissionsModule, AuthModule, RealtimeModule, PluginGuardsModule, AddonsModule],
   controllers: [TodoController],
   providers: [TodoService, TodoMcp, TodoRpc],
   exports: [TodoService],

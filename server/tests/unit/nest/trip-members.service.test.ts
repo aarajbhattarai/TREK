@@ -98,7 +98,7 @@ beforeAll(async () => {
   tripMembersRepo = await createTestTripMembersRepo(testDb);
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
   roster = new TripMembersService(
-    dbs(), budgetSvc,
+    budgetSvc,
     new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), usersRepo, await createTestTripMembersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection)),
     new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
     new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection),

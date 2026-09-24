@@ -2,7 +2,7 @@ import { HttpException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { formatAssignmentWithPlace } from '../common/rowShape';
@@ -67,8 +67,8 @@ export class DayReorderError extends Error {}
  * `day_accommodations` statements now go through `ReservationsRepository`/
  * `ReservationEndpointsRepository` (Plan 3d Task 2) and
  * `DayAccommodationsRepository` (Plan 3d Task 3) — no raw SQL left in this
- * file. Trip access still rides `DatabaseService.canAccessTrip` (Task 0b's 110
- * unconverted callers, this among them); mutations use the 'day_edit'
+ * file. Trip access rides `TripsRepository.findAccessible` (Plan 4 Task 2 —
+ * off `DatabaseService.canAccessTrip`); mutations use the 'day_edit'
  * permission; the WebSocket broadcast keeps its legacy call path.
  *
  * Day ids arriving from a route (`:id`) are an **affinity seam**: the legacy
@@ -112,7 +112,6 @@ export class DayReorderError extends Error {}
 @Injectable()
 export class DaysService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly queryHelpers: QueryHelpersService,
@@ -134,7 +133,10 @@ export class DaysService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return await this.db.canAccessTrip(Number(tripId), userId);
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
+    // gone: this reuses the TripsRepository already injected for other
+    // reads and calls findAccessible.
+    return await this.tripsRepo.findAccessible(Number(tripId), userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {

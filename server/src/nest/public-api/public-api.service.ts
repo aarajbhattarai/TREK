@@ -24,7 +24,6 @@ import { DayNotes } from '../../db/entities/DayNotes.entity';
 import type { DayNotesRepository } from '../../db/repositories/DayNotes.repository';
 import { BucketList } from '../../db/entities/BucketList.entity';
 import type { BucketListRepository } from '../../db/repositories/BucketList.repository';
-import { DatabaseService } from '../database/database.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
 
 /**
@@ -48,14 +47,14 @@ import { TripMembershipService } from '../trip-membership/trip-membership.servic
  *
  * Plan 4 Task 1: the four raw `this.db.all(...)` reads (days, places,
  * day-notes, bucket-list) moved onto `DaysRepository`/`PlacesRepository`/
- * `DayNotesRepository`/`BucketListRepository` — `DatabaseService` stays
- * injected purely for `getTrip`'s `canAccessTrip` delegate (Plan 4 Task
- * 2/3's facade-inline sweep, not this task's).
+ * `DayNotesRepository`/`BucketListRepository`. Plan 4 Task 2: `getTrip`'s
+ * `canAccessTrip` delegate is now `TripsRepository.findAccessible` directly
+ * (reusing `tripsRepo` below) — `DatabaseService` is gone from this file
+ * entirely.
  */
 @Injectable()
 export class PublicApiService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly membership: TripMembershipService,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
     @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
@@ -81,7 +80,7 @@ export class PublicApiService {
    * trip ids exist.
    */
   async getTrip(tripId: number, userId: number, include: PublicApiInclude[], granted: readonly string[] = include): Promise<PublicApiTrip | null> {
-    if (!(await this.db.canAccessTrip(tripId, userId))) return null;
+    if (!(await this.tripsRepo.findAccessible(tripId, userId))) return null;
     const row = await this.tripsRepo.findSummaryById(tripId);
     if (!row) return null;
 

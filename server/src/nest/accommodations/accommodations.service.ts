@@ -15,6 +15,8 @@ import { Places } from '../../db/entities/Places.entity';
 import type { PlacesRepository } from '../../db/repositories/Places.repository';
 import { Days } from '../../db/entities/Days.entity';
 import type { DaysRepository } from '../../db/repositories/Days.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
 import type { RoadtripViasRepository } from '../../db/repositories/RoadtripVias.repository';
 import { Reservations } from '../../db/entities/Reservations.entity';
@@ -109,11 +111,16 @@ export interface CreateAccommodationData {
 @Injectable()
 export class AccommodationsService {
   constructor(
+    // `dbs` stays: `stampLodging` still reaches `getPlaceWithTags`
+    // (Task 3/4's own delegate, not this task's).
     private readonly dbs: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly assignments: AssignmentsService,
     private readonly uow: UnitOfWork,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly and calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     @InjectRepository(DayAccommodations) private readonly dayAccommodationsRepo: DayAccommodationsRepository,
     @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
     @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
@@ -131,7 +138,7 @@ export class AccommodationsService {
   /** Owner or member, returning the trip. Takes a number too: the MCP tools pass
    *  the parsed id, the REST path the raw param. */
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return await this.dbs.canAccessTrip(Number(tripId), userId);
+    return await this.trips.findAccessible(Number(tripId), userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {

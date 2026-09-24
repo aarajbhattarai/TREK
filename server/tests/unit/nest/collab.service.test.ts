@@ -114,8 +114,10 @@ let linksRepo: CollabLinksRepository;
 let messagesRepo: CollabMessagesRepository;
 
 async function buildCollabService(dbs: DatabaseService, storage = collabFx.storage, rl = rateLimit): Promise<CollabService> {
+  // Plan 4 Task 2 — CollabService's own DatabaseService param is gone:
+  // canAccessTrip now reads through the TripsRepository passed at the end;
+  // `dbs` stays as this helper's own param (every caller still passes one).
   return new CollabService(
-    dbs,
     new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     notificationsStub(),

@@ -3,7 +3,6 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
 import { encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { AddonsService } from '../addons/addons.service';
-import { DatabaseService } from '../database/database.service';
 import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
 import { ImmichService } from './immich.service';
 import { SynologyService } from './synology.service';
@@ -39,7 +38,6 @@ import type { TripsRepository } from '../../db/repositories/Trips.repository';
 @Injectable()
 export class UnifiedMemoriesService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly photos: TrekPhotoRegistrationService,
     private readonly immich: ImmichService,
     private readonly synology: SynologyService,
@@ -80,7 +78,7 @@ export class UnifiedMemoriesService {
 
 
   async listTripPhotos(tripId: string, userId: number): Promise<ServiceResult<any[]>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -102,7 +100,7 @@ export class UnifiedMemoriesService {
   }
 
   async listTripAlbumLinks(tripId: string, userId: number): Promise<ServiceResult<any[]>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -155,7 +153,7 @@ export class UnifiedMemoriesService {
     sid: string,
     albumLinkId?: string,
   ): Promise<ServiceResult<{ added: number; shared: boolean }>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -196,7 +194,7 @@ export class UnifiedMemoriesService {
     shared: boolean,
     sid?: string,
   ): Promise<ServiceResult<true>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -218,7 +216,7 @@ export class UnifiedMemoriesService {
     photoId: number,
     sid?: string,
   ): Promise<ServiceResult<true>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -239,7 +237,7 @@ export class UnifiedMemoriesService {
   // managing album links in trip
 
   async createTripAlbumLink(tripId: string, userId: number, providerRaw: unknown, albumIdRaw: unknown, albumNameRaw: unknown, passphrase?: string): Promise<ServiceResult<true>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -283,7 +281,7 @@ export class UnifiedMemoriesService {
   }
 
   async removeAlbumLink(tripId: string, linkId: string, userId: number): Promise<ServiceResult<true>> {
-    const access = await this.db.canAccessTrip(tripId, userId);
+    const access = await this.trips.findAccessible(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }

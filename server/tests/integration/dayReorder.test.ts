@@ -20,7 +20,6 @@ vi.mock('../../src/config', () => ({
 import { db as testDb } from '../../src/db/database';
 import { resetTestDb } from '../helpers/test-db';
 import { createUser, createTrip, createPlace, createDay, createDayAssignment, createReservation, createDayAccommodation } from '../helpers/factories';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
 import { DaysService, DayReorderError } from '../../src/nest/days/days.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
@@ -37,7 +36,6 @@ import {
 let svc: DaysService;
 beforeAll(async () => {
   svc = new DaysService(
-    new DatabaseService(testDb),
     new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),

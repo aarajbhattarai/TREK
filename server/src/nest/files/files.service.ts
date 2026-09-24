@@ -12,7 +12,9 @@ import { verifyJwtAndLoadUser } from '../auth/jwt-verify';
 import { EntityManager } from '@mikro-orm/core';
 import { Users } from '../../db/entities/Users.entity';
 import type { User } from '../../types';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { UnitOfWork } from '../database/unit-of-work';
 import { toRowId } from '../common/row-id';
 import { StorageService } from '../storage/storage.service';
@@ -114,7 +116,10 @@ function coerceLinkId(value: string | number | null | undefined): number | null 
 @Injectable()
 export class FilesService {
   constructor(
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly (same constructor slot) and
+    // calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly tokens: EphemeralTokenService,
@@ -134,7 +139,7 @@ export class FilesService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return await this.db.canAccessTrip(tripId, userId);
+    return await this.trips.findAccessible(tripId, userId);
   }
 
   async can(action: FilePermission, trip: Trip, user: User): Promise<boolean> {

@@ -46,17 +46,18 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createDay, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { DayNotesService } from '../../../src/nest/day-notes/day-notes.service';
 import type { DayNote } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService, createTestDayNotesRepo, createTestDaysRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDayNotesRepo, createTestDaysRepo, createTestTripsRepo } from '../../helpers/test-uow';
 
 let svc: DayNotesService;
 beforeAll(async () => {
+  // Plan 4 Task 2 — DayNotesService's own canAccessTrip delegate is now
+  // TripsRepository.findAccessible, in the same constructor slot.
   svc = new DayNotesService(
-    await createTestDatabaseService(testDb),
+    await createTestTripsRepo(testDb),
     new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     await createTestDayNotesRepo(testDb),
@@ -294,7 +295,7 @@ describe('DayNotesService.canEdit', () => {
   it('DAYNOTE-SVC-090 asks for day_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
-    const withStub = new DayNotesService(new DatabaseService(testDb), permissions, new RealtimeService(), await createTestDayNotesRepo(testDb), await createTestDaysRepo(testDb));
+    const withStub = new DayNotesService(await createTestTripsRepo(testDb), permissions, new RealtimeService(), await createTestDayNotesRepo(testDb), await createTestDaysRepo(testDb));
     const trip = { id: 1, user_id: 1 } as never;
 
     expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);

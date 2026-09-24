@@ -73,7 +73,7 @@ const reservationsRepoStub = {
   getFull: async (id: number) => dbMock.prepare().get(id),
 } as unknown as ReservationsRepository;
 
-function svc(db: DatabaseService = new DatabaseService(dbConn)) {
+function svc(db: DatabaseService = new DatabaseService(dbConn), tripsRepo: TripsRepository = {} as unknown as TripsRepository) {
   return new BudgetService(
     db, permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub,
     {} as unknown as BudgetItemsRepository,
@@ -83,7 +83,7 @@ function svc(db: DatabaseService = new DatabaseService(dbConn)) {
     {} as unknown as BudgetCategoryOrderRepository,
     reservationsRepoStub,
     {} as unknown as PlacesRepository,
-    {} as unknown as TripsRepository,
+    tripsRepo,
   );
 }
 
@@ -93,16 +93,14 @@ beforeEach(() => {
 });
 
 describe('BudgetService', () => {
-  it('verifyTripAccess resolves through DatabaseService.canAccessTrip', async () => {
-    // Plan 3c Task 0b: `DatabaseService.canAccessTrip` is repository-backed
-    // now (not `db/database.ts`'s deleted free function, which is why this
-    // file's `db/database` mock's `canAccessTrip` above no longer reaches
-    // it) — a fake `DatabaseService` in place of the real, EntityManager-less
-    // one `svc()` defaults to, consistent with this suite's "no database
-    // behind it" design (everything else here is a `prepare` stub).
+  it('verifyTripAccess resolves through TripsRepository.findAccessible', async () => {
+    // Plan 4 Task 2: `verifyTripAccess` no longer rides `DatabaseService
+    // .canAccessTrip` — it reads through the injected `TripsRepository`
+    // directly, consistent with this suite's "no database behind it"
+    // design (everything else here is a `prepare` stub).
     const findAccessible = vi.fn(async () => ({ id: 5, user_id: 2 }));
-    const fakeDb = { canAccessTrip: findAccessible } as unknown as DatabaseService;
-    expect(await svc(fakeDb).verifyTripAccess('5', 2)).toEqual({ id: 5, user_id: 2 });
+    const fakeTripsRepo = { findAccessible } as unknown as TripsRepository;
+    expect(await svc(undefined, fakeTripsRepo).verifyTripAccess('5', 2)).toEqual({ id: 5, user_id: 2 });
     expect(findAccessible).toHaveBeenCalledWith('5', 2);
   });
 

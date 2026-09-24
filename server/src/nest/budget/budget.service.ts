@@ -142,7 +142,11 @@ export class BudgetService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return await this.db.canAccessTrip(tripId, userId);
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
+    // gone: this reuses the TripsRepository already injected for other
+    // reads and calls findAccessible. `db` stays injected for
+    // `rosterUserIds` (Task 3's own).
+    return await this.tripsRepo.findAccessible(tripId, userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {

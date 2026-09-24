@@ -89,7 +89,7 @@ beforeAll(async () => {
   vi.spyOn(DatabaseService.prototype, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
     t.em.getRepository(Trips).findAccessible(tripId, userId),
   );
-  access = new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos));
+  access = new MemoriesAccessService(t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos));
 });
 
 beforeEach(() => {

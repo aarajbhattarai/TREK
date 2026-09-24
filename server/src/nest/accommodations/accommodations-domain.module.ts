@@ -11,6 +11,7 @@ import { Places } from '../../db/entities/Places.entity';
 import { Days } from '../../db/entities/Days.entity';
 import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
 import { Reservations } from '../../db/entities/Reservations.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 
 /**
  * The accommodations SERVICE, split from the controller/MCP/RPC surfaces (the
@@ -39,7 +40,7 @@ import { Reservations } from '../../db/entities/Reservations.entity';
 @Module({
   imports: [
     PermissionsModule, RealtimeModule, AssignmentsDomainModule,
-    MikroOrmModule.forFeature([DayAccommodations, DayAssignments, Places, Days, RoadtripVias, Reservations, BudgetItems]),
+    MikroOrmModule.forFeature([DayAccommodations, DayAssignments, Places, Days, RoadtripVias, Reservations, BudgetItems, Trips]),
   ],
   providers: [AccommodationsService],
   exports: [AccommodationsService],

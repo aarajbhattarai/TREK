@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService } from '../database/database.service';
 import type { User } from '../../types';
 import { avatarUrl } from '../common/avatarUrl';
 import { UserCleanupService } from '../auth/user-cleanup.service';
@@ -67,7 +66,6 @@ export interface GuestMember {
 @Injectable()
 export class TripMembersService {
   constructor(
-    private readonly dbs: DatabaseService,
     private readonly budget: BudgetService,
     private readonly userCleanup: UserCleanupService,
     private readonly permissions: PermissionsService,
@@ -80,7 +78,10 @@ export class TripMembersService {
   ) {}
 
   async canAccessTrip(tripId: string | number, userId: number) {
-    const access = await this.dbs.canAccessTrip(tripId, userId);
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
+    // gone: this reuses the TripsRepository already injected for other
+    // reads and calls findAccessible.
+    const access = await this.tripsRepo.findAccessible(tripId, userId);
     return access as { user_id: number } | null | undefined;
   }
 

@@ -50,7 +50,7 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
   const realtime = new RealtimeService();
   const t = await sharedTestOrm(dbs.connection);
   const assignments = new AssignmentsService(
-    dbs, permissions, realtime,
+    await createTestTripsRepo(dbs.connection), permissions, realtime,
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     new JourneyDomainService(
       dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(dbs.connection), dbs), await createTestUnitOfWork(dbs.connection),
@@ -69,6 +69,10 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
   );
   return new AccommodationsService(
     dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
+    // Plan 4 Task 2 — AccommodationsService's own canAccessTrip delegate is now
+    // TripsRepository.findAccessible; `dbs` itself stays (still needed for
+    // stampLodging's getPlaceWithTags).
+    await createTestTripsRepo(dbs.connection),
     await createTestDayAccommodationsRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestPlacesRepo(dbs.connection),

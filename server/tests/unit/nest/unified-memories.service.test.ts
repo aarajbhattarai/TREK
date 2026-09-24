@@ -114,11 +114,10 @@ beforeAll(async () => {
   tripAlbumLinksRepo = t.repo(TripAlbumLinks);
   usersRepo = await createTestUsersRepo(testDb);
   svc = new UnifiedMemoriesService(
-    dbs,
     new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), dbs),
     {} as ImmichService,
     {} as SynologyService,
-    new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos)),
+    new MemoriesAccessService(t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos)),
     notificationsStub(),
     await createTestAddonsService(testDb, dbs),
     await createTestUnitOfWork(testDb),

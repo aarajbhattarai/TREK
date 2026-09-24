@@ -50,7 +50,6 @@ vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createDay, createPlace, createDayAssignment, createDayAccommodation, createDayNote, createTag } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { DaysService, DayReorderError, addDays } from '../../../src/nest/days/days.service';
 // Was days.bridge, deleted with the other three that had no consumer outside the
@@ -62,7 +61,7 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
 import type { Day } from '../../../src/types';
 import {
-  createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseService,
+  createTestUnitOfWork, createTestAppSettingsRepo,
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestReservationsRepo,
@@ -72,9 +71,7 @@ import {
 
 let svc: DaysService;
 beforeAll(async () => {
-  const dbs = await createTestDatabaseService(testDb);
   svc = new DaysService(
-    dbs,
     new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
@@ -828,7 +825,6 @@ describe('DaysService.canEdit', () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
     const withStub = new DaysService(
-      new DatabaseService(testDb),
       permissions,
       new RealtimeService(),
       new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),

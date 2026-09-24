@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { UnitOfWork } from '../database/unit-of-work';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -166,7 +166,6 @@ type AccommodationTimesMeta = {
 @Injectable()
 export class ReservationsService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly budget: BudgetService,
     private readonly realtime: RealtimeService,
@@ -190,7 +189,10 @@ export class ReservationsService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return await this.db.canAccessTrip(tripId, userId);
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
+    // gone: this reuses the TripsRepository already injected for other
+    // reads and calls findAccessible.
+    return await this.tripsRepo.findAccessible(tripId, userId);
   }
 
   /**
