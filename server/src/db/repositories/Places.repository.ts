@@ -231,7 +231,7 @@ export class PlacesRepository extends TrekRepository<Places> {
   async existsInTrip(id: number, trip_id: number): Promise<boolean> {
     const row = await this.qb('p')
       .select(['p.id'])
-      .where('p.id = ? AND p.trip_id = ?', [id, trip_id])
+      .where({ 'p.id': id, 'p.trip_id': trip_id })
       .execute<{ id: number } | undefined>('get', false);
     return !!row;
   }
@@ -252,7 +252,7 @@ export class PlacesRepository extends TrekRepository<Places> {
   async findInTrip(id: number, trip_id: number): Promise<PlaceRow | undefined> {
     return this.qb('p')
       .select(['p.*'])
-      .where('p.id = ? AND p.trip_id = ?', [id, trip_id])
+      .where({ 'p.id': id, 'p.trip_id': trip_id })
       .execute<PlaceRow | undefined>('get', false);
   }
 
@@ -267,7 +267,7 @@ export class PlacesRepository extends TrekRepository<Places> {
   async findRaw(id: number): Promise<PlaceRow | undefined> {
     return this.qb('p')
       .select(['p.*'])
-      .where('p.id = ?', [id])
+      .where({ 'p.id': id })
       .execute<PlaceRow | undefined>('get', false);
   }
 
@@ -281,7 +281,7 @@ export class PlacesRepository extends TrekRepository<Places> {
   async reclaimInputs(id: number, trip_id: number): Promise<{ google_place_id: string | null; image_url: string | null } | undefined> {
     return this.qb('p')
       .select(['p.google_place_id', 'p.image_url'])
-      .where('p.id = ? AND p.trip_id = ?', [id, trip_id])
+      .where({ 'p.id': id, 'p.trip_id': trip_id })
       .execute<{ google_place_id: string | null; image_url: string | null } | undefined>('get', false);
   }
 
@@ -1144,7 +1144,7 @@ export class PlacesRepository extends TrekRepository<Places> {
     if (ids.length === 0) return [];
     return await this.qb('p')
       .select(['p.id', 'p.name', 'p.lat', 'p.lng', 'p.google_place_id', 'p.google_ftid', 'p.osm_id'])
-      .where('p.trip_id = ?', [trip_id])
+      .where({ 'p.trip_id': trip_id })
       .andWhere({ id: { $in: ids } })
       .execute<PlaceMatchRow[]>('all', false);
   }

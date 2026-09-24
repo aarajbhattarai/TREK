@@ -750,11 +750,20 @@ export class TripsRepository extends TrekRepository<Trips> {
    * `updated_at` out — a public share-link viewer never sees either). No
    * access check here, matching the legacy statement — the caller's own
    * `verifyTripAccess`/token validity gates this read.
+   *
+   * `id: number` (Plan 4 Task 8a, rule 23): unlike `findAccessible`/
+   * `isOwner`, this is never on the guard's raw-`req.params` path — its one
+   * caller (`share.service.ts#getSharedTripData`) passes `shareRow.trip_id`,
+   * a `number` straight off a Kysely-typed `share_tokens` row, never an
+   * unconverted URL param — so the `number | string` raw-bind seam those
+   * two methods' own docstrings describe does not apply here, and this one
+   * narrows to a typed filter now rather than waiting on that seam's guard-
+   * level parse (deferred, out of this task's scope).
    */
-  async findPublicForShare(id: number | string): Promise<TripPublicShareRow | undefined> {
+  async findPublicForShare(id: number): Promise<TripPublicShareRow | undefined> {
     return await this.qb('t')
       .select(['t.id', 't.title', 't.description', 't.start_date', 't.end_date', 't.cover_image', 't.currency'])
-      .where('t.id = ?', [id])
+      .where({ 't.id': id })
       .execute<TripPublicShareRow | undefined>('get', false);
   }
 
