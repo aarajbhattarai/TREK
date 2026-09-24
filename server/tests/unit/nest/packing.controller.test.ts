@@ -197,6 +197,16 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       });
     });
 
+    // Plan 4 Task 8b (U6) — :id is parsed ONCE at the controller gate (toRowId).
+    it('404 (not 500) on a non-numeric :id', async () => {
+      const updateItem = vi.fn();
+      const svc = makeService({ updateItem } as Partial<PackingService>);
+      expect(await thrown(async () => await new PackingController(svc).update(user, '5', 'abc', { name: 'X' }))).toEqual({
+        status: 404, body: { error: 'Item not found' },
+      });
+      expect(updateItem).not.toHaveBeenCalled();
+    });
+
     it('updates, forwards changed keys + acting user, and broadcasts (stays public)', async () => {
       const updateItem = vi.fn().mockReturnValue({ id: 9, name: 'X' });
       const broadcast = vi.fn();
@@ -204,7 +214,8 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       await new PackingController(svc).update(user, '5', '9', { name: 'X', checked: true }, 'sock');
       // acting user id is forwarded so privatizing an unowned item can stamp the
       // owner (#858); checked is normalized to the 0/1 the SQL binds.
-      expect(updateItem).toHaveBeenCalledWith('5', '9', expect.objectContaining({ name: 'X', checked: 1 }), ['name', 'checked'], undefined, user.id);
+      // Plan 4 Task 8b (U6) — :id is now parsed ONCE at the controller gate (toRowId).
+      expect(updateItem).toHaveBeenCalledWith('5', 9, expect.objectContaining({ name: 'X', checked: 1 }), ['name', 'checked'], undefined, user.id);
       // A public item (is_private undefined, was public) broadcasts to the whole room.
       expect(broadcast).toHaveBeenCalledWith('5', 'packing:updated', { item: { id: 9, name: 'X' } }, 'sock');
     });
@@ -261,7 +272,7 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       expect(await thrown(async () => await new PackingController(svc).update(user, '5', '9', { name: 'Mine' }, 'sock', '2026-01-01 00:00:00'))).toEqual({
         status: 409, body: { error: 'conflict', server: { id: 9, name: 'Theirs' } },
       });
-      expect(updateItem).toHaveBeenCalledWith('5', '9', expect.objectContaining({ name: 'Mine' }), ['name'], '2026-01-01 00:00:00', user.id);
+      expect(updateItem).toHaveBeenCalledWith('5', 9, expect.objectContaining({ name: 'Mine' }), ['name'], '2026-01-01 00:00:00', user.id);
       expect(broadcast).not.toHaveBeenCalled();
     });
   });
@@ -282,6 +293,16 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       expect(await thrown(async () => await new PackingController(svc).remove(user, '5', '9'))).toEqual({
         status: 404, body: { error: 'Item not found' },
       });
+    });
+
+    // Plan 4 Task 8b (U6) — :id is parsed ONCE at the controller gate (toRowId).
+    it('404 (not 500) on a non-numeric :id', async () => {
+      const deleteItem = vi.fn();
+      const svc = makeService({ deleteItem } as Partial<PackingService>);
+      expect(await thrown(async () => await new PackingController(svc).remove(user, '5', 'abc'))).toEqual({
+        status: 404, body: { error: 'Item not found' },
+      });
+      expect(deleteItem).not.toHaveBeenCalled();
     });
 
     it('deletes a Common item and broadcasts to the room', async () => {
@@ -318,7 +339,8 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const broadcastToViewers = vi.fn();
       const svc = makeService({ setItemSharing, broadcast, broadcastToViewers } as Partial<PackingService>);
       await new PackingController(svc).setSharing(user, '5', '9', { visibility: 'shared', recipient_ids: [2] }, 'sock');
-      expect(setItemSharing).toHaveBeenCalledWith('5', '9', user.id, 'shared', [2]);
+      // Plan 4 Task 8b (U6) — :id is now parsed ONCE at the controller gate (toRowId).
+      expect(setItemSharing).toHaveBeenCalledWith('5', 9, user.id, 'shared', [2]);
       expect(broadcast).toHaveBeenCalledWith('5', 'packing:deleted', { itemId: 9 }, 'sock');
       expect(broadcastToViewers).toHaveBeenCalledWith('5', 'packing:created', { item: updated }, [1, 2], 'sock');
     });
@@ -330,7 +352,8 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const broadcastToViewers = vi.fn();
       const svc = makeService({ cloneItem, broadcastToViewers } as Partial<PackingService>);
       expect(await new PackingController(svc).clone(user, '5', '9', 'sock')).toEqual({ item });
-      expect(cloneItem).toHaveBeenCalledWith('5', '9', user.id);
+      // Plan 4 Task 8b (U6) — :id is now parsed ONCE at the controller gate (toRowId).
+      expect(cloneItem).toHaveBeenCalledWith('5', 9, user.id);
       expect(broadcastToViewers).toHaveBeenCalledWith('5', 'packing:created', { item }, [1], 'sock');
     });
 
@@ -341,7 +364,8 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const broadcast = vi.fn();
       const svc = makeService({ addContributor, broadcast } as Partial<PackingService>);
       await new PackingController(svc).addContributor(user, '5', '9', 'sock');
-      expect(addContributor).toHaveBeenCalledWith('5', '9', user.id);
+      // Plan 4 Task 8b (U6) — :id is now parsed ONCE at the controller gate (toRowId).
+      expect(addContributor).toHaveBeenCalledWith('5', 9, user.id);
       expect(broadcast).toHaveBeenCalledWith('5', 'packing:updated', { item }, 'sock');
     });
 
@@ -351,8 +375,22 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const broadcast = vi.fn();
       const svc = makeService({ removeContributor, broadcast } as Partial<PackingService>);
       await new PackingController(svc).removeContributor(user, '5', '9', '2', 'sock');
-      expect(removeContributor).toHaveBeenCalledWith('5', '9', 2);
+      // Plan 4 Task 8b (U6) — :id/:userId are now parsed ONCE at the controller gate (toRowId).
+      expect(removeContributor).toHaveBeenCalledWith('5', 9, 2);
       expect(broadcast).toHaveBeenCalledWith('5', 'packing:updated', { item }, 'sock');
+    });
+
+    // Plan 4 Task 8b (U6) — :userId used to reach a bare Number.parseInt(),
+    // the NaN-into-SQL trap row-id.ts documents; both #858 routes are
+    // native Nest code with no pre-ORM Express precedent, so there is no
+    // legacy behavior to match — a malformed id just 404s.
+    it('DELETE /:id/contributors/:userId 404 (not 500) on a non-numeric :userId', async () => {
+      const removeContributor = vi.fn();
+      const svc = makeService({ removeContributor } as Partial<PackingService>);
+      expect(await thrown(async () => await new PackingController(svc).removeContributor(user, '5', '9', 'abc'))).toEqual({
+        status: 404, body: { error: 'Item not found' },
+      });
+      expect(removeContributor).not.toHaveBeenCalled();
     });
   });
 
@@ -412,7 +450,8 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const broadcast = vi.fn();
       const svc = makeService({ updateBag, broadcast } as Partial<PackingService>);
       await new PackingController(svc).updateBag(user, '5', '3', { name: 'X', color: '#000' }, 'sock');
-      expect(updateBag).toHaveBeenCalledWith('5', '3', expect.objectContaining({ name: 'X', color: '#000' }), ['name', 'color']);
+      // Plan 4 Task 8b (U6) — :bagId is now parsed ONCE at the controller gate (toRowId).
+      expect(updateBag).toHaveBeenCalledWith('5', 3, expect.objectContaining({ name: 'X', color: '#000' }), ['name', 'color']);
       expect(broadcast).toHaveBeenCalledWith('5', 'packing:bag-updated', { bag: { id: 3, name: 'X' } }, 'sock');
     });
 
@@ -444,7 +483,8 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const svc = makeService({ setBagMembers, broadcast } as Partial<PackingService>);
       const res = await new PackingController(svc).setBagMembers(user, '5', '3', { user_ids: [1, 2] }, 'sock');
       expect(res).toEqual({ members: [{ user_id: 1 }, { user_id: 2 }] });
-      expect(setBagMembers).toHaveBeenCalledWith('5', '3', [1, 2]);
+      // Plan 4 Task 8b (U6) — :bagId is now parsed ONCE at the controller gate (toRowId).
+      expect(setBagMembers).toHaveBeenCalledWith('5', 3, [1, 2]);
       expect(broadcast).toHaveBeenCalledWith('5', 'packing:bag-members-updated', { bagId: 3, members: [{ user_id: 1 }, { user_id: 2 }] }, 'sock');
     });
 
@@ -464,9 +504,19 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
 
     it('404 when applying a missing/empty template (POST stays 200 otherwise)', async () => {
       const svc = makeService({ applyTemplate: vi.fn().mockReturnValue(null) } as Partial<PackingService>);
+      expect(await thrown(async () => await new PackingController(svc).applyTemplate(user, '5', '1', {}))).toEqual({
+        status: 404, body: { error: 'Template not found or empty' },
+      });
+    });
+
+    // Plan 4 Task 8b (U6) — :templateId is parsed ONCE at the controller gate (toRowId).
+    it('404 (not 500) on a non-numeric :templateId', async () => {
+      const applyTemplate = vi.fn();
+      const svc = makeService({ applyTemplate } as Partial<PackingService>);
       expect(await thrown(async () => await new PackingController(svc).applyTemplate(user, '5', 't1', {}))).toEqual({
         status: 404, body: { error: 'Template not found or empty' },
       });
+      expect(applyTemplate).not.toHaveBeenCalled();
     });
 
     it('applies a template, broadcasts the added items and reports the count', async () => {
@@ -474,9 +524,9 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const applyTemplate = vi.fn().mockReturnValue(items);
       const broadcastItem = vi.fn();
       const svc = makeService({ applyTemplate, broadcastItem } as Partial<PackingService>);
-      const res = await new PackingController(svc).applyTemplate(user, '5', 't1', {}, 'sock');
+      const res = await new PackingController(svc).applyTemplate(user, '5', '1', {}, 'sock');
       expect(res).toEqual({ items, count: 3 });
-      expect(applyTemplate).toHaveBeenCalledWith('5', 't1', 'common', user.id);
+      expect(applyTemplate).toHaveBeenCalledWith('5', 1, 'common', user.id);
       expect(broadcastItem).toHaveBeenCalledWith('5', 'packing:template-applied', { items }, items[0], 'sock');
     });
 
@@ -487,16 +537,16 @@ describe('PackingController (parity with the legacy /api/trips/:tripId/packing r
       const applyTemplate = vi.fn().mockReturnValue(items);
       const broadcastItem = vi.fn();
       const svc = makeService({ applyTemplate, broadcastItem } as Partial<PackingService>);
-      await new PackingController(svc).applyTemplate(user, '5', 't1', { visibility: 'personal' }, 'sock');
-      expect(applyTemplate).toHaveBeenCalledWith('5', 't1', 'personal', user.id);
+      await new PackingController(svc).applyTemplate(user, '5', '1', { visibility: 'personal' }, 'sock');
+      expect(applyTemplate).toHaveBeenCalledWith('5', 1, 'personal', user.id);
       expect(broadcastItem).toHaveBeenCalledWith('5', 'packing:template-applied', { items }, items[0], 'sock');
     });
 
     it('falls back to the common pool for an unknown visibility', async () => {
       const applyTemplate = vi.fn().mockReturnValue([{ id: 1 }]);
       const svc = makeService({ applyTemplate } as Partial<PackingService>);
-      await new PackingController(svc).applyTemplate(user, '5', 't1', { visibility: 'bogus' } as never);
-      expect(applyTemplate).toHaveBeenCalledWith('5', 't1', 'common', user.id);
+      await new PackingController(svc).applyTemplate(user, '5', '1', { visibility: 'bogus' } as never);
+      expect(applyTemplate).toHaveBeenCalledWith('5', 1, 'common', user.id);
     });
 
     it('400 when an admin saves a template with no name (whitespace — the schema cannot see it)', async () => {

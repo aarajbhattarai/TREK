@@ -253,9 +253,15 @@ export class PackingService {
     return await this.enrichItems(rows);
   }
 
-  /** Reads an item's current privacy fields (#858) before an update, so the
-   *  controller can detect a public↔private transition and route the broadcast. */
-  async getItemPrivacy(tripId: string | number, id: string | number): Promise<PrivacyFields | undefined> {
+  /**
+   * Reads an item's current privacy fields (#858) before an update, so the
+   * controller can detect a public↔private transition and route the
+   * broadcast. `id: number` (Plan 4 Task 8b, U6 — the program's gate-level
+   * id parsing carry: `PackingController.update` parses `:id` once via
+   * `toRowId` and threads the number here; `packing.rpc.ts`'s `num()`-
+   * derived `itemId` was already a number).
+   */
+  async getItemPrivacy(tripId: string | number, id: number): Promise<PrivacyFields | undefined> {
     return await this.itemsRepo.getPrivacy(id, tripId);
   }
 
@@ -301,9 +307,10 @@ export class PackingService {
     return (await this.enrichItems([await this.itemsRepo.findById(itemId)]))[0];
   }
 
+  /** `id: number` — same Plan 4 Task 8b (U6) gate-level narrowing as {@link getItemPrivacy} (`PackingController.update`/`packing.mcp.ts`'s Zod-typed `itemId`/`packing.rpc.ts`'s `num()`-derived `itemId`). */
   async updateItem(
     tripId: string | number,
-    id: string | number,
+    id: number,
     data: { name?: string; checked?: number; category?: string; weight_grams?: number | null; bag_id?: number | null; quantity?: number; is_private?: boolean },
     bodyKeys: string[],
     ifMatch?: string,
@@ -350,9 +357,10 @@ export class PackingService {
    * Re-set who a "shared with specific people" item covers, and its visibility tier.
    * Only the owner (bringer) may change this; a non-owner caller is rejected with null.
    */
+  /** `id: number` — same Plan 4 Task 8b (U6) gate-level narrowing as {@link getItemPrivacy} (`PackingController.setSharing`/`packing.mcp.ts`'s Zod-typed `itemId`). */
   async setItemSharing(
     tripId: string | number,
-    id: string | number,
+    id: number,
     actingUserId: number,
     visibility: PackingVisibility,
     recipientIds: number[],
@@ -368,32 +376,38 @@ export class PackingService {
       // exactly (nothing else touches owner_id inside this same transaction).
       const claimOwnerId = item.owner_id == null ? actingUserId : undefined;
       await this.itemsRepo.updateSharing(id, this.visibilityToPrivate(visibility), claimOwnerId);
-      await this.itemsRepo.deleteRecipientsForItem(Number(id));
+      await this.itemsRepo.deleteRecipientsForItem(id);
       if (visibility === 'shared') {
         const owner = item.owner_id ?? actingUserId;
         const roster = await this.tripRosterIds(tripId);
         const recipients = recipientIds.filter(uid => uid !== owner && roster.has(uid));
-        await this.itemsRepo.insertRecipientsIgnore(Number(id), recipients);
+        await this.itemsRepo.insertRecipientsIgnore(id, recipients);
       }
       // Leaving the Common tier drops any co-contributors (they only apply to Common).
-      if (visibility !== 'common') await this.contributorsRepo.deleteForItem(Number(id));
+      if (visibility !== 'common') await this.contributorsRepo.deleteForItem(id);
     });
     return (await this.enrichItems([await this.itemsRepo.findById(id)]))[0];
   }
 
-  /** "I can bring that too" — adds the user as a co-contributor on a Common item. */
-  async addContributor(tripId: string | number, id: string | number, userId: number) {
+  /**
+   * "I can bring that too" — adds the user as a co-contributor on a Common
+   * item. `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link
+   * getItemPrivacy} (`PackingController.addContributor`, native Nest code
+   * with no pre-ORM Express precedent — #858 landed post-migration).
+   */
+  async addContributor(tripId: string | number, id: number, userId: number) {
     const item = await this.itemsRepo.findVisibleInTrip(id, tripId, userId);
     if (!item || item.is_private !== 0) return null; // co-contribution is a Common-list concept
     if (item.owner_id === userId) return null; // the bringer is already covering it
-    await this.contributorsRepo.insertIgnore(Number(id), userId);
+    await this.contributorsRepo.insertIgnore(id, userId);
     return (await this.enrichItems([await this.itemsRepo.findById(id)]))[0];
   }
 
-  async removeContributor(tripId: string | number, id: string | number, userId: number) {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link addContributor}; `userId` here is the target being removed, not the acting viewer (`PackingController.removeContributor` now parses both `:id`/`:userId` via `toRowId` instead of a bare `Number.parseInt`). */
+  async removeContributor(tripId: string | number, id: number, userId: number) {
     const item = await this.itemsRepo.findVisibleInTrip(id, tripId, userId);
     if (!item) return null;
-    await this.contributorsRepo.deleteOne(Number(id), userId);
+    await this.contributorsRepo.deleteOne(id, userId);
     return (await this.enrichItems([await this.itemsRepo.findById(id)]))[0];
   }
 
@@ -423,7 +437,8 @@ export class PackingService {
    * Weight comes along — it is a property of the thing, and re-entering it by hand for
    * every traveller was the whole complaint in #207.
    */
-  async cloneItem(tripId: string | number, id: string | number, userId: number) {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link addContributor} (`PackingController.clone`). */
+  async cloneItem(tripId: string | number, id: number, userId: number) {
     const item = await this.itemsRepo.findVisibleInTrip(id, tripId, userId);
     if (!item) return null;
     return await this.createItem(tripId, {
@@ -436,7 +451,8 @@ export class PackingService {
     }, userId);
   }
 
-  async deleteItem(tripId: string | number, id: string | number, actingUserId?: number) {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link addContributor} (`PackingController.remove`/`packing.mcp.ts`'s Zod-typed `itemId`/`packing.rpc.ts`'s `num()`-derived `itemId`). */
+  async deleteItem(tripId: string | number, id: number, actingUserId?: number) {
     // Return the deleted row (not just a boolean) so callers can target the
     // delete broadcast at the owner when the item was private (#858).
     // Scoped to what the actor may see: trip membership alone used to be enough
@@ -571,17 +587,18 @@ export class PackingService {
     return await this.tripMembersRepo.rosterUserIds(tripId);
   }
 
-  async setBagMembers(tripId: string | number, bagId: string | number, userIds: number[]) {
+  /** `bagId: number` (Plan 4 Task 8b, U6 — the program's gate-level id parsing carry: `PackingController.setBagMembers` parses `:bagId` once via `toRowId`; `packing.mcp.ts`'s Zod-typed `bagId`/`packing.rpc.ts`'s `num()`-derived `bagId` were already numbers). */
+  async setBagMembers(tripId: string | number, bagId: number, userIds: number[]) {
     const bag = await this.bagsRepo.findInTrip(bagId, tripId);
     if (!bag) return null;
     await this.uow.transactional(async () => {
-      await this.bagsRepo.deleteMembersForBag(Number(bagId));
+      await this.bagsRepo.deleteMembersForBag(bagId);
       // Only real trip members may be bag members — never write an arbitrary account id.
       const roster = await this.tripRosterIds(tripId);
       const members = userIds.filter(uid => roster.has(uid));
-      await this.bagsRepo.insertMembersIgnore(Number(bagId), members);
+      await this.bagsRepo.insertMembersIgnore(bagId, members);
     });
-    const rows = await this.bagsRepo.listMembersWithUserForBag(Number(bagId));
+    const rows = await this.bagsRepo.listMembersWithUserForBag(bagId);
     return rows.map(m => ({ ...m, avatar: avatarUrl(m) }));
   }
 
@@ -597,9 +614,10 @@ export class PackingService {
     return await this.bagsRepo.findById(newId);
   }
 
+  /** `bagId: number` — same Plan 4 Task 8b (U6) narrowing as {@link setBagMembers} (`PackingController.updateBag`). */
   async updateBag(
     tripId: string | number,
-    bagId: string | number,
+    bagId: number,
     data: { name?: string; color?: string; weight_limit_grams?: number | null; user_id?: number | null },
     bodyKeys?: string[]
   ) {
@@ -619,7 +637,8 @@ export class PackingService {
     return await this.bagsRepo.findWithAssignee(bagId);
   }
 
-  async deleteBag(tripId: string | number, bagId: string | number): Promise<boolean> {
+  /** `bagId: number` — same Plan 4 Task 8b (U6) narrowing as {@link setBagMembers} (`PackingController.deleteBag`). */
+  async deleteBag(tripId: string | number, bagId: number): Promise<boolean> {
     const bag = await this.bagsRepo.findInTrip(bagId, tripId);
     if (!bag) return false;
 
@@ -640,9 +659,10 @@ export class PackingService {
 
   // ── Apply Template ─────────────────────────────────────────────────────────
 
+  /** `templateId: number` (Plan 4 Task 8b, U6 — the program's gate-level id parsing carry: `PackingController.applyTemplate` parses `:templateId` once via `toRowId`; `packing.mcp.ts`'s Zod-typed `templateId` was already a number). */
   async applyTemplate(
     tripId: string | number,
-    templateId: string | number,
+    templateId: number,
     visibility: 'common' | 'personal' = 'common',
     ownerId?: number,
   ) {

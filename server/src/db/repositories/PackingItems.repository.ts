@@ -155,9 +155,9 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
       .execute();
   }
 
-  /** PK6 (`getItemPrivacy`) — `SELECT is_private, owner_id FROM packing_items WHERE id = ? AND trip_id = ?`. */
-  async getPrivacy(id: number | string, trip_id: number | string): Promise<{ is_private: number; owner_id: number | null } | undefined> {
-    return await this.db().selectFrom('packing_items').select(['is_private', 'owner_id']).where('id', '=', id as number).where('trip_id', '=', trip_id as number).executeTakeFirst();
+  /** PK6 (`getItemPrivacy`) — `SELECT is_private, owner_id FROM packing_items WHERE id = ? AND trip_id = ?`. `id: number` (Plan 4 Task 8b, U6 — the program's gate-level id parsing carry: its one caller, `PackingService.getItemPrivacy`, is only reached with a `toRowId`-parsed id); `trip_id` stays `number | string`, a separate, still-accepted carry. */
+  async getPrivacy(id: number, trip_id: number | string): Promise<{ is_private: number; owner_id: number | null } | undefined> {
+    return await this.db().selectFrom('packing_items').select(['is_private', 'owner_id']).where('id', '=', id).where('trip_id', '=', trip_id as number).executeTakeFirst();
   }
 
   /** PK7/PK28/PK51 (`createItem`/`bulkImport`/`applyTemplate`) — `SELECT MAX(sort_order) as max FROM packing_items WHERE trip_id = ?`, one method, three call sites. */
@@ -255,9 +255,9 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
       .execute();
   }
 
-  /** PK10/PK14/PK19/PK21/PK23/PK33/PK53 — `SELECT * FROM packing_items WHERE id = ?`, the shared post-write re-select text, seven call sites. */
-  async findById(id: number | string): Promise<PackingItemRow | undefined> {
-    return await this.db().selectFrom('packing_items').selectAll().where('id', '=', id as number).executeTakeFirst();
+  /** PK10/PK14/PK19/PK21/PK23/PK33/PK53 — `SELECT * FROM packing_items WHERE id = ?`, the shared post-write re-select text, seven call sites. `id: number` (Plan 4 Task 8b, U6 — every call site is already a real row id: an insert's own return value, or a `toRowId`-parsed/Zod-typed id threaded down from the other narrowed methods on this class). */
+  async findById(id: number): Promise<PackingItemRow | undefined> {
+    return await this.db().selectFrom('packing_items').selectAll().where('id', '=', id).executeTakeFirst();
   }
 
   /**
@@ -269,14 +269,17 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
    * Task 0's shared `packingVisibleToActorExpr` predicate, never a
    * re-spelled fragment. A missing actor id returns `undefined` without
    * querying (matching the legacy JS-level guard — "a missing actor denies
-   * too, rather than falling through unfiltered").
+   * too, rather than falling through unfiltered"). `id: number` (Plan 4
+   * Task 8b, U6 — the program's gate-level id parsing carry: all six call
+   * sites now thread a `toRowId`-parsed/Zod-typed id); `trip_id` stays
+   * `number | string`, a separate, still-accepted carry.
    */
-  async findVisibleInTrip(id: number | string, trip_id: number | string, actorId: number | undefined): Promise<PackingItemRow | undefined> {
+  async findVisibleInTrip(id: number, trip_id: number | string, actorId: number | undefined): Promise<PackingItemRow | undefined> {
     if (actorId == null) return undefined;
     return await this.db()
       .selectFrom('packing_items')
       .selectAll()
-      .where('id', '=', id as number)
+      .where('id', '=', id)
       .where('trip_id', '=', trip_id as number)
       .where((eb) => packingVisibleToActorExpr(eb, actorId))
       .executeTakeFirst();
@@ -301,7 +304,8 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
    * `BudgetItemsRepository.update`'s early-return guard (budget's row has
    * no `updated_at` column at all).
    */
-  async update(id: number | string, write: {
+  /** `id: number`, same Plan 4 Task 8b (U6) narrowing as {@link findById} (its one caller, `updateItem`, is only reached with a `toRowId`-parsed/Zod-typed id). */
+  async update(id: number, write: {
     name?: readonly [present: boolean, value: string | null];
     checked?: readonly [present: boolean, value: number];
     category?: readonly [present: boolean, value: string | null];
@@ -325,7 +329,7 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
       is_private: write.is_private,
       owner: write.owner_id,
     });
-    await this.nativeUpdate({ id: id as number }, { ...data, updated_at: currentTimestamp(platform) });
+    await this.nativeUpdate({ id }, { ...data, updated_at: currentTimestamp(platform) });
   }
 
   /**
@@ -335,12 +339,13 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
    * semantics: `owner_id` is passed only when the pre-image's `owner_id` was
    * `null` (an unowned legacy item being claimed), otherwise omitted so the
    * column is left untouched — the same presence-object shape as
-   * {@link update}, one key.
+   * {@link update}, one key. `id: number`, same Plan 4 Task 8b narrowing as
+   * {@link findById}.
    */
-  async updateSharing(id: number | string, is_private: number, claimOwnerId?: number): Promise<void> {
+  async updateSharing(id: number, is_private: number, claimOwnerId?: number): Promise<void> {
     const platform = this.getEntityManager().getPlatform();
     const data = presenceSet<{ owner: number }>({ owner: claimOwnerId !== undefined ? [true, claimOwnerId] : undefined });
-    await this.nativeUpdate({ id: id as number }, { is_private, ...data, updated_at: currentTimestamp(platform) });
+    await this.nativeUpdate({ id }, { is_private, ...data, updated_at: currentTimestamp(platform) });
   }
 
   /** PK16 (`setItemSharing`'s replace-all) — `DELETE FROM packing_item_recipients WHERE item_id = ?`. */
@@ -348,9 +353,9 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
     await this.db().deleteFrom('packing_item_recipients').where('item_id', '=', item_id).execute();
   }
 
-  /** PK27 (`deleteItem`) — `DELETE FROM packing_items WHERE id = ?`. */
-  async delete(id: number | string): Promise<void> {
-    await this.nativeDelete({ id: id as number });
+  /** PK27 (`deleteItem`) — `DELETE FROM packing_items WHERE id = ?`. `id: number`, same Plan 4 Task 8b narrowing as {@link findById}. */
+  async delete(id: number): Promise<void> {
+    await this.nativeDelete({ id });
   }
 
   /**

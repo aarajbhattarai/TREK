@@ -80,10 +80,14 @@ export class PackingBagsRepository extends TrekRepository<PackingBags> {
    * read-model per statement" is about DISTINCT projections, not about
    * reproducing an accidental column subset when a caller only reads one
    * or two fields off it) — `bagInTrip` checks truthiness, `bagForCloner`
-   * reads `.user_id`, the three guards check truthiness too.
+   * reads `.user_id`, the three guards check truthiness too. `id: number`
+   * (Plan 4 Task 8b, U6 — the program's gate-level id parsing carry: every
+   * call site is either a genuine `bag_id` value or a `toRowId`-parsed/
+   * Zod-typed route id); `trip_id` stays `number | string`, a separate,
+   * still-accepted carry.
    */
-  async findInTrip(id: number | string, trip_id: number | string): Promise<PackingBagRow | undefined> {
-    return await this.db().selectFrom('packing_bags').selectAll().where('id', '=', id as number).where('trip_id', '=', trip_id as number).executeTakeFirst();
+  async findInTrip(id: number, trip_id: number | string): Promise<PackingBagRow | undefined> {
+    return await this.db().selectFrom('packing_bags').selectAll().where('id', '=', id).where('trip_id', '=', trip_id as number).executeTakeFirst();
   }
 
   /** PK30 (`bulkImport`'s bag-by-name resolution) — `SELECT id FROM packing_bags WHERE trip_id = ? AND name = ?`. */
@@ -150,7 +154,8 @@ export class PackingBagsRepository extends TrekRepository<PackingBags> {
    * returned 200; task-8-review.md H2) — the same guard `BudgetItems`
    * (`:222`) and `TodoItems` (`:125`) already carry.
    */
-  async update(id: number | string, write: {
+  /** `id: number`, same Plan 4 Task 8b (U6) narrowing as {@link findInTrip} (its one caller, `updateBag`, is only reached with a `toRowId`-parsed/Zod-typed id). */
+  async update(id: number, write: {
     name?: readonly [present: boolean, value: string | null];
     color?: readonly [present: boolean, value: string | null];
     weight_limit_grams?: readonly [present: boolean, value: number | null];
@@ -158,23 +163,23 @@ export class PackingBagsRepository extends TrekRepository<PackingBags> {
   }): Promise<void> {
     const data = presenceSet<{ name: string; color: string; weight_limit_grams: number | null; user_id: number | null }>(write);
     if (Object.keys(data).length === 0) return;
-    await this.db().updateTable('packing_bags').set(data).where('id', '=', id as number).execute();
+    await this.db().updateTable('packing_bags').set(data).where('id', '=', id).execute();
   }
 
-  /** PK46 (`updateBag`'s re-select) — `SELECT b.*, COALESCE(u.display_name, u.username) as assigned_username FROM packing_bags b LEFT JOIN users u ON b.user_id = u.id WHERE b.id = ?`. */
-  async findWithAssignee(id: number | string): Promise<PackingBagWithAssigneeRow | undefined> {
+  /** PK46 (`updateBag`'s re-select) — `SELECT b.*, COALESCE(u.display_name, u.username) as assigned_username FROM packing_bags b LEFT JOIN users u ON b.user_id = u.id WHERE b.id = ?`. `id: number`, same Plan 4 Task 8b narrowing as {@link findInTrip}. */
+  async findWithAssignee(id: number): Promise<PackingBagWithAssigneeRow | undefined> {
     return await this.db()
       .selectFrom('packing_bags as b')
       .leftJoin('users as u', 'u.id', 'b.user_id')
       .selectAll('b')
       .select((eb) => eb.fn.coalesce('u.display_name', 'u.username').as('assigned_username'))
-      .where('b.id', '=', id as number)
+      .where('b.id', '=', id)
       .executeTakeFirst();
   }
 
-  /** PK48 (`deleteBag`) — `DELETE FROM packing_bags WHERE id = ?`. */
-  async delete(id: number | string): Promise<void> {
-    await this.nativeDelete({ id: id as number });
+  /** PK48 (`deleteBag`) — `DELETE FROM packing_bags WHERE id = ?`. `id: number`, same Plan 4 Task 8b narrowing as {@link findInTrip}. */
+  async delete(id: number): Promise<void> {
+    await this.nativeDelete({ id });
   }
 
   /** PK35 (`decorateBags`) — `SELECT * FROM packing_bags WHERE trip_id = ? ORDER BY sort_order, id`. */

@@ -38,14 +38,16 @@ export class PackingTemplateItemsRepository extends TrekRepository<PackingTempla
    * PK50 (`applyTemplate`) — `SELECT ti.name, tc.name as category FROM
    * packing_template_items ti JOIN packing_template_categories tc ON
    * ti.category_id = tc.id WHERE tc.template_id = ? ORDER BY tc.sort_order,
-   * ti.sort_order`.
+   * ti.sort_order`. `template_id: number` (Plan 4 Task 8b, U6 — the
+   * program's gate-level id parsing carry: its one caller, `applyTemplate`,
+   * is only reached with a `toRowId`-parsed/Zod-typed id).
    */
-  async listForApply(template_id: number | string): Promise<PackingTemplateApplyRow[]> {
+  async listForApply(template_id: number): Promise<PackingTemplateApplyRow[]> {
     return await this.db()
       .selectFrom('packing_template_items as ti')
       .innerJoin('packing_template_categories as tc', 'tc.id', 'ti.category_id')
       .select(['ti.name', 'tc.name as category'])
-      .where('tc.template_id', '=', template_id as number)
+      .where('tc.template_id', '=', template_id)
       .orderBy('tc.sort_order', 'asc')
       .orderBy('ti.sort_order', 'asc')
       .execute();

@@ -66,7 +66,9 @@ export class PackingRpc {
     // Read the privacy BEFORE the write, so a public/private toggle routes correctly.
     const before = await this.packing.getItemPrivacy(tripId, itemId);
     const input = parsed.data as Record<string, unknown>;
-    const updated = await this.packing.updateItem(String(tripId), String(itemId), input as never, Object.keys(input), undefined, actor);
+    // Plan 4 Task 8b (U6) — itemId is already a real row id (num() above);
+    // PackingService.updateItem's id param no longer needs the String() wrapper.
+    const updated = await this.packing.updateItem(String(tripId), itemId, input as never, Object.keys(input), undefined, actor);
     if (!updated) throw new ForbiddenResource(`no packing item ${itemId} on trip ${tripId}`);
     if (isUpdateConflict(updated)) throw new BadParams('packing item was modified concurrently');
     // A referenced bag must exist on this trip (#2154), as on the REST route.
@@ -84,7 +86,8 @@ export class PackingRpc {
     const itemId = num(params.itemId, 'itemId');
     const actor = this.guards.requireActor(ctx, 'packing item');
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
-    const deleted = await this.packing.deleteItem(String(tripId), String(itemId), actor) as PrivacyItem | null;
+    // Plan 4 Task 8b (U6) — same drop of itemId's String() wrapper as update above.
+    const deleted = await this.packing.deleteItem(String(tripId), itemId, actor) as PrivacyItem | null;
     if (!deleted) throw new ForbiddenResource(`no packing item ${itemId} on trip ${tripId}`);
     this.packing.emitToViewers(String(tripId), 'packing:deleted', { itemId }, deleted, undefined);
     this.packing.broadcastBagTotals(String(tripId));
@@ -121,7 +124,9 @@ export class PackingRpc {
     const actor = this.guards.requireActor(ctx, 'packing bag');
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
     const input = asPayload(params.input);
-    const bag = await this.packing.updateBag(String(tripId), String(bagId), input as never, Object.keys(input));
+    // Plan 4 Task 8b (U6) — bagId is already a real row id (num() above);
+    // PackingService.updateBag's bagId param no longer needs the String() wrapper.
+    const bag = await this.packing.updateBag(String(tripId), bagId, input as never, Object.keys(input));
     if (!bag) throw new ForbiddenResource(`no packing bag ${bagId} on trip ${tripId}`);
     this.realtime.broadcast(tripId, 'packing:bag-updated', { bag }, undefined);
     return bag;
@@ -133,7 +138,8 @@ export class PackingRpc {
     const bagId = num(params.bagId, 'bagId');
     const actor = this.guards.requireActor(ctx, 'packing bag');
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
-    if (!(await this.packing.deleteBag(String(tripId), String(bagId)))) {
+    // Plan 4 Task 8b (U6) — same drop of bagId's String() wrapper as updateBag above.
+    if (!(await this.packing.deleteBag(String(tripId), bagId))) {
       throw new ForbiddenResource(`no packing bag ${bagId} on trip ${tripId}`);
     }
     this.realtime.broadcast(tripId, 'packing:bag-deleted', { bagId }, undefined);
@@ -151,7 +157,8 @@ export class PackingRpc {
     // userIds sits on the params object itself, not under `input`.
     const raw = asPayload(params).userIds;
     const userIds = Array.isArray(raw) ? raw.filter((x): x is number => typeof x === 'number') : [];
-    const members = await this.packing.setBagMembers(String(tripId), String(bagId), userIds);
+    // Plan 4 Task 8b (U6) — same drop of bagId's String() wrapper as updateBag above.
+    const members = await this.packing.setBagMembers(String(tripId), bagId, userIds);
     if (!members) throw new ForbiddenResource(`no packing bag ${bagId} on trip ${tripId}`);
     this.realtime.broadcast(tripId, 'packing:bag-members-updated', { bagId, members }, undefined);
     return members;

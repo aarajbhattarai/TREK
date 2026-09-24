@@ -18,6 +18,7 @@ import { isUpdateConflict } from '../common/conflictResult';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { RequirePermission, TripAccessGuard } from '../permissions/trip-access.guard';
+import { toRowId } from '../common/row-id';
 import {
   PackingApplyTemplateDto,
   PackingBagMembersDto,
@@ -131,14 +132,24 @@ export class PackingController {
     @Headers('x-socket-id') socketId?: string,
     @Headers('x-base-updated-at') ifMatch?: string,
   ) {
+    // Plan 4 Task 8b (U6) — :id is parsed ONCE here (toRowId, not Number():
+    // rule 15's NaN-into-SQL trap), and the parsed number is what flows into
+    // the service instead of the raw route string reaching the repository.
+    // A malformed id never matched under the legacy affinity CAST either,
+    // so it 404s with the same body this handler's own not-found branch
+    // already produces below.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Item not found' }, 404);
+    }
     // Privacy state before the change, so a public↔private toggle (#858) can route
     // the broadcast correctly instead of leaking a freshly-privatized item.
-    const before = await this.packing.getItemPrivacy(tripId, id);
+    const before = await this.packing.getItemPrivacy(tripId, itemId);
     const { name, checked, category, weight_grams, bag_id, quantity, is_private } = body;
     // bodyKeys carries which keys the request actually provided (the presence-
     // sentinel protocol); the parsed body only ever holds known schema keys.
     // checked arrives as boolean or legacy 0/1 — normalize to the 0/1 the SQL binds.
-    const updated = await this.packing.updateItem(tripId, id, { name, checked: checked === undefined ? undefined : checked ? 1 : 0, category, weight_grams, bag_id, quantity, is_private }, Object.keys(body), ifMatch, user.id);
+    const updated = await this.packing.updateItem(tripId, itemId, { name, checked: checked === undefined ? undefined : checked ? 1 : 0, category, weight_grams, bag_id, quantity, is_private }, Object.keys(body), ifMatch, user.id);
     if (!updated) {
       throw new HttpException({ error: 'Item not found' }, 404);
     }
@@ -150,7 +161,7 @@ export class PackingController {
     if (isInvalidBagRef(updated)) {
       throw new HttpException({ error: 'Bag not found' }, 400);
     }
-    this.packing.broadcastUpdate(tripId, id, updated as PackingItemRow, !!before?.is_private, socketId);
+    this.packing.broadcastUpdate(tripId, itemId, updated as PackingItemRow, !!before?.is_private, socketId);
     // Only when the write could actually move a weight. Checking an item off is
     // the most frequent packing write there is, and every ping costs every
     // connected client a listBags round trip.
@@ -168,7 +179,12 @@ export class PackingController {
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const deleted = await this.packing.deleteItem(tripId, id, user.id);
+    // Plan 4 Task 8b (U6) — same single gate-level parse as update above.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Item not found' }, 404);
+    }
+    const deleted = await this.packing.deleteItem(tripId, itemId, user.id);
     if (!deleted) {
       throw new HttpException({ error: 'Item not found' }, 404);
     }
@@ -176,7 +192,7 @@ export class PackingController {
     // `deleted` is already a concretely-typed `PackingItemRow` (Plan 3e Task 3's
     // `PackingItemsRepository`, via `PackingService.deleteItem`'s return type) —
     // no cast needed, unlike `updated` above (that one's inferred as `unknown`).
-    this.packing.emitToViewers(tripId, 'packing:deleted', { itemId: Number(id) }, deleted, socketId);
+    this.packing.emitToViewers(tripId, 'packing:deleted', { itemId }, deleted, socketId);
     this.packing.broadcastBagTotals(tripId);
     return { success: true };
   }
@@ -190,7 +206,12 @@ export class PackingController {
     @Body() body: PackingSetSharingDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const updated = await this.packing.setItemSharing(tripId, id, user.id, body.visibility, Array.isArray(body.recipient_ids) ? body.recipient_ids : []);
+    // Plan 4 Task 8b (U6) — same single gate-level parse as update above.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Item not found' }, 404);
+    }
+    const updated = await this.packing.setItemSharing(tripId, itemId, user.id, body.visibility, Array.isArray(body.recipient_ids) ? body.recipient_ids : []);
     if (!updated) {
       throw new HttpException({ error: 'Item not found' }, 404);
     }
@@ -199,7 +220,7 @@ export class PackingController {
     }
     // The viewer set just changed: drop the item from the whole room, then re-add
     // it for whoever can now see it (owner + recipients, or everyone if Common).
-    this.packing.broadcast(tripId, 'packing:deleted', { itemId: Number(id) }, socketId);
+    this.packing.broadcast(tripId, 'packing:deleted', { itemId }, socketId);
     this.packing.emitToViewers(tripId, 'packing:created', { item: updated }, updated as PackingItemRow, socketId);
     return { item: updated };
   }
@@ -213,7 +234,12 @@ export class PackingController {
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const item = await this.packing.cloneItem(tripId, id, user.id);
+    // Plan 4 Task 8b (U6) — same single gate-level parse as update above.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Item not found' }, 404);
+    }
+    const item = await this.packing.cloneItem(tripId, itemId, user.id);
     if (!item) {
       throw new HttpException({ error: 'Item not found' }, 404);
     }
@@ -231,7 +257,16 @@ export class PackingController {
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const item = await this.packing.addContributor(tripId, id, user.id);
+    // Plan 4 Task 8b (U6) — :id parsed ONCE here (toRowId). #858's
+    // contributors/sharing routes are native Nest code with no pre-ORM
+    // Express precedent (introduced in 7eabf6066, after the migration), so
+    // there is no legacy affinity-seam behavior to match — a malformed id
+    // just 404s the same way an unknown one already does below.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Item not found or not a shared list item' }, 404);
+    }
+    const item = await this.packing.addContributor(tripId, itemId, user.id);
     if (!item) {
       throw new HttpException({ error: 'Item not found or not a shared list item' }, 404);
     }
@@ -249,9 +284,17 @@ export class PackingController {
     @Param('userId') userId: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
+    // Plan 4 Task 8b (U6) — :id/:userId both parsed ONCE here (toRowId, not
+    // Number.parseInt(): the NaN-into-SQL trap row-id.ts documents — a
+    // malformed userId used to reach contributorsRepo.deleteOne as a bare
+    // NaN parameter). Same "no legacy precedent" note as addContributor above.
+    const itemId = toRowId(id);
+    const target = toRowId(userId);
+    if (itemId === null || target === null) {
+      throw new HttpException({ error: 'Item not found' }, 404);
+    }
     // You can drop your own pledge; the owner can remove anyone's.
-    const target = Number.parseInt(userId);
-    const item = await this.packing.removeContributor(tripId, id, target);
+    const item = await this.packing.removeContributor(tripId, itemId, target);
     if (!item) {
       throw new HttpException({ error: 'Item not found' }, 404);
     }
@@ -293,10 +336,18 @@ export class PackingController {
     @Body() body: PackingUpdateBagDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
+    // Plan 4 Task 8b (U6) — :bagId is parsed ONCE here (toRowId, not
+    // Number(): rule 15's NaN-into-SQL trap). A malformed id never matched
+    // under the legacy affinity CAST either, so it 404s with the same body
+    // this handler's own not-found branch already produces below.
+    const bagIdNum = toRowId(bagId);
+    if (bagIdNum === null) {
+      throw new HttpException({ error: 'Bag not found' }, 404);
+    }
     const { name, color, weight_limit_grams, user_id } = body;
     // bodyKeys carries which keys the request actually provided (the presence-
     // sentinel protocol); the parsed body only ever holds known schema keys.
-    const updated = await this.packing.updateBag(tripId, bagId, { name, color, weight_limit_grams, user_id }, Object.keys(body));
+    const updated = await this.packing.updateBag(tripId, bagIdNum, { name, color, weight_limit_grams, user_id }, Object.keys(body));
     if (!updated) {
       throw new HttpException({ error: 'Bag not found' }, 404);
     }
@@ -312,10 +363,15 @@ export class PackingController {
     @Param('bagId') bagId: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!(await this.packing.deleteBag(tripId, bagId))) {
+    // Plan 4 Task 8b (U6) — same single gate-level parse as updateBag above.
+    const bagIdNum = toRowId(bagId);
+    if (bagIdNum === null) {
       throw new HttpException({ error: 'Bag not found' }, 404);
     }
-    this.packing.broadcast(tripId, 'packing:bag-deleted', { bagId: Number(bagId) }, socketId);
+    if (!(await this.packing.deleteBag(tripId, bagIdNum))) {
+      throw new HttpException({ error: 'Bag not found' }, 404);
+    }
+    this.packing.broadcast(tripId, 'packing:bag-deleted', { bagId: bagIdNum }, socketId);
     // bag_id is ON DELETE SET NULL, so everything that was in it just landed in
     // the unassigned pile — both figures moved.
     this.packing.broadcastBagTotals(tripId);
@@ -337,8 +393,16 @@ export class PackingController {
     @Body() body: PackingApplyTemplateDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
+    // Plan 4 Task 8b (U6) — :templateId is parsed ONCE here (toRowId, not
+    // Number(): rule 15's NaN-into-SQL trap). A malformed id never matched
+    // under the legacy affinity CAST either, so it 404s with the same body
+    // this handler's own not-found branch already produces below.
+    const templateIdNum = toRowId(templateId);
+    if (templateIdNum === null) {
+      throw new HttpException({ error: 'Template not found or empty' }, 404);
+    }
     const visibility = body?.visibility === 'personal' ? 'personal' : 'common';
-    const added = await this.packing.applyTemplate(tripId, templateId, visibility, user.id);
+    const added = await this.packing.applyTemplate(tripId, templateIdNum, visibility, user.id);
     if (!added) {
       throw new HttpException({ error: 'Template not found or empty' }, 404);
     }
@@ -356,11 +420,16 @@ export class PackingController {
     @Body() body: PackingBagMembersDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const members = await this.packing.setBagMembers(tripId, bagId, body.user_ids);
+    // Plan 4 Task 8b (U6) — same single gate-level parse as updateBag above.
+    const bagIdNum = toRowId(bagId);
+    if (bagIdNum === null) {
+      throw new HttpException({ error: 'Bag not found' }, 404);
+    }
+    const members = await this.packing.setBagMembers(tripId, bagIdNum, body.user_ids);
     if (!members) {
       throw new HttpException({ error: 'Bag not found' }, 404);
     }
-    this.packing.broadcast(tripId, 'packing:bag-members-updated', { bagId: Number(bagId), members }, socketId);
+    this.packing.broadcast(tripId, 'packing:bag-members-updated', { bagId: bagIdNum, members }, socketId);
     return { members };
   }
 
