@@ -61,6 +61,22 @@ function getRawConnection(): Database.Database {
   return _db;
 }
 
+/**
+ * Plan 4 Task 4 deleted `DatabaseService`/`DatabaseModule` and every `src/`
+ * importer of this Proxy is gone — but the export itself stays, deliberately:
+ * ~190 test files' `vi.mock('…/db/database', …)` factories return a
+ * `{ db: <mock handle>, … }` shape (`buildDbMock`/the ad-hoc equivalents),
+ * and their own `import { db as testDb } from '…/db/database'` line is typed
+ * against THIS file's real exports, not the runtime mock — Vitest's
+ * `vi.mock` swaps the module at runtime, but `tsc` resolves the import
+ * statically regardless. Deleting this export makes every one of those
+ * files fail `typecheck:tests` even though none of them use the exported
+ * Proxy in production. That test-harness idiom is Track B's own territory
+ * (5a/5b/5c's "e2e pattern"), not enumerated in this task's file set —
+ * left for a follow-up that swaps the idiom, not deleted out from under it.
+ * `src/` never imports it, so ESLint's `no-restricted-imports` shrink still
+ * holds this file to its permanent allow-list entry (rule 4) regardless.
+ */
 const db = new Proxy({} as Database.Database, {
   get(_, prop: string | symbol) {
     if (!_db) throw new Error('Database connection is not available (restore in progress?)');
@@ -142,8 +158,12 @@ async function reinitialize(): Promise<void> {
 // interfaces lived here through Plan 3c Task 0a's async sweep. Task 0b moved
 // their bodies onto TripsRepository.findAccessible/isOwner and
 // PlacesRepository.findWithTagsAndRatings — db/repositories/Trips.repository.ts's
-// TripAccess is now the single source (db/database.ts's copy is deleted, not
-// re-exported); DatabaseService re-exports both type names from the
-// repositories that own them now, so no importer's path changed.
+// TripAccess is now the single source. Plan 4 Task 4 deleted `DatabaseService`
+// (its last `src/` consumer) once every caller moved onto a repository, the
+// `UnitOfWork`, or (for the two whole-database-file statements no
+// entity/repository call can express) `MaintenanceRepository`/
+// `DemoRepository`'s own `connection.execute()`. The `db` Proxy itself stays
+// exported — see its own docstring above for why (~190 test files' static
+// typecheck, not a production `src/` need).
 
 export { db, closeDb, reinitialize, getRawConnection, registerReinitializeHook, runDemoSeed };

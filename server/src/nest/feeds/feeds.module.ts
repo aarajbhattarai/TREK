@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AppConfigModule } from '../app-config/app-config.module';
 import { CalendarModule } from '../calendar/calendar.module';
-import { DatabaseModule } from '../database/database.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { RealtimeModule } from '../realtime/realtime.module';
@@ -28,7 +27,6 @@ import { DemoModule } from '../common/demo.module';
   // added Plan 3i Task 4 fix wave — FeedsMcp injects DemoService).
   imports: [
     CalendarModule,
-    DatabaseModule,
     PermissionsModule,
     McpSharedModule,
     AppConfigModule,

@@ -3,7 +3,6 @@ import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AddonsModule } from '../addons/addons.module';
 import { AuthModule } from '../auth/auth.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
-import { DatabaseModule } from '../database/database.module';
 import { FilesModule } from '../files/files.module';
 import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
 import { PermissionsModule } from '../permissions/permissions.module';
@@ -62,7 +61,6 @@ import { WebdavClient } from './providers/webdav.client';
  */
 @Module({
   imports: [
-    DatabaseModule,
     StorageModule,
     FilesModule,
     AllowedFileTypesModule,

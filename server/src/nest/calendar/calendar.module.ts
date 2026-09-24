@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { CalendarService } from './calendar.service';
-import { DatabaseModule } from '../database/database.module';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { Trips } from '../../db/entities/Trips.entity';
 import { Days } from '../../db/entities/Days.entity';
@@ -17,7 +16,7 @@ import { Reservations } from '../../db/entities/Reservations.entity';
  *  elsewhere already) and CL2/CL4/CL7's own additive methods on
  *  `ReservationsRepository` (Plan 3d Task 4) resolve through. */
 @Module({
-  imports: [DatabaseModule, ReservationsModule, MikroOrmModule.forFeature([Trips, Days, DayNotes, Reservations])],
+  imports: [ReservationsModule, MikroOrmModule.forFeature([Trips, Days, DayNotes, Reservations])],
   providers: [CalendarService],
   exports: [CalendarService],
 })
