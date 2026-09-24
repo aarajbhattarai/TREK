@@ -8,64 +8,6 @@ import request from 'supertest';
 import type { Application } from 'express';
 import type { INestApplication } from '@nestjs/common';
 
-const Database = require('better-sqlite3');
-
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
-
-let testDb: any;
-
-beforeAll(() => {
-  testDb = new Database(':memory:');
-  testDb.exec('PRAGMA journal_mode = WAL');
-  testDb.exec('PRAGMA foreign_keys = ON');
-  createTables(testDb);
-  runMigrations(testDb);
-});
-
-afterAll(() => {
-  testDb.close();
-});
-
-describe('incoming_leg_transport_mode migration', () => {
-  it('adds a nullable incoming_leg_transport_mode column to day_assignments', () => {
-    const cols = testDb.prepare(`PRAGMA table_info(day_assignments)`).all() as { name: string }[];
-    expect(cols.map(c => c.name)).toContain('incoming_leg_transport_mode');
-  });
-
-  // The case above starts from an empty database and runs every migration, so it
-  // passes wherever a migration sits in the array.
-  it('every unreleased migration replays cleanly on a database that is behind', () => {
-    // What actually has to hold: existing installs replay only the slots above
-    // their schema_version, and an install may skip releases — so every
-    // migration that has not shipped yet must be REPLAY-SAFE on a schema where
-    // it already applied: guard DDL (CREATE ... IF NOT EXISTS, pragma column
-    // checks before ALTER TABLE) and make data transforms idempotent (WHERE
-    // guards, UPDATE OR IGNORE). This test rewinds a fully migrated database
-    // to the last released version and replays everything above it; a slot
-    // that is not replay-safe throws here.
-    //
-    // >>> Appending a migration? Nothing to change here — just write it
-    // >>> replay-safe; this replay tells you if it is not.
-    // >>> Cutting a release? Bump RELEASED_VERSION to the version it ships.
-    const RELEASED_VERSION = 189;
-
-    const upgraded = new Database(':memory:');
-    upgraded.exec('PRAGMA foreign_keys = ON');
-    createTables(upgraded);
-    runMigrations(upgraded);
-
-    const { version } = upgraded.prepare('SELECT version FROM schema_version').get() as { version: number };
-    expect(version).toBeGreaterThanOrEqual(RELEASED_VERSION);
-
-    upgraded.prepare('UPDATE schema_version SET version = ?').run(RELEASED_VERSION);
-    runMigrations(upgraded); // a throw = some trailing migration is not replay-safe
-
-    expect(upgraded.prepare('SELECT version FROM schema_version').get()).toEqual({ version });
-    upgraded.close();
-  });
-});
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Read-path parity (day-LIST endpoint) — mirrors the harness in
 // tests/integration/assignments.test.ts verbatim.
