@@ -8,18 +8,17 @@
  * to come from the connection that database.ts actually opened, so what these
  * cases assert is which file each copy names.
  *
- * demo-reset resolves ../db/database through a runtime require() — the module is
- * a boot-time singleton — and vitest's mock registry never sees that call: it
- * goes to Node's own resolver, which cannot load a .ts file and throws
- * "Cannot find module '../db/database'". Hence the loader below, which is the
- * seam that lets the module run at all. The file system is spied rather than
- * written to, because the baseline path is fixed at data/travel-baseline.db and
- * a developer running a demo instance has a real one sitting there.
+ * demo-reset reads that path off `getRawConnection()` (a static import of
+ * ../db/database since the Plan 4 review's m1 — it used to runtime-require the
+ * `db` Proxy), so the module is mocked below with a handle stub that only has a
+ * `name`. The file system is spied rather than written to, because the
+ * baseline path is fixed at data/travel-baseline.db and a developer running a
+ * demo instance has a real one sitting there.
  *
  * Plan 3i Task 3: `resetDemoUser`/`saveBaseline` now read/write through
  * `DemoRepository`/`MaintenanceRepository`, which resolve an `EntityManager`
- * via `RequestContext.getEntityManager()` — independent of the `db`/
- * `closeDb`/`reinitialize` stub below (that stub covers only the
+ * via `RequestContext.getEntityManager()` — independent of the
+ * `getRawConnection`/`closeDb`/`reinitialize` stub below (that stub covers only the
  * connection-lifecycle calls this file still makes). Every call here runs
  * inside `withRequestContext(orm.orm, ...)`, bound to a REAL (empty) test
  * database, so the credential/instance-key reads resolve to nothing found
@@ -27,39 +26,26 @@
  * this file's own assertions are about the FILE path, not the row data,
  * which DEMORESET-CRED below covers separately.
  */
-import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm } from '../../helpers/test-orm';
 import { withRequestContext } from '../../../src/nest/database/request-context';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const Module = require('node:module');
 
-const BASELINE = path.resolve(__dirname, '..', '..', '..', 'data', 'travel-baseline.db');
 const LIVE_DB = path.join(path.sep, 'srv', 'trek', 'custom-name.db');
 
-const dbStub = {
-  name: LIVE_DB,
-  exec: vi.fn(),
-  prepare: vi.fn(() => ({ get: () => undefined, all: () => [], run: () => undefined })),
-};
-const databaseModule = { db: dbStub, closeDb: vi.fn(), reinitialize: vi.fn() };
-
-// Teach Node's require how to answer the one runtime require demo-reset makes.
-const previousLoader = Module._extensions['.ts'];
-Module._extensions['.ts'] = (mod: { exports: unknown }, filename: string) => {
-  if (filename.endsWith(path.join('src', 'db', 'database.ts'))) {
-    mod.exports = databaseModule;
-    return;
-  }
-  throw new Error(`unexpected runtime require of ${filename}`);
-};
-afterAll(() => {
-  if (previousLoader) Module._extensions['.ts'] = previousLoader;
-  else delete Module._extensions['.ts'];
+const { handleStub, databaseModule } = vi.hoisted(() => {
+  const handleStub = { name: '' };
+  return {
+    handleStub,
+    databaseModule: { getRawConnection: () => handleStub, closeDb: vi.fn(), reinitialize: vi.fn(async () => {}) },
+  };
 });
+vi.mock('../../../src/db/database', () => databaseModule);
+
+const BASELINE = path.resolve(__dirname, '..', '..', '..', 'data', 'travel-baseline.db');
 
 import { resetDemoUser, saveBaseline } from '../../../src/demo/demo-reset';
 
@@ -68,7 +54,7 @@ describe('demo-reset DB path', () => {
   let ormDb: Database.Database;
 
   beforeEach(async () => {
-    dbStub.name = LIVE_DB;
+    handleStub.name = LIVE_DB;
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
     // Built before the existsSync spy below is installed: createSnapshotTestDb()
     // reads the schema snapshot through schema-snapshot.ts's own fs.existsSync
@@ -105,7 +91,7 @@ describe('demo-reset DB path', () => {
   });
 
   it('DEMORESET-003: an in-memory database is left alone rather than copied around', async () => {
-    dbStub.name = ':memory:';
+    handleStub.name = ':memory:';
     await withCtx(() => saveBaseline());
     await withCtx(() => resetDemoUser());
     expect(copyFileSync).not.toHaveBeenCalled();

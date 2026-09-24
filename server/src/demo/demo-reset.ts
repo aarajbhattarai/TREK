@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { RequestContext, type EntityManager } from '@mikro-orm/core';
 import { readEnv } from '../app-config';
+import { closeDb, getRawConnection, reinitialize } from '../db/database';
 import { DemoRepository, type DemoAdminCredentialsRow, type DemoInstanceKeyRow } from '../db/repositories/DemoRepository';
 import { MaintenanceRepository } from '../db/repositories/MaintenanceRepository';
 
@@ -10,9 +11,11 @@ const baselinePath = path.join(dataDir, 'travel-baseline.db');
 
 // Where the live DB actually is. database.ts honours TREK_DB_FILE, so hardcoding
 // data/travel.db here would copy the baseline over an unrelated file and leave
-// the database we just closed untouched. The open connection knows its own path.
-function liveDbPath(db: { name: string }): string {
-  return db.name;
+// the database we just closed untouched. The open connection knows its own path —
+// read off the raw handle (the same accessor the ORM driver binds), not the `db`
+// Proxy, and before `closeDb()` drops it.
+function liveDbPath(): string {
+  return getRawConnection().name;
 }
 
 /**
@@ -43,8 +46,7 @@ async function resetDemoUser(): Promise<void> {
     return;
   }
 
-  const { db, closeDb, reinitialize } = require('../db/database');
-  const dbPath = liveDbPath(db);
+  const dbPath = liveDbPath();
   if (dbPath === ':memory:') {
     console.log('[Demo Reset] In-memory database, nothing to restore.');
     return;
@@ -141,8 +143,7 @@ async function resetDemoUser(): Promise<void> {
 }
 
 async function saveBaseline(): Promise<void> {
-  const { db } = require('../db/database');
-  const dbPath = liveDbPath(db);
+  const dbPath = liveDbPath();
   if (dbPath === ':memory:') {
     console.log('[Demo] In-memory database, no baseline to save.');
     return;
