@@ -823,7 +823,7 @@ const LEGACY_LIST_ROADTRIP_VISITS = `
 `;
 
 describe('DayAssignmentsRepository.listRoadtripVisits (RPL2, roadtrip-plan.service.ts::context)', () => {
-  it('ASSIGNREPO-031: matches the legacy statement — no stay, coalesce falls back to the place, leg transport NULL', async () => {
+  it('ASSIGNREPO-034: matches the legacy statement — no stay, coalesce falls back to the place, leg transport NULL', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -838,7 +838,7 @@ describe('DayAssignmentsRepository.listRoadtripVisits (RPL2, roadtrip-plan.servi
     expect(typed[0]).toMatchObject({ time: '09:00', end_time: '11:00', stay_id: null, check_in: null, check_out: null, checkout_day: null, leg_transport_mode: null });
   });
 
-  it('ASSIGNREPO-032: matches the legacy statement — a matching stay populates stay/checkout columns, explicit overrides win over coalesce', async () => {
+  it('ASSIGNREPO-035: matches the legacy statement — a matching stay populates stay/checkout columns, explicit overrides win over coalesce', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { day_number: 1 });

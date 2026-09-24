@@ -1219,7 +1219,7 @@ describe('PlacesRepository.setImageUrlIfUnset (MAP9)', () => {
 });
 
 describe('PlacesRepository.listAssignedForPublicApi (Plan 4 Task 1, public-api.service.ts::placesByDay)', () => {
-  it('PLACEREPO-030: day_id + place fields + category name, scoped to the trip, ordered by day then order_index — a booked-night stop is excluded', async () => {
+  it('PLACEREPO-053: day_id + place fields + category name, scoped to the trip, ordered by day then order_index — a booked-night stop is excluded', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const other = createTrip(testDb, user.id);
@@ -1250,7 +1250,7 @@ describe('PlacesRepository.listAssignedForPublicApi (Plan 4 Task 1, public-api.s
     expect(rows[2]).toMatchObject({ day_id: dayB.id, name: 'B-first' });
   });
 
-  it('PLACEREPO-031: empty array when nothing is assigned', async () => {
+  it('PLACEREPO-054: empty array when nothing is assigned', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     expect(await places.listAssignedForPublicApi(trip.id)).toEqual([]);
@@ -1271,7 +1271,7 @@ describe('PlacesRepository.isTrackInTrip (RT13, RoadtripService.trackExists)', (
       "SELECT id FROM places WHERE id = ? AND trip_id = ? AND route_geometry IS NOT NULL AND route_geometry != ''",
     ).get(id, tripId);
 
-  it('PLACEREPO-032: a place with route_geometry set matches the legacy predicate — true', async () => {
+  it('PLACEREPO-055: a place with route_geometry set matches the legacy predicate — true', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id);
@@ -1281,7 +1281,7 @@ describe('PlacesRepository.isTrackInTrip (RT13, RoadtripService.trackExists)', (
     expect(await places.isTrackInTrip(place.id, trip.id)).toBe(true);
   });
 
-  it('PLACEREPO-033: route_geometry NULL matches the legacy predicate — false', async () => {
+  it('PLACEREPO-056: route_geometry NULL matches the legacy predicate — false', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id);
@@ -1291,7 +1291,7 @@ describe('PlacesRepository.isTrackInTrip (RT13, RoadtripService.trackExists)', (
     expect(await places.isTrackInTrip(place.id, trip.id)).toBe(false);
   });
 
-  it('PLACEREPO-034: route_geometry \'\' (empty string) matches the legacy predicate — false', async () => {
+  it('PLACEREPO-057: route_geometry \'\' (empty string) matches the legacy predicate — false', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id);
@@ -1301,7 +1301,7 @@ describe('PlacesRepository.isTrackInTrip (RT13, RoadtripService.trackExists)', (
     expect(await places.isTrackInTrip(place.id, trip.id)).toBe(false);
   });
 
-  it('PLACEREPO-035: a track on a DIFFERENT trip is not found — false', async () => {
+  it('PLACEREPO-058: a track on a DIFFERENT trip is not found — false', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const other = createTrip(testDb, user.id);
@@ -1320,7 +1320,7 @@ describe('PlacesRepository.isTrackInTrip (RT13, RoadtripService.trackExists)', (
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('PlacesRepository.listForTripIds (AT2, AtlasService#getPlacesForTrips)', () => {
-  it('PLACEREPO-036: matches SELECT * FROM places WHERE trip_id IN (...) run raw', async () => {
+  it('PLACEREPO-059: matches SELECT * FROM places WHERE trip_id IN (...) run raw', async () => {
     const { user } = createUser(testDb);
     const tripA = createTrip(testDb, user.id);
     const tripB = createTrip(testDb, user.id);
@@ -1335,13 +1335,13 @@ describe('PlacesRepository.listForTripIds (AT2, AtlasService#getPlacesForTrips)'
     expect(typed.map((p) => p.id).sort((a, b) => a - b)).toEqual([pa.id, pb.id].sort((a, b) => a - b));
   });
 
-  it('PLACEREPO-037: an empty trip-id array short-circuits to [] without a query', async () => {
+  it('PLACEREPO-060: an empty trip-id array short-circuits to [] without a query', async () => {
     expect(await places.listForTripIds([])).toEqual([]);
   });
 });
 
 describe('PlacesRepository.listAddressesForUser (AT41, AtlasService#getTravelStats)', () => {
-  it('PLACEREPO-038: matches the legacy DISTINCT statement, owner and member trips, region_name joined from place_regions', async () => {
+  it('PLACEREPO-061: matches the legacy DISTINCT statement, owner and member trips, region_name joined from place_regions', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
