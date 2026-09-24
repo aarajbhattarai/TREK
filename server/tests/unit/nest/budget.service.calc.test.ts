@@ -1,123 +1,63 @@
 /**
- * Settlement-math and FX-freeze unit tests for BudgetService over a prepare-stub
- * DB mock. Moved 1:1 from the legacy tests/unit/services/budgetService.test.ts
- * (same cases, incl. the #1335/#1445/#1426 pins); the SUT is now the folded
- * BudgetService with a constructor-injected ExchangeRatesService stub (was a
- * path mock of the deleted exchange-rates.bridge), and the raw settlement
- * update is exercised as applySettlementUpdate (the no-freeze write the REST
- * updateSettlement wraps).
+ * Settlement-math and FX-freeze unit tests for BudgetService over a real
+ * in-memory SQLite DB (Plan 4 Task 8b-3, off the prepare-stub bridge this
+ * suite used to run on). Moved 1:1 from the legacy
+ * tests/unit/services/budgetService.test.ts (same cases, incl. the
+ * #1335/#1445/#1426 pins); the SUT is the folded BudgetService with a
+ * constructor-injected ExchangeRatesService stub (the only remaining mock —
+ * FX rates are an external call, not DB state) and repositories built by
+ * `budgetRepoArgs` over the suite's own better-sqlite3 handle (the same
+ * `createSnapshotTestDb()` + async `vi.mock` idiom as every other converted
+ * `tests/unit/nest/*.test.ts`), and the raw settlement update is exercised
+ * as applySettlementUpdate (the no-freeze write the REST updateSettlement
+ * wraps).
+ *
+ * ~50 of these cases hard-code literal ids (alice=1, bob=2, carol=3,
+ * dave=4; item/settlement ids 1-3) in their assertions, which a `createUser`/
+ * `createTrip` factory autoincrement can't reproduce test-to-test (ids keep
+ * growing across a file — `resetTestDb`'s own docstring). `setupDb` below
+ * inserts every row with those literal ids directly instead, matching what
+ * the old `mockDb.db.prepare` stub used to hand back — clearing its own
+ * tables first so a test that reconfigures the fixture mid-test (one does)
+ * stays safe to call twice.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-// ── DB mock setup ────────────────────────────────────────────────────────────
-
-const mockDb = vi.hoisted(() => {
-  return {
-    db: {
-      // Typed as the real prepare(sql) rather than inferred from this default
-      // implementation: inferred, every later mockImplementation had to match
-      // the exact three-member object literal below, so widening one of them
-      // broke the other nine.
-      prepare: vi.fn<(sql: string) => import('better-sqlite3').Statement>(
-        () =>
-          ({
-            all: vi.fn(() => [] as unknown[]),
-            get: vi.fn(() => undefined as unknown),
-            run: vi.fn(),
-          }) as unknown as import('better-sqlite3').Statement,
-      ),
-    },
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: vi.fn(async () => true),
-    isOwner: () => false,
-  };
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-vi.mock('../../../src/db/database', () => mockDb);
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
 
-const mockRates = { getRates: vi.fn() };
-
+import { db as testDb } from '../../../src/db/database';
+import { resetTestDb } from '../../helpers/test-db';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import type { BudgetItem, BudgetItemMember, BudgetItemPayer } from '../../../src/types';
-import type Database from 'better-sqlite3';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { budgetRepoArgs } from '../../helpers/budget-repos';
 
-/**
- * There is no database behind this suite — every read is served by the
- * prepare-stub above — so the UnitOfWork is a pass-through: it runs the callback
- * as MikroORM would, without a transaction there is nothing to open on.
- */
-const uowStub = { transactional: <T>(fn: () => Promise<T>) => fn() } as unknown as UnitOfWork;
-
-/**
- * A prepared-statement stub.
- *
- * better-sqlite3's Statement has a dozen members; these cases drive three of
- * them. Naming the widening once beats a cast at each of the sixteen returns,
- * and keeps `prepare`'s own signature honest so a genuinely wrong mock still
- * fails to compile.
- */
-const stmt = (impl: Partial<Database.Statement>) => impl as Database.Statement;
+const mockRates = { getRates: vi.fn() };
 
 const permissionsStub = { checkPermission: vi.fn(() => true) } as unknown as PermissionsService;
 
-/**
- * Plan 3e Task 2 (budget): `calculateSettlement`/`freezeForeignRate`/
- * `listSettlements`/`applySettlementUpdate` now read/write through
- * repositories instead of `this.db.get/all/run`, so these proxy the SAME
- * `mockDb.db.prepare(sql)`-dispatched stmt (`setupDb`'s SQL-text
- * `mockImplementation`, below) rather than a real repository — every test
- * that only configures `setupDb`/`prepare` continues to drive the same
- * fixture data unchanged. `applySettlementUpdate`'s own describe block
- * additionally reaches straight into the mocked `stmt` (no SQL-text
- * dispatch to proxy — see its own comment there).
- */
-const budgetItemsRepoStub = {
-  listAllForTrip: async () => mockDb.db.prepare('SELECT * FROM budget_items').all(),
-  getCurrency: async (id: number) => (mockDb.db.prepare('SELECT currency FROM budget_items WHERE id = ?').get(id) as { currency?: string } | undefined)?.currency,
-} as unknown as import('../../../src/db/repositories/BudgetItems.repository').BudgetItemsRepository;
+let budget: BudgetService;
 
-const budgetItemMembersRepoStub = {
-  listForTripWithUsers: async () => mockDb.db.prepare('SELECT * FROM budget_item_members').all(),
-} as unknown as import('../../../src/db/repositories/BudgetItemMembers.repository').BudgetItemMembersRepository;
+beforeAll(async () => {
+  budget = new BudgetService(
+    permissionsStub,
+    mockRates as unknown as ExchangeRatesService,
+    new RealtimeService(),
+    await createTestUnitOfWork(testDb),
+    ...(await budgetRepoArgs(testDb)),
+  );
+});
 
-const budgetItemPayersRepoStub = {
-  listForTripWithUsers: async () => mockDb.db.prepare('SELECT * FROM budget_item_payers').all(),
-} as unknown as import('../../../src/db/repositories/BudgetItemPayers.repository').BudgetItemPayersRepository;
-
-const budgetSettlementsRepoStub = {
-  listForTrip: async () => mockDb.db.prepare('SELECT * FROM budget_settlements').all(),
-  findWithUsers: async (id: number) => mockDb.db.prepare('SELECT * FROM budget_settlements').get(id),
-  findGuard: async (id: number) => mockDb.db.prepare('SELECT id FROM budget_settlements').get(id),
-  update: async (id: number, write: { from_user_id: number; to_user_id: number; amount: number }) =>
-    mockDb.db.prepare('UPDATE budget_settlements').run(write.from_user_id, write.to_user_id, write.amount, 0, null, null, 1, 0, null, id),
-} as unknown as import('../../../src/db/repositories/BudgetSettlements.repository').BudgetSettlementsRepository;
-
-const tripsRepoStub = {
-  getCurrency: async (id: number) => (mockDb.db.prepare('SELECT currency FROM trips WHERE id = ?').get(id) as { currency?: string } | undefined)?.currency,
-} as unknown as import('../../../src/db/repositories/Trips.repository').TripsRepository;
-
-const budget = new BudgetService(
-  permissionsStub,
-  mockRates as unknown as ExchangeRatesService,
-  new RealtimeService(),
-  uowStub,
-  budgetItemsRepoStub,
-  budgetItemMembersRepoStub,
-  budgetItemPayersRepoStub,
-  budgetSettlementsRepoStub,
-  {} as unknown as import('../../../src/db/repositories/BudgetCategoryOrder.repository').BudgetCategoryOrderRepository,
-  {} as unknown as import('../../../src/db/repositories/Reservations.repository').ReservationsRepository,
-  {} as unknown as import('../../../src/db/repositories/Places.repository').PlacesRepository,
-  tripsRepoStub,
-  {} as unknown as import('../../../src/db/repositories/TripMembers.repository').TripMembersRepository,
-);
+afterAll(() => {
+  testDb.close();
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 // Who actually paid is recorded as explicit payers (budget_item_payers); members
@@ -155,31 +95,78 @@ function makeSettlementRow(
  */
 const centSum = (values: number[]) => values.reduce((a, v) => a + Math.round(v * 100), 0);
 
+/** Every trip in this suite is id 1, owned by a user no test ever names or asserts on. */
+const GHOST_OWNER_ID = 999999;
+
+function seedBaseline() {
+  testDb.prepare(
+    'INSERT INTO users (id, username, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
+  ).run(GHOST_OWNER_ID, 'ghost_owner', 'ghost_owner@test.example.com', 'x', 'user');
+  testDb.prepare(
+    "INSERT INTO trips (id, user_id, title, currency) VALUES (1, ?, 'Trip', 'EUR')",
+  ).run(GHOST_OWNER_ID);
+}
+
+function seedUser(id: number, username: string) {
+  testDb.prepare(
+    'INSERT INTO users (id, username, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
+  ).run(id, username, `${username}.${id}@test.example.com`, 'x', 'user');
+}
+
 function setupDb(
   items: BudgetItem[],
   members: (BudgetItemMember & { budget_item_id: number })[],
   payers: (BudgetItemPayer & { budget_item_id: number })[] = [],
   settlements: ReturnType<typeof makeSettlementRow>[] = [],
 ) {
-  mockDb.db.prepare.mockImplementation((sql: string) => {
-    if (sql.includes('SELECT * FROM budget_items')) {
-      return stmt({ all: vi.fn(() => items), get: vi.fn(), run: vi.fn() });
-    }
-    if (sql.includes('budget_item_members')) {
-      return stmt({ all: vi.fn(() => members), get: vi.fn(), run: vi.fn() });
-    }
-    if (sql.includes('budget_item_payers')) {
-      return stmt({ all: vi.fn(() => payers), get: vi.fn(), run: vi.fn() });
-    }
-    if (sql.includes('budget_settlements')) {
-      return stmt({ all: vi.fn(() => settlements), get: vi.fn(), run: vi.fn() });
-    }
-    return stmt({ all: vi.fn(() => []), get: vi.fn(), run: vi.fn() });
-  });
+  // Idempotent: one test reconfigures the fixture mid-run (recomputes settlement
+  // after booking its own offered flows), so a second call must not collide with
+  // the first's rows. Children before parents; users last since settlements and
+  // items/members/payers all reference them.
+  testDb.exec('DELETE FROM budget_settlements');
+  testDb.exec('DELETE FROM budget_item_payers');
+  testDb.exec('DELETE FROM budget_item_members');
+  testDb.exec('DELETE FROM budget_items');
+  testDb.prepare('DELETE FROM users WHERE id != ?').run(GHOST_OWNER_ID);
+
+  // Every user id these rows reference, with the username the fixture gave it —
+  // members/payers carry one explicitly; a settlement-only party (no expense
+  // behind the transfer) falls back to the settlement row's own username.
+  const usernames = new Map<number, string>();
+  for (const m of members) usernames.set(m.user_id, m.username);
+  for (const p of payers) usernames.set(p.user_id, p.username);
+  for (const s of settlements) {
+    if (!usernames.has(s.from_user_id)) usernames.set(s.from_user_id, s.from_username);
+    if (!usernames.has(s.to_user_id)) usernames.set(s.to_user_id, s.to_username);
+  }
+  for (const [id, username] of usernames) seedUser(id, username);
+
+  for (const item of items) {
+    testDb.prepare(
+      'INSERT INTO budget_items (id, trip_id, name, total_price, currency, exchange_rate) VALUES (?, ?, ?, ?, ?, ?)',
+    ).run(item.id, item.trip_id, item.name, item.total_price, item.currency ?? null, item.exchange_rate ?? 1);
+  }
+  for (const m of members) {
+    testDb.prepare(
+      'INSERT INTO budget_item_members (budget_item_id, user_id, paid, amount) VALUES (?, ?, ?, ?)',
+    ).run(m.budget_item_id, m.user_id, m.paid ?? 0, m.amount ?? null);
+  }
+  for (const p of payers) {
+    testDb.prepare(
+      'INSERT INTO budget_item_payers (budget_item_id, user_id, amount) VALUES (?, ?, ?)',
+    ).run(p.budget_item_id, p.user_id, p.amount);
+  }
+  for (const s of settlements) {
+    testDb.prepare(
+      'INSERT INTO budget_settlements (id, trip_id, from_user_id, to_user_id, amount, currency, exchange_rate) VALUES (?, 1, ?, ?, ?, ?, ?)',
+    ).run(s.id, s.from_user_id, s.to_user_id, s.amount, s.currency, s.exchange_rate);
+  }
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetTestDb(testDb);
+  seedBaseline();
   setupDb([], [], []);
 });
 
@@ -319,14 +306,7 @@ describe('calculateSettlement', () => {
 
   it('counts a settlement with no matching expense as an amount still to square up', async () => {
     // bob paid alice 30 but every expense behind it was deleted: alice now owes bob.
-    mockDb.db.prepare.mockImplementation((sql: string) => {
-      if (sql.includes('FROM budget_settlements')) {
-        return stmt({ all: vi.fn(() => [
-          { id: 1, trip_id: 1, from_user_id: 2, to_user_id: 1, amount: 30, from_username: 'bob', to_username: 'alice', from_avatar: null, to_avatar: null },
-        ]), get: vi.fn(), run: vi.fn() });
-      }
-      return stmt({ all: vi.fn(() => []), get: vi.fn(), run: vi.fn() });
-    });
+    setupDb([], [], [], [makeSettlementRow(1, 2, 1, 30)]);
     const result = await budget.calculateSettlement(1);
     const alice = result.balances.find(b => b.user_id === 1)!;
     const bob = result.balances.find(b => b.user_id === 2)!;
@@ -801,11 +781,12 @@ describe('calculateSettlement — finalBudgets', () => {
 describe('splitEqualShares — client parity (#2176)', () => {
   // Private on purpose (only the settlement calls it); the parity pin reaches
   // through so the fixture exercises the real implementation, not a re-model.
-  const split = (
-    budget as unknown as {
+  // `budget` isn't built until `beforeAll` runs, so this resolves it lazily at
+  // call time rather than binding it during collection (still undefined then).
+  const split = (totalCents: number, members: { user_id: number }[], itemId: number): Record<number, number> =>
+    (budget as unknown as {
       splitEqualShares(totalCents: number, members: { user_id: number }[], itemId: number): Record<number, number>;
-    }
-  ).splitEqualShares.bind(budget);
+    }).splitEqualShares(totalCents, members, itemId);
 
   it.each(SHARE_PARITY_FIXTURE)(
     'splits $totalCents cents across $users.length members (item $itemId) exactly like the client',
@@ -1008,16 +989,11 @@ describe('calculateSettlement: unpaid expenses (#2225)', () => {
 });
 
 // ── freezeForeignRate (write-path FX freeze, #1445) ───────────────────────────
+// The trip seeded by beforeEach/seedBaseline is EUR — every case here relies on
+// that baseline instead of reconfiguring a `FROM trips` stub.
 
 describe('freezeForeignRate', () => {
-  const tripRow = (currency: string) =>
-    stmt({ get: vi.fn(() => ({ currency })), all: vi.fn(), run: vi.fn() });
-
   it('freezes the live rate for a foreign currency into exchange_rate', async () => {
-    mockDb.db.prepare.mockImplementation((sql: string) => {
-      if (sql.includes('FROM trips')) return tripRow('EUR');
-      return stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() });
-    });
     mockRates.getRates.mockResolvedValue({ EUR: 1, USD: 1.25 });
     const data: { currency?: string | null; exchange_rate?: number } = { currency: 'usd' };
     await budget.freezeForeignRate(1, data);
@@ -1026,8 +1002,6 @@ describe('freezeForeignRate', () => {
   });
 
   it('leaves the rate unset when the currency equals the trip currency', async () => {
-    mockDb.db.prepare.mockImplementation((sql: string) =>
-      sql.includes('FROM trips') ? tripRow('EUR') : stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() }));
     const data: { currency?: string | null; exchange_rate?: number } = { currency: 'EUR' };
     await budget.freezeForeignRate(1, data);
     expect(mockRates.getRates).not.toHaveBeenCalled();
@@ -1042,8 +1016,6 @@ describe('freezeForeignRate', () => {
   });
 
   it('degrades to live rates (no freeze) when the rate fetch fails', async () => {
-    mockDb.db.prepare.mockImplementation((sql: string) =>
-      sql.includes('FROM trips') ? tripRow('EUR') : stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() }));
     mockRates.getRates.mockResolvedValue(null);
     const data: { currency?: string | null; exchange_rate?: number } = { currency: 'USD' };
     await budget.freezeForeignRate(1, data);
@@ -1051,11 +1023,9 @@ describe('freezeForeignRate', () => {
   });
 
   it('does not re-freeze on update when the currency is unchanged', async () => {
-    mockDb.db.prepare.mockImplementation((sql: string) => {
-      if (sql.includes('FROM budget_items')) return stmt({ get: vi.fn(() => ({ currency: 'USD' })), all: vi.fn(), run: vi.fn() });
-      if (sql.includes('FROM trips')) return tripRow('EUR');
-      return stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() });
-    });
+    testDb.prepare(
+      'INSERT INTO budget_items (id, trip_id, name, total_price, currency) VALUES (9, 1, ?, ?, ?)',
+    ).run('Existing', 1, 'USD');
     const data: { currency?: string | null; exchange_rate?: number } = { currency: 'USD' };
     await budget.freezeForeignRate(1, data, 9);
     expect(mockRates.getRates).not.toHaveBeenCalled();
@@ -1063,8 +1033,6 @@ describe('freezeForeignRate', () => {
   });
 
   it('does not re-freeze a settlement edit when its stored currency is unchanged (#1445)', async () => {
-    mockDb.db.prepare.mockImplementation((sql: string) =>
-      sql.includes('FROM trips') ? tripRow('EUR') : stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() }));
     const data: { currency?: string | null; exchange_rate?: number } = { currency: 'USD' };
     // the settlement already holds USD — pass it as existingCurrency → keep the frozen rate
     await budget.freezeForeignRate(1, data, undefined, 'USD');
@@ -1073,8 +1041,6 @@ describe('freezeForeignRate', () => {
   });
 
   it('re-freezes a settlement edit when its currency actually changes', async () => {
-    mockDb.db.prepare.mockImplementation((sql: string) =>
-      sql.includes('FROM trips') ? tripRow('EUR') : stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() }));
     mockRates.getRates.mockResolvedValue({ EUR: 1, USD: 1.25 });
     const data: { currency?: string | null; exchange_rate?: number } = { currency: 'USD' };
     await budget.freezeForeignRate(1, data, undefined, 'GBP'); // was GBP → now USD → re-freeze
@@ -1086,39 +1052,25 @@ describe('freezeForeignRate', () => {
 
 describe('applySettlementUpdate', () => {
   it('returns null when the settlement is not in the trip', async () => {
-    mockDb.db.prepare.mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM budget_settlements')) {
-        return stmt({ get: vi.fn(() => undefined), all: vi.fn(), run: vi.fn() });
-      }
-      return stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() });
-    });
     expect(await budget.applySettlementUpdate(7, 1, { from_user_id: 2, to_user_id: 1, amount: 10 })).toBeNull();
   });
 
   it('updates the row (rounded to cents) and returns the refreshed settlement', async () => {
-    const run = vi.fn();
-    mockDb.db.prepare.mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM budget_settlements')) {
-        return stmt({ get: vi.fn(() => ({ id: 7 })), all: vi.fn(), run: vi.fn() });
-      }
-      if (sql.includes('UPDATE budget_settlements')) {
-        return stmt({ get: vi.fn(), all: vi.fn(), run });
-      }
-      if (sql.includes('FROM budget_settlements')) {
-        // Quirk fix: the re-select is a targeted single-row get, not a full
-        // listSettlements scan.
-        return stmt({ get: vi.fn(() => (
-          { id: 7, trip_id: 1, from_user_id: 2, to_user_id: 1, amount: 10.13, from_username: 'bob', to_username: 'alice', from_avatar: null, to_avatar: null }
-        )), all: vi.fn(() => []), run: vi.fn() });
-      }
-      return stmt({ get: vi.fn(), all: vi.fn(() => []), run: vi.fn() });
-    });
+    seedUser(1, 'alice');
+    seedUser(2, 'bob');
+    testDb.prepare(
+      'INSERT INTO budget_settlements (id, trip_id, from_user_id, to_user_id, amount, currency, exchange_rate, settled_at) VALUES (7, 1, 1, 2, 5, NULL, 1, NULL)',
+    ).run();
 
     const res = await budget.applySettlementUpdate(7, 1, { from_user_id: 2, to_user_id: 1, amount: 10.126 });
-    // from, to, rounded amount, currency-flag(0)/value(null), rate-flag(null)/value(1),
-    // settled_at-flag(0)/value(null), id.
-    // No currency/exchange_rate/settled_at passed → all three CASE guards keep the existing columns.
-    expect(run).toHaveBeenCalledWith(2, 1, 10.13, 0, null, null, 1, 0, null, 7);
+    // Quirk fix: currency/exchange_rate/settled_at are presence-gated CASE guards —
+    // omitted from this update, so the row keeps what it already had (NULL/1/NULL)
+    // while from/to/amount (rounded) take the new values. Checked against the
+    // persisted row rather than a mocked `run` call, now that there is a real one.
+    const row = testDb.prepare(
+      'SELECT from_user_id, to_user_id, amount, currency, exchange_rate, settled_at FROM budget_settlements WHERE id = ?',
+    ).get(7);
+    expect(row).toEqual({ from_user_id: 2, to_user_id: 1, amount: 10.13, currency: null, exchange_rate: 1, settled_at: null });
     expect(res).toMatchObject({ id: 7, from_user_id: 2, to_user_id: 1, amount: 10.13 });
   });
 });
