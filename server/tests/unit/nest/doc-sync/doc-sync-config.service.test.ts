@@ -350,6 +350,23 @@ describe('a secret the provider earned itself', () => {
     expect((await svc.getConnection(conn.id) as ConnectionRow).secrets).not.toContain('DEVICE-7');
   });
 
+  // 3h L3 carry (task-7-review.md's L3: "document_connections.secrets ... has
+  // no `enc:v1:` check"). The whole-secret-map column is one `maybe_encrypt_
+  // api_key` call (`encryptSecrets`, doc-sync-secrets.ts) over the JSON blob,
+  // so the at-rest pin is the same shape as `AirtrailService`'s and
+  // `DawarichService`'s: read the raw column, assert the ciphertext prefix,
+  // then assert `decryptSecrets` round-trips it.
+  it('DOCSYNC-ENC-001: the raw document_connections.secrets column is enc:v1:-prefixed ciphertext, never plaintext, and round-trips', async () => {
+    const conn = await nas();
+
+    const raw = (testDb.prepare('SELECT secrets FROM document_connections WHERE id = ?').get(conn.id) as { secrets: string | null }).secrets;
+
+    expect(raw).toMatch(/^enc:v1:/);
+    expect(raw).not.toContain('nas-pw');
+    expect(raw).not.toContain('123456');
+    expect(await secretsOf(conn.id)).toEqual({ password: 'nas-pw', otp_code: '123456' });
+  });
+
   it('never reaches a client, not even as a mask', async () => {
     const conn = await nas();
     await svc.saveEarnedSecret(conn.id, 'device_token', EARNED);
@@ -650,6 +667,24 @@ describe('createLink', () => {
     const view = await svc.publicLink(first, 'https://trek.example.com');
     expect(view.webhookSecret).toBe(DOCSYNC_SECRET_MASK);
     expect(JSON.stringify(view)).not.toContain(secret);
+  });
+
+  // 3h L3 carry (task-7-review.md's L3: "trip_document_links.webhook_secret —
+  // No at-rest pin."). `createLink` mints the secret with the same
+  // `encryptSecrets` call the connection's own secret map uses (`doc-sync-
+  // config.service.ts:417`), so the pin is the same shape: raw column is
+  // `enc:v1:`-prefixed ciphertext, never the plaintext, and `webhookSecret`
+  // round-trips it.
+  it('DOCSYNC-ENC-002: the raw trip_document_links.webhook_secret column is enc:v1:-prefixed ciphertext, never plaintext, and round-trips', async () => {
+    const conn = await connect();
+    const bound = await link(conn.id);
+
+    const raw = (testDb.prepare('SELECT webhook_secret FROM trip_document_links WHERE id = ?').get(bound.id) as { webhook_secret: string | null }).webhook_secret;
+
+    expect(raw).toMatch(/^enc:v1:/);
+    const secret = svc.webhookSecret(bound);
+    expect(secret).toBeTruthy();
+    expect(raw).not.toContain(secret);
   });
 });
 
