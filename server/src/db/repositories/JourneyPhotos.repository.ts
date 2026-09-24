@@ -50,6 +50,20 @@ interface GalleryKyselyDB {
   };
   journey_entry_photos: { entry_id: number; journey_photo_id: number };
   journey_entries: { id: number; entry_date: string; entry_time: string | null };
+  journeys: { id: number; user_id: number };
+}
+
+/** JS7 (Plan 4 Task 8b relocation) — the public photo-validation join's row (`journey_photos` + `trek_photos`). */
+export interface JourneyPublicPhotoValidationRow {
+  photo_id: number;
+  owner_id: number | null;
+  journey_id: number;
+}
+
+/** JS10 (Plan 4 Task 8b relocation) — the public asset-validation join's row (`journey_photos` + `trek_photos` + `journeys`). */
+export interface JourneyPublicAssetValidationRow {
+  owner_id: number | null;
+  journey_owner_id: number;
 }
 
 /** `GALLERY_SELECT`'s exact column list (`journey-domain.service.ts`'s module const), aliased `gp`/`tp` — shared by every gallery-shaped read below. */
@@ -167,6 +181,49 @@ export class JourneyPhotosRepository extends TrekRepository<JourneyPhotos> {
       .where('photo_id', '=', photoId)
       .execute();
     return rows.map((r) => r.journey_id);
+  }
+
+  /**
+   * JS7 (Plan 4 Task 8b relocation) — `JourneyShareService
+   * .validateShareTokenForPhoto`'s photo/journey resolution: `SELECT
+   * gp.photo_id, tkp.owner_id, gp.journey_id FROM journey_photos gp JOIN
+   * trek_photos tkp ON tkp.id=gp.photo_id WHERE gp.photo_id=? AND
+   * gp.journey_id=?`. Public/anonymous — reachable from
+   * `JourneyPublicController` with no authentication, gated only by the
+   * unguessable share token the service already checked before calling
+   * this. Previously lived as `JourneyShareTokens.repository.ts`'s own
+   * fallback stub from 3g Task 3 (this repository was still mid-flight when
+   * that task landed) — relocated here now that it is stable.
+   */
+  async findGalleryPhotoForValidation(photoId: number, journeyId: number): Promise<JourneyPublicPhotoValidationRow | undefined> {
+    return await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos as gp')
+      .innerJoin('trek_photos as tkp', 'tkp.id', 'gp.photo_id')
+      .select(['gp.photo_id', 'tkp.owner_id', 'gp.journey_id'])
+      .where('gp.photo_id', '=', photoId)
+      .where('gp.journey_id', '=', journeyId)
+      .executeTakeFirst();
+  }
+
+  /**
+   * JS10 (Plan 4 Task 8b relocation) — `JourneyShareService
+   * .validateShareTokenForAsset`'s owner resolution: `SELECT tkp.owner_id,
+   * j.user_id AS journey_owner_id FROM journey_photos gp JOIN trek_photos
+   * tkp ON tkp.id=gp.photo_id JOIN journeys j ON j.id=gp.journey_id WHERE
+   * tkp.asset_id=? AND gp.journey_id=?`. Public/anonymous, security-critical
+   * — the service never trusts a caller-supplied owner id; only this join
+   * resolves `ownerId`. Relocated the same way as {@link
+   * findGalleryPhotoForValidation}/JS7.
+   */
+  async findAssetForValidation(assetId: string, journeyId: number): Promise<JourneyPublicAssetValidationRow | undefined> {
+    return await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos as gp')
+      .innerJoin('trek_photos as tkp', 'tkp.id', 'gp.photo_id')
+      .innerJoin('journeys as j', 'j.id', 'gp.journey_id')
+      .select(['tkp.owner_id', 'j.user_id as journey_owner_id'])
+      .where('tkp.asset_id', '=', assetId)
+      .where('gp.journey_id', '=', journeyId)
+      .executeTakeFirst();
   }
 
   /** JG88/JG99 — `ensureInGallery`'s and `uploadGalleryPhotos`'s next-sort-order probe: `SELECT MAX(sort_order) as m FROM journey_photos WHERE journey_id = ?`, one statement text. */

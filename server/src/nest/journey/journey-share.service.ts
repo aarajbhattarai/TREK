@@ -8,12 +8,16 @@ import { UnitOfWork } from '../database/unit-of-work';
 import { Journeys } from '../../db/entities/Journeys.entity';
 import type { JourneysRepository } from '../../db/repositories/Journeys.repository';
 import { JourneyShareTokens } from '../../db/entities/JourneyShareTokens.entity';
-import type {
-  JourneyPublicEntryPhotoRow,
-  JourneyShareTokensRepository,
-} from '../../db/repositories/JourneyShareTokens.repository';
+import type { JourneyShareTokensRepository } from '../../db/repositories/JourneyShareTokens.repository';
 import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';
 import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhotos.repository';
+import { JourneyEntries } from '../../db/entities/JourneyEntries.entity';
+import type { JourneyEntriesRepository } from '../../db/repositories/JourneyEntries.repository';
+import { JourneyEntryPhotos } from '../../db/entities/JourneyEntryPhotos.entity';
+import type {
+  JourneyEntryPhotosRepository,
+  JourneyPublicEntryPhotoRow,
+} from '../../db/repositories/JourneyEntryPhotos.repository';
 
 interface JourneySharePermissions {
   share_timeline?: boolean;
@@ -61,6 +65,14 @@ export class JourneyShareService {
     //   byte-identical copy of the ORDER BY builder and the gallery query.
     private readonly uow: UnitOfWork,
     @InjectRepository(JourneyPhotos) private readonly photosRepo: JourneyPhotosRepository,
+    // Plan 4 Task 8b constructor-ripple: JS7/JS10 (`photosRepo`, above) and
+    // JS13/JS14 (`entriesRepo`/`entryPhotosRepo`, below) relocated off
+    // `JourneyShareTokensRepository`'s own fallback stub onto their natural
+    // home repositories — both already registered in `journey-domain.module
+    // .ts`'s `forFeature` array for `JourneyDomainService`'s own use, no
+    // module change needed.
+    @InjectRepository(JourneyEntries) private readonly entriesRepo: JourneyEntriesRepository,
+    @InjectRepository(JourneyEntryPhotos) private readonly entryPhotosRepo: JourneyEntryPhotosRepository,
   ) {}
 
   async createOrUpdateJourneyShareLink(
@@ -171,8 +183,8 @@ export class JourneyShareService {
     // already strips photos when it is off. Enumerable photo ids otherwise stay
     // fetchable after the owner disables the gallery.
     if (!row.share_gallery) return null;
-    // JS7.
-    const photo = await this.shareTokensRepo.findGalleryPhotoForValidation(photoId, row.journey_id);
+    // JS7 (Plan 4 Task 8b: relocated to `JourneyPhotosRepository`).
+    const photo = await this.photosRepo.findGalleryPhotoForValidation(photoId, row.journey_id);
     if (!photo) return null;
     // JS8 — reuses `JourneysRepository.findById` (JG5's dup group), no
     // `canAccessJourney` involved: public means public.
@@ -187,10 +199,11 @@ export class JourneyShareService {
     // Same as the unified photo proxy: no asset bytes leave the host unless the
     // owner shared the gallery.
     if (!row.share_gallery) return null;
-    // JS10 — security-critical: whose provider credentials get tried must
-    // never come from a number an anonymous caller put in the URL. Only this
-    // join resolves `ownerId`; a caller-supplied value never reaches it.
-    const photo = await this.shareTokensRepo.findAssetForValidation(assetId, row.journey_id);
+    // JS10 (Plan 4 Task 8b: relocated to `JourneyPhotosRepository`) —
+    // security-critical: whose provider credentials get tried must never
+    // come from a number an anonymous caller put in the URL. Only this join
+    // resolves `ownerId`; a caller-supplied value never reaches it.
+    const photo = await this.photosRepo.findAssetForValidation(assetId, row.journey_id);
     // Only resolve assets that actually belong to this shared journey.
     if (!photo) return null;
     // trek_photos.owner_id can be NULL. The journey's owner is the fallback, the
@@ -207,11 +220,11 @@ export class JourneyShareService {
     const journey = await this.journeysRepo.findById(row.journey_id);
     if (!journey) return null;
 
-    // Entries with photos — JS13.
-    const entries = await this.shareTokensRepo.listPublicEntries(row.journey_id);
+    // Entries with photos — JS13 (Plan 4 Task 8b: relocated to `JourneyEntriesRepository`).
+    const entries = await this.entriesRepo.listPublicEntries(row.journey_id);
 
-    // JS14.
-    const photos = await this.shareTokensRepo.listEntryPhotosForPublicJourney(row.journey_id);
+    // JS14 (Plan 4 Task 8b: relocated to `JourneyEntryPhotosRepository`, dedupe against `JP_COLUMNS`).
+    const photos = await this.entryPhotosRepo.listForPublicJourney(row.journey_id);
 
     const photosByEntry: Record<number, JourneyPublicEntryPhotoRow[]> = {};
     for (const p of photos) {

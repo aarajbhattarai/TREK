@@ -1,4 +1,3 @@
-import type { JourneyEntry } from '../../types';
 import type { JourneyShareTokens } from '../entities/JourneyShareTokens.entity';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -30,42 +29,6 @@ export interface JourneyShareTokenAccessRow {
   share_gallery: number | null;
 }
 
-/** JS7 — the photo-validation join's row (`journey_photos` + `trek_photos`). */
-export interface JourneyPublicPhotoValidationRow {
-  photo_id: number;
-  owner_id: number | null;
-  journey_id: number;
-}
-
-/** JS10 — the asset-validation join's row (`journey_photos` + `trek_photos` + `journeys`). */
-export interface JourneyPublicAssetValidationRow {
-  owner_id: number | null;
-  journey_owner_id: number;
-}
-
-/** JS14 — the public per-entry photo read. Column-for-column identical to `journey-domain.service.ts`'s `JP_SELECT` (only the `trek_photos` join alias differs, `tkp` vs `tp`) — see task-3-report.md for the reuse decision. */
-export interface JourneyPublicEntryPhotoRow {
-  id: number;
-  entry_id: number;
-  photo_id: number;
-  caption: string | null;
-  sort_order: number | null;
-  shared: number;
-  created_at: number;
-  provider: string;
-  asset_id: string | null;
-  owner_id: number | null;
-  file_path: string | null;
-  thumbnail_path: string | null;
-  width: number | null;
-  height: number | null;
-  media_type: string | null;
-  duration_ms: number | null;
-  taken_at: string | null;
-  lat: number | null;
-  lng: number | null;
-}
-
 /** JS15 — the public gallery read (`GALLERY_SELECT` shape, `GALLERY_CHRONOLOGICAL_ORDER` applied). */
 export interface JourneyPublicGalleryRow {
   id: number;
@@ -89,82 +52,6 @@ export interface JourneyPublicGalleryRow {
   lng: number | null;
 }
 
-/**
- * The narrow Kysely shape the public-surface methods below need. `journeys`,
- * `journey_photos`, `journey_entry_photos`, `journey_entries` and
- * `trek_photos` are NOT this repository's own tables — Task 2's
- * `JourneyPhotosRepository`/`JourneyEntryPhotosRepository`/
- * `JourneyEntriesRepository` own them, but Task 2 was still mid-flight
- * (uncommitted) when this task ran, so per the brief's own fallback
- * instruction these six public/anonymous statements (JS7/JS10/JS13/JS14/
- * JS15, plus JS8/JS12 which reuse Task 1's already-stable
- * `JourneysRepository.findById` instead) get a typed Kysely read here
- * rather than depending on an in-flight repository. Flagged in
- * task-3-report.md for a possible later relocation once Task 2 lands.
- */
-interface JourneyPublicKyselyDB {
-  journey_entries: {
-    id: number;
-    journey_id: number;
-    source_trip_id: number | null;
-    source_place_id: number | null;
-    source_assignment_id: number | null;
-    author_id: number;
-    type: string;
-    title: string | null;
-    story: string | null;
-    entry_date: string;
-    entry_time: string | null;
-    location_name: string | null;
-    location_lat: number | null;
-    location_lng: number | null;
-    mood: string | null;
-    weather: string | null;
-    tags: string | null;
-    pros_cons: string | null;
-    visibility: string | null;
-    sort_order: number | null;
-    created_at: number;
-    updated_at: number;
-    stats_excluded: number;
-    dismissed: number;
-    country_code: string | null;
-  };
-  journey_photos: {
-    id: number;
-    journey_id: number;
-    photo_id: number;
-    caption: string | null;
-    shared: number;
-    sort_order: number | null;
-    created_at: number;
-  };
-  journey_entry_photos: {
-    entry_id: number;
-    journey_photo_id: number;
-    sort_order: number | null;
-  };
-  journeys: {
-    id: number;
-    user_id: number;
-  };
-  trek_photos: {
-    id: number;
-    provider: string;
-    asset_id: string | null;
-    owner_id: number | null;
-    file_path: string | null;
-    thumbnail_path: string | null;
-    width: number | null;
-    height: number | null;
-    media_type: string | null;
-    duration_ms: number | null;
-    taken_at: string | null;
-    lat: number | null;
-    lng: number | null;
-  };
-}
-
 // L2 — `galleryChronologicalOrderExpr`/`listGalleryForPublicJourney` (JS15)
 // used to be a byte-identical duplicate of `JourneyPhotosRepository`'s own
 // `galleryChronologicalOrderExpr`/`galleryRead` (same `GALLERY_COLUMNS`
@@ -179,15 +66,17 @@ interface JourneyPublicKyselyDB {
 // public gallery response.
 
 /**
- * `journey_share_tokens` — public share links (Plan 3g Task 3, R4). Six of
- * its methods (`findAccessByToken`, `findByToken` and the five cross-table
- * public reads below) are reachable from `JourneyPublicController` with NO
- * authentication at all, gated purely by the unguessable token. Every token
- * lookup here is a plain `.where({token})`/`.where('token', '=', token)`
- * equality — no `LIKE`, no `COLLATE NOCASE`, no case-folding of any kind
- * (R4) — and every one of these returns `undefined` on a miss, never throws,
- * so a missing/revoked/wrong-case/NUL token 404s through the controller
- * instead of 500ing.
+ * `journey_share_tokens` — public share links (Plan 3g Task 3, R4).
+ * `findAccessByToken`/`findByToken` are reachable from
+ * `JourneyPublicController` with NO authentication at all, gated purely by
+ * the unguessable token — a plain `.where({token})`/`.where('token', '=',
+ * token)` equality, no `LIKE`, no `COLLATE NOCASE`, no case-folding of any
+ * kind (R4), returning `undefined` on a miss, never throwing, so a
+ * missing/revoked/wrong-case/NUL token 404s through the controller instead
+ * of 500ing. The five cross-table public reads (JS7/JS10/JS13/JS14/JS15)
+ * that used to live here as a fallback Kysely stub (3g Task 3, before Task
+ * 2's own repositories landed) have all been relocated to their natural
+ * home repositories — see the bottom of this file (Plan 4 Task 8b).
  */
 export class JourneyShareTokensRepository extends TrekRepository<JourneyShareTokens> {
   /** JS1 — `createOrUpdateJourneyShareLink`'s existing-link read: `SELECT token, share_timeline, share_gallery, share_map, newest_first FROM journey_share_tokens WHERE journey_id = ?`. */
@@ -260,72 +149,19 @@ export class JourneyShareTokensRepository extends TrekRepository<JourneyShareTok
     return await this.qb('jst').select(['jst.*']).where({ token }).execute<JourneyShareTokenRow | undefined>('get', false);
   }
 
-  /** JS7 — `validateShareTokenForPhoto`'s photo/journey resolution: `SELECT gp.photo_id, tkp.owner_id, gp.journey_id FROM journey_photos gp JOIN trek_photos tkp ON tkp.id=gp.photo_id WHERE gp.photo_id=? AND gp.journey_id=?`. */
-  async findGalleryPhotoForValidation(photoId: number, journeyId: number): Promise<JourneyPublicPhotoValidationRow | undefined> {
-    return await this.kysely<JourneyPublicKyselyDB>()
-      .selectFrom('journey_photos as gp')
-      .innerJoin('trek_photos as tkp', 'tkp.id', 'gp.photo_id')
-      .select(['gp.photo_id', 'tkp.owner_id', 'gp.journey_id'])
-      .where('gp.photo_id', '=', photoId)
-      .where('gp.journey_id', '=', journeyId)
-      .executeTakeFirst();
-  }
+  // JS7/JS10 — `validateShareTokenForPhoto`'s/`validateShareTokenForAsset`'s
+  // photo/asset resolution moved to `JourneyPhotosRepository
+  // .findGalleryPhotoForValidation`/`.findAssetForValidation` (Plan 4 Task
+  // 8b relocation — this repository's own fallback stub from 3g Task 3 is
+  // gone now that `JourneyPhotosRepository` is stable).
 
-  /**
-   * JS10 — `validateShareTokenForAsset`'s owner resolution: `SELECT
-   * tkp.owner_id, j.user_id AS journey_owner_id FROM journey_photos gp JOIN
-   * trek_photos tkp ON tkp.id=gp.photo_id JOIN journeys j ON j.id=gp.journey_id
-   * WHERE tkp.asset_id=? AND gp.journey_id=?`. Security-critical (the
-   * service never trusts a caller-supplied owner id — this join is the only
-   * source of the resolved `ownerId`).
-   */
-  async findAssetForValidation(assetId: string, journeyId: number): Promise<JourneyPublicAssetValidationRow | undefined> {
-    return await this.kysely<JourneyPublicKyselyDB>()
-      .selectFrom('journey_photos as gp')
-      .innerJoin('trek_photos as tkp', 'tkp.id', 'gp.photo_id')
-      .innerJoin('journeys as j', 'j.id', 'gp.journey_id')
-      .select(['tkp.owner_id', 'j.user_id as journey_owner_id'])
-      .where('tkp.asset_id', '=', assetId)
-      .where('gp.journey_id', '=', journeyId)
-      .executeTakeFirst();
-  }
+  // JS13 — `getPublicJourney`'s entry list moved to
+  // `JourneyEntriesRepository.listPublicEntries` (Plan 4 Task 8b, same
+  // reason as JS7/JS10 above).
 
-  /** JS13 — `getPublicJourney`'s entry list: `SELECT je.* FROM journey_entries je WHERE je.journey_id=? AND je.type != 'skeleton' AND je.dismissed=0 ORDER BY je.entry_date, je.sort_order`. Skeletons never appear publicly. */
-  async listPublicEntries(journeyId: number): Promise<JourneyEntry[]> {
-    const rows = await this.kysely<JourneyPublicKyselyDB>()
-      .selectFrom('journey_entries as je')
-      .selectAll('je')
-      .where('je.journey_id', '=', journeyId)
-      .where('je.type', '!=', 'skeleton')
-      .where('je.dismissed', '=', 0)
-      .orderBy('je.entry_date', 'asc')
-      .orderBy('je.sort_order', 'asc')
-      .execute();
-    return rows as unknown as JourneyEntry[];
-  }
-
-  /**
-   * JS14 — `getPublicJourney`'s per-entry photo read. The select list is
-   * byte-for-byte the same columns, in the same order, as `JP_SELECT`
-   * (`journey-domain.service.ts`) — only the `trek_photos` join alias
-   * differs (`tkp` here, `tp` there). See task-3-report.md for why this
-   * stays a separate, hand-kept query rather than reusing Task 2's
-   * `JourneyEntryPhotosRepository` (not yet landed when this task ran).
-   */
-  async listEntryPhotosForPublicJourney(journeyId: number): Promise<JourneyPublicEntryPhotoRow[]> {
-    return await this.kysely<JourneyPublicKyselyDB>()
-      .selectFrom('journey_entry_photos as jep')
-      .innerJoin('journey_photos as gp', 'gp.id', 'jep.journey_photo_id')
-      .innerJoin('trek_photos as tkp', 'tkp.id', 'gp.photo_id')
-      .select([
-        'gp.id', 'jep.entry_id', 'gp.photo_id', 'gp.caption', 'jep.sort_order', 'gp.shared', 'gp.created_at',
-        'tkp.provider', 'tkp.asset_id', 'tkp.owner_id', 'tkp.file_path', 'tkp.thumbnail_path', 'tkp.width', 'tkp.height',
-        'tkp.media_type', 'tkp.duration_ms', 'tkp.taken_at', 'tkp.lat', 'tkp.lng',
-      ])
-      .where('gp.journey_id', '=', journeyId)
-      .orderBy('jep.sort_order', 'asc')
-      .execute();
-  }
+  // JS14 — `getPublicJourney`'s per-entry photo read moved to
+  // `JourneyEntryPhotosRepository.listForPublicJourney` (Plan 4 Task 8b,
+  // dedupe against that repository's own `JP_COLUMNS`).
 
   // JS15 — `getPublicJourney`'s gallery read moved to
   // `JourneyPhotosRepository.galleryRead` (L2, above).

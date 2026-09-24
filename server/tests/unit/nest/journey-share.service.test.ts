@@ -48,6 +48,8 @@ import {
 } from '../../helpers/journey-repos';
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
 import type { JourneyPublicGalleryRow, JourneyShareTokensRepository } from '../../../src/db/repositories/JourneyShareTokens.repository';
+import type { JourneyEntriesRepository } from '../../../src/db/repositories/JourneyEntries.repository';
+import type { JourneyEntryPhotosRepository } from '../../../src/db/repositories/JourneyEntryPhotos.repository';
 import { GALLERY_CHRONOLOGICAL_ORDER } from '../../../src/nest/journey/journey-gallery-order';
 
 const dbs = new DatabaseService(dbConn);
@@ -79,6 +81,10 @@ beforeAll(async () => {
     // task-5-fix-brief constructor-ripple: `UnitOfWork` (L1's transactional
     // create/update) + `JourneyPhotosRepository` (L2's `galleryRead` reuse).
     uow, await createTestJourneyPhotosRepo(testDb),
+    // Plan 4 Task 8b constructor-ripple: `JourneyEntriesRepository` (JS13) +
+    // `JourneyEntryPhotosRepository` (JS14), relocated off
+    // `JourneyShareTokensRepository`'s own fallback stub.
+    await createTestJourneyEntriesRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb),
   );
 });
 
@@ -774,10 +780,18 @@ describe('parity — JourneyShareTokensRepository reads match the legacy stateme
   // pins that method's output against the legacy statement instead of the
   // (now-deleted) `JourneyShareTokensRepository.listGalleryForPublicJourney`.
   let journeyPhotosRepo: Awaited<ReturnType<typeof createTestJourneyPhotosRepo>>;
+  // Plan 4 Task 8b — JS7/JS10/JS13/JS14 relocated the same way JS15 was: P04
+  // and P05 below now pin `JourneyEntriesRepository.listPublicEntries` and
+  // `JourneyEntryPhotosRepository.listForPublicJourney` instead of the
+  // (now-deleted) `JourneyShareTokensRepository` fallback stub methods.
+  let journeyEntriesRepo: JourneyEntriesRepository;
+  let journeyEntryPhotosRepo: JourneyEntryPhotosRepository;
 
   beforeAll(async () => {
     shareTokensRepo = await createTestJourneyShareTokensRepo(testDb);
     journeyPhotosRepo = await createTestJourneyPhotosRepo(testDb);
+    journeyEntriesRepo = await createTestJourneyEntriesRepo(testDb);
+    journeyEntryPhotosRepo = await createTestJourneyEntryPhotosRepo(testDb);
   });
 
   it('JOURNEY-SHARE-P01: findFlagsByJourneyId (JS1) matches the legacy 5-column read', async () => {
@@ -837,10 +851,10 @@ describe('parity — JourneyShareTokensRepository reads match the legacy stateme
       `)
       .all(journey.id);
 
-    expect(await shareTokensRepo.listPublicEntries(journey.id)).toEqual(legacy);
+    expect(await journeyEntriesRepo.listPublicEntries(journey.id)).toEqual(legacy);
   });
 
-  it('JOURNEY-SHARE-P05: listEntryPhotosForPublicJourney (JS14) matches the legacy JP_SELECT-shaped statement', async () => {
+  it('JOURNEY-SHARE-P05: JourneyEntryPhotosRepository.listForPublicJourney (JS14) matches the legacy JP_SELECT-shaped statement', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
@@ -859,7 +873,7 @@ describe('parity — JourneyShareTokensRepository reads match the legacy stateme
       `)
       .all(journey.id);
 
-    expect(await shareTokensRepo.listEntryPhotosForPublicJourney(journey.id)).toEqual(legacy);
+    expect(await journeyEntryPhotosRepo.listForPublicJourney(journey.id)).toEqual(legacy);
   });
 
   it('JOURNEY-SHARE-P06: JourneyPhotosRepository.galleryRead (JS15, GALLERY_CHRONOLOGICAL_ORDER) matches the legacy statement — a photo linked to an entry AND an unattached gallery photo', async () => {

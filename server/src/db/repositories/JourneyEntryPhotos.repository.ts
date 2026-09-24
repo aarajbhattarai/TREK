@@ -32,6 +32,40 @@ const JP_COLUMNS = [
 ] as const;
 
 /**
+ * JS14 (Plan 4 Task 8b relocation) — `JourneyShareService.getPublicJourney`'s
+ * per-entry photo row. Column-for-column identical to `JP_COLUMNS` above
+ * (only the widened nullability on a couple of fields to match the public
+ * route's original hand-kept shape) — {@link
+ * JourneyEntryPhotosRepository.listForPublicJourney} reuses `JP_COLUMNS`
+ * rather than a second, hand-duplicated select list. Previously lived as
+ * `JourneyShareTokens.repository.ts`'s own `JourneyPublicEntryPhotoRow` +
+ * `listEntryPhotosForPublicJourney`, a fallback stub from 3g Task 3 (this
+ * repository was still mid-flight when that task landed) — relocated here
+ * now that it is stable.
+ */
+export interface JourneyPublicEntryPhotoRow {
+  id: number;
+  entry_id: number;
+  photo_id: number;
+  caption: string | null;
+  sort_order: number | null;
+  shared: number;
+  created_at: number;
+  provider: string;
+  asset_id: string | null;
+  owner_id: number | null;
+  file_path: string | null;
+  thumbnail_path: string | null;
+  width: number | null;
+  height: number | null;
+  media_type: string | null;
+  duration_ms: number | null;
+  taken_at: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+/**
  * `journey_entry_photos` — the entry↔gallery-photo junction (Plan 3g Task 2,
  * Part B). A genuine TWO-column composite primary key (`entry` +
  * `journeyPhoto`, both `.primary()`, R3 — pinned against
@@ -99,6 +133,28 @@ export class JourneyEntryPhotosRepository extends TrekRepository<JourneyEntryPho
       .limit(1)
       .executeTakeFirst();
     return row as JourneyPhoto | undefined;
+  }
+
+  /**
+   * JS14 (Plan 4 Task 8b relocation) — the public `getPublicJourney` route's
+   * per-entry photo read: `SELECT {JP_SELECT} FROM {JP_JOIN} WHERE
+   * gp.journey_id = ? ORDER BY jep.sort_order`. Filters directly on
+   * `gp.journey_id`, NOT via a `journey_entries` join like {@link
+   * listForJourney}/JG15/JG72 — a different statement text (the legacy
+   * public route never scoped through `journey_entries` at all), so this is
+   * a distinct method reusing the same `JP_COLUMNS` select list, not a call
+   * to {@link listForJourney}.
+   */
+  async listForPublicJourney(journeyId: number): Promise<JourneyPublicEntryPhotoRow[]> {
+    const rows = await this.kysely<JourneyPhotoJoinKyselyDB>()
+      .selectFrom('journey_entry_photos as jep')
+      .innerJoin('journey_photos as gp', 'gp.id', 'jep.journey_photo_id')
+      .innerJoin('trek_photos as tp', 'tp.id', 'gp.photo_id')
+      .select(JP_COLUMNS)
+      .where('gp.journey_id', '=', journeyId)
+      .orderBy('jep.sort_order', 'asc')
+      .execute();
+    return rows as unknown as JourneyPublicEntryPhotoRow[];
   }
 
   /** JG91 — `linkGalleryPhotoToEntry`'s next-sort-order probe: `SELECT MAX(sort_order) as m FROM journey_entry_photos WHERE entry_id = ?`. */
