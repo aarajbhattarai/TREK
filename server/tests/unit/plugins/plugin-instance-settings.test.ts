@@ -13,18 +13,15 @@ import os from 'node:os';
 import path from 'node:path';
 import type { Request } from 'express';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null } };
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null };
 });
-vi.mock('../../../src/db/database', () => dbMock);
-import { db as dbConn } from '../../../src/db/database';
+import { db as testDb } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'x'.repeat(40), ENCRYPTION_KEY: 'a'.repeat(64), updateJwtSecret: () => {} }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { PluginsService } from '../../../src/nest/plugins/plugins.service';
 import { PluginsController } from '../../../src/nest/plugins/plugins.controller';
 import { PluginConsentRequired, type PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
@@ -81,7 +78,7 @@ let pluginErrorLogRepo: PluginErrorLogRepository;
 let pluginCapabilityAuditRepo: PluginCapabilityAuditRepository;
 const svc = () =>
   new PluginsService(
-    new DatabaseService(dbConn),
+    new DatabaseService(testDb),
     addonsService,
     pluginsRepo,
     pluginEgressHostsRepo,
@@ -112,10 +109,8 @@ async function installFixturePlugin(opts: { settings: Array<Record<string, unkno
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
-  addonsService = await createTestAddonsService(testDb, new DatabaseService(dbConn));
-  const orm = await sharedTestOrm(dbConn);
+  addonsService = await createTestAddonsService(testDb, new DatabaseService(testDb));
+  const orm = await sharedTestOrm(testDb);
   pluginsRepo = orm.repo(Plugins);
   pluginEgressHostsRepo = orm.repo(PluginEgressHosts);
   pluginSettingsFieldsRepo = orm.repo(PluginSettingsFields);
@@ -258,13 +253,13 @@ describe('required settings are enforced on save', () => {
 describe('respawn on save (runtime)', () => {
   it('INS-004 — an inactive plugin is left alone (no respawn, reports false)', async () => {
     install('p');
-    const rt = await createPluginRuntime(new DatabaseService(dbConn));
+    const rt = await createPluginRuntime(new DatabaseService(testDb));
     await expect(rt.respawnIfActive('p')).resolves.toBe(false);
   });
 
   it('INS-005 — an active plugin is stopped and re-activated so the child re-reads config', async () => {
     install('p');
-    const rt = await createPluginRuntime(new DatabaseService(dbConn));
+    const rt = await createPluginRuntime(new DatabaseService(testDb));
     const calls: string[] = [];
     vi.spyOn(rt, 'isActive').mockReturnValue(true);
     vi.spyOn(rt, 'activate').mockImplementation(async () => { calls.push('activate'); });
@@ -380,7 +375,7 @@ describe('defaults reach the child at spawn', () => {
     const s = svc();
     await s.updateInstanceConfig('fixture-id', { api_url: 'https://mine.example' });
 
-    const rt = await createPluginRuntime(new DatabaseService(dbConn));
+    const rt = await createPluginRuntime(new DatabaseService(testDb));
     const sup = (rt as unknown as { supervisor: { activate: (...a: unknown[]) => Promise<void> } }).supervisor;
     const activate = vi.spyOn(sup, 'activate').mockResolvedValue(undefined);
 
@@ -409,7 +404,7 @@ describe('instance-scope actions (admin)', () => {
   }
   const adminReq = { user: { id: 42 } } as unknown as Request;
   async function controller(invoke = vi.fn(async () => ({ ok: true, message: 'pong' }))) {
-    const rt = await createPluginRuntime(new DatabaseService(dbConn));
+    const rt = await createPluginRuntime(new DatabaseService(testDb));
     // isActive normally reflects the supervisor's live child map, which nothing here
     // spawns — so it's stubbed to read the same DB status the test itself flips,
     // mirroring what an actually-activated plugin would report.

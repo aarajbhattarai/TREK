@@ -12,20 +12,17 @@
  *   - it is always the ADMIN, never an end user, who widens it;
  *   - changing the set RE-SPAWNS the plugin, because the child's guard is install-once.
  */
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null } };
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null };
 });
-vi.mock('../../../src/db/database', () => dbMock);
-import { db as dbConn } from '../../../src/db/database';
+import { db as testDb } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'x'.repeat(40), ENCRYPTION_KEY: 'a'.repeat(64), updateJwtSecret: () => {} }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { parseManifest, ManifestError } from '../../../src/nest/plugins/install/manifest';
@@ -49,12 +46,11 @@ function install(id: string, operatorEgress: boolean, perms: string[] = ['http:o
 
 let rt: PluginRuntimeService;
 
-beforeAll(() => { createTables(testDb); runMigrations(testDb); });
 beforeEach(async () => {
   testDb.prepare('DELETE FROM plugins').run();
   testDb.prepare('DELETE FROM plugin_egress_hosts').run();
   testDb.prepare('DELETE FROM plugin_actions').run();
-  rt = await createPluginRuntime(new DatabaseService(dbConn));
+  rt = await createPluginRuntime(new DatabaseService(testDb));
 });
 
 describe('operator-supplied egress hosts', () => {
@@ -181,8 +177,8 @@ describe('the admin list surfaces operator egress (so the chip can be shown)', (
     // list() resolves required-addon dependencies through AddonsService, so it gets a real
     // one over the same DB. These fixtures declare no dependencies, so it is never consulted.
     const listPlugins = async () => {
-      const dbs = new DatabaseService(dbConn);
-      const orm = await sharedTestOrm(dbConn);
+      const dbs = new DatabaseService(testDb);
+      const orm = await sharedTestOrm(testDb);
       const service = new PluginsService(
         dbs,
         await createTestAddonsService(testDb, dbs),

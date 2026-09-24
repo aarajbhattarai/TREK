@@ -2,7 +2,7 @@
  * Reservations + accommodations module e2e — exercises both migrated mounts
  * through the real JwtAuthGuard against a temp SQLite db. Reservation SQL runs
  * for real (ReservationsService is DI-native, no mock — the temp db carries the
- * full schema via createTables + runMigrations), and so does the accommodation
+ * full, real migrated schema via createSnapshotTestDb), and so does the accommodation
  * SQL (the injected DaysService is DI-native too); the budget service, the
  * permission check and the WebSocket broadcast stay mocked.
  */
@@ -22,29 +22,21 @@ import type { Server } from 'http';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockInstance } from 'vitest';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  // What production runs (db/database.ts) and what createTestDb gives every
-  // unit suite. Without it the reservation foreign keys are inert here, and an
-  // id that resolves to nothing passes the mount unnoticed.
-  tmp.exec('PRAGMA foreign_keys = ON');
-  return { db: tmp };
-});
-
 // Task 9 fix wave (B-L11): `src/db/database.ts` no longer exports
 // `canAccessTrip` (Plan 3c Task 0b moved it onto `TripsRepository` behind
 // `TripAccessGuard`'s own `EntityManager`), so mocking it here was a dead
 // no-op — the "404 when trip not accessible" cases below already delete/
 // restore the real row instead (see their own comments).
-vi.mock('../../src/db/database', () => ({
-  db,
-  getPlaceWithTags: vi.fn(),
-  closeDb: () => {},
-  reinitialize: () => {},
-}));
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
+    db,
+    getPlaceWithTags: vi.fn(),
+    closeDb: () => {},
+    reinitialize: () => {},
+  };
+});
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn() }));
 const { notificationSend } = vi.hoisted(() => ({ notificationSend: vi.fn().mockResolvedValue(undefined) }));
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
@@ -56,8 +48,7 @@ let checkPermission: MockInstance;
 // The budget-sync seam runs the real injected BudgetService (BudgetModule is
 // imported by ReservationsModule since the budget fold) over the same temp db.
 
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
+import { db } from '../../src/db/database';
 import { NotificationsService } from '../../src/nest/notifications/notifications.service';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 import { createTestMikroOrmModule } from '../helpers/test-orm';
@@ -81,8 +72,6 @@ describe('Reservations + accommodations e2e (real auth guard + temp SQLite, real
   }
 
   beforeAll(async () => {
-    createTables(db);
-    runMigrations(db);
     // The temp db carries the real schema (password_hash NOT NULL), so seed the
     // auth user directly instead of via the trimmed-DDL seedUser helper.
     db.prepare(

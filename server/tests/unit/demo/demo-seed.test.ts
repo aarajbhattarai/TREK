@@ -14,7 +14,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type Database from 'better-sqlite3';
-import { createTestDb } from '../../helpers/test-db';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm } from '../../helpers/test-orm';
 import { withRequestContext } from '../../../src/nest/database/request-context';
 
@@ -36,7 +36,7 @@ describe('demo seeding', () => {
   const realPass = process.env.DEMO_ADMIN_PASS;
 
   beforeEach(() => {
-    db = createTestDb();
+    db = createSnapshotTestDb();
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
   });
 

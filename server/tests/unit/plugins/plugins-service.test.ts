@@ -4,23 +4,12 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 
-const { testDb } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec(`CREATE TABLE plugins (
-    id TEXT PRIMARY KEY, name TEXT, description TEXT, type TEXT, icon TEXT, version TEXT,
-    status TEXT, enabled INTEGER DEFAULT 0, last_error TEXT, reviewed_at TEXT, source_repo TEXT, config TEXT DEFAULT '{}', permissions TEXT DEFAULT '[]', granted_permissions TEXT DEFAULT '[]', capabilities TEXT DEFAULT '{}', dependencies TEXT DEFAULT '{}', operator_egress INTEGER DEFAULT 0, updated_at TEXT,
-    author_pubkey TEXT, update_block_code TEXT, update_block_detail TEXT, update_block_version TEXT,
-    trek_range TEXT, sort_order INTEGER DEFAULT 0, update_hold INTEGER NOT NULL DEFAULT 0);
-    CREATE TABLE plugin_settings_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, field_key TEXT, scope TEXT, secret INTEGER, required INTEGER DEFAULT 0, input_type TEXT DEFAULT 'text', default_value TEXT, sort_order INTEGER DEFAULT 0);
-    CREATE TABLE plugin_error_log (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, level TEXT, message TEXT, ts TEXT DEFAULT '2026-01-01');
-    CREATE TABLE plugin_actions (plugin_id TEXT, action_key TEXT, label TEXT, hint TEXT, danger INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0, scope TEXT DEFAULT 'user', PRIMARY KEY (plugin_id, action_key));
-    CREATE TABLE plugin_egress_hosts (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, host TEXT, created_at TEXT DEFAULT (datetime('now')));
-    CREATE TABLE plugin_user_config (plugin_id TEXT, user_id INTEGER, config TEXT DEFAULT '{}', updated_at TEXT DEFAULT (datetime('now')), PRIMARY KEY (plugin_id, user_id));`);
-  return { testDb: db };
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db };
 });
-vi.mock('../../../src/db/database', () => ({ db: testDb }));
-import { db as dbConn } from '../../../src/db/database';
+import { db as testDb } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
@@ -43,7 +32,7 @@ import type { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env
 // (over the same connection) rather than reconstructed at every call site.
 let addonsService: AddonsService;
 beforeAll(async () => {
-  addonsService = await createTestAddonsService(testDb, new DatabaseService(dbConn));
+  addonsService = await createTestAddonsService(testDb, new DatabaseService(testDb));
 });
 
 /**
@@ -55,7 +44,7 @@ beforeAll(async () => {
 async function makeService(): Promise<PluginsService> {
   const orm = await sharedTestOrm(testDb);
   return new PluginsService(
-    new DatabaseService(dbConn),
+    new DatabaseService(testDb),
     addonsService,
     orm.repo(Plugins),
     orm.repo(PluginEgressHosts),
@@ -408,7 +397,7 @@ describe('PluginsService instance config', () => {
 describe('PluginsService error log', () => {
   beforeEach(() => testDb.exec('DELETE FROM plugin_error_log'));
   it('lists and clears a plugin error log', async () => {
-    testDb.prepare("INSERT INTO plugin_error_log (plugin_id, level, message) VALUES ('p','error','boom')").run();
+    testDb.prepare("INSERT INTO plugin_error_log (plugin_id, level, message, ts) VALUES ('p','error','boom','2026-01-01')").run();
     const svc = await makeService();
     expect(await svc.errors('p')).toEqual([{ ts: '2026-01-01', level: 'error', message: 'boom' }]);
     await svc.clearErrors('p');

@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
-import { CAN_ACCESS_TRIP_SQL, buildDbMock, createTestDb, resetTestDb } from '../../helpers/test-db';
+import { CAN_ACCESS_TRIP_SQL, buildDbMock, resetTestDb } from '../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { Trips } from '../../../src/db/entities/Trips.entity';
 import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
@@ -81,7 +81,7 @@ describe('TripsRepository.findAccessible (formerly canAccessTrip)', () => {
  */
 describe('the buildDbMock stand-in for canAccessTrip', () => {
   it('hands back the trip currency, like the real one', async () => {
-    const dbmockDb = createTestDb();
+    const dbmockDb = createSnapshotTestDb();
     try {
       const owner = Number(
         dbmockDb.prepare("INSERT INTO users (username, email, password_hash, role) VALUES ('m', 'm@example.test', 'x', 'user')")

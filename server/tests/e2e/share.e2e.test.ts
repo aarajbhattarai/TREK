@@ -15,29 +15,25 @@ import type { Server } from 'http';
 import { Test } from '@nestjs/testing';
 import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  return { db: tmp };
-});
-
-vi.mock('../../src/db/database', () => ({
-  db,
-  // Real-SQL trip access over the temp db — ShareService.verifyTripAccess and
-  // DatabaseModule both read the mocked singleton.
-  canAccessTrip: (tripId: number | string, userId: number) =>
-    db.prepare(`
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
+    db,
+    // Real-SQL trip access over the temp db — ShareService.verifyTripAccess and
+    // DatabaseModule both read the mocked singleton.
+    canAccessTrip: (tripId: number | string, userId: number) =>
+      db.prepare(`
       SELECT t.id, t.user_id FROM trips t
       LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
       WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)
     `).get(userId, tripId, userId),
-  isOwner: () => false,
-  getPlaceWithTags: () => null,
-  closeDb: () => {},
-  reinitialize: () => {},
-}));
+    isOwner: () => false,
+    getPlaceWithTags: () => null,
+    closeDb: () => {},
+    reinitialize: () => {},
+  };
+});
 
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
 
@@ -51,8 +47,7 @@ const serveKey = vi.fn();
 
 import path from 'node:path';
 import fs from 'node:fs';
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
+import { db } from '../../src/db/database';
 import { ShareModule } from '../../src/nest/share/share.module';
 import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-cache.service';
 import { DatabaseModule } from '../../src/nest/database/database.module';
@@ -81,8 +76,6 @@ describe('Share-link e2e (real auth guard + real SQL over temp SQLite)', () => {
   }
 
   beforeAll(async () => {
-    createTables(db);
-    runMigrations(db);
     // seedUser() omits password_hash, which the real schema requires NOT NULL.
     db.prepare(
       "INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'e2e-user', 'e2e@example.test', 'x', 'user')",

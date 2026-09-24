@@ -1,7 +1,7 @@
 /**
  * Budget module e2e — exercises the migrated /api/trips/:tripId/budget endpoints
- * through the real JwtAuthGuard against a temp SQLite db carrying the full real
- * schema (createTables + runMigrations), so the folded BudgetService runs its
+ * through the real JwtAuthGuard against a temp SQLite db carrying the full real,
+ * migrated schema (createSnapshotTestDb), so the folded BudgetService runs its
  * real SQL. Only the db singleton (trip access) and the WebSocket broadcast are
  * mocked; the permission check is a spy on the container's PermissionsService.
  */
@@ -14,24 +14,20 @@ import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
 import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  tmp.exec('PRAGMA foreign_keys = ON');
-  return { db: tmp };
-});
 const { canAccessTrip } = vi.hoisted(() => ({ canAccessTrip: vi.fn() }));
 
-vi.mock('../../src/db/database', () => ({
-  db,
-  closeDb: () => {},
-  reinitialize: () => {},
-  canAccessTrip,
-  getPlaceWithTags: () => null,
-  isOwner: () => false,
-}));
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
+    db,
+    closeDb: () => {},
+    reinitialize: () => {},
+    canAccessTrip,
+    getPlaceWithTags: () => null,
+    isOwner: () => false,
+  };
+});
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn() }));
 
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
@@ -40,8 +36,7 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 // PermissionsService singleton (created in beforeAll, after build()).
 let checkPermission: MockInstance;
 
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
+import { db } from '../../src/db/database';
 import { BudgetModule } from '../../src/nest/budget/budget.module';
 import { ExchangeRatesService } from '../../src/nest/budget/exchange-rates.service';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
@@ -70,8 +65,6 @@ describe('Budget e2e (real auth guard + temp SQLite, real budget SQL)', () => {
   }
 
   beforeAll(async () => {
-    createTables(db);
-    runMigrations(db);
     // The temp db carries the real schema (password_hash NOT NULL), so seed the
     // auth users directly instead of via the trimmed-DDL seedUser helper.
     db.prepare(

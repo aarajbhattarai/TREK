@@ -1,13 +1,18 @@
 /**
- * First-run admin seeding (seedAdminAccount).
+ * First-run admin seeding — the live MikroORM `AdminSeeder` (`db/seeders/AdminSeeder.ts`),
+ * not the retired `db/seeds.ts::seedAdminAccount` this file used to test (that function
+ * has no production caller any more — `db/orm.ts`'s own comment says it "replaces
+ * createTables() → runMigrations() → runSeeds()"). Same behavior, same env reads
+ * (`readEnv().adminBootstrap`), redirected to the seeder that actually runs at boot.
  *
  * Covers the #1339 fix: ADMIN_EMAIL/ADMIN_PASSWORD only take effect on first run
  * (empty database). Setting them once a user exists must no longer be silent — it
  * has to warn — and a partial config (only one of the two) must warn too instead
  * of quietly falling back to a generated password.
  */
-import { seedAdminAccount } from '../../../src/db/seeds';
-import { createTestDb } from '../../helpers/test-db';
+import { AdminSeeder } from '../../../src/db/seeders/AdminSeeder';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 
 import type Database from 'better-sqlite3';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -24,12 +29,14 @@ function insertExistingUser(db: Database.Database): void {
   ).run();
 }
 
-describe('seedAdminAccount — first-run admin', () => {
+describe('AdminSeeder — first-run admin', () => {
   let db: Database.Database;
+  let t: TestOrm;
   let saved: Record<string, string | undefined>;
 
-  beforeEach(() => {
-    db = createTestDb();
+  beforeEach(async () => {
+    db = createSnapshotTestDb();
+    t = await createTestOrm(db);
     saved = {};
     for (const k of ENV_KEYS) {
       saved[k] = process.env[k];
@@ -37,7 +44,8 @@ describe('seedAdminAccount — first-run admin', () => {
     }
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await t.close();
     db.close();
     for (const k of ENV_KEYS) {
       if (saved[k] === undefined) delete process.env[k];
@@ -46,12 +54,12 @@ describe('seedAdminAccount — first-run admin', () => {
     vi.restoreAllMocks();
   });
 
-  it('creates the admin from ADMIN_EMAIL/ADMIN_PASSWORD on an empty database', () => {
+  it('creates the admin from ADMIN_EMAIL/ADMIN_PASSWORD on an empty database', async () => {
     process.env.ADMIN_EMAIL = 'me@example.com';
     process.env.ADMIN_PASSWORD = 'S3cret-pw';
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    seedAdminAccount(db);
+    await new AdminSeeder().run(t.em);
 
     const user = db
       .prepare('SELECT email, role, must_change_password FROM users WHERE email = ?')
@@ -62,13 +70,13 @@ describe('seedAdminAccount — first-run admin', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('warns and creates nothing when ADMIN_* is set but a user already exists', () => {
+  it('warns and creates nothing when ADMIN_* is set but a user already exists', async () => {
     insertExistingUser(db);
     process.env.ADMIN_EMAIL = 'new@example.com';
     process.env.ADMIN_PASSWORD = 'whatever';
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    seedAdminAccount(db);
+    await new AdminSeeder().run(t.em);
 
     expect(countUsers(db)).toBe(1);
     expect(db.prepare('SELECT 1 FROM users WHERE email = ?').get('new@example.com')).toBeUndefined();
@@ -76,21 +84,21 @@ describe('seedAdminAccount — first-run admin', () => {
     expect(msg).toContain('only apply on first run');
   });
 
-  it('stays silent when no admin env is set and a user already exists', () => {
+  it('stays silent when no admin env is set and a user already exists', async () => {
     insertExistingUser(db);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    seedAdminAccount(db);
+    await new AdminSeeder().run(t.em);
 
     expect(countUsers(db)).toBe(1);
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('warns about a partial config and falls back to a generated password', () => {
+  it('warns about a partial config and falls back to a generated password', async () => {
     process.env.ADMIN_EMAIL = 'me@example.com'; // ADMIN_PASSWORD intentionally missing
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    seedAdminAccount(db);
+    await new AdminSeeder().run(t.em);
 
     // Falls back to the default local admin, NOT the provided email.
     expect(db.prepare('SELECT 1 FROM users WHERE email = ?').get('admin@trek.local')).toBeDefined();

@@ -18,6 +18,7 @@ vi.mock('../../../src/db/database', () => ({ get db() { return getDb.current; } 
 import { db as dbConn } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 
 import Database from 'better-sqlite3';
 import { PluginsService } from '../../../src/nest/plugins/plugins.service';
@@ -57,11 +58,7 @@ async function userSettings(): Promise<PluginUserSettingsService> {
 }
 
 function freshDb() {
-  const d = new Database(':memory:');
-  d.exec(`
-    CREATE TABLE plugin_settings_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, field_key TEXT, label TEXT, input_type TEXT, placeholder TEXT, hint TEXT, required INTEGER, secret INTEGER, scope TEXT, options TEXT, default_value TEXT, sort_order INTEGER);
-    CREATE TABLE plugin_user_config (plugin_id TEXT, user_id INTEGER, config TEXT, updated_at TEXT, PRIMARY KEY (plugin_id, user_id));
-  `);
+  const d = createSnapshotTestDb();
   // p: a user-scope api key (secret) + a user-scope pref (not secret) + an INSTANCE field.
   const ins = d.prepare('INSERT INTO plugin_settings_fields (plugin_id, field_key, input_type, required, secret, scope, sort_order) VALUES (?,?,?,?,?,?,?)');
   ins.run('p', 'apiKey', 'text', 1, 1, 'user', 0);

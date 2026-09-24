@@ -8,13 +8,12 @@ import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { withRequestContext } from '../../src/nest/database/request-context';
 import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  return { db: new Database(':memory:') };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db, closeDb: () => {} };
 });
-vi.mock('../../src/db/database', () => ({ db, closeDb: () => {} }));
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
+import { db } from '../../src/db/database';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { SchoolHolidaysModule } from '../../src/nest/school-holidays/school-holidays.module';
 import { SchoolHolidaysService } from '../../src/nest/school-holidays/school-holidays.service';
@@ -33,9 +32,6 @@ let app: INestApplication;
 let service: SchoolHolidaysService;
 let orm: MikroORM;
 beforeAll(async () => {
-  db.pragma('foreign_keys = ON');
-  createTables(db);
-  runMigrations(db);
   db.prepare("INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'admin', 'admin@test.local', '', 'admin'), (2, 'member', 'member@test.local', '', 'user')").run();
   const module = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, SchoolHolidaysModule] }).compile();
   app = module.createNestApplication();

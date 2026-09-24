@@ -14,23 +14,18 @@ import type { Server } from 'http';
 import { Test } from '@nestjs/testing';
 import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  tmp.exec('PRAGMA foreign_keys = ON');
-  return { db: tmp };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
+    db,
+    closeDb: () => {},
+    reinitialize: () => {},
+    getPlaceWithTags: () => null,
+    canAccessTrip: () => undefined,
+    isOwner: () => false,
+  };
 });
-
-vi.mock('../../src/db/database', () => ({
-  db,
-  closeDb: () => {},
-  reinitialize: () => {},
-  getPlaceWithTags: () => null,
-  canAccessTrip: () => undefined,
-  isOwner: () => false,
-}));
 
 vi.mock('../../src/websocket', () => ({ broadcastToUser: vi.fn(), broadcast: vi.fn() }));
 // The audit domain is DI-native: writeAudit runs for real against the temp
@@ -45,8 +40,7 @@ vi.mock('../../src/app-config', async (importOriginal) => {
 });
 
 import { MailerService } from '../../src/nest/notifications/mailer/mailer.service';
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
+import { db } from '../../src/db/database';
 import { createUser } from '../helpers/factories';
 import { encrypt_api_key } from '../../src/nest/common/crypto/apiKeyCrypto';
 import { resetRateLimits } from '../helpers/test-db';
@@ -90,8 +84,6 @@ describe('Auth e2e (real auth guard + real service + real cookie service + temp 
     (db.prepare('SELECT COUNT(*) AS n FROM audit_log WHERE action = ?').get(action) as { n: number }).n;
 
   beforeAll(async () => {
-    createTables(db as never);
-    runMigrations(db as never);
     const seeded = createUser(db as never, { username: 'auth-e2e', email: 'u@example.test' });
     userId = seeded.user.id;
     userEmail = seeded.user.email;

@@ -32,6 +32,7 @@ vi.mock('node:dns/promises', () => {
 });
 
 import Database from 'better-sqlite3';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { PluginOAuthService } from '../../../src/nest/plugins/oauth/plugin-oauth.service';
 import { sharedTestOrm } from '../../helpers/test-uow';
 import { Plugins } from '../../../src/db/entities/Plugins.entity';
@@ -48,14 +49,8 @@ const CFG = {
 };
 
 function freshDb(cfg: Record<string, unknown> = CFG) {
-  const d = new Database(':memory:');
-  d.exec(`
-    CREATE TABLE plugins (id TEXT PRIMARY KEY, config TEXT, status TEXT);
-    CREATE TABLE plugin_settings_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, field_key TEXT, scope TEXT, secret INTEGER, default_value TEXT);
-    CREATE TABLE plugin_oauth_tokens (plugin_id TEXT, user_id INTEGER, access_token TEXT, refresh_token TEXT, expires_at INTEGER, scope TEXT, updated_at TEXT, PRIMARY KEY (plugin_id, user_id));
-    CREATE TABLE plugin_oauth_state (state TEXT PRIMARY KEY, plugin_id TEXT, user_id INTEGER, verifier TEXT, created_at INTEGER);
-  `);
-  d.prepare("INSERT INTO plugins (id, config, status) VALUES ('p', ?, 'active')").run(JSON.stringify(cfg));
+  const d = createSnapshotTestDb();
+  d.prepare("INSERT INTO plugins (id, name, config, status) VALUES ('p', 'p', ?, 'active')").run(JSON.stringify(cfg));
   return d;
 }
 

@@ -16,14 +16,11 @@ import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { reseatBookedNights } from '../../../src/db/reseat-booked-nights';
 
 function freshDb() {
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  createTables(db);
-  runMigrations(db);
+  const db = createSnapshotTestDb();
   db.prepare("INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'u', 'u@test.local', 'x', 'user')").run();
   db.prepare("INSERT INTO trips (id, user_id, title) VALUES (1, 1, 'T')").run();
   db.prepare("INSERT INTO days (id, trip_id, day_number, date) VALUES (1, 1, 1, '2026-10-02')").run();
@@ -202,9 +199,24 @@ describe('booked night reseat', () => {
   });
 
   it('RESEAT-009: the migration runs the step on a database being upgraded', () => {
-    // Seeded through the tables the base schema has, so the step fires on its normal
-    // pass: the backfill for older bookings appends the night last first, then the
-    // reseat brings it to the front.
+    // Plan 4 Task 5c FINDING: unlike ruling 7's claim, `reseatBookedNights` is
+    // NOT invoked from inside any numbered MikroORM migration — only from the
+    // legacy `db/migrations.ts` array (its last step, #242). Grepped the whole
+    // `src/db/migrations/` tree for `reseat`/`reseatBookedNights` and every
+    // check-in/seat-ordering wording: no hit. The two numbered migrations that
+    // DO touch booked nights near the end of the chain
+    // (`Migration20200101034900_give_every_stay_booked_before_this_release`,
+    // `Migration20200101035000_the_same_sweep_once_more_for_the`) both call
+    // `attachStayStopsToCheckInDay` (creates the day stop), a DIFFERENT legacy
+    // step (#229/#230) from the reseat/reorder step (#242) this test exercises.
+    // So this one case is left on the legacy `createTables`+`runMigrations`
+    // builder deliberately, NOT swapped: there is no numbered-migration target
+    // to port it onto. Flagged for the controller/Task 6 — this is a real "no
+    // equivalent found" gap (ruling 10), not an oversight: an install upgrading
+    // through the numbered chain never gets this one-time reorder applied, and
+    // this file will still show up in Task 6's "zero test files import
+    // db/schema or db/migrations" precondition grep until that gap is resolved
+    // one way or another.
     const db = new Database(':memory:');
     db.exec('PRAGMA journal_mode = WAL');
     db.exec('PRAGMA foreign_keys = ON');

@@ -11,20 +11,17 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null } };
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null };
 });
-vi.mock('../../../src/db/database', () => dbMock);
-import { db as dbConn } from '../../../src/db/database';
+import { db as testDb } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'x'.repeat(40), ENCRYPTION_KEY: 'a'.repeat(64), updateJwtSecret: () => {} }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { createUser } from '../../helpers/factories';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { parseManifest, ManifestError } from '../../../src/nest/plugins/install/manifest';
@@ -74,12 +71,10 @@ function setUserConfig(pluginId: string, config: Record<string, unknown>) {
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   // Plan 3j Task 4 — `userSettings()` above now needs repositories, so the ORM this
   // file eventually built only inside PSET-007 is built here instead, before any
   // test runs (PSET-001..006 call `userSettings()` with no ORM of their own).
-  t = await createTestOrm(dbConn);
+  t = await createTestOrm(testDb);
 });
 beforeEach(() => {
   testDb.prepare('DELETE FROM plugin_settings_fields').run();
@@ -164,9 +159,9 @@ describe('a plugin channel label is bounded by the host', () => {
     ).run(JSON.stringify({ notificationChannel: { title: '🎉'.repeat(5) + 'A'.repeat(500) } }));
 
     const rt = new PluginRuntimeService(
-      new DatabaseService(dbConn),
+      new DatabaseService(testDb),
       new AuditService(t.repo(AuditLog), t.repo(Users)),
-      await createTestAddonsService(dbConn),
+      await createTestAddonsService(testDb),
       userSettings(),
       t.repo(Plugins),
       t.repo(PluginErrorLog),

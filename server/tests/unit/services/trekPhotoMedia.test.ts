@@ -4,31 +4,26 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   // FKs off: this suite only checks media_type persistence, not owner/user integrity.
   db.exec('PRAGMA foreign_keys = OFF');
-  const mock = { db, closeDb: () => {}, reinitialize: () => {}, getPlaceWithTags: async () => null, canAccessTrip: async () => null, isOwner: async () => false };
-  return { testDb: db, dbMock: mock };
+  return { db, closeDb: () => {}, reinitialize: () => {}, getPlaceWithTags: async () => null, canAccessTrip: async () => null, isOwner: async () => false };
 });
-
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
   updateJwtSecret: () => {},
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { createUser } from '../../helpers/factories';
 import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { db as trekDb } from '../../../src/db/database';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 
 // Was photos.bridge, deleted with the other three that had no consumer outside
@@ -40,10 +35,8 @@ const getOrCreateLocalTrekPhoto = (...a: Parameters<TrekPhotoRegistrationService
 const resolveTrekPhoto = (id: number) => trekPhotos.resolve(id);
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   t = await createTestOrm(testDb);
-  trekPhotos = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), new DatabaseService(trekDb, t.em));
+  trekPhotos = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), new DatabaseService(testDb, t.em));
 });
 
 beforeEach(() => {

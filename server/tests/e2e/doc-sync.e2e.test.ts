@@ -24,28 +24,23 @@ import type { Server } from 'http';
 import { Test } from '@nestjs/testing';
 import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  tmp.exec('PRAGMA foreign_keys = ON');
-  return { db: tmp };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
+    db,
+    closeDb: () => {},
+    reinitialize: () => {},
+    getPlaceWithTags: () => null,
+    canAccessTrip: (tripId: number | string, userId: number) =>
+      db
+        .prepare(
+          'SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)',
+        )
+        .get(userId, tripId, userId),
+    isOwner: () => false,
+  };
 });
-
-vi.mock('../../src/db/database', () => ({
-  db,
-  closeDb: () => {},
-  reinitialize: () => {},
-  getPlaceWithTags: () => null,
-  canAccessTrip: (tripId: number | string, userId: number) =>
-    db
-      .prepare(
-        'SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)',
-      )
-      .get(userId, tripId, userId),
-  isOwner: () => false,
-}));
 
 const { isAddonEnabled } = vi.hoisted(() => ({ isAddonEnabled: vi.fn(() => true) }));
 vi.mock('../../src/websocket', () => ({ broadcastToUser: vi.fn(), broadcast: vi.fn() }));
@@ -68,8 +63,7 @@ vi.mock('../../src/utils/ssrfGuard', async (importOriginal) => {
   };
 });
 
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
+import { db } from '../../src/db/database';
 import { createTrip, createUser } from '../helpers/factories';
 import { DocSyncModule } from '../../src/nest/doc-sync/doc-sync.module';
 import { DocSyncMcp } from '../../src/nest/doc-sync/doc-sync.mcp';
@@ -158,8 +152,6 @@ describe('Document sync e2e (real guards + real services + temp SQLite)', () => 
   }
 
   beforeAll(async () => {
-    createTables(db as never);
-    runMigrations(db as never);
     ownerId = createUser(db as never, { username: 'owner', email: 'owner@test.local' }).user.id;
     memberId = createUser(db as never, { username: 'member', email: 'member@test.local' }).user.id;
     strangerId = createUser(db as never, { username: 'stranger', email: 'stranger@test.local' }).user.id;

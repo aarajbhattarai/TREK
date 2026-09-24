@@ -23,33 +23,14 @@ import path from 'node:path';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 
-const { testDb } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec(`CREATE TABLE plugins (
-    id TEXT PRIMARY KEY, status TEXT, enabled INTEGER DEFAULT 0, version TEXT, api_version INTEGER DEFAULT 1, permissions TEXT DEFAULT '[]', operator_egress INTEGER DEFAULT 0, granted_permissions TEXT DEFAULT '',
-    config TEXT DEFAULT '{}', dependencies TEXT DEFAULT '{}', capabilities TEXT DEFAULT '{}', last_error TEXT, updated_at TEXT,
-    trek_range TEXT DEFAULT '>=3.0.0',
-    source_repo TEXT, author_pubkey TEXT, update_block_code TEXT, update_block_detail TEXT, update_block_version TEXT);
-    CREATE TABLE plugin_error_log (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, level TEXT, message TEXT, ts TEXT);
-    CREATE TABLE plugin_settings_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, field_key TEXT, scope TEXT, secret INTEGER, default_value TEXT);
-    CREATE TABLE settings (user_id INTEGER, key TEXT, value TEXT);
-    CREATE TABLE plugin_entity_metadata (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, entity_type TEXT, entity_id INTEGER, key TEXT, value TEXT, updated_at TEXT);
-    CREATE TABLE plugin_user_config (plugin_id TEXT, user_id INTEGER, field_key TEXT, value TEXT, PRIMARY KEY (plugin_id, user_id, field_key));
-    CREATE TABLE plugin_meta_migrations (plugin_id TEXT, migration_id TEXT, PRIMARY KEY (plugin_id, migration_id));
-    CREATE TABLE plugin_capability_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, acting_user_id INTEGER, method TEXT, resource TEXT, code TEXT, ts TEXT, prev_hash TEXT, hash TEXT);
-    CREATE TABLE plugin_scheduled_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT NOT NULL, name TEXT NOT NULL, due_at INTEGER NOT NULL, payload TEXT NOT NULL DEFAULT 'null', every_ms INTEGER, created_at TEXT DEFAULT (datetime('now')), UNIQUE(plugin_id, name));
-    CREATE TABLE plugin_user_erasure_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT NOT NULL, user_id INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now')), UNIQUE(plugin_id, user_id));
-    CREATE TABLE addons (id TEXT PRIMARY KEY, enabled INTEGER DEFAULT 0);
-    CREATE TABLE audit_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      user_id INTEGER, action TEXT NOT NULL, resource TEXT, details TEXT, ip TEXT);`);
-  return { testDb: db };
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db, canAccessTrip: () => undefined };
 });
-vi.mock('../../../src/db/database', () => ({ db: testDb, canAccessTrip: () => undefined }));
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 
-import { db as dbConn } from '../../../src/db/database';
+import { db as testDb } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
@@ -107,7 +88,7 @@ beforeAll(() => {
   // db:own. Seeded 'inactive' (not the 'active' a real shutdown leaves) so the
   // poll below only terminates on a status the THIS-boot supervisor wrote.
   testDb
-    .prepare("INSERT INTO plugins (id, status, enabled, permissions, granted_permissions, config) VALUES ('migrator','inactive',1,'[\"db:own\"]','[\"db:own\"]','{}')")
+    .prepare("INSERT INTO plugins (id, name, status, enabled, permissions, granted_permissions, config, trek_range) VALUES ('migrator','migrator','inactive',1,'[\"db:own\"]','[\"db:own\"]','{}','>=3.0.0')")
     .run();
 });
 
@@ -123,18 +104,18 @@ afterAll(async () => {
 
 describe('plugin boot vs registry scan ordering', () => {
   it('BOOT-REG-001 a plugin enabled before a restart activates cleanly even though the registry scan runs in a LATER provider\'s onModuleInit', async () => {
-    const dbs = new DatabaseService(dbConn);
+    const dbs = new DatabaseService(testDb);
     // Empty at construction — exactly what PluginRpcRegistryService is before its
     // own onModuleInit scan has run.
     const registry = new PluginRpcRegistry();
-    t = await createTestOrm(dbConn);
+    t = await createTestOrm(testDb);
     // Plan 3j Task 3: `PluginRpcHostFactory`'s `audit` callback now takes
     // `PluginCapabilityAuditRepository`, not `DatabaseService`.
     const hostFactory = new PluginRpcHostFactory(t.repo(PluginCapabilityAudit), registry as unknown as PluginRpcRegistryService);
     const userSettings = new PluginUserSettingsService((t as TestOrm).repo(PluginSettingsFields), (t as TestOrm).repo(PluginUserConfig));
     const auditLogRepo = t.repo(AuditLog);
     const usersRepo = t.repo(Users);
-    const addonsService = await createTestAddonsService(dbConn, dbs);
+    const addonsService = await createTestAddonsService(testDb, dbs);
 
     mod = await Test.createTestingModule({
       providers: [
@@ -217,10 +198,10 @@ describe('plugin boot vs registry scan ordering', () => {
     const dir = path.join(codeRoot, 'addongated', 'server');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'index.js'), `module.exports = { async onLoad(ctx) {} };`);
-    testDb.prepare("INSERT INTO addons (id, enabled) VALUES ('needsaddon_addon', 1)").run();
+    testDb.prepare("INSERT INTO addons (id, name, enabled) VALUES ('needsaddon_addon', 'needsaddon_addon', 1)").run();
     testDb
       .prepare(
-        "INSERT INTO plugins (id, status, enabled, permissions, granted_permissions, config, dependencies) VALUES ('addongated','inactive',1,'[]','[]','{}', ?)",
+        "INSERT INTO plugins (id, name, status, enabled, permissions, granted_permissions, config, trek_range, dependencies) VALUES ('addongated','addongated','inactive',1,'[]','[]','{}','>=3.0.0', ?)",
       )
       .run(JSON.stringify({ requiredAddons: ['needsaddon_addon'] }));
 
@@ -233,11 +214,11 @@ describe('plugin boot vs registry scan ordering', () => {
     // exactly the bug this test exists to catch): this is what makes the
     // addon check below genuinely depend on the withRequestContext wrap
     // rather than passing either way.
-    const t2 = await createTestOrm(dbConn, { allowGlobalContext: false });
+    const t2 = await createTestOrm(testDb, { allowGlobalContext: false });
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     let mod2: TestingModule | undefined;
     try {
-      const dbs2 = new DatabaseService(dbConn);
+      const dbs2 = new DatabaseService(testDb);
       const userSettings2 = new PluginUserSettingsService(t2.repo(PluginSettingsFields), t2.repo(PluginUserConfig));
       const registry2 = new PluginRpcRegistry();
       // Registry already scanned — this test is about the addon check, not the
