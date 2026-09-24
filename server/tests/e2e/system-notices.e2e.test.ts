@@ -37,7 +37,6 @@ vi.mock('../../src/db/database', () => ({ db, closeDb: () => {}, reinitialize: (
 
 import { SystemNoticesModule } from '../../src/nest/system-notices/system-notices.module';
 import { SystemNoticesService } from '../../src/nest/system-notices/system-notices.service';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 import { createTestMikroOrmModule } from '../helpers/test-orm';
@@ -61,7 +60,7 @@ describe('System-notices e2e (real auth guard + temp SQLite)', () => {
     // own MikroOrmModule.forFeature (Plan 3f Task 6) — no case here reaches a
     // real repository (SystemNoticesService is overridden below), so the
     // minimal `users`-only schema above is enough.
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, SystemNoticesModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), SystemNoticesModule] })
       .overrideProvider(SystemNoticesService)
       .useValue({ getActiveFor, dismiss })
       .compile();

@@ -50,7 +50,6 @@ import fs from 'node:fs';
 import { db } from '../../src/db/database';
 import { ShareModule } from '../../src/nest/share/share.module';
 import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-cache.service';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
@@ -62,7 +61,7 @@ describe('Share-link e2e (real auth guard + real SQL over temp SQLite)', () => {
   let tripId: number;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, ShareModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), ShareModule] })
       .overrideProvider(PlacePhotoCacheService).useValue({ serveKey })
       .compile();
     const nest = moduleRef.createNestApplication();

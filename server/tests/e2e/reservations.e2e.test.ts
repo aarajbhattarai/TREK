@@ -13,7 +13,6 @@ import { ReservationsModule } from '../../src/nest/reservations/reservations.mod
 // to assemble both or the /accommodations cases below 404 while production serves them.
 import { AccommodationsModule } from '../../src/nest/accommodations/accommodations.module';
 import { sessionCookie } from './harness';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
 
@@ -59,7 +58,7 @@ describe('Reservations + accommodations e2e (real auth guard + temp SQLite, real
   let tripId: number;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, ReservationsModule, AccommodationsModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, ReservationsModule, AccommodationsModule] })
       .overrideProvider(NotificationsService)
       .useValue({ send: notificationSend })
       .compile();

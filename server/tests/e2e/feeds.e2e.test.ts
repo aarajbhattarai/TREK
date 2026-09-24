@@ -23,7 +23,6 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import type { Server } from 'http';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { Test } from '@nestjs/testing';
 
 vi.mock('../../src/db/database', async () => {
@@ -72,7 +71,6 @@ describe('Calendar-feed e2e (real auth guard + temp SQLite)', () => {
         await TestUnitOfWorkModule.forRoot(db),
         await createTestMikroOrmModule(db),
         AppConfigModule,
-        DatabaseModule,
         RealtimeModule,
         FeedsModule,
       ],

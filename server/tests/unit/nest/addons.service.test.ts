@@ -26,7 +26,6 @@ import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { PlaceShadowService } from '../../../src/nest/place-shadow/place-shadow.service';
 import { Addons } from '../../../src/db/entities/Addons.entity';
@@ -170,7 +169,7 @@ beforeEach(() => {
   t.clear();
   getPhotoProviderConfig.mockReset();
   getPhotoProviderConfig.mockReturnValue({});
-  svc = new AddonsService(addonsRepo, photoProvidersRepo, photoProviderFieldsRepo, appSettingsRepo, usersRepo, new DatabaseService(testDb));
+  svc = new AddonsService(addonsRepo, photoProvidersRepo, photoProviderFieldsRepo, appSettingsRepo, usersRepo);
 });
 
 afterEach(() => {

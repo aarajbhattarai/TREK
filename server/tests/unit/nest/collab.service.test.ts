@@ -77,7 +77,6 @@ import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
 import { avatarUrl } from '../../../src/nest/common/avatarUrl';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { CollabService } from '../../../src/nest/collab/collab.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
@@ -113,10 +112,9 @@ let pollVotesRepo: CollabPollVotesRepository;
 let linksRepo: CollabLinksRepository;
 let messagesRepo: CollabMessagesRepository;
 
-async function buildCollabService(dbs: DatabaseService, storage = collabFx.storage, rl = rateLimit): Promise<CollabService> {
-  // Plan 4 Task 2 — CollabService's own DatabaseService param is gone:
-  // canAccessTrip now reads through the TripsRepository passed at the end;
-  // `dbs` stays as this helper's own param (every caller still passes one).
+async function buildCollabService(storage = collabFx.storage, rl = rateLimit): Promise<CollabService> {
+  // Plan 4 Task 2/4 — CollabService's own DatabaseService param is gone:
+  // canAccessTrip now reads through the TripsRepository passed at the end.
   return new CollabService(
     new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
@@ -135,7 +133,7 @@ async function buildCollabService(dbs: DatabaseService, storage = collabFx.stora
 }
 
 beforeAll(async () => {
-  svc = await buildCollabService(new DatabaseService(testDb));
+  svc = await buildCollabService();
   notesRepo = await createTestCollabNotesRepo(testDb);
   messageReactionsRepo = await createTestCollabMessageReactionsRepo(testDb);
   pollsRepo = await createTestCollabPollsRepo(testDb);
@@ -145,7 +143,7 @@ beforeAll(async () => {
 });
 
 /** A CollabService with its own preview cache and budget, for the tests that fill either. */
-const freshSvc = async () => buildCollabService(new DatabaseService(testDb), collabFx.storage, new RateLimitService());
+const freshSvc = async () => buildCollabService(collabFx.storage, new RateLimitService());
 
 beforeEach(() => {
   resetTestDb(testDb);
@@ -776,8 +774,7 @@ describe('linkPreview hardening', () => {
 describe('hardening', () => {
   it('COLLAB-SVC-034: votePoll switch is atomic — prior vote survives a failed INSERT', async () => {
     const { user1, trip } = setup();
-    const dbs = new DatabaseService(testDb);
-    const failing = await buildCollabService(dbs);
+    const failing = await buildCollabService();
     const poll = await failing.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
     await failing.votePoll(trip.id, poll!.id, user1.id, 0);
 
@@ -797,8 +794,7 @@ describe('hardening', () => {
 
   it('COLLAB-SVC-035: deleteNote is atomic — trip_files rows survive a failed note DELETE', async () => {
     const { user1, trip } = setup();
-    const dbs = new DatabaseService(testDb);
-    const failing = await buildCollabService(dbs);
+    const failing = await buildCollabService();
     const note = await failing.createNote(trip.id, user1.id, { title: 'With file' });
     testDb.prepare('INSERT INTO trip_files (trip_id, note_id, filename, original_name) VALUES (?, ?, ?, ?)')
       .run(trip.id, note.id, 'files/a.pdf', 'a.pdf');
@@ -816,9 +812,8 @@ describe('hardening', () => {
 
   it('COLLAB-SVC-036: a failing storage delete is swallowed — note + file deletes still succeed', async () => {
     const { user1, trip } = setup();
-    const dbs = new DatabaseService(testDb);
     const failingStorage = { delete: vi.fn().mockRejectedValue(new Error('EACCES')) };
-    const failing = await buildCollabService(dbs, failingStorage as unknown as import('../../../src/nest/storage/storage.service').StorageService);
+    const failing = await buildCollabService(failingStorage as unknown as import('../../../src/nest/storage/storage.service').StorageService);
     const note = await failing.createNote(trip.id, user1.id, { title: 'Sticky file' });
     testDb.prepare('INSERT INTO trip_files (trip_id, note_id, filename, original_name) VALUES (?, ?, ?, ?)')
       .run(trip.id, note.id, 'stuck.pdf', 'stuck.pdf');

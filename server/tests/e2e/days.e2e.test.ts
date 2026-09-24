@@ -21,7 +21,6 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockIns
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import type { Server } from 'http';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
 import { sessionCookie } from './harness';
@@ -54,7 +53,7 @@ describe('Days + day-notes e2e (real auth guard + temp SQLite, real day SQL)', (
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, DaysModule, DayNotesModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, DaysModule, DayNotesModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalPipes(new ZodValidationPipe());

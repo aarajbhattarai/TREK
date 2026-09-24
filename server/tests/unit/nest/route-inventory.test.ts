@@ -16,7 +16,6 @@ vi.mock('../../../src/db/database', async () => {
 
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../../src/nest/app.module';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import {
   ANONYMOUS_GUARDED_ROUTE_ALLOW_LIST,
   collectRouteGuards,
@@ -25,10 +24,9 @@ import {
 } from '../../../src/nest/common/validate-route-guards';
 
 async function buildApp() {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(DatabaseService)
-    .useValue({ get: () => undefined, all: () => [], run: () => ({}), canAccessTrip: () => null, isOwner: () => false })
-    .compile();
+  // Plan 4 Task 4: `DatabaseService` is gone — nothing left in the graph
+  // needs overriding for this to compile.
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   return moduleRef.createNestApplication();
 }
 

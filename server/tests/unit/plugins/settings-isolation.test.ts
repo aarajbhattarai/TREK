@@ -17,7 +17,7 @@ vi.mock('../../../src/db/database', async () => {
   return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null };
 });
 import { db as testDb } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'x'.repeat(40), ENCRYPTION_KEY: 'a'.repeat(64), updateJwtSecret: () => {} }));
@@ -159,7 +159,6 @@ describe('a plugin channel label is bounded by the host', () => {
     ).run(JSON.stringify({ notificationChannel: { title: '🎉'.repeat(5) + 'A'.repeat(500) } }));
 
     const rt = new PluginRuntimeService(
-      new DatabaseService(testDb),
       new AuditService(t.repo(AuditLog), t.repo(Users)),
       await createTestAddonsService(testDb),
       userSettings(),
@@ -178,6 +177,8 @@ describe('a plugin channel label is bounded by the host', () => {
       t.repo(PluginCapabilityAudit),
       t.repo(Settings),
       t.repo(NotificationChannelPreferences),
+      // Plan 4 Task 4: `uow` is no longer `@Optional()`.
+      new UnitOfWork(t.em),
     );
     // Stand the plugin up as a granted, active notificationChannel provider.
     (rt as unknown as { supervisor: { running: Map<string, unknown> } }).supervisor.running.set('loud', {

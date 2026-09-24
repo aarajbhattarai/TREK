@@ -55,9 +55,8 @@ import {
   createUser, createTrip, createJourney, createJourneyEntry, createPlace,
   createDay, createDayAssignment, linkTripToJourney,
 } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
@@ -68,7 +67,6 @@ import {
   createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
 
-const dbs = new DatabaseService(dbConn);
 let svc: JourneyDomainService;
 
 /** The factory has no coordinate fields, and a route is made of coordinates. */
@@ -89,7 +87,7 @@ function placeEntry(
 beforeAll(async () => {
   const t = await sharedTestOrm(testDb);
   svc = new JourneyDomainService(
-    dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb), dbs), await createTestUnitOfWork(testDb),
+    new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb)), await createTestUnitOfWork(testDb),
     await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
     await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
     // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.

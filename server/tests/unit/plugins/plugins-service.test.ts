@@ -10,7 +10,6 @@ vi.mock('../../../src/db/database', async () => {
   return { db };
 });
 import { db as testDb } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
@@ -32,7 +31,7 @@ import type { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env
 // (over the same connection) rather than reconstructed at every call site.
 let addonsService: AddonsService;
 beforeAll(async () => {
-  addonsService = await createTestAddonsService(testDb, new DatabaseService(testDb));
+  addonsService = await createTestAddonsService(testDb);
 });
 
 /**
@@ -44,7 +43,6 @@ beforeAll(async () => {
 async function makeService(): Promise<PluginsService> {
   const orm = await sharedTestOrm(testDb);
   return new PluginsService(
-    new DatabaseService(testDb),
     addonsService,
     orm.repo(Plugins),
     orm.repo(PluginEgressHosts),

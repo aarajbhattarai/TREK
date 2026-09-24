@@ -29,8 +29,7 @@ vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
 }));
 
 import { db as testDb } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
@@ -67,7 +66,6 @@ const cache = {
 // addresses the 'journey' category with the 'journey/' prefix stripped.
 const storage = { exists: vi.fn(), sendToResponse: vi.fn() };
 
-const dbs = new DatabaseService(testDb);
 // Real adapters over the stubbed services, and a real registry: the cases below
 // keep asserting on immich.streamImmichAsset/synology.streamSynologyAsset, so
 // they now also pin the adapters' argument mapping — which is where the two
@@ -95,7 +93,7 @@ function insertPhoto(cols: Record<string, unknown>): number {
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  const repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), dbs);
+  const repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos));
   svc = new PhotoResolverService(
     repo,
     thumbnails as unknown as ThumbnailService,

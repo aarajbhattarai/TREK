@@ -42,7 +42,7 @@ import { ADDON_IDS } from '../../../src/addons';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { UnifiedMemoriesService } from '../../../src/nest/memories/unified-memories.service';
 import { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { TripAlbumLinks } from '../../../src/db/entities/TripAlbumLinks.entity';
@@ -52,7 +52,6 @@ import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
 import { Journeys } from '../../../src/db/entities/Journeys.entity';
 import { JourneyContributors } from '../../../src/db/entities/JourneyContributors.entity';
 import type { ServiceResult } from '../../../src/nest/memories/memories.helpers';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { ImmichService } from '../../../src/nest/memories/immich.service';
 import type { SynologyService } from '../../../src/nest/memories/synology.service';
 import type { RealtimeService } from '../../../src/nest/realtime/realtime.service';
@@ -64,7 +63,6 @@ import { createTestUnitOfWork, sharedTestOrm, createTestUsersRepo } from '../../
 
 // The album-sync paths are the providers' half and have their own suites; these
 // cases never reach them, so stubs keep the graph small.
-const dbs = new DatabaseService(testDb);
 let svc: UnifiedMemoriesService;
 const realtimeMock = { broadcast: vi.fn() };
 let tripPhotosRepo: TripPhotosRepository;
@@ -102,24 +100,20 @@ const createTripAlbumLink = (...a: Parameters<Svc['createTripAlbumLink']>) => sv
 const removeAlbumLink = (...a: Parameters<Svc['removeAlbumLink']>) => svc.removeAlbumLink(...a);
 
 beforeAll(async () => {
-  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — `canAccessTrip` (the
-  // only one of the four primitives this suite's code paths reach) is spied
-  // directly on this instance, routed to a real `DatabaseService` built
-  // with one.
+  // Plan 4 Task 4: `DatabaseService` is gone — `UnifiedMemoriesService`
+  // never read it, so the `dbs.canAccessTrip` spy this block used to route
+  // to a real `DatabaseService` was already dead; removed with it.
   const t = await sharedTestOrm(testDb);
-  const real = new DatabaseService(testDb, t.em);
-  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
   tripPhotosRepo = t.repo(TripPhotos);
   tripAlbumLinksRepo = t.repo(TripAlbumLinks);
   usersRepo = await createTestUsersRepo(testDb);
   svc = new UnifiedMemoriesService(
-    new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), dbs),
+    new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos)),
     {} as ImmichService,
     {} as SynologyService,
     new MemoriesAccessService(t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos)),
     notificationsStub(),
-    await createTestAddonsService(testDb, dbs),
+    await createTestAddonsService(testDb),
     await createTestUnitOfWork(testDb),
     realtimeMock as unknown as RealtimeService,
     t.repo(PhotoProviders),

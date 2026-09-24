@@ -54,7 +54,6 @@ import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember } from '../../helpers/factories';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
@@ -83,12 +82,11 @@ import { BudgetItemMembers } from '../../../src/db/entities/BudgetItemMembers.en
 // (removeUserFromBudgetItems) under test.
 //
 // Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the `beforeAll`
-// below, before any `dbs()`/`new DatabaseService(testDb)` call —
-// `canAccessTrip`/`isOwner`/`rosterUserIds`/`getPlaceWithTags` resolve
-// `TripsRepository`/`TripMembersRepository`/`PlacesRepository` through it
-// now, not through `db/database.ts`'s deleted free functions.
+// below — `canAccessTrip`/`isOwner`/`rosterUserIds`/`getPlaceWithTags`
+// resolve `TripsRepository`/`TripMembersRepository`/`PlacesRepository`
+// through it. Plan 4 Task 4: `DatabaseService` itself is gone —
+// `UserCleanupService` now takes this `EntityManager` directly.
 let dbsEm: import('@mikro-orm/core').EntityManager | undefined;
-const dbs = () => new DatabaseService(testDb, dbsEm);
 
 let budget: BudgetService;
 let membersSvc: TripMembersService;
@@ -113,8 +111,8 @@ beforeAll(async () => {
 );
   membersSvc = new TripMembersService(
   budget,
-  new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb), await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb)),
-  new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+  new UserCleanupService(dbsEm!, budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb), await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb)),
+  new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   new RealtimeService(),
   notificationsStub(),
   await createTestUnitOfWork(testDb),

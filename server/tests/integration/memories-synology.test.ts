@@ -1172,7 +1172,7 @@ describe('Synology SSRF blocked error handling', () => {
 
 import { MikroORM } from '@mikro-orm/core';
 import { withRequestContext } from '../../src/nest/database/request-context';
-import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photo-registration.service';
 
 // Was photos.bridge, which existed for consumers outside the container and had
 // none left. The repository is what it delegated to. Resolved off the real,

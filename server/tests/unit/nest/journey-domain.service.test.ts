@@ -45,9 +45,8 @@ import {
   createDayAssignment,
   addTripPhoto,
 } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
@@ -62,7 +61,6 @@ import {
 import { todayUtc } from '@trek/shared';
 import { GALLERY_CHRONOLOGICAL_ORDER } from '../../../src/nest/journey/journey-gallery-order';
 
-let dbs: DatabaseService;
 let svc: JourneyDomainService;
 // Plan 3g Task 1's own additions (below, "repositories (R9's parity + mutation
 // proofs)" describe block) reach the repositories directly — held here so
@@ -95,7 +93,6 @@ let placesRepoDirect: Awaited<ReturnType<typeof createTestPlacesRepo>>;
 // below this block changes.
 beforeAll(async () => {
   const t = await sharedTestOrm(testDb);
-  dbs = new DatabaseService(dbConn, t.em);
   journeysRepoDirect = await createTestJourneysRepo(testDb);
   contributorsRepoDirect = await createTestJourneyContributorsRepo(testDb);
   journeyTripsRepoDirect = await createTestJourneyTripsRepo(testDb);
@@ -105,7 +102,7 @@ beforeAll(async () => {
   entryPhotosRepoDirect = await createTestJourneyEntryPhotosRepo(testDb);
   placesRepoDirect = await createTestPlacesRepo(testDb);
   svc = new JourneyDomainService(
-    dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), photosRepoDirect, dbs), await createTestUnitOfWork(testDb),
+    new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), photosRepoDirect), await createTestUnitOfWork(testDb),
     journeysRepoDirect, contributorsRepoDirect, journeyTripsRepoDirect, entriesRepoDirect, tripsRepoDirect,
     // Plan 3g Task 2's own append to this SAME construction call — the two
     // repositories this task builds, plus `PlacesRepository` (JG44) — per

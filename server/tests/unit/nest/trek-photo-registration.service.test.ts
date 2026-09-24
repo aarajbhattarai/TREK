@@ -15,7 +15,6 @@ import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { resetTestDb } from '../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { createUser, createTrip } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
@@ -29,7 +28,7 @@ let repo: TrekPhotoRegistrationService;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), new DatabaseService(testDb, t.em));
+  repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos));
 });
 
 beforeEach(() => { resetTestDb(testDb); t.clear(); });

@@ -18,7 +18,6 @@ import path from 'node:path';
 // (`createSnapshotTestDb` + `createTestOrm`) replaces the old hand-rolled table set,
 // same fix `registry.test.ts` needed.
 import { createSnapshotTestDb } from '../../helpers/db-mock';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
@@ -54,7 +53,7 @@ beforeAll(async () => {
   process.env.TREK_PLUGINS_DATA_DIR = dataRoot;
   process.env.TREK_PLUGINS_ENABLED = 'true';
   process.env.TREK_PLUGINS_DEV_LINK = '1';
-  runtime = await createPluginRuntime(new DatabaseService(dbConn));
+  runtime = await createPluginRuntime(dbConn);
 });
 
 afterAll(async () => {

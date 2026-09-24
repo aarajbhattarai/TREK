@@ -91,7 +91,7 @@ vi.mock('cron', () => ({
 
 import { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
@@ -128,12 +128,10 @@ let dataRoot: string;
 let preLoopContextSeen: boolean | undefined;
 
 async function buildRuntime(registrar?: CronRegistrarService, orm?: TestOrm['orm']): Promise<PluginRuntimeService> {
-  const dbs = new DatabaseService(testDb);
   const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
-  const addons = await createTestAddonsService(testDb, dbs);
+  const addons = await createTestAddonsService(testDb);
   const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
   return new PluginRuntimeService(
-    dbs,
     audit,
     addons,
     userSettings,
@@ -152,7 +150,8 @@ async function buildRuntime(registrar?: CronRegistrarService, orm?: TestOrm['orm
     t.repo(PluginCapabilityAudit),
     t.repo(Settings),
     t.repo(NotificationChannelPreferences),
-    undefined,
+    // Plan 4 Task 4: `uow` is no longer `@Optional()`.
+    new UnitOfWork(t.em),
     undefined,
     undefined,
     orm,

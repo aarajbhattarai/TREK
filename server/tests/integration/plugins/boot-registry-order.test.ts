@@ -31,7 +31,7 @@ vi.mock('../../../src/db/database', async () => {
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 
 import { db as testDb } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
@@ -104,7 +104,6 @@ afterAll(async () => {
 
 describe('plugin boot vs registry scan ordering', () => {
   it('BOOT-REG-001 a plugin enabled before a restart activates cleanly even though the registry scan runs in a LATER provider\'s onModuleInit', async () => {
-    const dbs = new DatabaseService(testDb);
     // Empty at construction — exactly what PluginRpcRegistryService is before its
     // own onModuleInit scan has run.
     const registry = new PluginRpcRegistry();
@@ -115,7 +114,7 @@ describe('plugin boot vs registry scan ordering', () => {
     const userSettings = new PluginUserSettingsService((t as TestOrm).repo(PluginSettingsFields), (t as TestOrm).repo(PluginUserConfig));
     const auditLogRepo = t.repo(AuditLog);
     const usersRepo = t.repo(Users);
-    const addonsService = await createTestAddonsService(testDb, dbs);
+    const addonsService = await createTestAddonsService(testDb);
 
     mod = await Test.createTestingModule({
       providers: [
@@ -131,7 +130,6 @@ describe('plugin boot vs registry scan ordering', () => {
           // repositories above (auditLogRepo/usersRepo) already share.
           useFactory: () =>
             new PluginRuntimeService(
-              dbs,
               new AuditService(auditLogRepo, usersRepo),
               addonsService,
               userSettings,
@@ -150,9 +148,11 @@ describe('plugin boot vs registry scan ordering', () => {
               (t as TestOrm).repo(PluginCapabilityAudit),
               (t as TestOrm).repo(Settings),
               (t as TestOrm).repo(NotificationChannelPreferences),
+              // Plan 4 Task 4: `uow` is no longer `@Optional()` — ordered ahead
+              // of `registry?`/`hostFactory?`, matching the real constructor.
+              new UnitOfWork((t as TestOrm).em),
               undefined,
               hostFactory,
-              undefined,
               t?.orm,
             ),
         },
@@ -218,7 +218,6 @@ describe('plugin boot vs registry scan ordering', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     let mod2: TestingModule | undefined;
     try {
-      const dbs2 = new DatabaseService(testDb);
       const userSettings2 = new PluginUserSettingsService(t2.repo(PluginSettingsFields), t2.repo(PluginUserConfig));
       const registry2 = new PluginRpcRegistry();
       // Registry already scanned — this test is about the addon check, not the
@@ -233,7 +232,6 @@ describe('plugin boot vs registry scan ordering', () => {
         t2.repo(PhotoProviderFields),
         t2.repo(AppSettings),
         t2.repo(Users),
-        dbs2,
       );
       const auditLogRepo2 = t2.repo(AuditLog);
       const usersRepo2 = t2.repo(Users);
@@ -244,7 +242,6 @@ describe('plugin boot vs registry scan ordering', () => {
             provide: PluginRuntimeService,
             useFactory: () =>
               new PluginRuntimeService(
-                dbs2,
                 new AuditService(auditLogRepo2, usersRepo2),
                 addonsService2,
                 userSettings2,
@@ -263,9 +260,9 @@ describe('plugin boot vs registry scan ordering', () => {
                 t2.repo(PluginCapabilityAudit),
                 t2.repo(Settings),
                 t2.repo(NotificationChannelPreferences),
+                new UnitOfWork(t2.em),
                 undefined,
                 hostFactory2,
-                undefined,
                 t2.orm,
               ),
           },

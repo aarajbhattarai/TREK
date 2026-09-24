@@ -14,7 +14,7 @@ const logMock = vi.hoisted(() => ({ LOG_LEVEL: 'error', logInfo: vi.fn(), logErr
 vi.mock('../../../src/nest/audit/audit-log.logger', () => logMock);
 
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
@@ -61,12 +61,10 @@ function installEnabledPlugin(id: string): void {
 }
 
 async function buildRuntime(withOrm: boolean): Promise<PluginRuntimeService> {
-  const dbs = new DatabaseService(testDb);
   const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
-  const addons = await createTestAddonsService(testDb, dbs);
+  const addons = await createTestAddonsService(testDb);
   const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
   return new PluginRuntimeService(
-    dbs,
     audit,
     addons,
     userSettings,
@@ -85,7 +83,9 @@ async function buildRuntime(withOrm: boolean): Promise<PluginRuntimeService> {
     t.repo(PluginCapabilityAudit),
     t.repo(Settings),
     t.repo(NotificationChannelPreferences),
-    undefined,
+    // Plan 4 Task 4: `uow` is no longer `@Optional()` — ordered ahead of
+    // `registry?`/`hostFactory?`, matching the real constructor's own order.
+    new UnitOfWork(t.em),
     undefined,
     undefined,
     withOrm ? t.orm : undefined,

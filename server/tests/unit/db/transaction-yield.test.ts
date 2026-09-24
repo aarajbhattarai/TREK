@@ -3,19 +3,25 @@
  * added by Plan 3c Task 9's whole-plan review (reviewer A, ruling 5): "transactional
  * bodies await DB work only." The server holds ONE better-sqlite3 connection, shared
  * by MikroORM's Kysely-backed driver (`orm-driver.ts`'s `BoundSqliteDriver`) and by
- * `DatabaseService`'s raw `db.prepare(...)` calls. This file pins the two concrete
- * behaviours that measurement (fork A2, real `UnitOfWork` + `withRequestContext` +
- * the bound driver, no mocks) found when a `uow.transactional` body is left open
- * across a real `await` (which no converted service does today — a static scan of
- * all 131 `.transactional(` call sites found none awaiting non-DB I/O; this file's
- * own transactional bodies hold one open ONLY to observe the window, which is
- * exactly the shape a future violation of rule 24 would take):
+ * any code holding the raw `better-sqlite3` handle directly (Plan 4 Task 4 deleted
+ * `DatabaseService`, the class that used to wrap `db.prepare(...)` this way — the
+ * hazard below is unchanged, since `MaintenanceRepository`/`DemoRepository`'s own
+ * `connection.execute()` calls and the still-exported `db` Proxy in
+ * `db/database.ts` are the same kind of direct, non-Kysely-queued access). This
+ * file pins the two concrete behaviours that measurement (fork A2, real
+ * `UnitOfWork` + `withRequestContext` + the bound driver, no mocks) found when a
+ * `uow.transactional` body is left open across a real `await` (which no converted
+ * service does today — a static scan of all 131 `.transactional(` call sites found
+ * none awaiting non-DB I/O; this file's own transactional bodies hold one open
+ * ONLY to observe the window, which is exactly the shape a future violation of
+ * rule 24 would take):
  *
  *   A. Another request's ORM/Kysely statement QUEUES behind the open transaction —
  *      Kysely's own `ConnectionMutex` for SQLite serialises every statement onto
  *      the one connection, so there is no interleaving: the queued statement's
  *      result only becomes observable after the holder's transaction settles.
- *   B. A raw `DatabaseService` statement issued while that same transaction is
+ *   B. A raw `better-sqlite3` statement (`db.prepare(...).get/run(...)`, the same
+ *      shape `DatabaseService` used to wrap) issued while that same transaction is
  *      open does NOT queue — it shares the connection directly, with no mutex of
  *      its own, so it runs INSIDE the open transaction: a "dirty read" of the
  *      transaction's uncommitted write, which then reverts to its pre-transaction
@@ -38,7 +44,6 @@ import { Trips } from '../../../src/db/entities/Trips.entity';
 import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 import { withRequestContext } from '../../../src/nest/database/request-context';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -46,13 +51,11 @@ const testDb = createSnapshotTestDb();
 let t: TestOrm;
 let trips: TripsRepository;
 let uow: UnitOfWork;
-let dbs: DatabaseService;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
   trips = t.repo(Trips);
   uow = new UnitOfWork(t.em);
-  dbs = new DatabaseService(testDb, t.em);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });
@@ -134,14 +137,16 @@ describe('transaction yield (rule 24)', () => {
     // forked `withRequestContext` — not a call from inside the holder's own
     // body (L-3: that would only prove a request can dirty-read its own
     // uncommitted write, not the cross-request hazard rule 24 names). It
-    // issues a raw `DatabaseService` READ and a raw `DatabaseService` WRITE.
-    // Neither is behind Kysely's `ConnectionMutex` (probe A), so both share
-    // the one better-sqlite3 connection directly and run INSIDE the
-    // holder's still-open, uncommitted transaction.
+    // issues a raw `better-sqlite3` READ and WRITE directly against the
+    // shared handle (the same shape `DatabaseService.get`/`.run` used to
+    // wrap — `this.conn.prepare(sql).get/run(...)`, bypassing MikroORM/
+    // Kysely entirely). Neither is behind Kysely's `ConnectionMutex` (probe
+    // A), so both share the one better-sqlite3 connection directly and run
+    // INSIDE the holder's still-open, uncommitted transaction.
     await withRequestContext(t.orm, async () => {
-      const row = dbs.get<{ end_date: string | null }>('SELECT end_date FROM trips WHERE id = ?', trip.id);
+      const row = testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(trip.id) as { end_date: string | null } | undefined;
       dirtyRead = row?.end_date;
-      dbs.run('UPDATE trips SET title = ? WHERE id = ?', 'DIRTY-WRITE-MARKER', trip.id);
+      testDb.prepare('UPDATE trips SET title = ? WHERE id = ?').run('DIRTY-WRITE-MARKER', trip.id);
     });
 
     await holder;

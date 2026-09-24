@@ -20,7 +20,6 @@ vi.mock('../../../src/db/database', async () => {
   return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null };
 });
 import { db as testDb } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'x'.repeat(40), ENCRYPTION_KEY: 'a'.repeat(64), updateJwtSecret: () => {} }));
 
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
@@ -50,7 +49,7 @@ beforeEach(async () => {
   testDb.prepare('DELETE FROM plugins').run();
   testDb.prepare('DELETE FROM plugin_egress_hosts').run();
   testDb.prepare('DELETE FROM plugin_actions').run();
-  rt = await createPluginRuntime(new DatabaseService(testDb));
+  rt = await createPluginRuntime(testDb);
 });
 
 describe('operator-supplied egress hosts', () => {
@@ -177,11 +176,9 @@ describe('the admin list surfaces operator egress (so the chip can be shown)', (
     // list() resolves required-addon dependencies through AddonsService, so it gets a real
     // one over the same DB. These fixtures declare no dependencies, so it is never consulted.
     const listPlugins = async () => {
-      const dbs = new DatabaseService(testDb);
       const orm = await sharedTestOrm(testDb);
       const service = new PluginsService(
-        dbs,
-        await createTestAddonsService(testDb, dbs),
+        await createTestAddonsService(testDb),
         orm.repo(Plugins),
         orm.repo(PluginEgressHosts),
         orm.repo(PluginSettingsFields),

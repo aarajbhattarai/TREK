@@ -51,7 +51,6 @@ vi.mock('../../../src/websocket', () => ({ broadcast }));
 
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
@@ -73,13 +72,11 @@ import type { UsersRepository } from '../../../src/db/repositories/Users.reposit
 import type { TripMembersRepository } from '../../../src/db/repositories/TripMembers.repository';
 
 // Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the `beforeAll`
-// below, before any `dbs()` call — `canAccessTrip`/`isOwner`/`rosterUserIds`/
-// `getPlaceWithTags` resolve `TripsRepository`/`TripMembersRepository`/
-// `PlacesRepository` through it now, not through `db/database.ts`'s deleted
-// free functions. Kept as a module-level variable (not threaded through
-// `dbs()`'s signature) so the ~17 existing `dbs()` call sites stay unchanged.
+// below — `canAccessTrip`/`isOwner`/`rosterUserIds`/`getPlaceWithTags`
+// resolve `TripsRepository`/`TripMembersRepository`/`PlacesRepository`
+// through it. Plan 4 Task 4: `DatabaseService` itself is gone —
+// `UserCleanupService` now takes this `EntityManager` directly.
 let dbsEm: EntityManager | undefined;
-const dbs = () => new DatabaseService(testDb, dbsEm);
 
 let budgetSvc: BudgetService;
 let roster: TripMembersService;
@@ -96,12 +93,12 @@ beforeAll(async () => {
   tripsRepo = await createTestTripsRepo(testDb);
   usersRepo = await createTestUsersRepo(testDb);
   tripMembersRepo = await createTestTripMembersRepo(testDb);
-  budgetSvc = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
+  budgetSvc = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb)));
   roster = new TripMembersService(
     budgetSvc,
-    new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), usersRepo, await createTestTripMembersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection), await createTestPluginsRepo(dbs().connection), await createTestPluginUserErasureQueueRepo(dbs().connection)),
-    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
-    new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection),
+    new UserCleanupService(dbsEm!, budgetSvc, await createTestUnitOfWork(testDb), usersRepo, await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb), await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb)),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
+    new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(testDb),
     tripsRepo, tripMembersRepo, usersRepo,
   );
 });

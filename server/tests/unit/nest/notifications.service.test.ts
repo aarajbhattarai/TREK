@@ -90,7 +90,6 @@ vi.mock('../../../src/utils/ssrfGuard', () => {
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, setAppSetting, setNotificationChannels, disableNotificationPref } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { NotificationsService, type NotificationPayload } from '../../../src/nest/notifications/notifications.service';
 import { setPluginChannelSource } from '../../../src/nest/notifications/channel-registry';
@@ -138,7 +137,7 @@ function countAllNotifications(): number {
 // ── Setup ──────────────────────────────────────────────────────────────────
 
 beforeAll(async () => {
-  notifications = await makeNotificationsService(new DatabaseService(testDb));
+  notifications = await makeNotificationsService(testDb);
 });
 
 beforeEach(() => {

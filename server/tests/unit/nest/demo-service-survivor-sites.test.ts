@@ -31,7 +31,7 @@ const stub = {} as never;
 
 describe('Plan 3i Task 3 — isDemoUserId survivor sites: exact refusal body per domain', () => {
   it('DEMO-SURVIVOR-001 (trip-invite.mcp.ts): create_trip_invite_link refuses byte-for-byte in demo mode', async () => {
-    const mcp = new TripInviteMcp(stub, stub, stub, stub, stub, demoBlocked);
+    const mcp = new TripInviteMcp(stub, stub, stub, stub, demoBlocked);
     const res = await mcp.createTripInviteLink({ tripId: 1, expires_in_days: null }, ctx);
     expect(res).toEqual(DEMO_REFUSAL);
   });
@@ -43,7 +43,7 @@ describe('Plan 3i Task 3 — isDemoUserId survivor sites: exact refusal body per
   });
 
   it('DEMO-SURVIVOR-003 (categories.mcp.ts): create_category refuses byte-for-byte in demo mode', async () => {
-    const mcp = new CategoriesMcp(stub, stub, stub, stub, demoBlocked);
+    const mcp = new CategoriesMcp(stub, stub, stub, demoBlocked);
     const res = await mcp.createCategory({ name: 'Test' }, ctx);
     expect(res).toEqual(DEMO_REFUSAL);
   });

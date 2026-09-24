@@ -55,7 +55,6 @@ vi.mock('../../../src/demo/demo-reset', () => ({
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createUserWithMfa, createAdmin, createInviteToken } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
@@ -109,7 +108,6 @@ import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourneyContributorsRepo } from '../../helpers/journey-repos';
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
 
-const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
 
 let webauthn: WebauthnConfigService;
@@ -126,38 +124,38 @@ let svc: AdminService;
 let mcpTokensRepo: McpTokensRepository;
 let auditLogRepo: AuditLogRepository;
 beforeAll(async () => {
-  webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(dbs.connection));
-  permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
-  userCleanup = new UserCleanupService(dbs, new BudgetService(permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection))), await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection), await createTestPluginsRepo(dbs.connection), await createTestPluginUserErasureQueueRepo(dbs.connection));
+  webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(testDb));
+  permissions = new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb));
+  userCleanup = new UserCleanupService((await sharedTestOrm(testDb)).em, new BudgetService(permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb), await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb));
   auth = new AuthService(
-    permissions, new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)), webauthn, userCleanup, new MailerService(await createTestUsersRepo(dbs.connection), await createTestSettingsRepo(dbs.connection), await createTestAppSettingsRepo(dbs.connection)), new EphemeralTokenService(), new AllowedFileTypesService(await createTestAppSettingsRepo(dbs.connection)), await createTestUnitOfWork(dbs.connection),
-    await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestInviteTokensRepo(dbs.connection), await createTestMcpTokensRepo(dbs.connection),
-    await createTestOauthTokensRepo(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestPasswordResetTokensRepo(dbs.connection),
+    permissions, new TripMembershipService(await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb)), webauthn, userCleanup, new MailerService(await createTestUsersRepo(testDb), await createTestSettingsRepo(testDb), await createTestAppSettingsRepo(testDb)), new EphemeralTokenService(), new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)), await createTestUnitOfWork(testDb),
+    await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb), await createTestInviteTokensRepo(testDb), await createTestMcpTokensRepo(testDb),
+    await createTestOauthTokensRepo(testDb), await createTestWebauthnCredentialsRepo(testDb), await createTestPasswordResetTokensRepo(testDb),
   );
   const t = await sharedTestOrm(testDb);
-  mcpTokensRepo = await createTestMcpTokensRepo(dbs.connection);
+  mcpTokensRepo = await createTestMcpTokensRepo(testDb);
   auditLogRepo = t.repo(AuditLog);
   svc = new AdminService(
-  await createTestUsersRepo(dbs.connection),
+  await createTestUsersRepo(testDb),
   auditLogRepo,
-  await createTestAppSettingsRepo(dbs.connection),
+  await createTestAppSettingsRepo(testDb),
   t.repo(Addons),
   t.repo(PhotoProviders),
   t.repo(PhotoProviderFields),
   t.repo(DocumentProviders),
   mcpTokensRepo,
-  await createTestOauthTokensRepo(dbs.connection),
-  await createTestTripsRepo(dbs.connection),
-  await createTestPlacesRepo(dbs.connection),
+  await createTestOauthTokensRepo(testDb),
+  await createTestTripsRepo(testDb),
+  await createTestPlacesRepo(testDb),
   t.repo(TripFiles),
-  await createTestAddonsService(testDb, dbs),
-  new PasskeyService(auth, webauthn, await createTestUnitOfWork(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestWebauthnChallengesRepo(dbs.connection), await createTestUsersRepo(dbs.connection)),
+  await createTestAddonsService(testDb),
+  new PasskeyService(auth, webauthn, await createTestUnitOfWork(testDb), await createTestWebauthnCredentialsRepo(testDb), await createTestWebauthnChallengesRepo(testDb), await createTestUsersRepo(testDb)),
   auth,
   permissions,
-  await makeNotificationsService(dbs, realtime),
+  await makeNotificationsService(testDb, realtime),
   userCleanup,
   realtime,
-  await createTestUnitOfWork(dbs.connection),
+  await createTestUnitOfWork(testDb),
 );
 });
 
@@ -923,7 +921,7 @@ describe('createUser — the pre-existing uniqueness-check TOCTOU window (AD2-4,
     // own insert lands in the gap between this request's check and its own
     // INSERT — the two statements are two separate, un-transacted repository
     // calls, exactly as the legacy raw SQL was.
-    const usersRepo = await createTestUsersRepo(dbs.connection);
+    const usersRepo = await createTestUsersRepo(testDb);
     const spy = vi.spyOn(usersRepo, 'findIdByEmailExact').mockResolvedValueOnce(null);
 
     // The pre-check said "clear," but `users.email` carries its own UNIQUE

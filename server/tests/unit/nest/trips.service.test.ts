@@ -52,7 +52,6 @@ import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation, createPlace, createDay, createDayAssignment, createDayNote, addTripMember } from '../../helpers/factories';
 import { MAX_TRIP_DAYS } from '@trek/shared';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { DaysService } from '../../../src/nest/days/days.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
@@ -77,7 +76,7 @@ import { MapsService } from '../../../src/nest/maps/maps.service';
 import { UnsplashService } from '../../../src/nest/unsplash/unsplash.service';
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
@@ -130,14 +129,11 @@ import { createTestCollectionPlacesRepo } from '../../helpers/test-uow';
 // resyncs and the summary/bundle aggregation run their actual SQL.
 //
 // Plan 3c Task 0b: `dbsEm` is resolved once, at the top of the first
-// `beforeAll` below, before any `dbs()` call — `canAccessTrip`/`isOwner`/
-// `rosterUserIds`/`getPlaceWithTags` resolve `TripsRepository`/
-// `TripMembersRepository`/`PlacesRepository` through it now, not through
-// `db/database.ts`'s deleted free functions. Kept as a module-level variable
-// (not threaded through `dbs()`'s signature) so the many existing `dbs()`
-// call sites in this file stay unchanged.
+// `beforeAll` below — `canAccessTrip`/`isOwner`/`rosterUserIds`/
+// `getPlaceWithTags` resolve `TripsRepository`/`TripMembersRepository`/
+// `PlacesRepository` through it. Plan 4 Task 4: `DatabaseService` itself is
+// gone — `UserCleanupService` now takes this `EntityManager` directly.
 let dbsEm: import('@mikro-orm/core').EntityManager | undefined;
-const dbs = () => new DatabaseService(testDb, dbsEm);
 
 // Same collaborator set the container hands PlacesService (see places.service.test.ts).
 // Only the read-model aggregation reaches into places here, but the photo cache,
@@ -167,115 +163,112 @@ let readModelSvc: TripReadModelService;
 beforeAll(async () => {
   dbsEm = (await sharedTestOrm(testDb)).em;
   photoCache = new PlacePhotoCacheService(
-    dbs(),
     makeStorageFixture('photos/google/').storage,
-    await createTestGooglePlacePhotoMetaRepo(dbs().connection),
-    await createTestPlacesRepo(dbs().connection),
-    await createTestCollectionPlacesRepo(dbs().connection),
+    await createTestGooglePlacePhotoMetaRepo(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestCollectionPlacesRepo(testDb),
   );
-  budgetSvc = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
+  budgetSvc = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb)));
   daysSvc = new DaysService(
-    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
-    new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
-    await createTestUnitOfWork(dbs().connection),
-    await createTestDaysRepo(dbs().connection),
-    await createTestDayAssignmentsRepo(dbs().connection),
-    await createTestDayNotesRepo(dbs().connection),
-    await createTestTripsRepo(dbs().connection),
-    await createTestReservationsRepo(dbs().connection),
-    await createTestReservationEndpointsRepo(dbs().connection),
-    await createTestDayAccommodationsRepo(dbs().connection),
+    new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
+    await createTestUnitOfWork(testDb),
+    await createTestDaysRepo(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestDayNotesRepo(testDb),
+    await createTestTripsRepo(testDb),
+    await createTestReservationsRepo(testDb),
+    await createTestReservationEndpointsRepo(testDb),
+    await createTestDayAccommodationsRepo(testDb),
   );
   placesSvc = new PlacesService(
-  dbs(),
-  new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+  new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   new RealtimeService(),
-  new MapsService(photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestPlaceDetailsCacheRepo(dbs().connection), await createTestPlacesRepo(dbs().connection)),
-  new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
-  new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), coversFx.storage),
+  new MapsService(photoCache, await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb), await createTestPlaceDetailsCacheRepo(testDb), await createTestPlacesRepo(testDb)),
+  new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
+  new UnsplashService(await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb), new RuntimeEnvService(), coversFx.storage),
   photoCache,
   new JourneyDomainService(
-    dbs(), new RealtimeService(), new TrekPhotoRegistrationService(dbsEm!.getRepository(TrekPhotos), dbsEm!.getRepository(TripPhotos), dbsEm!.getRepository(JourneyPhotos), dbs()), await createTestUnitOfWork(dbs().connection),
-    await createTestJourneysRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection),
-    await createTestJourneyTripsRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+    new RealtimeService(), new TrekPhotoRegistrationService(dbsEm!.getRepository(TrekPhotos), dbsEm!.getRepository(TripPhotos), dbsEm!.getRepository(JourneyPhotos)), await createTestUnitOfWork(testDb),
+    await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+    await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
     // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
-    await createTestJourneyPhotosRepo(dbs().connection), await createTestJourneyEntryPhotosRepo(dbs().connection), await createTestPlacesRepo(dbs().connection),
+    await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
   ),
   makeStorageFixture('').storage,
-  await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
-  await createTestPlacesRepo(dbs().connection),
-  await createTestTagsRepo(dbs().connection),
-  await createTestPlaceRatingsRepo(dbs().connection),
-  await createTestTripMembersRepo(dbs().connection),
-  await createTestDayAssignmentsRepo(dbs().connection),
-  await createTestCategoriesRepo(dbs().connection),
-  await createTestTripsRepo(dbs().connection),
-  await createTestBudgetItemsRepo(dbs().connection),
-  await createTestCollectionPlacesRepo(dbs().connection),
+  await accommodationsOver(testDb), await createTestUnitOfWork(testDb),
+  await createTestPlacesRepo(testDb),
+  await createTestTagsRepo(testDb),
+  await createTestPlaceRatingsRepo(testDb),
+  await createTestTripMembersRepo(testDb),
+  await createTestDayAssignmentsRepo(testDb),
+  await createTestCategoriesRepo(testDb),
+  await createTestTripsRepo(testDb),
+  await createTestBudgetItemsRepo(testDb),
+  await createTestCollectionPlacesRepo(testDb),
 );
   svc = new TripsService(
-  dbs(),
-  new ReservationsService(new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)), accommodationsSvc, await createTestUnitOfWork(dbs().connection), await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection), await createTestReservationDayPositionsRepo(dbs().connection), await createTestDayAccommodationsRepo(dbs().connection), await createTestDaysRepo(dbs().connection), await createTestPlacesRepo(dbs().connection), await createTestDayAssignmentsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection)),
+  new ReservationsService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb)), accommodationsSvc, await createTestUnitOfWork(testDb), await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb), await createTestReservationDayPositionsRepo(testDb), await createTestDayAccommodationsRepo(testDb), await createTestDaysRepo(testDb), await createTestPlacesRepo(testDb), await createTestDayAssignmentsRepo(testDb), await createTestTripMembersRepo(testDb), await createTestUsersRepo(testDb), await createTestTripsRepo(testDb), await createTestBudgetItemsRepo(testDb)),
   daysSvc,
-  new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+  new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   budgetSvc,
   new VacayService(
-    await createTestVacayPlansRepo(dbs().connection), await createTestVacayPlanMembersRepo(dbs().connection),
-    await createTestVacayYearsRepo(dbs().connection), await createTestVacayUserYearsRepo(dbs().connection),
-    await createTestVacayUserColorsRepo(dbs().connection), await createTestVacayEntriesRepo(dbs().connection),
-    await createTestVacayCompanyHolidaysRepo(dbs().connection), await createTestVacayHolidayCalendarsRepo(dbs().connection),
-    await createTestVacaySharesRepo(dbs().connection), await createTestVacayUserSettingsRepo(dbs().connection),
-    await createTestSchoolHolidayRegionsRepo(dbs().connection),
-    new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection),
+    await createTestVacayPlansRepo(testDb), await createTestVacayPlanMembersRepo(testDb),
+    await createTestVacayYearsRepo(testDb), await createTestVacayUserYearsRepo(testDb),
+    await createTestVacayUserColorsRepo(testDb), await createTestVacayEntriesRepo(testDb),
+    await createTestVacayCompanyHolidaysRepo(testDb), await createTestVacayHolidayCalendarsRepo(testDb),
+    await createTestVacaySharesRepo(testDb), await createTestVacayUserSettingsRepo(testDb),
+    await createTestSchoolHolidayRegionsRepo(testDb),
+    new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb),
   ),
   new RealtimeService(),
   undefined as never, // unsplash — not exercised here
   coversFx.storage,
-  await createTestUnitOfWork(dbs().connection),
+  await createTestUnitOfWork(testDb),
   (await sharedTestOrm(testDb)).em,
 );
-  membersSvc = new TripMembersService(budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection), await createTestPluginsRepo(dbs().connection), await createTestPluginUserErasureQueueRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
+  membersSvc = new TripMembersService(budgetSvc, new UserCleanupService(dbsEm!, budgetSvc, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb), await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb)), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb), await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb), await createTestUsersRepo(testDb));
   readModelSvc = new TripReadModelService(
-  await createTestTripsRepo(dbs().connection), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
+  await createTestTripsRepo(testDb), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
   new PackingService(
-  dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection),
-  await createTestPackingItemsRepo(dbs().connection), await createTestPackingItemContributorsRepo(dbs().connection), await createTestPackingBagsRepo(dbs().connection),
-  await createTestPackingCategoryAssigneesRepo(dbs().connection), await createTestPackingTemplatesRepo(dbs().connection), await createTestPackingTemplateCategoriesRepo(dbs().connection),
-  await createTestPackingTemplateItemsRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+  new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(testDb),
+  await createTestPackingItemsRepo(testDb), await createTestPackingItemContributorsRepo(testDb), await createTestPackingBagsRepo(testDb),
+  await createTestPackingCategoryAssigneesRepo(testDb), await createTestPackingTemplatesRepo(testDb), await createTestPackingTemplateCategoriesRepo(testDb),
+  await createTestPackingTemplateItemsRepo(testDb), await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb),
   ),
-  new ReservationsService(new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)), accommodationsSvc, await createTestUnitOfWork(dbs().connection), await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection), await createTestReservationDayPositionsRepo(dbs().connection), await createTestDayAccommodationsRepo(dbs().connection), await createTestDaysRepo(dbs().connection), await createTestPlacesRepo(dbs().connection), await createTestDayAssignmentsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection)),
+  new ReservationsService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb)), accommodationsSvc, await createTestUnitOfWork(testDb), await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb), await createTestReservationDayPositionsRepo(testDb), await createTestDayAccommodationsRepo(testDb), await createTestDaysRepo(testDb), await createTestPlacesRepo(testDb), await createTestDayAssignmentsRepo(testDb), await createTestTripMembersRepo(testDb), await createTestUsersRepo(testDb), await createTestTripsRepo(testDb), await createTestBudgetItemsRepo(testDb)),
   new CollabService(
     // Plan 4 Task 2 — CollabService's own DatabaseService param is gone:
     // canAccessTrip now reads through the TripsRepository at the end.
-    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection),
-    await createTestCollabMessageReactionsRepo(dbs().connection), await createTestCollabNotesRepo(dbs().connection), await createTestCollabPollsRepo(dbs().connection),
-    await createTestCollabPollVotesRepo(dbs().connection), await createTestCollabLinksRepo(dbs().connection), await createTestCollabMessagesRepo(dbs().connection),
-    await createTestTripsRepo(dbs().connection),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService(), await createTestUnitOfWork(testDb),
+    await createTestCollabMessageReactionsRepo(testDb), await createTestCollabNotesRepo(testDb), await createTestCollabPollsRepo(testDb),
+    await createTestCollabPollVotesRepo(testDb), await createTestCollabLinksRepo(testDb), await createTestCollabMessagesRepo(testDb),
+    await createTestTripsRepo(testDb),
   ),
   placesSvc,
   new TodoService(
-  new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection),
-  await createTestTodoItemsRepo(dbs().connection), await createTestTodoCategoryAssigneesRepo(dbs().connection),
-  await createTestTripsRepo(dbs().connection),
-  await createTestTripMembersRepo(dbs().connection),
+  new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), await createTestUnitOfWork(testDb),
+  await createTestTodoItemsRepo(testDb), await createTestTodoCategoryAssigneesRepo(testDb),
+  await createTestTripsRepo(testDb),
+  await createTestTripMembersRepo(testDb),
   ),
   new FilesService(
     // Plan 4 Task 2 — FilesService's own canAccessTrip delegate is now
     // TripsRepository.findAccessible, in the same constructor slot.
-    await createTestTripsRepo(dbs().connection),
-    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+    await createTestTripsRepo(testDb),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     new EphemeralTokenService(),
     coversFx.storage,
     (await sharedTestOrm(testDb)).em,
-    await createTestUnitOfWork(dbs().connection),
-    await createTestTripFilesRepo(dbs().connection),
-    await createTestFileLinksRepo(dbs().connection),
-    await createTestReservationsRepo(dbs().connection),
-    await createTestPlacesRepo(dbs().connection),
-    await createTestDayAssignmentsRepo(dbs().connection),
-    await createTestBudgetItemsRepo(dbs().connection),
+    await createTestUnitOfWork(testDb),
+    await createTestTripFilesRepo(testDb),
+    await createTestFileLinksRepo(testDb),
+    await createTestReservationsRepo(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestBudgetItemsRepo(testDb),
   ),
 );
 });
@@ -1213,7 +1206,7 @@ describe('folded quirk branches', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Ordering', start_date: '2025-06-01', end_date: '2025-06-03' });
 
-    const daysRepo = await createTestDaysRepo(dbs().connection);
+    const daysRepo = await createTestDaysRepo(testDb);
     const spy = vi.spyOn(daysRepo, 'listOrderedForReorder').mockRejectedValueOnce(new Error('boom'));
     try {
       await expect(svc.updateTrip(trip.id, user.id, { start_date: '2025-07-01', end_date: '2025-07-03' }, 'user')).rejects.toThrow('boom');
@@ -1592,7 +1585,7 @@ describe('copy — whole-trip parity (Task 8)', () => {
     const tripsBefore = (testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n;
     const daysBefore = (testDb.prepare('SELECT COUNT(*) AS n FROM days').get() as { n: number }).n;
 
-    const dayNotesRepo = await createTestDayNotesRepo(dbs().connection);
+    const dayNotesRepo = await createTestDayNotesRepo(testDb);
     const spy = vi.spyOn(dayNotesRepo, 'insertNoteCopy').mockRejectedValueOnce(new Error('boom'));
     createDayNote(testDb, days[0].id, trip.id, { text: 'Triggers the late failure' });
     try {
@@ -1635,7 +1628,7 @@ describe('quirk fixes', () => {
       "INSERT INTO journey_entries (journey_id, source_trip_id, author_id, type, title, entry_date, created_at, updated_at) VALUES (?, ?, ?, 'skeleton', 'S', '2025-06-01', 0, 0)",
     ).run(journeyId, trip.id, user.id);
 
-    const tripsRepo = await createTestTripsRepo(dbs().connection);
+    const tripsRepo = await createTestTripsRepo(testDb);
     const spy = vi.spyOn(tripsRepo, 'deleteById').mockRejectedValueOnce(new Error('boom'));
     try {
       await expect(svc.remove(trip.id, user.id, 'user')).rejects.toThrow('boom');
@@ -1660,7 +1653,7 @@ describe('quirk fixes', () => {
     const { member: guest } = await membersSvc.createGuest(trip.id, 'Gia', owner.id);
     const item = await budgetSvc.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, guest.id] });
 
-    const usersRepo = await createTestUsersRepo(dbs().connection);
+    const usersRepo = await createTestUsersRepo(testDb);
     const spy = vi.spyOn(usersRepo, 'deleteGuest').mockRejectedValueOnce(new Error('boom'));
     try {
       await expect(membersSvc.deleteGuest(trip.id, guest.id)).rejects.toThrow('boom');

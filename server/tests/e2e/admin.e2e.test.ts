@@ -11,7 +11,6 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import type { Server } from 'http';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
 import { seedUser, sessionCookie } from './harness';
@@ -121,7 +120,7 @@ describe('Admin e2e (real auth + admin guard + temp SQLite)', () => {
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, AdminModule, OidcModule, SettingsModule, NotificationsModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, AdminModule, OidcModule, SettingsModule, NotificationsModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     // Mirror the production APP_PIPE (app.module.ts): DTO-typed bodies validate

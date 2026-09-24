@@ -40,7 +40,6 @@ import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, disableNotificationPref } from '../../helpers/factories';
 import { registerAction } from '../../../src/nest/notifications/in-app-actions';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { NotificationsService } from '../../../src/nest/notifications/notifications.service';
 import { makeNotificationsService, makeNotificationPreferencesService } from '../../helpers/notifications';
@@ -56,7 +55,7 @@ const createNotificationForRecipient = (...a: Parameters<Svc['createNotification
 const respondToBoolean = (...a: Parameters<Svc['respond']>) => notifications.respond(...a);
 
 beforeAll(async () => {
-  notifications = await makeNotificationsService(new DatabaseService(testDb));
+  notifications = await makeNotificationsService(testDb);
 });
 
 beforeEach(() => {

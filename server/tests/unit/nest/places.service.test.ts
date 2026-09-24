@@ -27,15 +27,11 @@ vi.mock('../../../src/db/database', async () => {
     closeDb: () => {},
     reinitialize: () => {},
     // Task 9 fix wave (item 10, A-L4c follow-up): the `getPlaceWithTags`/
-    // `isOwner` fakes removed — `DatabaseService.getPlaceWithTags`/`.isOwner`
-    // already go through the real ORM
+    // `isOwner` fakes removed — both already went through the real ORM
     // (`entityManager().getRepository(Places/Trips)...`), never through this
     // mocked `db/database` module's exports, so these module-level fakes
-    // were dead (nothing calls `getPlaceWithTags`/`isOwner` AS MODULE
-    // FUNCTIONS — see the `dbs.getPlaceWithTags` INSTANCE-METHOD spy below,
-    // which is a different, still-live thing: `AccommodationsService` calls
-    // `this.db.getPlaceWithTags(...)` on the injected `DatabaseService`
-    // instance, not on this module).
+    // were dead. Plan 4 Task 4: `DatabaseService` itself is gone now too —
+    // `PlacesService`/`AccommodationsService` are fully repository-backed.
     canAccessTrip: (tripId: any, userId: number) =>
       db.prepare(`SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)`).get(userId, tripId, userId),
   };
@@ -65,14 +61,13 @@ import { accommodationsOver } from '../../helpers/accommodations-service';
 import { createUser, createTrip, createPlace, createDay, createCategory, createTag, addTripMember } from '../../helpers/factories';
 import path from 'path';
 import fs from 'fs';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { PlacesService } from '../../../src/nest/places/places.service';
 import { MapsService } from '../../../src/nest/maps/maps.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
@@ -112,8 +107,6 @@ const noUsers = { getApiKeyColumn: async () => null } as unknown as UsersReposit
 const GPX_FIXTURE = path.join(__dirname, '../../fixtures/test.gpx');
 const KML_FIXTURE = path.join(__dirname, '../../fixtures/test.kml');
 
-const dbs = new DatabaseService(testDb);
-
 /**
  * Same collaborator set the container hands PlacesService,
  * built once here so the two construction sites cannot drift apart again. The
@@ -129,60 +122,41 @@ async function makePlacesService(
   maps: MapsService = new MapsService(photoCacheStub, noAppSettings, noUsers, {} as never, {} as never),
 ): Promise<PlacesService> {
   return new PlacesService(
-    dbs,
-    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     maps,
-    new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
-    new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), new RuntimeEnvService(), placesStorageFx.storage),
+    new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
+    new UnsplashService(await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb), new RuntimeEnvService(), placesStorageFx.storage),
     photoCacheStub,
     new JourneyDomainService(
-      dbs, new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), await createTestJourneyPhotosRepo(dbs.connection), dbs), await createTestUnitOfWork(dbs.connection),
-      await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
-      await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+      new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), await createTestJourneyPhotosRepo(testDb)), await createTestUnitOfWork(testDb),
+      await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+      await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
       // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
-      await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
+      await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
     ),
     placesStorageFx.storage,
-    await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
-    await createTestPlacesRepo(dbs.connection),
-    await createTestTagsRepo(dbs.connection),
-    await createTestPlaceRatingsRepo(dbs.connection),
-    await createTestTripMembersRepo(dbs.connection),
-    await createTestDayAssignmentsRepo(dbs.connection),
-    await createTestCategoriesRepo(dbs.connection),
-  await createTestTripsRepo(dbs.connection),
-  await createTestBudgetItemsRepo(dbs.connection),
-  await createTestCollectionPlacesRepo(dbs.connection),
+    await accommodationsOver(testDb), await createTestUnitOfWork(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestTagsRepo(testDb),
+    await createTestPlaceRatingsRepo(testDb),
+    await createTestTripMembersRepo(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestCategoriesRepo(testDb),
+  await createTestTripsRepo(testDb),
+  await createTestBudgetItemsRepo(testDb),
+  await createTestCollectionPlacesRepo(testDb),
   );
 }
 
 let accommodations: Awaited<ReturnType<typeof accommodationsOver>>;
 let svc: Awaited<ReturnType<typeof makePlacesService>>;
 beforeAll(async () => {
-  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — `canAccessTrip` and
-  // `getPlaceWithTags` are spied directly on this instance instead, routed
-  // to a real `DatabaseService` built with one.
-  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
-  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
-  // Task 9 fix wave (A-L4c, then item 10): `dbs.rosterUserIds` was dead here
-  // — `PlacesService` now calls `TripMembersRepository.rosterUserIds`
-  // directly (PL1, injected, not through `DatabaseService`) — and its
-  // `rosterUserIds` spy was removed in that fix-wave commit. `dbs.isOwner`
-  // was ALSO dead the same way (verified: `grep -n "\.isOwner("
-  // src/nest/places/places.service.ts src/nest/accommodations/
-  // accommodations.service.ts` has zero hits reachable from this file's
-  // constructed service graph) — removed here, along with the now-unused
-  // `real.isOwner` target it pointed at. `dbs.getPlaceWithTags` is NOT dead,
-  // though (unlike the module-level fake above): `AccommodationsService
-  // .stampLodging` — constructed below via `accommodationsOver(dbs)` and
-  // exercised by the PLACE-SVC-019d/019e/057b place-delete tests — calls
-  // `this.db.getPlaceWithTags(...)` on this exact `dbs` instance, which
-  // without this spy throws "no EntityManager available" (`dbs` here has
-  // none; only `real` does).
-  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
-  accommodations = await accommodationsOver(dbs);
+  // Plan 4 Task 4: `DatabaseService` is gone — `PlacesService`/
+  // `AccommodationsService` are fully repository-backed now, so the
+  // `dbs.canAccessTrip`/`dbs.getPlaceWithTags` spies this block used to
+  // route to a real `DatabaseService` are dead; removed with it.
+  accommodations = await accommodationsOver(testDb);
   svc = await makePlacesService();
 });
 
@@ -841,7 +815,7 @@ describe('importGpx', () => {
   it('PLACE-SVC-021c (L2) — an import is atomic: a failure partway through the loop leaves nothing stored', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const placesRepo = await createTestPlacesRepo(testDb);
     const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
     let calls = 0;
     const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {
@@ -1053,7 +1027,7 @@ describe('importGoogleList', () => {
       ]],
     ];
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => 'prefix\n' + JSON.stringify(listPayload) }));
-    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const placesRepo = await createTestPlacesRepo(testDb);
     const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
     let calls = 0;
     const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {
@@ -1390,7 +1364,7 @@ describe('importKmlPlaces — full stored row and atomicity (M2/L2)', () => {
   it('PLACE-SVC-036c (L2) — a failure partway through the KML loop leaves nothing stored', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const placesRepo = await createTestPlacesRepo(testDb);
     const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
     let calls = 0;
     const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {
@@ -2092,7 +2066,7 @@ describe('importNaverList provider payload', () => {
         ],
       }),
     }));
-    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const placesRepo = await createTestPlacesRepo(testDb);
     const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
     let calls = 0;
     const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {

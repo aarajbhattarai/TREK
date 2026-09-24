@@ -78,7 +78,6 @@ vi.mock('../../src/db/database', async (importActual) => {
   };
 });
 
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RateLimitModule } from '../../src/nest/common/rate-limit.module';
 import { PublicApiModule } from '../../src/nest/public-api/public-api.module';
 import { ApiTokenGuard } from '../../src/nest/public-api/api-token.guard';
@@ -153,7 +152,7 @@ describe('Public API v1 e2e (real guard + real SQL)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RateLimitModule, TokensModule, PublicApiModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RateLimitModule, TokensModule, PublicApiModule],
       // `/api/v1/stats` lives in atlas/ because its figures do, but it is guarded
       // and scoped by this directory's code — so it is mounted here with the real
       // guard and a stubbed AtlasService. Importing AtlasModule instead would pull

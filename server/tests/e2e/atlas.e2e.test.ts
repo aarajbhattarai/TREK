@@ -32,7 +32,6 @@ vi.mock('../../src/websocket', () => ({ broadcastToUser: vi.fn(), broadcast: vi.
 import { db } from '../../src/db/database';
 import { createUser, createTrip } from '../helpers/factories';
 import { AtlasModule } from '../../src/nest/atlas/atlas.module';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
@@ -44,7 +43,7 @@ describe('Atlas e2e (real auth guard + real service + temp SQLite)', () => {
   let userId: number;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, AtlasModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), AtlasModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());

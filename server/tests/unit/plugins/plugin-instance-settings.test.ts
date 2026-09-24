@@ -19,7 +19,6 @@ vi.mock('../../../src/db/database', async () => {
   return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: async () => null };
 });
 import { db as testDb } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'x'.repeat(40), ENCRYPTION_KEY: 'a'.repeat(64), updateJwtSecret: () => {} }));
 
 import { PluginsService } from '../../../src/nest/plugins/plugins.service';
@@ -31,7 +30,7 @@ import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { discoverPlugins } from '../../../src/nest/plugins/install/discovery';
-import { sharedTestOrm } from '../../helpers/test-uow';
+import { sharedTestOrm, createTestUnitOfWork } from '../../helpers/test-uow';
 import { Plugins } from '../../../src/db/entities/Plugins.entity';
 import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
 import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
@@ -78,7 +77,6 @@ let pluginErrorLogRepo: PluginErrorLogRepository;
 let pluginCapabilityAuditRepo: PluginCapabilityAuditRepository;
 const svc = () =>
   new PluginsService(
-    new DatabaseService(testDb),
     addonsService,
     pluginsRepo,
     pluginEgressHostsRepo,
@@ -105,11 +103,12 @@ async function installFixturePlugin(opts: { settings: Array<Record<string, unkno
   fs.writeFileSync(path.join(dir, 'index.js'), 'module.exports={}');
   // Plan 3j Task 3: `discoverPlugins` takes a `DiscoveryRepos` bundle now, not a raw
   // connection — the same repositories this file already resolves via `sharedTestOrm`.
-  await discoverPlugins({ plugins: pluginsRepo, actions: pluginActionsRepo, settingsFields: pluginSettingsFieldsRepo, errorLog: pluginErrorLogRepo });
+  // Plan 4 Task 4: `uow` is no longer optional in that bundle.
+  await discoverPlugins({ plugins: pluginsRepo, actions: pluginActionsRepo, settingsFields: pluginSettingsFieldsRepo, errorLog: pluginErrorLogRepo, uow: await createTestUnitOfWork(testDb) });
 }
 
 beforeAll(async () => {
-  addonsService = await createTestAddonsService(testDb, new DatabaseService(testDb));
+  addonsService = await createTestAddonsService(testDb);
   const orm = await sharedTestOrm(testDb);
   pluginsRepo = orm.repo(Plugins);
   pluginEgressHostsRepo = orm.repo(PluginEgressHosts);
@@ -253,13 +252,13 @@ describe('required settings are enforced on save', () => {
 describe('respawn on save (runtime)', () => {
   it('INS-004 — an inactive plugin is left alone (no respawn, reports false)', async () => {
     install('p');
-    const rt = await createPluginRuntime(new DatabaseService(testDb));
+    const rt = await createPluginRuntime(testDb);
     await expect(rt.respawnIfActive('p')).resolves.toBe(false);
   });
 
   it('INS-005 — an active plugin is stopped and re-activated so the child re-reads config', async () => {
     install('p');
-    const rt = await createPluginRuntime(new DatabaseService(testDb));
+    const rt = await createPluginRuntime(testDb);
     const calls: string[] = [];
     vi.spyOn(rt, 'isActive').mockReturnValue(true);
     vi.spyOn(rt, 'activate').mockImplementation(async () => { calls.push('activate'); });
@@ -375,7 +374,7 @@ describe('defaults reach the child at spawn', () => {
     const s = svc();
     await s.updateInstanceConfig('fixture-id', { api_url: 'https://mine.example' });
 
-    const rt = await createPluginRuntime(new DatabaseService(testDb));
+    const rt = await createPluginRuntime(testDb);
     const sup = (rt as unknown as { supervisor: { activate: (...a: unknown[]) => Promise<void> } }).supervisor;
     const activate = vi.spyOn(sup, 'activate').mockResolvedValue(undefined);
 
@@ -404,7 +403,7 @@ describe('instance-scope actions (admin)', () => {
   }
   const adminReq = { user: { id: 42 } } as unknown as Request;
   async function controller(invoke = vi.fn(async () => ({ ok: true, message: 'pong' }))) {
-    const rt = await createPluginRuntime(new DatabaseService(testDb));
+    const rt = await createPluginRuntime(testDb);
     // isActive normally reflects the supervisor's live child map, which nothing here
     // spawns — so it's stubbed to read the same DB status the test itself flips,
     // mirroring what an actually-activated plugin would report.

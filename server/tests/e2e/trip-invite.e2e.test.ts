@@ -10,7 +10,6 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockIns
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import type { Server } from 'http';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { Test } from '@nestjs/testing';
 import { seedUser, sessionCookie } from './harness';
 
@@ -73,7 +72,7 @@ describe('Trip invite-link e2e (real auth guard + temp SQLite)', () => {
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, TripInviteModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), TripInviteModule] })
       .overrideProvider(TripMembershipService).useValue({ joinTripAsMember })
       .compile();
     const nest = moduleRef.createNestApplication();

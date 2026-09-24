@@ -44,7 +44,6 @@ const notifSend = vi.fn().mockResolvedValue(undefined);
 import fs from 'fs';
 import path from 'path';
 import { createUser, createTrip, createPlace, createCategory, createTag, addTripMember, createDay, createDayAssignment } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { CollectionsService } from '../../../src/nest/collections/collections.service';
@@ -96,7 +95,6 @@ beforeAll(async () => {
     await createTestTagsRepo(testDb), await createTestUsersRepo(testDb),
   );
   photoCache = new PlacePhotoCacheService(
-    new DatabaseService(testDb),
     makeStorageFixture('photos/google/').storage,
     await createTestGooglePlacePhotoMetaRepo(testDb),
     await createTestPlacesRepo(testDb),

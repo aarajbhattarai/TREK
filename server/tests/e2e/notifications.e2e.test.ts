@@ -62,7 +62,6 @@ const { prefs, mailer, webhook, ntfy } = vi.hoisted(() => ({
   ntfy: { testNtfy: vi.fn(), getUserNtfyConfig: vi.fn(), getAdminNtfyConfig: vi.fn() },
 }));
 
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { NotificationsModule } from '../../src/nest/notifications/notifications.module';
 import { MailerService } from '../../src/nest/notifications/mailer/mailer.service';
@@ -87,7 +86,7 @@ describe('Notifications e2e (real auth guard + temp SQLite)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, NotificationsModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, NotificationsModule],
     })
       .overrideProvider(NotificationPreferencesService).useValue(prefs)
       .overrideProvider(MailerService).useValue(mailer)

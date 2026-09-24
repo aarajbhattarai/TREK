@@ -19,11 +19,10 @@ vi.mock('../../../src/config', () => ({
 
 import { db as testDb } from '../../../src/db/database';
 import { createUser } from '../../helpers/factories';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 
 // Was photos.bridge, deleted with the other three that had no consumer outside
@@ -36,7 +35,7 @@ const resolveTrekPhoto = (id: number) => trekPhotos.resolve(id);
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  trekPhotos = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos), new DatabaseService(testDb, t.em));
+  trekPhotos = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), t.repo(JourneyPhotos));
 });
 
 beforeEach(() => {

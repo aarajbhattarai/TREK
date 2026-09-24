@@ -17,7 +17,6 @@ import os from 'node:os';
 import path from 'node:path';
 import type { Server } from 'http';
 import { APP_GUARD } from '@nestjs/core';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { StorageModule } from '../../src/nest/storage/storage.module';
 import { ManagedGuard } from '../../src/nest/common/managed.guard';
 import { Test } from '@nestjs/testing';
@@ -68,7 +67,7 @@ describe('Storage admin e2e (real auth + admin guard + managed guard + temp SQLi
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, StorageModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), StorageModule],
       providers: [{ provide: APP_GUARD, useClass: ManagedGuard }],
     }).compile();
     const nest = moduleRef.createNestApplication();

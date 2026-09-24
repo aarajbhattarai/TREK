@@ -28,7 +28,6 @@ vi.mock('../../src/db/database', async () => {
 });
 
 import { db } from '../../src/db/database';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { FeedsModule } from '../../src/nest/feeds/feeds.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
@@ -40,7 +39,7 @@ describe('Calendar feed visibility e2e (real CalendarService over temp SQLite)',
   let feedToken: string;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, FeedsModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), FeedsModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.useGlobalFilters(new TrekExceptionFilter());
     await nest.init();

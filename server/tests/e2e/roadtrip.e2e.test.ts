@@ -27,7 +27,6 @@ import { ChargingService } from '../../src/nest/roadtrip/charging.service';
  */
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { RoadtripModule } from '../../src/nest/roadtrip/roadtrip.module';
@@ -66,7 +65,7 @@ describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, RoadtripModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, RoadtripModule],
     }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());

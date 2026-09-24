@@ -63,7 +63,6 @@ import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.serv
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { AuthMcp } from '../../../src/nest/auth/auth.mcp';
 import { DemoService } from '../../../src/nest/common/demo.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { McpToolGuardsService } from '../../../src/nest/mcp-shared/mcp-tool-guards.service';
@@ -104,13 +103,12 @@ const readModelStub = {
 // packing-list, budget-overview and the static-token notice. Built over the same
 // in-memory DB so the cases below keep asserting real rows.
 //
-// Plan 3c Task 0b: `promptEm` is resolved once in the first `beforeAll` below
-// (before any `promptDbs()` call) — `canAccessTrip`/`isOwner`/`rosterUserIds`/
+// Plan 3c Task 0b: `promptEm` is resolved once in the first `beforeAll` below —
+// `canAccessTrip`/`isOwner`/`rosterUserIds`/
 // `getPlaceWithTags` resolve `TripsRepository`/`TripMembersRepository`/
 // `PlacesRepository` through it now, not through `db/database.ts`'s deleted
 // free functions this file's `dbMock` used to stand in for.
 let promptEm: EntityManager | undefined;
-const promptDbs = () => new DatabaseService(testDb, promptEm);
 const authStub = { isDemoUser: () => false } as unknown as AuthService;
 
 
@@ -138,33 +136,33 @@ beforeAll(async () => {
   promptGuards,
 );
   promptPackingService = new PackingService(
-    promptDbs(),
-    new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     notificationsStub(),
-    await createTestUnitOfWork(promptDbs().connection),
-    await createTestPackingItemsRepo(promptDbs().connection),
-    await createTestPackingItemContributorsRepo(promptDbs().connection),
-    await createTestPackingBagsRepo(promptDbs().connection),
-    await createTestPackingCategoryAssigneesRepo(promptDbs().connection),
-    await createTestPackingTemplatesRepo(promptDbs().connection),
-    await createTestPackingTemplateCategoriesRepo(promptDbs().connection),
-    await createTestPackingTemplateItemsRepo(promptDbs().connection),
-    await createTestTripsRepo(promptDbs().connection),
+    await createTestUnitOfWork(testDb),
+    await createTestPackingItemsRepo(testDb),
+    await createTestPackingItemContributorsRepo(testDb),
+    await createTestPackingBagsRepo(testDb),
+    await createTestPackingCategoryAssigneesRepo(testDb),
+    await createTestPackingTemplatesRepo(testDb),
+    await createTestPackingTemplateCategoriesRepo(testDb),
+    await createTestPackingTemplateItemsRepo(testDb),
+    await createTestTripsRepo(testDb),
+    await createTestTripMembersRepo(testDb),
   );
   packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
   budgetMcp = new BudgetMcp(
-  new BudgetService(new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection), ...(await budgetRepoArgs(promptDbs().connection))),
+  new BudgetService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))),
   new ExchangeRatesService(),
   new RuntimeEnvService(),
-  new TripMembershipService(await createTestTripsRepo(promptDbs().connection), await createTestTripMembersRepo(promptDbs().connection)),
+  new TripMembershipService(await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb)),
   addonsStub,
   promptGuards,
-  await createTestUnitOfWork(promptDbs().connection),
-  await createTestPlacesRepo(promptDbs().connection),
-  await createTestTripsRepo(promptDbs().connection),
+  await createTestUnitOfWork(testDb),
+  await createTestPlacesRepo(testDb),
+  await createTestTripsRepo(testDb),
   new DemoService(new RuntimeEnvService(), promptEm),
-  await createTestTripMembersRepo(promptDbs().connection),
+  await createTestTripMembersRepo(testDb),
 );
   tripPromptsMcp = new TripPromptsMcp(tripsStub, readModelStub, promptPackingService, addonsStub);
 });

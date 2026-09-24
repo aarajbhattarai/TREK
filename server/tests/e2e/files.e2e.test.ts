@@ -79,7 +79,6 @@ vi.mock('../../src/nest/memories/memories-access.service', async (importOriginal
   return actual;
 });
 
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { FilesModule } from '../../src/nest/files/files.module';
 import { PhotosModule } from '../../src/nest/photos/photos.module';
@@ -92,7 +91,7 @@ describe('Files + photos e2e (real auth guard + temp SQLite)', () => {
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, FilesModule, PhotosModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, FilesModule, PhotosModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());

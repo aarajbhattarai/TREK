@@ -28,7 +28,6 @@ const { db } = vi.hoisted(() => {
 vi.mock('../../src/db/database', () => ({ db, closeDb: () => {}, reinitialize: () => {} }));
 
 import { TransitModule } from '../../src/nest/transit/transit.module';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { clearGoogleTransitCache } from '../../src/nest/transit/google-transit.provider';
@@ -50,7 +49,7 @@ describe('Transit backend switch e2e (#1699)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, TransitModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, TransitModule],
     }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());

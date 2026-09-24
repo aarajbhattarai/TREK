@@ -1,4 +1,4 @@
-import { DatabaseService } from '../../src/nest/database/database.service';
+import type Database from 'better-sqlite3';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { MailerService } from '../../src/nest/notifications/mailer/mailer.service';
 import { NotificationPreferencesService } from '../../src/nest/notifications/notification-preferences.service';
@@ -18,27 +18,29 @@ import { createTestNotificationsRepo, createTestNotificationChannelPreferencesRe
  * Plan 3f Task 3: `NotificationsService`/`NotificationPreferencesService` no
  * longer take a `DatabaseService` — both now take repositories, resolved
  * through `notifications-repos.ts`/`test-uow.ts`'s `sharedTestOrm`-memoised
- * factories, bound to `dbs.connection` the same way every other converted
- * domain's test helper does. The helper's own OUTER signature (`dbs`,
- * `realtime`) is unchanged, so every caller that only goes through this
- * function (`mcp-test-controllers.ts`, `plugin-host.ts`, both test-only) needs
- * no edit of its own.
+ * factories, bound to the raw better-sqlite3 handle the same way every other
+ * converted domain's test helper does. The helper's own OUTER signature
+ * (`db`, `realtime`) is unchanged in shape, so every caller that only goes
+ * through this function (`mcp-test-controllers.ts`, `plugin-host.ts`, both
+ * test-only) needs no edit of its own beyond passing the raw handle (Plan 4
+ * Task 4 dropped the `DatabaseService` wrapper — the handle was always all
+ * this helper read off it).
  *
  * Plan 3f Task 4: `MailerService`/`WebhookService`/`NtfyService` no longer
  * take a `DatabaseService` either — `MailerService` takes
  * `UsersRepository`/`SettingsRepository`/`AppSettingsRepository`,
  * `WebhookService`/`NtfyService` take `SettingsRepository`/
  * `AppSettingsRepository`, all resolved through the same memoised
- * `test-uow.ts` factories bound to `dbs.connection`.
+ * `test-uow.ts` factories bound to the same handle.
  */
-export async function makeNotificationsService(dbs: DatabaseService, realtime = new RealtimeService()): Promise<NotificationsService> {
-  const usersRepo = await createTestUsersRepo(dbs.connection);
-  const settingsRepo = await createTestSettingsRepo(dbs.connection);
-  const appSettings = await createTestAppSettingsRepo(dbs.connection);
+export async function makeNotificationsService(db: Database.Database, realtime = new RealtimeService()): Promise<NotificationsService> {
+  const usersRepo = await createTestUsersRepo(db);
+  const settingsRepo = await createTestSettingsRepo(db);
+  const appSettings = await createTestAppSettingsRepo(db);
   const mailer = new MailerService(usersRepo, settingsRepo, appSettings);
-  const uow = await createTestUnitOfWork(dbs.connection);
-  const channelPrefsRepo = await createTestNotificationChannelPreferencesRepo(dbs.connection);
-  const notificationsRepo = await createTestNotificationsRepo(dbs.connection);
+  const uow = await createTestUnitOfWork(db);
+  const channelPrefsRepo = await createTestNotificationChannelPreferencesRepo(db);
+  const notificationsRepo = await createTestNotificationsRepo(db);
   return new NotificationsService(
     realtime,
     mailer,
@@ -51,12 +53,12 @@ export async function makeNotificationsService(dbs: DatabaseService, realtime = 
 }
 
 /** The preferences half on its own, over the same connection. */
-export async function makeNotificationPreferencesService(dbs: DatabaseService): Promise<NotificationPreferencesService> {
-  const usersRepo = await createTestUsersRepo(dbs.connection);
-  const settingsRepo = await createTestSettingsRepo(dbs.connection);
-  const appSettings = await createTestAppSettingsRepo(dbs.connection);
-  const channelPrefsRepo = await createTestNotificationChannelPreferencesRepo(dbs.connection);
-  return new NotificationPreferencesService(new MailerService(usersRepo, settingsRepo, appSettings), await createTestUnitOfWork(dbs.connection), appSettings, channelPrefsRepo);
+export async function makeNotificationPreferencesService(db: Database.Database): Promise<NotificationPreferencesService> {
+  const usersRepo = await createTestUsersRepo(db);
+  const settingsRepo = await createTestSettingsRepo(db);
+  const appSettings = await createTestAppSettingsRepo(db);
+  const channelPrefsRepo = await createTestNotificationChannelPreferencesRepo(db);
+  return new NotificationPreferencesService(new MailerService(usersRepo, settingsRepo, appSettings), await createTestUnitOfWork(db), appSettings, channelPrefsRepo);
 }
 
 /**

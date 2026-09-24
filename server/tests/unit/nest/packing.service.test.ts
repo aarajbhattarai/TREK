@@ -64,7 +64,7 @@ import { PackingService, isInvalidBagRef } from '../../../src/nest/packing/packi
 const bridgeListItems = (tripId: string | number, viewerId?: number) => svc.listItems(tripId, viewerId);
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestDatabaseService, createTestTripsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestTripsRepo, createTestTripMembersRepo } from '../../helpers/test-uow';
 import {
   createTestPackingItemsRepo,
   createTestPackingItemContributorsRepo,
@@ -91,7 +91,6 @@ beforeAll(async () => {
   packingCategoryAssigneesRepoDirect = await createTestPackingCategoryAssigneesRepo(testDb);
   packingItemContributorsRepoDirect = await createTestPackingItemContributorsRepo(testDb);
   svc = new PackingService(
-    await createTestDatabaseService(testDb),
     permissionsStub,
     new RealtimeService(),
     notificationsStub(send),
@@ -104,6 +103,7 @@ beforeAll(async () => {
     await createTestPackingTemplateCategoriesRepo(testDb),
     await createTestPackingTemplateItemsRepo(testDb),
     await createTestTripsRepo(testDb),
+    await createTestTripMembersRepo(testDb),
   );
 });
 

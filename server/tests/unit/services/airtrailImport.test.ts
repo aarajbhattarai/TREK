@@ -12,7 +12,6 @@ import { db } from '../../../src/db/database';
 import { createUser, createTrip } from '../../helpers/factories';
 import type { AirtrailAirport, AirtrailFlightRaw } from '../../../src/nest/integrations/airtrail.client';
 import { AirtrailImportService } from '../../../src/nest/integrations/airtrail-import.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
@@ -34,26 +33,25 @@ const listFlights = vi.fn();
 const broadcast = vi.fn();
 
 async function makeImportService(): Promise<AirtrailImportService> {
-  const dbs = () => new DatabaseService(db);
-  const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection));
+  const permissions = new PermissionsService(await createTestAppSettingsRepo(db), await createTestUnitOfWork(db));
   const realtime = { broadcast } as unknown as RealtimeService;
   return new AirtrailImportService(
-    await createTestReservationsRepo(dbs().connection),
-    await createTestReservationEndpointsRepo(dbs().connection),
-    await createTestDaysRepo(dbs().connection),
+    await createTestReservationsRepo(db),
+    await createTestReservationEndpointsRepo(db),
+    await createTestDaysRepo(db),
     realtime,
     new ReservationsService(
       permissions,
-      new BudgetService(permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection))),
+      new BudgetService(permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(db), ...(await budgetRepoArgs(db))),
       realtime,
       notificationsStub(),
-      new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)),
-      await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
-      await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection),
-      await createTestReservationDayPositionsRepo(dbs().connection), await createTestDayAccommodationsRepo(dbs().connection),
-      await createTestDaysRepo(dbs().connection), await createTestPlacesRepo(dbs().connection), await createTestDayAssignmentsRepo(dbs().connection),
-      await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
-      await createTestBudgetItemsRepo(dbs().connection),
+      new ReservationsReadService(await createTestReservationsRepo(db), await createTestReservationEndpointsRepo(db), await createTestReservationTravelersRepo(db)),
+      await accommodationsOver(db), await createTestUnitOfWork(db),
+      await createTestReservationsRepo(db), await createTestReservationEndpointsRepo(db), await createTestReservationTravelersRepo(db),
+      await createTestReservationDayPositionsRepo(db), await createTestDayAccommodationsRepo(db),
+      await createTestDaysRepo(db), await createTestPlacesRepo(db), await createTestDayAssignmentsRepo(db),
+      await createTestTripMembersRepo(db), await createTestUsersRepo(db), await createTestTripsRepo(db),
+      await createTestBudgetItemsRepo(db),
     ),
     { listFlights } as unknown as AirtrailClient,
     {

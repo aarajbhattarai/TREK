@@ -9,7 +9,6 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockIns
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import type { Server } from 'http';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
 import { sessionCookie } from './harness';
@@ -50,7 +49,7 @@ describe('Budget e2e (real auth guard + temp SQLite, real budget SQL)', () => {
   let tripId: number;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, BudgetModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, BudgetModule] })
       // The settlement read awaits live FX rates; the trip here is all-EUR, so a
       // null result is the identity — and the test never touches the network.
       .overrideProvider(ExchangeRatesService)

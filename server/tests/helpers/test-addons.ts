@@ -1,6 +1,5 @@
 import type Database from 'better-sqlite3';
 import { AddonsService } from '../../src/nest/addons/addons.service';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { sharedTestOrm } from './test-uow';
 import { Addons } from '../../src/db/entities/Addons.entity';
 import { PhotoProviders } from '../../src/db/entities/PhotoProviders.entity';
@@ -28,16 +27,12 @@ import { Users } from '../../src/db/entities/Users.entity';
  */
 /**
  * The full `AddonsService` a hand-constructed test collaborator needs, bound
- * to the suite's own better-sqlite3 handle.
- *
- * `dbs` defaults to a fresh `DatabaseService` over the same handle when the
- * caller has no existing one to pass through — AddonsService still needs one
- * (see `addons.service.ts`'s constructor doc) purely to forward to
- * `transit-provider.ts`'s readTransitProvider/writeTransitProvider and
- * `instance-api-keys.ts`'s resolveApiKey, neither of which is one of this
- * plan's six domains.
+ * to the suite's own better-sqlite3 handle. Plan 4 Task 4 dropped the
+ * trailing `DatabaseService` param (dead in `AddonsService` itself since
+ * `transit-provider.ts`/`instance-api-keys.ts` moved onto
+ * `AppSettingsRepository` — Plan 4 Task 1).
  */
-export async function createTestAddonsService(db: Database.Database, dbs: DatabaseService = new DatabaseService(db)): Promise<AddonsService> {
+export async function createTestAddonsService(db: Database.Database): Promise<AddonsService> {
   const t = await sharedTestOrm(db);
   return new AddonsService(
     t.repo(Addons),
@@ -45,6 +40,5 @@ export async function createTestAddonsService(db: Database.Database, dbs: Databa
     t.repo(PhotoProviderFields),
     t.repo(AppSettings),
     t.repo(Users),
-    dbs,
   );
 }

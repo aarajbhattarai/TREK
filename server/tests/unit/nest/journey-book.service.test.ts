@@ -33,9 +33,8 @@ vi.mock('../../../src/websocket', () => ({ broadcastToUser: vi.fn() }));
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createJourney, addJourneyContributor } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
@@ -48,7 +47,6 @@ import {
 } from '../../helpers/journey-repos';
 import { createTestJourneyBooksRepo } from '../../helpers/journey-share-repos';
 
-const dbs = new DatabaseService(dbConn);
 let domain: JourneyDomainService;
 let books: JourneyBookService;
 
@@ -66,7 +64,7 @@ beforeAll(async () => {
   const uow = await createTestUnitOfWork(testDb);
   const t = await sharedTestOrm(testDb);
   domain = new JourneyDomainService(
-    dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb), dbs), uow,
+    new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb)), uow,
     await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
     await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
     // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.

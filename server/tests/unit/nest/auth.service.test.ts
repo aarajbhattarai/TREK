@@ -68,7 +68,6 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { verifyJwtAndLoadUser } from '../../../src/nest/auth/jwt-verify';
 import { authenticator } from 'otplib';
 import { hashBackupCode } from '../../../src/nest/auth/auth.helpers';
@@ -84,6 +83,7 @@ import { DEFAULT_ALLOWED_EXTENSIONS } from '../../../src/nest/files/files.consta
 import {
   createTestUnitOfWork,
   createTestAppSettingsRepo,
+  sharedTestOrm,
   createTestUsersRepo,
   createTestTripMembersRepo,
   createTestMcpTokensRepo,
@@ -117,7 +117,7 @@ beforeAll(async () => {
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   membershipStub,
   new WebauthnConfigService(await createTestAppSettingsRepo(testDb)),
-  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb), await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb)),
+  new UserCleanupService((await sharedTestOrm(testDb)).em, new BudgetService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestTripMembersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb), await createTestPluginsRepo(testDb), await createTestPluginUserErasureQueueRepo(testDb)),
   mailerStub,
   new EphemeralTokenService(),
   new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)), await createTestUnitOfWork(testDb),

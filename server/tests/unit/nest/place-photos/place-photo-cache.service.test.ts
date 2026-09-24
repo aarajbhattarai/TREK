@@ -20,8 +20,7 @@
  * these repositories touch is already in it — the R8 `createSnapshotTestDb()`
  * migration only applies once a converted read needs a column the hand-rolled
  * DDL omits, which is not the case here), wired through `createTestOrm()`.
- * `DatabaseService` itself is left injected (constructor-ripple scope, see
- * the class's own docstring) but is now unused in the body.
+ * Plan 4 Task 4 dropped the now-unused `DatabaseService` injection entirely.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import path from 'node:path';
@@ -59,7 +58,6 @@ testDb.exec(`
 vi.mock('../../../../src/db/database', () => ({ db: testDb }));
 
 import { PlacePhotoCacheService } from '../../../../src/nest/place-photos/place-photo-cache.service';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { GooglePlacePhotoMeta } from '../../../../src/db/entities/GooglePlacePhotoMeta.entity';
 import type { GooglePlacePhotoMetaRepository } from '../../../../src/db/repositories/GooglePlacePhotoMeta.repository';
@@ -125,7 +123,7 @@ describe.each([
 
   beforeAll(() => {
     fx = makeStorageFixture(keyPrefix);
-    cache = new PlacePhotoCacheService(new DatabaseService(testDb as never), fx.storage, metaRepo, placesRepo, collectionPlacesRepo);
+    cache = new PlacePhotoCacheService(fx.storage, metaRepo, placesRepo, collectionPlacesRepo);
   });
 
   beforeEach(() => {

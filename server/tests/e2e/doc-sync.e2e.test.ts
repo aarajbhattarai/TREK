@@ -68,7 +68,6 @@ import { createTrip, createUser } from '../helpers/factories';
 import { DocSyncModule } from '../../src/nest/doc-sync/doc-sync.module';
 import { DocSyncMcp } from '../../src/nest/doc-sync/doc-sync.mcp';
 import type { McpContext } from '../../src/nest-mcp';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { MikroORM } from '@mikro-orm/core';
 import { withRequestContext } from '../../src/nest/database/request-context';
 import { AddonsService } from '../../src/nest/addons/addons.service';
@@ -134,7 +133,7 @@ describe('Document sync e2e (real guards + real services + temp SQLite)', () => 
       [OpencloudDocumentProvider, 'opencloud'],
       [SynologyDriveDocumentProvider, 'synologydrive'],
     ] as const;
-    let builder = Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, DocSyncModule] })
+    let builder = Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DocSyncModule] })
       .overrideProvider(AddonsService)
       .useValue({ isAddonEnabled });
     const fakes = providers.map(([, id]) => fakeProvider(id));

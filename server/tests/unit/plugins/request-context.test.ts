@@ -32,7 +32,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createUser } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { PluginGuards } from '../../../src/nest/plugins/host/plugin-guards.service';
@@ -69,7 +68,6 @@ let userId: number;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb, { allowGlobalContext: false });
-  const dbs = new DatabaseService(testDb);
   permissions = new PermissionsService(t.repo(AppSettings), new UnitOfWork(t.em));
   // Plan 3j Task 1: PluginGuards' own role lookup (canCreateAs, PG4) now goes
   // through UsersRepository.getRole — a REAL repository bound to `t.em`
@@ -79,7 +77,7 @@ beforeAll(async () => {
   // A mocked UsersRepository would defeat that regression coverage.
   // Plan 4 Task 2 — PluginGuards' own canAccessTrip delegate is now
   // TripsRepository.findAccessible; same REAL-repository reasoning applies.
-  guards = new PluginGuards(t.repo(Trips), permissions, await createTestAddonsService(testDb, dbs), t.repo(Users));
+  guards = new PluginGuards(t.repo(Trips), permissions, await createTestAddonsService(testDb), t.repo(Users));
   userId = createUser(testDb, { role: 'user' }).user.id;
   // An admin has tightened trip_create from its 'everybody' default.
   testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('perm_trip_create', 'admin')").run();

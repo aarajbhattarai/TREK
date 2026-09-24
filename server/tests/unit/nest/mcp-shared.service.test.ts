@@ -19,12 +19,10 @@ import { db as testDb } from '../../../src/db/database';
 import { createUser } from '../../helpers/factories';
 import { McpToolGuardsService } from '../../../src/nest/mcp-shared/mcp-tool-guards.service';
 import { McpSharedModule } from '../../../src/nest/mcp-shared/mcp-shared.module';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
-const dbs = new DatabaseService(testDb);
 let svc: McpToolGuardsService;
 beforeAll(async () => {
   // Plan 4 Task 1 constructor-ripple: the trip `user_id` and user `role`
@@ -32,7 +30,7 @@ beforeAll(async () => {
   svc = new McpToolGuardsService(
     await createTestTripsRepo(testDb),
     await createTestUsersRepo(testDb),
-    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
   );
 });

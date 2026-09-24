@@ -25,11 +25,10 @@ import { createUser, createTrip, createBudgetItem, addTripMember } from '../../h
 import { createMcpHarness, parseToolResult, parseResourceResult, type McpHarness } from '../../helpers/mcp-harness';
 import { BudgetController } from '../../../src/nest/budget/budget.controller';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import type { TripAccess } from '../../../src/nest/database/database.service';
+import type { TripAccess } from '../../../src/db/repositories/Trips.repository';
 import type { User } from '../../../src/types';
 import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
@@ -335,9 +334,8 @@ describe('Settlement tools', () => {
     testDb.prepare('INSERT INTO budget_item_members (budget_item_id, user_id, paid) VALUES (?, ?, 0)')
       .run(unpaid.id, other.id);
 
-    const dbService = new DatabaseService(testDb);
     const controller = new BudgetController(
-      new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbService.connection), ...(await budgetRepoArgs(dbService.connection))),
+      new BudgetService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb))),
     );
     const rest = await controller.settlement(
       { id: user.id } as User,

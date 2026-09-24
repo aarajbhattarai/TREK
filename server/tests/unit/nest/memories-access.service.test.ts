@@ -56,7 +56,6 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
 import { mapDbError, pipeAsset, type ServiceResult } from '../../../src/nest/memories/memories.helpers';
 import { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { Trips } from '../../../src/db/entities/Trips.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
@@ -82,13 +81,10 @@ import { SsrfBlockedError } from '../../../src/utils/ssrfGuard';
 
 beforeAll(async () => {
   const t = await sharedTestOrm(testDb);
-  const dbs = new DatabaseService(testDb, t.em);
-  // `DatabaseService.prototype.canAccessTrip` is patched on the PROTOTYPE
-  // (not just this instance) so every OTHER hand-built `DatabaseService` in
-  // this file's helpers resolves through the same real predicate.
-  vi.spyOn(DatabaseService.prototype, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
-    t.em.getRepository(Trips).findAccessible(tripId, userId),
-  );
+  // Plan 4 Task 4: `DatabaseService` is gone — `MemoriesAccessService` is
+  // fully repository-backed, so the `DatabaseService.prototype.canAccessTrip`
+  // spy this block used to route to the real predicate is dead; removed
+  // with it.
   access = new MemoriesAccessService(t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips), t.repo(Journeys), t.repo(JourneyContributors), t.repo(JourneyPhotos));
 });
 

@@ -33,7 +33,6 @@ import { PlaceEnrichmentModule } from '../../src/nest/place-enrichment/place-enr
 import { candidateKey } from '../../src/nest/place-enrichment/place-enrichment.service';
 import { MapsService } from '../../src/nest/maps/maps.service';
 import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-cache.service';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RateLimitService } from '../../src/nest/common/rate-limit.service';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
@@ -48,7 +47,7 @@ describe('Place enrichment e2e (real auth guard + real validation pipe)', () => 
   let maps: MapsService;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, PlaceEnrichmentModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), PlaceEnrichmentModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());

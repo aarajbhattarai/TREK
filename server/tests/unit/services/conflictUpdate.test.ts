@@ -33,7 +33,6 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
 import { accommodationsOver } from '../../helpers/accommodations-service';
 import { isUpdateConflict } from '../../../src/nest/common/conflictResult';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PackingService } from '../../../src/nest/packing/packing.service';
 import { PlacesService } from '../../../src/nest/places/places.service';
 import { MapsService } from '../../../src/nest/maps/maps.service';
@@ -43,7 +42,7 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { UnsplashService } from '../../../src/nest/unsplash/unsplash.service';
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
@@ -81,7 +80,6 @@ import {
   createTestPackingTemplateItemsRepo,
 } from '../../helpers/packing-repos';
 
-const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
 const runtimeEnv = new RuntimeEnvService();
 
@@ -92,65 +90,57 @@ beforeAll(async () => {
   // One cache instance shared by maps and places, the way the container
   // wires it: the service's stampede guard only works if there is exactly
   // one of them. Plan 3c Task 1: PlacePhotoCacheService now takes the two
-  // repositories too.
+  // repositories too. Plan 4 Task 4: `DatabaseService` is gone — every
+  // service below is fully repository-backed, so the `dbs.canAccessTrip`/
+  // `isOwner`/`rosterUserIds`/`getPlaceWithTags` spies this block used to
+  // route to a real `DatabaseService` are dead; removed with it.
   photoCache = new PlacePhotoCacheService(
-    dbs,
     makeStorageFixture('photos/google/').storage,
-    await createTestGooglePlacePhotoMetaRepo(dbs.connection),
-    await createTestPlacesRepo(dbs.connection),
-    await createTestCollectionPlacesRepo(dbs.connection),
+    await createTestGooglePlacePhotoMetaRepo(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestCollectionPlacesRepo(testDb),
   );
-  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — the four
-  // repository-backed methods are spied directly on this instance instead,
-  // routed to a real `DatabaseService` built with one.
   const t = await sharedTestOrm(testDb);
-  const real = new DatabaseService(testDb, t.em);
-  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
-  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
-  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
-  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   packing = new PackingService(
-    dbs,
-    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     realtime,
     notificationsStub(),
-    await createTestUnitOfWork(dbs.connection),
-    await createTestPackingItemsRepo(dbs.connection),
-    await createTestPackingItemContributorsRepo(dbs.connection),
-    await createTestPackingBagsRepo(dbs.connection),
-    await createTestPackingCategoryAssigneesRepo(dbs.connection),
-    await createTestPackingTemplatesRepo(dbs.connection),
-    await createTestPackingTemplateCategoriesRepo(dbs.connection),
-    await createTestPackingTemplateItemsRepo(dbs.connection),
-    await createTestTripsRepo(dbs.connection),
+    await createTestUnitOfWork(testDb),
+    await createTestPackingItemsRepo(testDb),
+    await createTestPackingItemContributorsRepo(testDb),
+    await createTestPackingBagsRepo(testDb),
+    await createTestPackingCategoryAssigneesRepo(testDb),
+    await createTestPackingTemplatesRepo(testDb),
+    await createTestPackingTemplateCategoriesRepo(testDb),
+    await createTestPackingTemplateItemsRepo(testDb),
+    await createTestTripsRepo(testDb),
+    await createTestTripMembersRepo(testDb),
   );
   places = new PlacesService(
-  dbs,
-  new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+  new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   realtime,
-  new MapsService(photoCache, await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestPlaceDetailsCacheRepo(dbs.connection), await createTestPlacesRepo(dbs.connection)),
-  new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
-  new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), runtimeEnv, makeStorageFixture('').storage),
+  new MapsService(photoCache, await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb), await createTestPlaceDetailsCacheRepo(testDb), await createTestPlacesRepo(testDb)),
+  new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
+  new UnsplashService(await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb), runtimeEnv, makeStorageFixture('').storage),
   photoCache,
   new JourneyDomainService(
-    dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(dbs.connection), dbs), await createTestUnitOfWork(dbs.connection),
-    await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
-    await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+    realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb)), await createTestUnitOfWork(testDb),
+    await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+    await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
     // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
-    await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
+    await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
   ),
   makeStorageFixture('').storage,
-  await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
-  await createTestPlacesRepo(dbs.connection),
-  await createTestTagsRepo(dbs.connection),
-  await createTestPlaceRatingsRepo(dbs.connection),
-  await createTestTripMembersRepo(dbs.connection),
-  await createTestDayAssignmentsRepo(dbs.connection),
-  await createTestCategoriesRepo(dbs.connection),
-  await createTestTripsRepo(dbs.connection),
-  await createTestBudgetItemsRepo(dbs.connection),
-  await createTestCollectionPlacesRepo(dbs.connection),
+  await accommodationsOver(testDb), await createTestUnitOfWork(testDb),
+  await createTestPlacesRepo(testDb),
+  await createTestTagsRepo(testDb),
+  await createTestPlaceRatingsRepo(testDb),
+  await createTestTripMembersRepo(testDb),
+  await createTestDayAssignmentsRepo(testDb),
+  await createTestCategoriesRepo(testDb),
+  await createTestTripsRepo(testDb),
+  await createTestBudgetItemsRepo(testDb),
+  await createTestCollectionPlacesRepo(testDb),
 );
 });
 

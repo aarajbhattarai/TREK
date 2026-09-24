@@ -14,7 +14,6 @@ vi.mock('../../src/db/database', async () => {
   return { db, closeDb: () => {} };
 });
 import { db } from '../../src/db/database';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { SchoolHolidaysModule } from '../../src/nest/school-holidays/school-holidays.module';
 import { SchoolHolidaysService } from '../../src/nest/school-holidays/school-holidays.service';
 import { SchoolHolidaysMcp } from '../../src/nest/school-holidays/school-holidays.mcp';
@@ -33,7 +32,7 @@ let service: SchoolHolidaysService;
 let orm: MikroORM;
 beforeAll(async () => {
   db.prepare("INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'admin', 'admin@test.local', '', 'admin'), (2, 'member', 'member@test.local', '', 'user')").run();
-  const module = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, SchoolHolidaysModule] }).compile();
+  const module = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, SchoolHolidaysModule] }).compile();
   app = module.createNestApplication();
   app.use(cookieParser());
   app.useGlobalPipes(new ZodValidationPipe());

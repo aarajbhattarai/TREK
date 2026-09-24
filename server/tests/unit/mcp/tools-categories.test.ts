@@ -31,7 +31,6 @@ import { createTestRegistry } from '../../../src/nest-mcp';
 import { trekMcpAccessPolicy, trekMcpValidateAccess } from '../../../src/mcp/nest-mcp-policy';
 import { CategoriesMcp } from '../../../src/nest/categories/categories.mcp';
 import { CategoriesService } from '../../../src/nest/categories/categories.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { DemoService } from '../../../src/nest/common/demo.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
@@ -61,15 +60,13 @@ async function withHarness(
 // wired here rather than through the shared harness. Everything points at this
 // file's DB, which is what lets the admin gate and the demo gate be driven from
 // the users table instead of from a stub.
-const categoriesDb = new DatabaseService(testDb);
 let categoriesMcp: CategoriesMcp;
 beforeAll(async () => {
-  const categoriesEm = (await sharedTestOrm(categoriesDb.connection)).em;
+  const categoriesEm = (await sharedTestOrm(testDb)).em;
   categoriesMcp = new CategoriesMcp(
-  new CategoriesService(await createTestCategoriesRepo(categoriesDb.connection)),
-  categoriesDb,
+  new CategoriesService(await createTestCategoriesRepo(testDb)),
   new RuntimeEnvService(),
-  new McpToolGuardsService(await createTestTripsRepo(categoriesDb.connection), await createTestUsersRepo(categoriesDb.connection), new PermissionsService(await createTestAppSettingsRepo(categoriesDb.connection), await createTestUnitOfWork(categoriesDb.connection)), new RealtimeService()),
+  new McpToolGuardsService(await createTestTripsRepo(testDb), await createTestUsersRepo(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService()),
   new DemoService(new RuntimeEnvService(), categoriesEm),
 );
 });

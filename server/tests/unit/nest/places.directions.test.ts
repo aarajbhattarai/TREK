@@ -41,7 +41,6 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
 import { db as testDb } from '../../../src/db/database';
 import { createUser, createTrip, createPlace } from '../../helpers/factories';
 import { accommodationsOver } from '../../helpers/accommodations-service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { PlacesService } from '../../../src/nest/places/places.service';
@@ -51,7 +50,7 @@ import { UnsplashService } from '../../../src/nest/unsplash/unsplash.service';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
@@ -63,7 +62,6 @@ import {
   createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
 
-const dbs = new DatabaseService(testDb);
 const photoCacheStub = { removeIfUnreferenced: vi.fn() } as unknown as PlacePhotoCacheService;
 const storageFx = makeStorageFixture('');
 
@@ -75,8 +73,7 @@ const hit = (name: string, lat: number, lng: number) => ({
 
 async function svc(searchNominatim: MapsService['searchNominatim']): Promise<PlacesService> {
   return new PlacesService(
-    dbs,
-    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     new RealtimeService(),
     // The address backfill runs fire-and-forget after every import, so the stub answers
     // it too — otherwise every passing test prints a rejected promise.
@@ -93,27 +90,27 @@ async function svc(searchNominatim: MapsService['searchNominatim']): Promise<Pla
       },
       reverseGeocode: vi.fn(async () => null),
     } as unknown as MapsService,
-    new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
-    new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), new RuntimeEnvService(), storageFx.storage),
+    new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
+    new UnsplashService(await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb), new RuntimeEnvService(), storageFx.storage),
     photoCacheStub,
     new JourneyDomainService(
-      dbs, new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), await createTestJourneyPhotosRepo(dbs.connection), dbs), await createTestUnitOfWork(dbs.connection),
-      await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
-      await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+      new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), await createTestJourneyPhotosRepo(testDb)), await createTestUnitOfWork(testDb),
+      await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+      await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
       // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
-      await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
+      await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
     ),
     storageFx.storage,
-    await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
-    await createTestPlacesRepo(dbs.connection),
-    await createTestTagsRepo(dbs.connection),
-    await createTestPlaceRatingsRepo(dbs.connection),
-    await createTestTripMembersRepo(dbs.connection),
-    await createTestDayAssignmentsRepo(dbs.connection),
-    await createTestCategoriesRepo(dbs.connection),
-  await createTestTripsRepo(dbs.connection),
-  await createTestBudgetItemsRepo(dbs.connection),
-  await createTestCollectionPlacesRepo(dbs.connection),
+    await accommodationsOver(testDb), await createTestUnitOfWork(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestTagsRepo(testDb),
+    await createTestPlaceRatingsRepo(testDb),
+    await createTestTripMembersRepo(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestCategoriesRepo(testDb),
+  await createTestTripsRepo(testDb),
+  await createTestBudgetItemsRepo(testDb),
+  await createTestCollectionPlacesRepo(testDb),
   );
 }
 
@@ -129,17 +126,10 @@ const geocoder = () => vi.fn(async (query: string) => {
 
 let tripId: string;
 
-beforeAll(async () => {
-  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — the four
-  // repository-backed methods are spied directly on this instance instead,
-  // routed to a real `DatabaseService` built with one.
-  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
-  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
-  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
-  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
-  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
-});
+// Plan 4 Task 4: `DatabaseService` is gone — `PlacesService` is fully
+// repository-backed now, so the `dbs.canAccessTrip`/`isOwner`/
+// `rosterUserIds`/`getPlaceWithTags` spies this block used to route to a
+// real `DatabaseService` are dead; removed with it.
 
 beforeEach(() => {
   testDb.exec('DELETE FROM places; DELETE FROM trips; DELETE FROM users');

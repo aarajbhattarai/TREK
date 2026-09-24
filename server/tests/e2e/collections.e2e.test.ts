@@ -34,7 +34,6 @@ vi.mock('../../src/websocket', () => ({ broadcastToUser: vi.fn(), broadcast: vi.
 import { db } from '../../src/db/database';
 import { createUser, createTrip, createCategory, createDay, createPlace, createDayAssignment } from '../helpers/factories';
 import { CollectionsModule } from '../../src/nest/collections/collections.module';
-import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { AddonsService } from '../../src/nest/addons/addons.service';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
@@ -50,7 +49,7 @@ describe('Collections e2e (real auth guard + real service + temp SQLite)', () =>
   let tripId: number;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, CollectionsModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), RealtimeModule, CollectionsModule] })
       .overrideProvider(AddonsService)
       .useValue({ isAddonEnabled })
       .compile();

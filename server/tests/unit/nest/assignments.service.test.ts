@@ -45,19 +45,19 @@ vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember, createDay, createPlace, createDayAssignment, createTag } from '../../helpers/factories';
-import { type TripAccess } from '../../../src/nest/database/database.service';
+import { type TripAccess } from '../../../src/db/repositories/Trips.repository';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { AssignmentsService } from '../../../src/nest/assignments/assignments.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
   createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
-  createTestTripMembersRepo, createTestDatabaseService, createTestRoadtripViasRepo, sharedTestOrm, createTestTripsRepo,
+  createTestTripMembersRepo, createTestRoadtripViasRepo, sharedTestOrm, createTestTripsRepo,
 } from '../../helpers/test-uow';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
@@ -66,36 +66,30 @@ import {
 
 let svc: AssignmentsService;
 beforeAll(async () => {
-  // Plan 3c Task 3: `DatabaseService` now needs a real `EntityManager`
-  // up front (AS0's `canAccessTrip` still delegates to it; `TripAccess`'s
-  // shape comes off `TripsRepository`) — `createTestDatabaseService`
-  // (Task 0b's helper) builds one bound to the shared per-file ORM every
-  // repository below also resolves through.
-  const dbs = await createTestDatabaseService(testDb);
   const realtime = new RealtimeService();
   svc = new AssignmentsService(
     // Plan 4 Task 2 — AssignmentsService's own canAccessTrip delegate is now
     // TripsRepository.findAccessible, in the same constructor slot.
-    await createTestTripsRepo(dbs.connection),
-    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    await createTestTripsRepo(testDb),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
     realtime,
-    new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
+    new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
     // Real collaborator rather than a stub: reconcile() runs after every mutation
     // and needs the same connection to see the rows these cases write.
     new JourneyDomainService(
-      dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), await createTestJourneyPhotosRepo(dbs.connection), dbs), await createTestUnitOfWork(dbs.connection),
-      await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
-      await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+      realtime, new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), await createTestJourneyPhotosRepo(testDb)), await createTestUnitOfWork(testDb),
+      await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+      await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
       // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
-      await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
+      await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
     ),
-    await createTestUnitOfWork(dbs.connection),
-    await createTestDayAssignmentsRepo(dbs.connection),
-    await createTestAssignmentParticipantsRepo(dbs.connection),
-    await createTestDaysRepo(dbs.connection),
-    await createTestPlacesRepo(dbs.connection),
-    await createTestTripMembersRepo(dbs.connection),
-    await createTestRoadtripViasRepo(dbs.connection),
+    await createTestUnitOfWork(testDb),
+    await createTestDayAssignmentsRepo(testDb),
+    await createTestAssignmentParticipantsRepo(testDb),
+    await createTestDaysRepo(testDb),
+    await createTestPlacesRepo(testDb),
+    await createTestTripMembersRepo(testDb),
+    await createTestRoadtripViasRepo(testDb),
   );
 });
 

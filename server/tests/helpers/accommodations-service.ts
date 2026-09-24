@@ -1,12 +1,11 @@
 import type { Database } from 'better-sqlite3';
 import { AccommodationsService } from '../../src/nest/accommodations/accommodations.service';
 import { AssignmentsService } from '../../src/nest/assignments/assignments.service';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { JourneyDomainService } from '../../src/nest/journey/journey-domain.service';
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
-import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../src/db/entities/TripPhotos.entity';
 import {
@@ -29,59 +28,58 @@ import {
  * back, and it has to come out of the same connection. Five collaborators deep is
  * why this is a helper and not five copies across the suites.
  *
- * Plan 3c Task 0b: the `DatabaseService` built here needs a real
- * `EntityManager` now (its `.connection` backs every repository factory
- * below, and `JourneyDomainService` still takes a full `DatabaseService`).
- * `AccommodationsService` itself no longer holds one (Plan 4 Task 3 —
- * `stampLodging`'s old `getPlaceWithTags` delegate is
- * `PlacesRepository.findWithTagsAndRatings` directly now).
+ * Plan 4 Task 4: `DatabaseService` is gone — both this function and
+ * `accommodationsOver` below take the raw better-sqlite3 handle directly now
+ * (it was always the only thing either read off a `DatabaseService`
+ * instance). Kept as two functions for caller-shape continuity, though they
+ * are now identical.
  */
 export async function makeAccommodationsService(conn: Database): Promise<AccommodationsService> {
-  return accommodationsOver(new DatabaseService(conn, (await sharedTestOrm(conn)).em));
+  return accommodationsOver(conn);
 }
 
 /**
- * The same, for a suite that already holds the DatabaseService.
+ * The same, for a suite that already holds the raw connection.
  *
  * ReservationsService takes one now, because a hotel booking owes the day plan
  * the same stop a night entered under Days does, and every suite that builds
  * that service by hand needs one to hand it.
  */
-export async function accommodationsOver(dbs: DatabaseService): Promise<AccommodationsService> {
-  const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
+export async function accommodationsOver(conn: Database): Promise<AccommodationsService> {
+  const permissions = new PermissionsService(await createTestAppSettingsRepo(conn), await createTestUnitOfWork(conn));
   const realtime = new RealtimeService();
-  const t = await sharedTestOrm(dbs.connection);
+  const t = await sharedTestOrm(conn);
   const assignments = new AssignmentsService(
-    await createTestTripsRepo(dbs.connection), permissions, realtime,
-    new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
+    await createTestTripsRepo(conn), permissions, realtime,
+    new QueryHelpersService(await createTestTagsRepo(conn), await createTestPlaceRatingsRepo(conn), await createTestAssignmentParticipantsRepo(conn)),
     new JourneyDomainService(
-      dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(dbs.connection), dbs), await createTestUnitOfWork(dbs.connection),
-      await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
-      await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+      realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(conn)), await createTestUnitOfWork(conn),
+      await createTestJourneysRepo(conn), await createTestJourneyContributorsRepo(conn),
+      await createTestJourneyTripsRepo(conn), await createTestJourneyEntriesRepo(conn), await createTestTripsRepo(conn),
       // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
-      await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
+      await createTestJourneyPhotosRepo(conn), await createTestJourneyEntryPhotosRepo(conn), await createTestPlacesRepo(conn),
     ),
-    await createTestUnitOfWork(dbs.connection),
-    await createTestDayAssignmentsRepo(dbs.connection),
-    await createTestAssignmentParticipantsRepo(dbs.connection),
-    await createTestDaysRepo(dbs.connection),
-    await createTestPlacesRepo(dbs.connection),
-    await createTestTripMembersRepo(dbs.connection),
-    await createTestRoadtripViasRepo(dbs.connection),
+    await createTestUnitOfWork(conn),
+    await createTestDayAssignmentsRepo(conn),
+    await createTestAssignmentParticipantsRepo(conn),
+    await createTestDaysRepo(conn),
+    await createTestPlacesRepo(conn),
+    await createTestTripMembersRepo(conn),
+    await createTestRoadtripViasRepo(conn),
   );
   return new AccommodationsService(
-    permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
+    permissions, realtime, assignments, await createTestUnitOfWork(conn),
     // Plan 4 Task 2 — AccommodationsService's own canAccessTrip delegate is now
     // TripsRepository.findAccessible. Plan 4 Task 3 — stampLodging's
     // getPlaceWithTags is PlacesRepository.findWithTagsAndRatings directly
-    // (`placesRepo` below, already injected); `dbs` no longer needed here.
-    await createTestTripsRepo(dbs.connection),
-    await createTestDayAccommodationsRepo(dbs.connection),
-    await createTestDayAssignmentsRepo(dbs.connection),
-    await createTestPlacesRepo(dbs.connection),
-    await createTestDaysRepo(dbs.connection),
-    await createTestRoadtripViasRepo(dbs.connection),
-    await createTestReservationsRepo(dbs.connection),
-    await createTestBudgetItemsRepo(dbs.connection),
+    // (`placesRepo` below, already injected).
+    await createTestTripsRepo(conn),
+    await createTestDayAccommodationsRepo(conn),
+    await createTestDayAssignmentsRepo(conn),
+    await createTestPlacesRepo(conn),
+    await createTestDaysRepo(conn),
+    await createTestRoadtripViasRepo(conn),
+    await createTestReservationsRepo(conn),
+    await createTestBudgetItemsRepo(conn),
   );
 }

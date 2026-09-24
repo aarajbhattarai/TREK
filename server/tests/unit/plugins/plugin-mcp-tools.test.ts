@@ -41,12 +41,11 @@ function makeService(w: Wiring = {}) {
     grantsOf: vi.fn((id: string) => new Set((w.grants ?? {})[id] ?? [])),
   };
   const env = {} as never;
-  const dbs = {} as never;
   // Plan 3i Task 3: DemoService, stubbed the same shape the removed
   // vi.mock('.../common/demo-write', ...) provided — isDemoUserId() reads
   // the module-level `demoUser` flag at call time.
   const demo = { isDemoUserId: () => Promise.resolve(demoUser) } as never;
-  const svc = new PluginMcpToolsService(hooks as never, runtime as never, env, dbs, demo);
+  const svc = new PluginMcpToolsService(hooks as never, runtime as never, env, demo);
   return { svc, hooks, runtime, callTool };
 }
 

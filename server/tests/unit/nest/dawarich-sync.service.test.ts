@@ -38,7 +38,6 @@ vi.mock('../../../src/db/database', async () => {
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb, setAddonEnabled } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { DawarichSyncService } from '../../../src/nest/integrations/dawarich-sync.service';
@@ -113,7 +112,6 @@ const dawarich = {
 
 // Direct construction over the shared test connection — no TestingModule
 // (repo convention for DI-native service unit tests).
-const dbs = new DatabaseService(testDb);
 let t: TestOrm;
 let suggestions: DawarichVisitSuggestionsRepository;
 let trips: TripsRepository;
@@ -236,7 +234,7 @@ beforeAll(async () => {
   trips = await createTestTripsRepo(testDb);
   bucketList = t.repo(BucketList);
   connections = await createTestDawarichConnectionsRepo(testDb);
-  addons = await createTestAddonsService(testDb, dbs);
+  addons = await createTestAddonsService(testDb);
   svc = new DawarichSyncService(
     suggestions,
     addons,

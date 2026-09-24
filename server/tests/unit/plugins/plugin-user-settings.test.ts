@@ -15,8 +15,6 @@ vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
 
 const { getDb } = vi.hoisted(() => ({ getDb: { current: null as unknown } }));
 vi.mock('../../../src/db/database', () => ({ get db() { return getDb.current; } }));
-import { db as dbConn } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 
@@ -33,11 +31,10 @@ import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.enti
 import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
 
 /** Plan 3j Task 2 — PluginsService's own six repositories, over whichever fresh `getDb.current` the caller just set. */
-async function makePluginsService(dbs: DatabaseService): Promise<PluginsService> {
+async function makePluginsService(): Promise<PluginsService> {
   const orm = await sharedTestOrm(getDb.current as Database.Database);
   return new PluginsService(
-    dbs,
-    await createTestAddonsService(getDb.current as Database.Database, dbs),
+    await createTestAddonsService(getDb.current as Database.Database),
     orm.repo(Plugins),
     orm.repo(PluginEgressHosts),
     orm.repo(PluginSettingsFields),
@@ -73,8 +70,7 @@ describe('per-user plugin settings', () => {
   // real collaborator on the same connection rather than a stand-in.
   beforeEach(async () => {
     getDb.current = freshDb();
-    const dbs = new DatabaseService(dbConn);
-    svc = await makePluginsService(dbs);
+    svc = await makePluginsService();
   });
 
   it('lists only the user-scope fields, in order', async () => {
@@ -125,8 +121,7 @@ describe('manifest defaults reach the runtime reads', () => {
   let svc: PluginsService;
   beforeEach(async () => {
     getDb.current = freshDb();
-    const dbs = new DatabaseService(dbConn);
-    svc = await makePluginsService(dbs);
+    svc = await makePluginsService();
     const ins = (getDb.current as import('better-sqlite3').Database).prepare(
       'INSERT INTO plugin_settings_fields (plugin_id, field_key, input_type, required, secret, scope, sort_order, default_value) VALUES (?,?,?,?,?,?,?,?)',
     );
@@ -168,8 +163,7 @@ describe('hasRequired applies the same "filled" rule as the save gate', () => {
   let svc: PluginsService;
   beforeEach(async () => {
     getDb.current = freshDb();
-    const dbs = new DatabaseService(dbConn);
-    svc = await makePluginsService(dbs);
+    svc = await makePluginsService();
     (getDb.current as import('better-sqlite3').Database)
       .prepare('INSERT INTO plugin_settings_fields (plugin_id, field_key, input_type, required, secret, scope, sort_order) VALUES (?,?,?,?,?,?,?)')
       .run('p', 'consent', 'checkbox', 1, 0, 'user', 9);

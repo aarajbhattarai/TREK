@@ -31,9 +31,8 @@ vi.mock('../../../src/config', () => ({
 import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createJourney, createJourneyEntry, addJourneyContributor } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
@@ -52,7 +51,6 @@ import type { JourneyEntriesRepository } from '../../../src/db/repositories/Jour
 import type { JourneyEntryPhotosRepository } from '../../../src/db/repositories/JourneyEntryPhotos.repository';
 import { GALLERY_CHRONOLOGICAL_ORDER } from '../../../src/nest/journey/journey-gallery-order';
 
-const dbs = new DatabaseService(dbConn);
 let svc: JourneyShareService;
 let t: TestOrm;
 
@@ -67,7 +65,7 @@ beforeAll(async () => {
   const journeysRepo = await createTestJourneysRepo(testDb);
   svc = new JourneyShareService(
     new JourneyDomainService(
-      dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb), dbs), uow,
+      new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), await createTestJourneyPhotosRepo(testDb)), uow,
       journeysRepo, await createTestJourneyContributorsRepo(testDb),
       await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
       // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.

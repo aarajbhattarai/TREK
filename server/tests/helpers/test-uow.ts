@@ -36,7 +36,6 @@ import { TripMembers } from '../../src/db/entities/TripMembers.entity';
 import type { TripMembersRepository } from '../../src/db/repositories/TripMembers.repository';
 import { Places } from '../../src/db/entities/Places.entity';
 import type { PlacesRepository } from '../../src/db/repositories/Places.repository';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { Days } from '../../src/db/entities/Days.entity';
 import type { DaysRepository } from '../../src/db/repositories/Days.repository';
 import { DayAssignments } from '../../src/db/entities/DayAssignments.entity';
@@ -346,7 +345,7 @@ const tripsRepoPerHandle = new WeakMap<Database.Database, Promise<TripsRepositor
 const tripMembersRepoPerHandle = new WeakMap<Database.Database, Promise<TripMembersRepository>>();
 const placesRepoPerHandle = new WeakMap<Database.Database, Promise<PlacesRepository>>();
 
-/** The `TripsRepository` a hand-constructed `DatabaseService`/`TripAccessGuard` double needs. */
+/** The `TripsRepository` a hand-constructed `TripAccessGuard` double needs. */
 export function createTestTripsRepo(db: Database.Database): Promise<TripsRepository> {
   const existing = tripsRepoPerHandle.get(db);
   if (existing !== undefined) return existing;
@@ -355,7 +354,7 @@ export function createTestTripsRepo(db: Database.Database): Promise<TripsReposit
   return pending;
 }
 
-/** The `TripMembersRepository` `DatabaseService.rosterUserIds` needs. */
+/** The `TripMembersRepository` `PackingService`/`BudgetService`/`TodoService`'s `rosterUserIds` needs. */
 export function createTestTripMembersRepo(db: Database.Database): Promise<TripMembersRepository> {
   const existing = tripMembersRepoPerHandle.get(db);
   if (existing !== undefined) return existing;
@@ -364,33 +363,13 @@ export function createTestTripMembersRepo(db: Database.Database): Promise<TripMe
   return pending;
 }
 
-/** The `PlacesRepository` `DatabaseService.getPlaceWithTags` needs. */
+/** The `PlacesRepository` `PlacesService.findWithTagsAndRatings` needs. */
 export function createTestPlacesRepo(db: Database.Database): Promise<PlacesRepository> {
   const existing = placesRepoPerHandle.get(db);
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(Places));
   placesRepoPerHandle.set(db, pending);
   return pending;
-}
-
-/**
- * A `DatabaseService` bound to the suite's own better-sqlite3 handle, with
- * its `EntityManager` wired through `sharedTestOrm` — so `canAccessTrip`/
- * `isOwner`/`rosterUserIds`/`getPlaceWithTags` (Plan 3c Task 0b, now
- * repository-backed rather than delegating to `db/database.ts`'s deleted
- * free functions) work on a directly-constructed instance the same way they
- * do through Nest DI in production. `sharedTestOrm`'s ORM is built with
- * `allowGlobalContext: true` (`test-orm.ts`), so these calls need no
- * `withRequestContext` wrapper here, unlike production.
- *
- * A file that only needs `new DatabaseService(db)`'s other methods
- * (`prepare`/`get`/`all`/`run`) does not need this helper — the
- * `EntityManager` constructor argument is `@Optional()`, and only these four
- * methods use it.
- */
-export async function createTestDatabaseService(db: Database.Database): Promise<DatabaseService> {
-  const t = await sharedTestOrm(db);
-  return new DatabaseService(db, t.em);
 }
 
 // ---------------------------------------------------------------------------

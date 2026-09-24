@@ -22,7 +22,6 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
 import { PluginRuntimeService, PluginDependencyError } from '../../../src/nest/plugins/plugin-runtime.service';
 import { PluginsService } from '../../../src/nest/plugins/plugins.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
@@ -73,24 +72,24 @@ afterAll(async () => {
 });
 
 async function buildRuntime(registrar?: CronRegistrarService): Promise<PluginRuntimeService> {
-  const dbs = new DatabaseService(testDb);
   const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
-  const addons = await createTestAddonsService(testDb, dbs);
+  const addons = await createTestAddonsService(testDb);
   const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
   const uow = new UnitOfWork(t.em);
   return new PluginRuntimeService(
-    dbs, audit, addons, userSettings,
+    audit, addons, userSettings,
     t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
     t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
     t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
     t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
-    undefined, undefined, uow, t.orm, registrar,
+    // Plan 4 Task 4: `uow` is no longer `@Optional()` — ordered ahead of
+    // `registry?`/`hostFactory?`, matching the real constructor's own order.
+    uow, undefined, undefined, t.orm, registrar,
   );
 }
 
 function buildPluginsService(): PluginsService {
   return new PluginsService(
-    new DatabaseService(testDb),
     // A real AddonsService is not needed by any method this file calls.
     { isAddonEnabled: async () => true } as never,
     t.repo(Plugins), t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions),
@@ -155,16 +154,15 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
 
     it('INSTALL-GATE-PR26-ACCEPT: no new permissions on update -> activated: true, PR26 snapshot read via the repository', async () => {
       seedPlugin('pr26-accept2', { enabled: 1, permissions: '["db:own"]', granted_permissions: '["db:own"]' });
-      const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
-      const addons = await createTestAddonsService(testDb, dbs);
+      const addons = await createTestAddonsService(testDb);
       const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const rtU = new PluginRuntimeService(
-        dbs, audit, addons, userSettings,
+        audit, addons, userSettings,
         t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
         t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
         t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
-        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences), new UnitOfWork(t.em),
         fakeRegistry(['db:own']),
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -178,16 +176,15 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
 
     it('INSTALL-GATE-PR26-REFUSE: a widened permission set on update leaves the plugin inactive with the delta reported', async () => {
       seedPlugin('pr26-refuse', { enabled: 1, permissions: '["db:own"]', granted_permissions: '["db:own"]' });
-      const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
-      const addons = await createTestAddonsService(testDb, dbs);
+      const addons = await createTestAddonsService(testDb);
       const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const rtU = new PluginRuntimeService(
-        dbs, audit, addons, userSettings,
+        audit, addons, userSettings,
         t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
         t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
         t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
-        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences), new UnitOfWork(t.em),
         fakeRegistry(['db:own', 'db:read:trips']),
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,17 +210,16 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
 
     it('INSTALL-GATE-PR28-ACCEPT: a genuinely rotated key is pinned, read through PluginsRepository.findAuthorPubkey', async () => {
       seedPlugin('pr28-accept', { enabled: 1, author_pubkey: 'OLDKEY' });
-      const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
-      const addons = await createTestAddonsService(testDb, dbs);
+      const addons = await createTestAddonsService(testDb);
       const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const registry = registryFor('pr28-accept');
       const rtR = new PluginRuntimeService(
-        dbs, audit, addons, userSettings,
+        audit, addons, userSettings,
         t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
         t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
         t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
-        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences), new UnitOfWork(t.em),
         registry,
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -238,18 +234,17 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
 
     it('INSTALL-GATE-PR28-REFUSE: an invalid signature is not re-trustable — the pinned key is untouched', async () => {
       seedPlugin('pr28-refuse', { enabled: 1, author_pubkey: 'OLDKEY' });
-      const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
-      const addons = await createTestAddonsService(testDb, dbs);
+      const addons = await createTestAddonsService(testDb);
       const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const registry = registryFor('pr28-refuse');
       vi.mocked(registry.assertRetrustable).mockRejectedValue(new Error('nothing to re-trust'));
       const rtR = new PluginRuntimeService(
-        dbs, audit, addons, userSettings,
+        audit, addons, userSettings,
         t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
         t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
         t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
-        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences), new UnitOfWork(t.em),
         registry,
       );
       await expect(rtR.retrust('pr28-refuse', '2.0.0', 'NEWKEY', { userId: 1 })).rejects.toThrow(/nothing to re-trust/);

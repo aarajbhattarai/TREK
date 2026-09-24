@@ -64,7 +64,6 @@ let notifications: NotificationsService;
 const send = (payload: NotificationPayload) => notifications.send(payload);
 import { NtfyService } from '../../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../../src/nest/notifications/transports/webhook.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
 import { NotificationPreferencesService } from '../../../src/nest/notifications/notification-preferences.service';
@@ -95,7 +94,7 @@ beforeAll(async () => {
     await createTestAppSettingsRepo(testDb),
     await createTestNotificationChannelPreferencesRepo(testDb),
   );
-  notifications = await makeNotificationsService(new DatabaseService(testDb));
+  notifications = await makeNotificationsService(testDb);
 });
 beforeEach(() => { resetTestDb(testDb); setPluginChannelSource(null); });
 
@@ -268,7 +267,7 @@ describe('the plugin channel source reaches the outside-container instance', () 
     setNotificationChannels(testDb, 'none');
     const delivered: Array<{ userId: number; title: string }> = [];
 
-    const runtime = await createPluginRuntime(new DatabaseService(testDb));
+    const runtime = await createPluginRuntime(testDb);
     // Stand in for a booted supervisor: one plugin providing the hook, and an
     // invokeHook that records instead of forking a child.
     Object.defineProperty(runtime, 'supervisor', {

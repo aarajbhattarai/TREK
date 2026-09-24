@@ -28,7 +28,6 @@ import { resetTestDb, resetRateLimits } from '../helpers/test-db';
 import { createUser, createTrip, addTripMember, createDay, createPlace, createDayAssignment, createDayNote } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
 import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-cache.service';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { db as sharedDb } from '../../src/db/database';
 import { LocalDriver } from '../../src/nest/storage/drivers/local.driver';
 import { StorageService } from '../../src/nest/storage/storage.service';
@@ -67,7 +66,7 @@ beforeAll(async () => {
   nestApp = await buildApp();
   app = nestApp.getHttpAdapter().getInstance();
   const t = await createTestOrm(sharedDb, { allowGlobalContext: true });
-  placePhotoCache = new PlacePhotoCacheService(new DatabaseService(sharedDb), testStorage, t.repo(GooglePlacePhotoMeta), t.repo(Places), t.repo(CollectionPlaces));
+  placePhotoCache = new PlacePhotoCacheService(testStorage, t.repo(GooglePlacePhotoMeta), t.repo(Places), t.repo(CollectionPlaces));
 });
 
 beforeEach(() => {
