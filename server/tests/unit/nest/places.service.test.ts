@@ -18,12 +18,10 @@ import { ADDRESS_BACKFILL_MAX_PLACES } from '../../../src/nest/places/places.hel
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -41,10 +39,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: (tripId: any, userId: number) =>
       db.prepare(`SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)`).get(userId, tripId, userId),
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -61,8 +59,7 @@ vi.mock('../../../src/config', () => ({
 const removeIfUnreferencedSpy = vi.fn();
 const photoCacheStub = { removeIfUnreferenced: removeIfUnreferencedSpy } as unknown as PlacePhotoCacheService;
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { accommodationsOver } from '../../helpers/accommodations-service';
 import { createUser, createTrip, createPlace, createDay, createCategory, createTag, addTripMember } from '../../helpers/factories';
@@ -160,7 +157,6 @@ async function makePlacesService(
   );
 }
 
-
 let accommodations: Awaited<ReturnType<typeof accommodationsOver>>;
 let svc: Awaited<ReturnType<typeof makePlacesService>>;
 beforeAll(async () => {
@@ -188,11 +184,6 @@ beforeAll(async () => {
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   accommodations = await accommodationsOver(dbs);
   svc = await makePlacesService();
-});
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
 });
 
 beforeEach(() => {

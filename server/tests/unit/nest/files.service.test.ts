@@ -11,15 +11,17 @@ import path from 'path';
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, bareDb, dbMock } = vi.hoisted(() => {
+// A second, schema-less DB for the getAllowedExtensions catch branch.
+const { bareDb } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  // A second, schema-less DB for the getAllowedExtensions catch branch.
-  const bare = new Database(':memory:');
-  const mock = {
+  return { bareDb: new Database(':memory:') };
+});
+
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
     db,
     closeDb: () => {},
     reinitialize: () => {},
@@ -33,10 +35,9 @@ const { testDb, bareDb, dbMock } = vi.hoisted(() => {
     isOwner: (tripId: unknown, userId: number) =>
       !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
-  return { testDb: db, bareDb: bare, dbMock: mock };
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+import { db as testDb } from '../../../src/db/database';
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -54,8 +55,6 @@ const { consumeEphemeralToken } = vi.hoisted(() => ({ consumeEphemeralToken: vi.
 vi.mock('../../../src/nest/auth/ephemeral-tokens', () => ({ consumeEphemeralToken }));
 
 import type { Request } from 'express';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, addTripMember, createPlace, createReservation, createDay, createDayAssignment, setAppSetting, createCollabNote } from '../../helpers/factories';
 import { DatabaseService, type TripAccess } from '../../../src/nest/database/database.service';
@@ -103,11 +102,6 @@ const emStub = { getRepository } as unknown as EntityManager;
 let svc: FilesService;
 let tripFilesRepo: TripFilesRepository;
 let fileLinksRepo: FileLinksRepository;
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeAll(async () => {
   tripFilesRepo = await createTestTripFilesRepo(testDb);

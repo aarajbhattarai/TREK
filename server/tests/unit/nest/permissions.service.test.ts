@@ -21,21 +21,19 @@ import { ValidationError } from '@mikro-orm/core';
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
     reinitialize: () => {},
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 // The service logs unexpected load failures via the plain audit logger.
 vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
   LOG_LEVEL: 'error',
@@ -45,8 +43,7 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
   logWarn: vi.fn(),
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { logError } from '../../../src/nest/audit/audit-log.logger';
 import { PermissionsService, PERMISSION_ACTIONS } from '../../../src/nest/permissions/permissions.service';
 import {
@@ -61,11 +58,6 @@ import type { AppSettingsRepository } from '../../../src/db/repositories/AppSett
 let svc: PermissionsService;
 let t: TestOrm;
 let appSettings: AppSettingsRepository;
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);

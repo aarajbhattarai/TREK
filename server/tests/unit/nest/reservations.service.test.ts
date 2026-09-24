@@ -9,13 +9,10 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db, closeDb: () => {}, reinitialize: () => {}, getPlaceWithTags: () => null,
     canAccessTrip: (tripId: unknown, userId: number) => db.prepare(`
@@ -26,10 +23,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     isOwner: (tripId: unknown, userId: number) =>
       !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 
 const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
 vi.mock('../../../src/websocket', () => ({ broadcast }));
@@ -43,9 +40,8 @@ const budget = { createBudgetItem: vi.fn(), updateBudgetItem: vi.fn(), deleteBud
 
 const { notif } = vi.hoisted(() => ({ notif: { send: vi.fn().mockResolvedValue(undefined) } }));
 
+import { db as testDb } from '../../../src/db/database';
 import { HttpException } from '@nestjs/common';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation, createBudgetItem, createPlace, createDay, createDayAccommodation, createDayAssignment, addTripMember } from '../../helpers/factories';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
@@ -84,7 +80,6 @@ beforeAll(async () => {
   svc = new ReservationsService(dbs, permissionsStub, budget as unknown as BudgetService, new RealtimeService(), notificationsStub(notif.send), new ReservationsReadService(await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb)), await makeAccommodationsService(testDb), await createTestUnitOfWork(testDb), await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb), await createTestReservationDayPositionsRepo(testDb), await createTestDayAccommodationsRepo(testDb), await createTestDaysRepo(testDb), await createTestPlacesRepo(testDb), await createTestDayAssignmentsRepo(testDb), await createTestTripMembersRepo(testDb), await createTestUsersRepo(testDb), await createTestTripsRepo(testDb), await createTestBudgetItemsRepo(testDb));
 });
 
-beforeAll(() => { createTables(testDb); runMigrations(testDb); });
 beforeEach(() => {
   resetTestDb(testDb);
   vi.clearAllMocks();

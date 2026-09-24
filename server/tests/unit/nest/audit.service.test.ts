@@ -20,9 +20,7 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
 
 import type { Request } from 'express';
 import { ValidationError } from '@mikro-orm/core';
-import Database from 'better-sqlite3';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import { Users } from '../../../src/db/entities/Users.entity';
@@ -32,10 +30,7 @@ import { AuditService } from '../../../src/nest/audit/audit.service';
 import { getClientIp } from '../../../src/nest/audit/client-ip';
 import { logInfo, logDebug, logError } from '../../../src/nest/audit/audit-log.logger';
 
-const testDb = new Database(':memory:');
-testDb.exec('PRAGMA journal_mode = WAL');
-testDb.exec('PRAGMA foreign_keys = ON');
-testDb.exec('PRAGMA busy_timeout = 5000');
+const testDb = createSnapshotTestDb();
 
 let t: TestOrm;
 let auditLogRepo: AuditLogRepository;
@@ -43,8 +38,6 @@ let usersRepo: UsersRepository;
 let svc: AuditService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   t = await createTestOrm(testDb);
   auditLogRepo = t.repo(AuditLog);
   usersRepo = t.repo(Users);

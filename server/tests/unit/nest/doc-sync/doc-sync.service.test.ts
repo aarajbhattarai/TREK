@@ -20,31 +20,24 @@ import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  return {
-    testDb: db,
-    dbMock: {
+vi.mock('../../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return {
       db,
       closeDb: () => {},
       reinitialize: () => {},
       getPlaceWithTags: () => null,
       canAccessTrip: () => null,
       isOwner: () => false,
-    },
-  };
+    };
 });
 
-vi.mock('../../../../src/db/database', () => dbMock);
 
+
+import { db as testDb } from '../../../../src/db/database';
 import type { DocsyncErrorCode } from '@trek/shared';
-import { createTables } from '../../../../src/db/schema';
-import { runMigrations } from '../../../../src/db/migrations';
 import { createTrip, createUser } from '../../../helpers/factories';
 import { AllowedFileTypesService } from '../../../../src/nest/files/allowed-file-types.service';
 import { MAX_FILE_SIZE } from '../../../../src/nest/files/files.constants';
@@ -313,8 +306,6 @@ const switchProvider = (id: string, on: boolean) =>
 
 describe('DocSyncService', () => {
   beforeAll(async () => {
-    createTables(testDb);
-    runMigrations(testDb);
     spoolDir = fs.mkdtempSync(path.join(os.tmpdir(), 'trek-docsync-'));
 
     ownerId = createUser(testDb, { username: 'owner', email: 'owner@docsync.test' }).user.id;

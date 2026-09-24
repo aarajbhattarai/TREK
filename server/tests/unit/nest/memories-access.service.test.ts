@@ -8,12 +8,10 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup ─────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -28,10 +26,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     isOwner: (tripId: any, userId: number) =>
       !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -53,8 +51,7 @@ vi.mock('../../../src/utils/ssrfGuard', () => {
   };
 });
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
 import { mapDbError, pipeAsset, type ServiceResult } from '../../../src/nest/memories/memories.helpers';
@@ -84,8 +81,6 @@ const getAlbumIdFromLink = (...a: Parameters<MemoriesAccessService['getAlbumIdFr
 import { SsrfBlockedError } from '../../../src/utils/ssrfGuard';
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   const t = await sharedTestOrm(testDb);
   const dbs = new DatabaseService(testDb, t.em);
   // `DatabaseService.prototype.canAccessTrip` is patched on the PROTOTYPE

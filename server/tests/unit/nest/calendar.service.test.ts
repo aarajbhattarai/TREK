@@ -9,12 +9,10 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup ──────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -29,10 +27,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     isOwner: (tripId: any, userId: number) =>
       !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -41,8 +39,7 @@ vi.mock('../../../src/config', () => ({
 const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
 vi.mock('../../../src/websocket', () => ({ broadcast }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation, createPlace, createDay, createDayAssignment, createDayNote } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
@@ -63,7 +60,6 @@ import { budgetRepoArgs } from '../../helpers/budget-repos';
 
 const dbs = () => new DatabaseService(testDb);
 
-
 // Named `svc` so the moved cases below read exactly as they did on TripsService.
 let budgetSvc: BudgetService;
 let svc: CalendarService;
@@ -73,11 +69,6 @@ beforeAll(async () => {
   new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection), await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection), await createTestReservationDayPositionsRepo(dbs().connection), await createTestDayAccommodationsRepo(dbs().connection), await createTestDaysRepo(dbs().connection), await createTestPlacesRepo(dbs().connection), await createTestDayAssignmentsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection)),
   await createTestTripsRepo(dbs().connection), await createTestDaysRepo(dbs().connection), await createTestDayNotesRepo(dbs().connection), await createTestReservationsRepo(dbs().connection),
 );
-});
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
 });
 
 beforeEach(() => {
@@ -1596,7 +1587,6 @@ describe('folded quirk branches', () => {
     expect(ics).toContain('DTSTART;VALUE=DATE:20250603');
   });
 });
-
 
 // foldICS is the last thing that touches the bytes of both the download and the
 // feed, and it is exported, so it is pinned directly instead of through a trip.

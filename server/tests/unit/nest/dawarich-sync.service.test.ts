@@ -19,29 +19,23 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup (real in-memory SQLite — same vi.hoisted pattern as atlas/immich) ──
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  return {
-    testDb: db,
-    dbMock: {
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return {
       db,
       closeDb: () => {},
       reinitialize: () => {},
       getPlaceWithTags: () => null,
       canAccessTrip: () => null,
       isOwner: () => false,
-    },
-  };
+    };
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb, setAddonEnabled } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
@@ -237,8 +231,6 @@ function withVisits(...visits: DawarichVisitRaw[]): void {
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   t = await sharedTestOrm(testDb);
   suggestions = await createTestDawarichVisitSuggestionsRepo(testDb);
   trips = await createTestTripsRepo(testDb);

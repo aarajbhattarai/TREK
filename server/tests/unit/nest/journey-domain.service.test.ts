@@ -6,12 +6,10 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } 
 
 // -- DB setup -----------------------------------------------------------------
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   // Plan 3g Task 1 (Part A, R9): `getPlaceWithTags`/`canAccessTrip`/`isOwner`
   // dropped from this mock — none of the three are exports of
   // `src/db/database.ts` any more (it exports only `db`/`closeDb`/
@@ -23,10 +21,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
   // guard now goes through a REAL `TripsRepository.findAccessible` below
   // (`createTestTripsRepo`), not a hand-written closure.
   const mock = { db, closeDb: () => {}, reinitialize: () => {} };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -34,8 +32,7 @@ vi.mock('../../../src/config', () => ({
 }));
 vi.mock('../../../src/websocket', () => ({ broadcastToUser: vi.fn() }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import {
   createUser,
@@ -97,8 +94,6 @@ let placesRepoDirect: Awaited<ReturnType<typeof createTestPlacesRepo>>;
 // R9's "fix the constructor call for the entire file in one pass" edit; nothing
 // below this block changes.
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   const t = await sharedTestOrm(testDb);
   dbs = new DatabaseService(dbConn, t.em);
   journeysRepoDirect = await createTestJourneysRepo(testDb);
@@ -2772,7 +2767,6 @@ describe('addTripToJourney guards', () => {
     expect(testDb.prepare('SELECT 1 FROM journey_photos WHERE journey_id = ?').all(journey.id)).toHaveLength(0);
   });
 });
-
 
 // -- Dismissing a suggestion (discussion #2299) --------------------------------
 

@@ -41,17 +41,11 @@
  *    yet", never a crash on the settings page.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 
 // ── DB setup (real in-memory SQLite, the pattern the other Dawarich service tests use) ──
 
-const { testDb } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  return { testDb: db };
-});
+const testDb = createSnapshotTestDb();
 
 // Same fixed key the global setup exports, pinned here so the at-rest round
 // trip cannot depend on what is lying in server/data.
@@ -76,8 +70,6 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
 }));
 
 import { DAWARICH_KEY_MASK, type DawarichCapabilities } from '@trek/shared';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import type { DawarichConnectionsRepository } from '../../../src/db/repositories/DawarichConnections.repository';
@@ -245,8 +237,6 @@ const countryCodeAbsentCases: Array<[string, Partial<DawarichVisitRaw>]> = [
 ];
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   t = await sharedTestOrm(testDb);
   connections = await createTestDawarichConnectionsRepo(testDb);
   svc = new DawarichService(

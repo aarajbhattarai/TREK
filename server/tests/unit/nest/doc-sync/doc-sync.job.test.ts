@@ -14,7 +14,7 @@
  * service's query, so it runs the tick over the real service and a database.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { createSnapshotTestDb } from '../../../helpers/db-mock';
 
 const log = vi.hoisted(() => ({
   LOG_LEVEL: 'error',
@@ -39,8 +39,6 @@ import { AllowedFileTypesService } from '../../../../src/nest/files/allowed-file
 import type { FilesService } from '../../../../src/nest/files/files.service';
 import type { StorageService } from '../../../../src/nest/storage/storage.service';
 import type { RealtimeService } from '../../../../src/nest/realtime/realtime.service';
-import { createTables } from '../../../../src/db/schema';
-import { runMigrations } from '../../../../src/db/migrations';
 import { createTrip, createUser } from '../../../helpers/factories';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo } from '../../../helpers/test-uow';
 import {
@@ -417,7 +415,7 @@ describe('DocSyncJob due-ness', () => {
  * whatever this file told it.
  */
 describe('DocSyncJob and a provider switched off in the admin panel', () => {
-  const testDb = new Database(':memory:');
+  const testDb = createSnapshotTestDb();
   let paperlessLink: number;
   let nextcloudLink: number;
 
@@ -450,8 +448,6 @@ describe('DocSyncJob and a provider switched off in the admin panel', () => {
   const linkRow = (id: number) => testDb.prepare('SELECT * FROM trip_document_links WHERE id = ?').get(id);
 
   beforeAll(async () => {
-    createTables(testDb);
-    runMigrations(testDb);
     appSettingsRepo = await createTestAppSettingsRepo(testDb);
     config = new DocSyncConfigService(
       await createTestTripsRepo(testDb),

@@ -11,17 +11,15 @@
 // vi.hoisted: build the real in-memory DB and the module mock before any import
 // ---------------------------------------------------------------------------
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => undefined, isOwner: () => false };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
   decrypt_api_key: vi.fn((v) => v),
   maybe_encrypt_api_key: vi.fn((v) => v),
@@ -33,9 +31,8 @@ vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
+import { db as testDb } from '../../../src/db/database';
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin } from '../../helpers/factories';
 import fs from 'node:fs';
@@ -49,8 +46,6 @@ const avatarsFx = makeStorageFixture('avatars/');
 let profile: UserProfileService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   profile = new UserProfileService(
     avatarsFx.storage,
     await createTestUnitOfWork(testDb),

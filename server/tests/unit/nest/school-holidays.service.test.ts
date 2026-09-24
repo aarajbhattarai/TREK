@@ -11,10 +11,8 @@
  * service replaced, on the same seeded rows, and compare full-key.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import Database from 'better-sqlite3';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { ConflictException } from '@nestjs/common';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { sharedTestOrm, createTestUnitOfWork } from '../../helpers/test-uow';
@@ -25,17 +23,12 @@ import {
 import type { TestOrm } from '../../helpers/test-orm';
 import { SchoolHolidaysService } from '../../../src/nest/school-holidays/school-holidays.service';
 
-const testDb = new Database(':memory:');
-testDb.exec('PRAGMA journal_mode = WAL');
-testDb.exec('PRAGMA foreign_keys = ON');
-testDb.exec('PRAGMA busy_timeout = 5000');
+const testDb = createSnapshotTestDb();
 
 let t: TestOrm;
 let svc: SchoolHolidaysService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   t = await sharedTestOrm(testDb);
   svc = new SchoolHolidaysService(
     await createTestSchoolHolidayCountriesRepo(testDb),

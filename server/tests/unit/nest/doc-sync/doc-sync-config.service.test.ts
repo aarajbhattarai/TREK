@@ -15,27 +15,21 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  return {
-    testDb: db,
-    dbMock: {
+vi.mock('../../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return {
       db,
       closeDb: () => {},
       reinitialize: () => {},
       getPlaceWithTags: () => null,
       canAccessTrip: () => undefined,
       isOwner: () => false,
-    },
-  };
+    };
 });
 
-vi.mock('../../../../src/db/database', () => dbMock);
+
 
 // The whole guard surface, not only `checkSsrf`: modules on the import graph
 // pull other names off it, and a factory mock that omits one throws on access
@@ -51,9 +45,8 @@ vi.mock('../../../../src/utils/ssrfGuard', () => ({
   SsrfBlockedError: class extends Error {},
 }));
 
+import { db as testDb } from '../../../../src/db/database';
 import { DOCSYNC_SECRET_MASK, type DocsyncConnectionInput, type DocsyncLinkInput } from '@trek/shared';
-import { createTables } from '../../../../src/db/schema';
-import { runMigrations } from '../../../../src/db/migrations';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTrip, createUser } from '../../../helpers/factories';
 import {
@@ -124,8 +117,6 @@ async function storedSecret(connectionId: number): Promise<string | undefined> {
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   svc = new DocSyncConfigService(
     await createTestTripsRepo(testDb),
     await createTestDocumentProvidersRepo(testDb),

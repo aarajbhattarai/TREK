@@ -11,14 +11,10 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock, broadcastToUser } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const broadcastToUser = vi.fn();
-  const mock = {
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
     db,
     closeDb: () => {},
     reinitialize: () => {},
@@ -31,10 +27,12 @@ const { testDb, dbMock, broadcastToUser } = vi.hoisted(() => {
         .get(userId, tripId, userId),
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock, broadcastToUser };
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+const { broadcastToUser } = vi.hoisted(() => ({ broadcastToUser: vi.fn() }));
+
+import { db as testDb } from '../../../src/db/database';
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -45,8 +43,6 @@ const notifSend = vi.fn().mockResolvedValue(undefined);
 
 import fs from 'fs';
 import path from 'path';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { createUser, createTrip, createPlace, createCategory, createTag, addTripMember, createDay, createDayAssignment } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
@@ -126,8 +122,6 @@ function clearCollections() {
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
 });
 
 beforeEach(() => {

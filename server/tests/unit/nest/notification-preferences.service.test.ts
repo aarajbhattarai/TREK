@@ -4,11 +4,10 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -17,10 +16,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => null,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -32,8 +31,7 @@ vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
   encrypt_api_key: (v: string) => v,
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, setAppSetting, setNotificationChannels, disableNotificationPref } from '../../helpers/factories';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
@@ -65,10 +63,7 @@ const getActiveChannels = (...a: Parameters<Svc['getActiveChannels']>) => svc.ge
 const isSmtpConfigured = (...a: Parameters<Svc['isSmtpConfigured']>) => svc.isSmtpConfigured(...a);
 const isWebhookConfigured = (...a: Parameters<Svc['isWebhookConfigured']>) => svc.isWebhookConfigured(...a);
 
-
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   const usersRepo = await createTestUsersRepo(testDb);
   const settingsRepo = await createTestSettingsRepo(testDb);
   const appSettingsRepoForChannels = await createTestAppSettingsRepo(testDb);

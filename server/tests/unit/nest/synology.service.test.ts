@@ -11,16 +11,13 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  return {
-    testDb: db,
-    dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => null, isOwner: () => false, getPlaceWithTags: () => null },
-  };
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => null, isOwner: () => false, getPlaceWithTags: () => null };
 });
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'x'.repeat(40),
   ENCRYPTION_KEY: 'a'.repeat(64),
@@ -47,8 +44,7 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
 // The service fires the session-cleared notice and .catch()es it, so the stub
 // has to be a promise.
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { SynologyService } from '../../../src/nest/memories/synology.service';
 import type { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
 import { notificationsStub } from '../../helpers/notifications';
@@ -80,8 +76,6 @@ function httpError(status: number) {
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   const users = await createTestUsersRepo(testDb);
   svc = new SynologyService(access as unknown as MemoriesAccessService, notificationsStub(), users);
 });

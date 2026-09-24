@@ -9,9 +9,7 @@
  * now injects CategoriesService directly.)
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import Database from 'better-sqlite3';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { createTestCategoriesRepo, sharedTestOrm } from '../../helpers/test-uow';
@@ -20,17 +18,12 @@ import { CategoriesService } from '../../../src/nest/categories/categories.servi
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const testDb = new Database(':memory:');
-testDb.exec('PRAGMA journal_mode = WAL');
-testDb.exec('PRAGMA foreign_keys = ON');
-testDb.exec('PRAGMA busy_timeout = 5000');
+const testDb = createSnapshotTestDb();
 
 let t: TestOrm;
 let svc: CategoriesService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   t = await sharedTestOrm(testDb);
   svc = new CategoriesService(await createTestCategoriesRepo(testDb));
 });

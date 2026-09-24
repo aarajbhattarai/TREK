@@ -18,26 +18,21 @@ import type { Request } from 'express';
  * reconciler is a spy: a run is a side effect here, not the subject.
  */
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  return {
-    testDb: db,
-    dbMock: {
+vi.mock('../../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return {
       db,
       closeDb: () => {},
       reinitialize: () => {},
       getPlaceWithTags: () => null,
       canAccessTrip: () => undefined,
       isOwner: () => false,
-    },
-  };
+    };
 });
 
-vi.mock('../../../../src/db/database', () => dbMock);
+
 vi.mock('../../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 
 /**
@@ -57,8 +52,7 @@ vi.mock('../../../../src/utils/ssrfGuard', async (importOriginal) => ({
   checkSsrf,
 }));
 
-import { createTables } from '../../../../src/db/schema';
-import { runMigrations } from '../../../../src/db/migrations';
+import { db as testDb } from '../../../../src/db/database';
 import { createTrip, createUser } from '../../../helpers/factories';
 import { DocSyncController } from '../../../../src/nest/doc-sync/doc-sync.controller';
 import { DocSyncConfigService } from '../../../../src/nest/doc-sync/doc-sync-config.service';
@@ -210,8 +204,6 @@ let tripId: number;
 let otherTripId: number;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   // L1 (Plan 3h Task 7 review): createLink's fire-and-forget syncLink call
   // is now wrapped in its own withRequestContext fork, which needs a real
   // MikroORM instance — sync itself stays a spy, this ORM never resolves a

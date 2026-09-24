@@ -11,12 +11,10 @@
 // vi.hoisted: build the real in-memory DB and the module mock before any import
 // ---------------------------------------------------------------------------
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -24,10 +22,10 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => undefined,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/nest/auth/ephemeral-tokens', () => ({ createEphemeralToken: vi.fn() }));
 vi.mock('../../../src/mcp/sessionManager', () => ({ revokeUserSessions: vi.fn() }));
 
@@ -35,9 +33,8 @@ vi.mock('../../../src/mcp/sessionManager', () => ({ revokeUserSessions: vi.fn() 
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
+import { db as testDb } from '../../../src/db/database';
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { TokenService } from '../../../src/nest/tokens/token.service';
@@ -55,8 +52,6 @@ import { createTestMcpTokensRepo, createTestUsersRepo } from '../../helpers/test
 let svc: TokenService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   svc = new TokenService(await createTestMcpTokensRepo(testDb), await createTestUsersRepo(testDb), new EphemeralTokenService());
 });
 

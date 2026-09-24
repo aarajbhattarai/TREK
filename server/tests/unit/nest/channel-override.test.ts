@@ -9,12 +9,13 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => null, isOwner: () => false, getPlaceWithTags: () => null } };
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => null, isOwner: () => false, getPlaceWithTags: () => null };
 });
-vi.mock('../../../src/db/database', () => dbMock);
+
 vi.mock('../../../src/config', () => ({ JWT_SECRET: 'x'.repeat(40), ENCRYPTION_KEY: 'a'.repeat(64), updateJwtSecret: () => {} }));
 vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({ decrypt_api_key: (v: string) => v, maybe_encrypt_api_key: (v: string) => v, encrypt_api_key: (v: string) => v }));
 const { sendMailMock } = vi.hoisted(() => ({ sendMailMock: vi.fn().mockResolvedValue({ accepted: ['a@b.c'] }) }));
@@ -45,8 +46,7 @@ vi.mock('../../../src/utils/ssrfGuard', () => {
   };
 });
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, setAppSetting, setNotificationChannels } from '../../helpers/factories';
 // The send dispatcher is DI-native since the notifications fold
@@ -89,8 +89,6 @@ const getPreferencesMatrix = (...a: Parameters<NotificationPreferencesService['g
 void WebhookService; void NtfyService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   prefsSvc = new NotificationPreferencesService(
     new MailerService(await createTestUsersRepo(testDb), await createTestSettingsRepo(testDb), await createTestAppSettingsRepo(testDb)),
     await createTestUnitOfWork(testDb),

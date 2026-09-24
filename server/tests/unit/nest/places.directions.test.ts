@@ -8,10 +8,10 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA foreign_keys = ON');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   // DatabaseService delegates the joined read straight through to the module, so the
   // mock has to answer it: without this the insert half of every import throws.
   const mock = {
@@ -23,9 +23,9 @@ const { testDb, dbMock } = vi.hoisted(() => {
       return place ? { ...place, category: null, tags: [] } : null;
     },
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
-vi.mock('../../../src/db/database', () => dbMock);
+
 
 const { checkSsrf, safeFetchFollow } = vi.hoisted(() => ({
   checkSsrf: vi.fn(async () => ({ allowed: true, resolvedIp: '1.2.3.4' })),
@@ -38,8 +38,7 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
   SsrfBlockedError: class SsrfBlockedError extends Error {},
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { createUser, createTrip, createPlace } from '../../helpers/factories';
 import { accommodationsOver } from '../../helpers/accommodations-service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
@@ -131,8 +130,6 @@ const geocoder = () => vi.fn(async (query: string) => {
 let tripId: string;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   // Plan 3c Task 0b: `dbs` is constructed at module load, before any
   // `beforeAll` can resolve a real `EntityManager` — the four
   // repository-backed methods are spied directly on this instance instead,

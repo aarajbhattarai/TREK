@@ -1,22 +1,20 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  return { testDb: db, dbMock: { db, closeDb: () => {}, reinitialize: () => {} } };
+vi.mock('../../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return { db, closeDb: () => {}, reinitialize: () => {} };
 });
-vi.mock('../../../../src/db/database', () => dbMock);
+
 vi.mock('../../../../src/config', () => ({ ENCRYPTION_KEY: 'storage-jobs-test-key' }));
 
+import { db as testDb } from '../../../../src/db/database';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { Logger } from '@nestjs/common';
-import { createTables } from '../../../../src/db/schema';
-import { runMigrations } from '../../../../src/db/migrations';
 import type { RuntimeEnvService } from '../../../../src/nest/app-config/runtime-env.service';
 import { MirrorDriver } from '../../../../src/nest/storage/drivers/mirror.driver';
 import { StorageEventsService } from '../../../../src/nest/storage/storage-events.service';
@@ -30,11 +28,6 @@ import {
   StorageJobsService,
 } from '../../../../src/nest/storage/storage-jobs.service';
 import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from '../../../helpers/test-uow';
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 const tmpDirs: string[] = [];
 function makeTmpDir(): string {

@@ -11,17 +11,11 @@
  * user's stored credentials.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 
 // ── DB setup (real in-memory SQLite — same pattern as the other service tests) ──
 
-const { testDb } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  return { testDb: db };
-});
+const testDb = createSnapshotTestDb();
 
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
@@ -32,8 +26,6 @@ vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
 
 import { DAWARICH_BUCKET_SCAN_LIMIT } from '@trek/shared';
 import type { DawarichConnection } from '@trek/shared';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createDay, addTripMember } from '../../helpers/factories';
 import {
@@ -298,11 +290,6 @@ async function asyncRefusalFrom(fn: () => Promise<unknown>): Promise<AcceptError
   }
   throw new Error('expected the call to reject with an AcceptError, but it resolved');
 }
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   resetTestDb(testDb);

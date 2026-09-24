@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, afterAll, beforeAll, beforeEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 
 vi.mock('../../../src/db/database', () => ({
   db: { prepare: () => ({ get: vi.fn(() => undefined), all: vi.fn(() => []) }) },
@@ -52,8 +52,6 @@ import { NtfyService, resolveNtfyUrl, resolveAdminNtfyUrl, resolveNtfyToken, typ
 import { buildBuiltinChannels } from '../../../src/nest/notifications/channels/builtins';
 import { checkSsrf } from '../../../src/utils/ssrfGuard';
 import { logError } from '../../../src/nest/audit/audit-log.logger';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { createTestSettingsRepo, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // The transports are providers now, taking SettingsRepository/
@@ -72,9 +70,7 @@ let sendWebhook: WebhookService['sendWebhook'];
 let sendNtfy: NtfyService['sendNtfy'];
 
 beforeAll(async () => {
-  const transportsDb = new Database(':memory:');
-  createTables(transportsDb);
-  runMigrations(transportsDb);
+  const transportsDb = createSnapshotTestDb();
   const settingsRepo = await createTestSettingsRepo(transportsDb);
   const appSettingsRepo = await createTestAppSettingsRepo(transportsDb);
   webhookSvc = new WebhookService(settingsRepo, appSettingsRepo);
@@ -464,9 +460,7 @@ describe('GHSA-7pqc-fj3c-9346: ntfy token is only attached when the target is th
 // the same call NotificationsService.send() makes.
 describe('GHSA-7pqc-fj3c-9346 (live path): buildBuiltinChannels sendToUser resolves configs through the repositories', () => {
   it('operator-server user gets the admin token; foreign-server user does not', async () => {
-    const liveDb = new Database(':memory:');
-    createTables(liveDb);
-    runMigrations(liveDb);
+    const liveDb = createSnapshotTestDb();
     liveDb
       .prepare("INSERT INTO users (id, username, email, password_hash, role) VALUES (1,'op','op@x','x','admin'),(2,'u2','u2@x','x','user')")
       .run();

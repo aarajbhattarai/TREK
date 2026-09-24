@@ -7,21 +7,16 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  return {
-    testDb: db,
-    dbMock: { db, closeDb: () => {}, reinitialize: () => {}, getPlaceWithTags: () => null, canAccessTrip: () => undefined, isOwner: () => false },
-  };
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+    return { db, closeDb: () => {}, reinitialize: () => {}, getPlaceWithTags: () => null, canAccessTrip: () => undefined, isOwner: () => false };
 });
+
 
 const logMock = vi.hoisted(() => ({ LOG_LEVEL: 'error', logInfo: vi.fn(), logError: vi.fn(), logWarn: vi.fn(), logDebug: vi.fn() }));
 
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 vi.mock('../../../src/nest/audit/audit-log.logger', () => logMock);
 vi.mock('../../../src/config', () => ({
@@ -30,8 +25,7 @@ vi.mock('../../../src/config', () => ({
   updateJwtSecret: () => {},
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { createUser, createTrip, createTodoItem, setAppSetting, setNotificationChannels } from '../../helpers/factories';
 import { ReminderJobsService } from '../../../src/nest/notifications/reminder-jobs.service';
 import { notificationsStub } from '../../helpers/notifications';
@@ -87,8 +81,6 @@ function tripWithReminder(userId: number, days: number, title = 'Lisbon'): numbe
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   appSettingsRepo = await createTestAppSettingsRepo(testDb);
   tripsRepo = await createTestTripsRepo(testDb);
   todoItemsRepo = await createTestTodoItemsRepo(testDb);

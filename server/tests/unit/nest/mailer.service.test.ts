@@ -10,12 +10,10 @@
  * Constructed directly (no TestingModule, repo convention).
  */
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = {
     db,
     closeDb: () => {},
@@ -23,8 +21,9 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => undefined,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
+
 
 const { sendMail, createTransport } = vi.hoisted(() => {
   const send = vi.fn().mockResolvedValue({ messageId: 'test' });
@@ -34,7 +33,6 @@ const { sendMail, createTransport } = vi.hoisted(() => {
   };
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('nodemailer', () => ({ default: { createTransport } }));
 vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
   logInfo: vi.fn(),
@@ -43,9 +41,8 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
   logWarn: vi.fn(),
 }));
 
+import { db as testDb } from '../../../src/db/database';
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
 import { logError, logInfo, logWarn } from '../../../src/nest/audit/audit-log.logger';
@@ -78,8 +75,6 @@ function lastTransportOptions(): Record<string, unknown> {
 }
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   testOrm = await createTestOrm(testDb);
 });
 

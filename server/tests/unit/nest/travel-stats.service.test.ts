@@ -11,21 +11,18 @@
  * are preserved so the history stays greppable.
  */
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   const mock = { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => undefined, isOwner: () => false };
-  return { testDb: db, dbMock: mock };
+    return mock;
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
 
+
+import { db as testDb } from '../../../src/db/database';
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createPlace, createReservation, addTripMember } from '../../helpers/factories';
 import { AtlasService } from '../../../src/nest/atlas/atlas.service';
@@ -42,8 +39,6 @@ import {
 let atlas: AtlasService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   atlas = new AtlasService(
     await createTestBucketListRepo(testDb),
     await createTestHiddenCountriesRepo(testDb),
