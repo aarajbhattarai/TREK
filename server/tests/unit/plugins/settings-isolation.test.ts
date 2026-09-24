@@ -46,8 +46,15 @@ import { PluginMetaMigrations } from '../../../src/db/entities/PluginMetaMigrati
 import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
 import { Settings } from '../../../src/db/entities/Settings.entity';
 import { NotificationChannelPreferences } from '../../../src/db/entities/NotificationChannelPreferences.entity';
-/** The host-side settings reads, over the same connection the test seeded. */
-const userSettings = () => new PluginUserSettingsService(new DatabaseService(dbConn));
+/**
+ * The host-side settings reads, over the same connection the test seeded. `t` is
+ * initialized in `beforeAll` (below) before any test runs — this reaches for
+ * `PluginSettingsFieldsRepository`/`PluginUserConfigRepository` through it, matching
+ * PSET-007's own `PluginRuntimeService` construction further down, which reuses the
+ * SAME `t` rather than a second ORM over the same connection.
+ */
+const userSettings = () =>
+  new PluginUserSettingsService((t as TestOrm).repo(PluginSettingsFields), (t as TestOrm).repo(PluginUserConfig));
 
 let uid: number;
 let t: TestOrm | undefined;
@@ -66,7 +73,14 @@ function setUserConfig(pluginId: string, config: Record<string, unknown>) {
   testDb.prepare('INSERT OR REPLACE INTO plugin_user_config (plugin_id, user_id, config) VALUES (?, ?, ?)').run(pluginId, uid, JSON.stringify(config));
 }
 
-beforeAll(() => { createTables(testDb); runMigrations(testDb); });
+beforeAll(async () => {
+  createTables(testDb);
+  runMigrations(testDb);
+  // Plan 3j Task 4 — `userSettings()` above now needs repositories, so the ORM this
+  // file eventually built only inside PSET-007 is built here instead, before any
+  // test runs (PSET-001..006 call `userSettings()` with no ORM of their own).
+  t = await createTestOrm(dbConn);
+});
 beforeEach(() => {
   testDb.prepare('DELETE FROM plugin_settings_fields').run();
   testDb.prepare('DELETE FROM plugin_user_config').run();
@@ -149,7 +163,6 @@ describe('a plugin channel label is bounded by the host', () => {
        VALUES ('loud', 'Loud', 'active', 1, '1.0.0', '[]', '[]', ?, '{}')`,
     ).run(JSON.stringify({ notificationChannel: { title: '🎉'.repeat(5) + 'A'.repeat(500) } }));
 
-    t = await createTestOrm(dbConn);
     const rt = new PluginRuntimeService(
       new DatabaseService(dbConn),
       new AuditService(t.repo(AuditLog), t.repo(Users)),

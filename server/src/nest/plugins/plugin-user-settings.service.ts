@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { decrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { safeParseConfig } from './plugin-config-parse';
 import { isFilled, settingDefaults } from './settings-defaults';
+import { PluginSettingsFields } from '../../db/entities/PluginSettingsFields.entity';
+import type { PluginSettingsFieldsRepository } from '../../db/repositories/PluginSettingsFields.repository';
+import { PluginUserConfig } from '../../db/entities/PluginUserConfig.entity';
+import type { PluginUserConfigRepository } from '../../db/repositories/PluginUserConfig.repository';
 
 /**
  * A plugin's per-user settings, decrypted host-side.
@@ -17,22 +21,16 @@ import { isFilled, settingDefaults } from './settings-defaults';
  */
 @Injectable()
 export class PluginUserSettingsService {
-  constructor(private readonly dbs: DatabaseService) {}
-
-  private get db() {
-    return this.dbs.connection;
-  }
+  constructor(
+    @InjectRepository(PluginSettingsFields) private readonly settingsFields: PluginSettingsFieldsRepository,
+    @InjectRepository(PluginUserConfig) private readonly userConfig: PluginUserConfigRepository,
+  ) {}
 
   /** One decrypted value for the acting user, for the runtime's `ctx.settings.get()`. */
   async readOne(pluginId: string, userId: number, key: string): Promise<unknown> {
-    const isSecret =
-      (
-        this.db
-          .prepare("SELECT secret FROM plugin_settings_fields WHERE plugin_id = ? AND field_key = ? AND scope = 'user'")
-          .get(pluginId, key) as { secret: number } | undefined
-      )?.secret === 1;
+    const isSecret = await this.settingsFields.isUserFieldSecret(pluginId, key); // PU1
     const value = (await this.storedFor(pluginId, userId))[key];
-    if (value == null) return (await settingDefaults(this.db, pluginId, 'user'))[key]; // unset → the manifest default, if any
+    if (value == null) return (await settingDefaults(this.settingsFields, pluginId, 'user'))[key]; // unset → the manifest default, if any
     return isSecret ? decrypt_api_key(value as string) : value;
   }
 
@@ -44,14 +42,12 @@ export class PluginUserSettingsService {
    * resolves against the acting user) would return undefined there.
    */
   async readAll(pluginId: string, userId: number): Promise<Record<string, unknown>> {
-    const fields = this.db
-      .prepare("SELECT field_key, secret FROM plugin_settings_fields WHERE plugin_id = ? AND scope = 'user'")
-      .all(pluginId) as Array<{ field_key: string; secret: number }>;
+    const fields = await this.settingsFields.listFieldKeysWithSecretFlag(pluginId, 'user');
     const stored = await this.storedFor(pluginId, userId);
     // Null-prototype for the same reason as safeParseConfig: never let a field key write
     // through to Object.prototype on the way out to the plugin.
     const out: Record<string, unknown> = Object.create(null);
-    const defaults = await settingDefaults(this.db, pluginId, 'user');
+    const defaults = await settingDefaults(this.settingsFields, pluginId, 'user');
     for (const field of fields) {
       const value = stored[field.field_key];
       if (value == null) {
@@ -74,21 +70,15 @@ export class PluginUserSettingsService {
    * must not leave them "not configured".
    */
   async hasRequired(pluginId: string, userId: number): Promise<boolean> {
-    const required = this.db
-      .prepare(
-        "SELECT field_key FROM plugin_settings_fields WHERE plugin_id = ? AND scope = 'user' AND required = 1 AND input_type != 'checkbox'",
-      )
-      .all(pluginId) as Array<{ field_key: string }>;
+    const required = await this.settingsFields.listRequiredFieldKeys(pluginId, 'user');
     if (required.length === 0) return true;
     const stored = await this.storedFor(pluginId, userId);
-    const defaults = await settingDefaults(this.db, pluginId, 'user');
-    return required.every((field) => isFilled(stored[field.field_key] ?? defaults[field.field_key]));
+    const defaults = await settingDefaults(this.settingsFields, pluginId, 'user');
+    return required.every((key) => isFilled(stored[key] ?? defaults[key]));
   }
 
   private async storedFor(pluginId: string, userId: number): Promise<Record<string, unknown>> {
-    const row = this.db
-      .prepare('SELECT config FROM plugin_user_config WHERE plugin_id = ? AND user_id = ?')
-      .get(pluginId, userId) as { config: string } | undefined;
-    return safeParseConfig(row?.config ?? '{}');
+    const config = await this.userConfig.findConfig(pluginId, userId); // PU2 — reuses Task 2's PS7/PS9/PS11 method
+    return safeParseConfig(config ?? '{}');
   }
 }

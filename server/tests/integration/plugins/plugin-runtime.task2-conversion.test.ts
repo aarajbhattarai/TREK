@@ -76,7 +76,7 @@ async function buildRuntime(registrar?: CronRegistrarService): Promise<PluginRun
   const dbs = new DatabaseService(testDb);
   const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
   const addons = await createTestAddonsService(testDb, dbs);
-  const userSettings = new PluginUserSettingsService(dbs);
+  const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
   const uow = new UnitOfWork(t.em);
   return new PluginRuntimeService(
     dbs, audit, addons, userSettings,
@@ -158,7 +158,7 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
       const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
       const addons = await createTestAddonsService(testDb, dbs);
-      const userSettings = new PluginUserSettingsService(dbs);
+      const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const rtU = new PluginRuntimeService(
         dbs, audit, addons, userSettings,
         t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
@@ -181,7 +181,7 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
       const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
       const addons = await createTestAddonsService(testDb, dbs);
-      const userSettings = new PluginUserSettingsService(dbs);
+      const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const rtU = new PluginRuntimeService(
         dbs, audit, addons, userSettings,
         t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
@@ -216,7 +216,7 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
       const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
       const addons = await createTestAddonsService(testDb, dbs);
-      const userSettings = new PluginUserSettingsService(dbs);
+      const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const registry = registryFor('pr28-accept');
       const rtR = new PluginRuntimeService(
         dbs, audit, addons, userSettings,
@@ -241,7 +241,7 @@ describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR2
       const dbs = new DatabaseService(testDb);
       const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
       const addons = await createTestAddonsService(testDb, dbs);
-      const userSettings = new PluginUserSettingsService(dbs);
+      const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
       const registry = registryFor('pr28-refuse');
       vi.mocked(registry.assertRetrustable).mockRejectedValue(new Error('nothing to re-trust'));
       const rtR = new PluginRuntimeService(

@@ -92,4 +92,88 @@ export class PluginSettingsFieldsRepository extends TrekRepository<PluginSetting
   async deleteAllForPlugin(pluginId: string): Promise<void> {
     await this.nativeDelete({ plugin_id: pluginId });
   }
+
+  /**
+   * PU1 (Plan 3j Task 4, `plugin-user-settings.service.ts#readOne`) — `SELECT
+   * secret FROM plugin_settings_fields WHERE plugin_id = ? AND field_key = ? AND
+   * scope = 'user'`, as a boolean secret flag deciding whether `readOne` decrypts
+   * the stored value.
+   */
+  async isUserFieldSecret(pluginId: string, fieldKey: string): Promise<boolean> {
+    const row = await this.findOne({ plugin_id: pluginId, field_key: fieldKey, scope: 'user' }, { fields: ['secret'] });
+    return row?.secret === 1;
+  }
+
+  /**
+   * `plugin-user-settings.service.ts#readAll` (Plan 3j Task 4) — `SELECT
+   * field_key, secret FROM plugin_settings_fields WHERE plugin_id = ? AND scope =
+   * ?` (`scope` is always `'user'` at this call site; kept as a parameter to match
+   * this repository's own established convention on every other `scope`-taking
+   * method here).
+   */
+  async listFieldKeysWithSecretFlag(pluginId: string, scope: 'instance' | 'user'): Promise<Array<{ field_key: string; secret: number }>> {
+    const rows = await this.find({ plugin_id: pluginId, scope }, { fields: ['field_key', 'secret'] });
+    return rows.map((r) => ({ field_key: r.field_key, secret: r.secret }));
+  }
+
+  /**
+   * DI8 (Plan 3j Task 3, `install/discovery.ts#upsert`) — `` INSERT INTO
+   * plugin_settings_fields (plugin_id, field_key, label, input_type, placeholder, hint,
+   * required, secret, scope, options, oauth_config, default_value, sort_order) VALUES
+   * (?,?,?,?,?,?,?,?,?,?,?,?,?) ``, looped once per manifest settings field, paired with
+   * DI7's `deleteAllForPlugin` above (the same delete-then-reinsert re-declare sequence).
+   * `insertMany`, one batched native insert — same rows the legacy per-row `.run()` loop
+   * produced. A no-op on an empty manifest `settings[]`.
+   */
+  async insertFields(pluginId: string, fields: NewPluginSettingsFieldRow[]): Promise<void> {
+    if (!fields.length) return;
+    await this.insertMany(
+      fields.map((f) => ({
+        plugin_id: pluginId,
+        field_key: f.field_key,
+        label: f.label,
+        input_type: f.input_type,
+        placeholder: f.placeholder,
+        hint: f.hint,
+        required: f.required,
+        secret: f.secret,
+        scope: f.scope,
+        options: f.options,
+        oauth_config: f.oauth_config,
+        default_value: f.default_value,
+        sort_order: f.sort_order,
+      })),
+    );
+  }
+
+  /**
+   * SD1 (Plan 3j Task 3, `settings-defaults.ts#settingDefaults`) — `SELECT field_key,
+   * default_value FROM plugin_settings_fields WHERE plugin_id = ? AND scope = ? AND
+   * secret = 0 AND default_value IS NOT NULL`. Secrets never carry a default (the
+   * manifest parse drops it before it ever reaches a row) — the `secret = 0` filter is
+   * belt-and-braces, kept exactly as the legacy statement had it.
+   */
+  async listDefaults(pluginId: string, scope: 'instance' | 'user'): Promise<Array<{ field_key: string; default_value: string }>> {
+    const rows = await this.find(
+      { plugin_id: pluginId, scope, secret: 0, default_value: { $ne: null } },
+      { fields: ['field_key', 'default_value'] },
+    );
+    return rows.map((r) => ({ field_key: r.field_key, default_value: r.default_value ?? '' }));
+  }
+}
+
+/** DI8's own row shape — `discoverPlugins#upsert`'s per-manifest-settings-field insert. */
+export interface NewPluginSettingsFieldRow {
+  field_key: string;
+  label: string | null;
+  input_type: string;
+  placeholder: string | null;
+  hint: string | null;
+  required: number;
+  secret: number;
+  scope: string;
+  options: string | null;
+  oauth_config: string | null;
+  default_value: string | null;
+  sort_order: number;
 }

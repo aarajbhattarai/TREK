@@ -64,7 +64,7 @@ async function buildRuntime(withOrm: boolean): Promise<PluginRuntimeService> {
   const dbs = new DatabaseService(testDb);
   const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
   const addons = await createTestAddonsService(testDb, dbs);
-  const userSettings = new PluginUserSettingsService(dbs);
+  const userSettings = new PluginUserSettingsService(t.repo(PluginSettingsFields), t.repo(PluginUserConfig));
   return new PluginRuntimeService(
     dbs,
     audit,
