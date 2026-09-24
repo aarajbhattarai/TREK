@@ -315,8 +315,17 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   // Plan 3j Task 3: `discoverPlugins` composes `DiscoveryRepos` from the repositories
   // this class already injects for its own PR-numbered statements — no new params.
+  // Plan 4 Task 8a: `uow` (already injected, `@Optional()`, for `setOperatorEgressHosts`
+  // above) is threaded through too, so `upsert`'s DI5–DI8 delete/re-insert pairs run
+  // in one transaction — `DiscoveryRepos.uow`'s own docstring covers why this is
+  // optional rather than a throwing guard like `setOperatorEgressHosts`'s: several
+  // hand-built partial-DI-graph test instances of this class (e.g.
+  // `boot-registry-order.test.ts`) exercise `onApplicationBootstrap`'s discovery
+  // call with no `uow`, and discovery — unlike a write an admin is actively waiting
+  // on — must never refuse outright; it degrades to the pre-existing untransacted
+  // sequence instead.
   private get discoveryRepos(): DiscoveryRepos {
-    return { plugins: this.plugins, actions: this.pluginActions, settingsFields: this.pluginSettingsFields, errorLog: this.pluginErrorLog };
+    return { plugins: this.plugins, actions: this.pluginActions, settingsFields: this.pluginSettingsFields, errorLog: this.pluginErrorLog, uow: this.uow };
   }
 
   // onApplicationBootstrap, NOT onModuleInit: boot activation builds each plugin's
