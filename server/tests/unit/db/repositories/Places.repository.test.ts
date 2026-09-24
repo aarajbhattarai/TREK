@@ -1374,3 +1374,78 @@ describe('PlacesRepository.listAddressesForUser (AT41, AtlasService#getTravelSta
     expect(await places.listAddressesForUser(stranger.id)).toEqual([]);
   });
 });
+
+/**
+ * Plan 4 Task 8b-4a (3h L4) — full-key `toEqual(<legacy raw>)` parity for
+ * `PlacesRepository.listPublicForShare` (`share.service.ts:340` SH12),
+ * flagged by the 3h ledger as having no repository-level parity test. The
+ * legacy statement (the method's own docstring) is a named 20-column
+ * allow-list (never `p.*`) LEFT JOINed to `categories`, scoped by trip only
+ * — a public share sees every place in the pool regardless of any
+ * assignment/booking status, but never the owner-only columns
+ * (`reservation_status`, `google_place_id`, `osm_id`, `route_geometry`,
+ * `source`, …) this SELECT list withholds by omission.
+ */
+describe('PlacesRepository — share.service.ts SH12 read', () => {
+  function legacyPublicForShare(tripId: number): unknown {
+    return testDb.prepare(`
+      SELECT p.id, p.trip_id, p.name, p.description, p.lat, p.lng, p.address, p.category_id,
+        p.price, p.currency, p.place_time, p.end_time, p.duration_minutes, p.notes,
+        p.image_url, p.website, p.phone, p.transport_mode, p.created_at, p.updated_at,
+        c.name as category_name, c.color as category_color, c.icon as category_icon
+      FROM places p
+      LEFT JOIN categories c ON c.id = p.category_id
+      WHERE p.trip_id = ?
+      ORDER BY p.created_at DESC`).all(tripId);
+  }
+
+  it('listPublicForShare — matches the legacy statement, categorised and uncategorised, every nullable column both null and set', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const category = createCategory(testDb, { name: 'Museum', color: '#111111', icon: '🏛️' });
+
+    const withCategory = createPlace(testDb, trip.id, { name: 'Louvre', lat: 48.86, lng: 2.34, category_id: category.id, description: 'Art museum' });
+    testDb.prepare(`
+      UPDATE places SET address = ?, price = ?, currency = ?, place_time = ?, end_time = ?,
+        duration_minutes = ?, notes = ?, image_url = ?, website = ?, phone = ?, transport_mode = ?,
+        updated_at = ?, created_at = ?, reservation_status = 'confirmed', google_place_id = 'ChIJ123'
+      WHERE id = ?`).run(
+      'Rue de Rivoli', 17.5, 'EUR', '10:00', '12:00', 120, 'bring ID', 'https://img/louvre.jpg',
+      'https://louvre.fr', '+33140205050', 'walking', '2026-09-01T09:00:00.000Z', '2026-09-01T08:00:00.000Z',
+      withCategory.id,
+    );
+
+    const bare = createPlace(testDb, trip.id, { name: 'Unnamed spot' });
+    testDb.prepare(`
+      UPDATE places SET category_id = NULL, lat = NULL, lng = NULL, address = NULL, price = NULL,
+        currency = NULL, place_time = NULL, end_time = NULL, duration_minutes = NULL, notes = NULL,
+        image_url = NULL, website = NULL, phone = NULL, transport_mode = NULL, updated_at = NULL,
+        created_at = '2026-09-02T08:00:00.000Z', description = NULL
+      WHERE id = ?`).run(bare.id);
+
+    // A place on a different trip must never leak in.
+    createPlace(testDb, other.id, { name: 'Foreign place' });
+
+    const legacy = legacyPublicForShare(trip.id);
+    const typed = await places.listPublicForShare(trip.id);
+    expect(typed).toEqual(legacy);
+    // ORDER BY p.created_at DESC: bare (2026-09-02) before withCategory (2026-09-01).
+    expect(typed.map((r) => r.id)).toEqual([bare.id, withCategory.id]);
+    expect(typed.find((r) => r.id === withCategory.id)).toMatchObject({
+      category_name: 'Museum', category_color: '#111111', category_icon: '🏛️',
+    });
+    expect(typed.find((r) => r.id === bare.id)).toMatchObject({
+      category_id: null, category_name: null, category_color: null, category_icon: null,
+    });
+    // Owner-only columns are withheld by omission — never present on the row at all.
+    expect(typed[1]).not.toHaveProperty('reservation_status');
+    expect(typed[1]).not.toHaveProperty('google_place_id');
+  });
+
+  it('listPublicForShare — [] for a trip with no places', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await places.listPublicForShare(trip.id)).toEqual([]);
+  });
+});
