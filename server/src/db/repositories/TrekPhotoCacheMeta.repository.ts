@@ -26,9 +26,11 @@ export class TrekPhotoCacheMetaRepository extends TrekRepository<TrekPhotoCacheM
   /**
    * TC4 (`put`) — `INSERT OR REPLACE INTO trek_photo_cache_meta (cache_key,
    * content_type, fetched_at) VALUES (?, ?, ?)`. `cache_key` is the table's
-   * only unique/primary column (a genuine nullable TEXT PK per R5's Task 0
-   * finding — not a bug, and not touched here), so it is the sole conflict
-   * target, same upsert shape as `AppSettingsRepository.setValue`.
+   * only unique/primary column (`NOT NULL` since Plan 4 Task 8a's
+   * cache_key-tightening migration — R5's Task 0 finding was that every
+   * writer already bound a non-null value, so this was a schema tightening,
+   * not a behaviour change), so it is the sole conflict target, same upsert
+   * shape as `AppSettingsRepository.setValue`.
    */
   async upsertMeta(cache_key: string, content_type: string, fetched_at: number): Promise<void> {
     await this.upsert({ cache_key, content_type, fetched_at }, { onConflictFields: ['cache_key'], onConflictAction: 'merge' });
