@@ -26,8 +26,8 @@ function build(canEdit = true) {
   const todos = {
     listItems: vi.fn(() => [{ id: 90, name: 'Pack' }]),
     createItem: vi.fn((tripId: string, input: Record<string, unknown>) => ({ id: 91, trip_id: tripId, ...input })),
-    updateItem: vi.fn((_t: string, id: string) => (id === '90' ? { id: 90, checked: 1 } : undefined)),
-    deleteItem: vi.fn((_t: string, id: string) => id === '90'),
+    updateItem: vi.fn((_t: string, id: number) => (id === 90 ? { id: 90, checked: 1 } : undefined)),
+    deleteItem: vi.fn((_t: string, id: number) => id === 90),
   } as unknown as TodoService & Record<string, ReturnType<typeof vi.fn>>;
   const realtime = { broadcast: vi.fn() } as unknown as RealtimeService & { broadcast: ReturnType<typeof vi.fn> };
   const permissions = { checkPermission: vi.fn(() => canEdit) } as unknown as PermissionsService;

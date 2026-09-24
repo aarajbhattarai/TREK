@@ -114,7 +114,7 @@ describe('dispatch strips the supervisor _inv marker', () => {
       createTestPluginRegistry([new PackingRpc(packing, realtime, guards)]),
     );
     await host.dispatch(req('packing.setBagMembers', { tripId: 1, bagId: 80, userIds: [3], _inv: 'req-7' }), 42);
-    expect(setBagMembers).toHaveBeenCalledWith('1', '80', [3]);
+    expect(setBagMembers).toHaveBeenCalledWith('1', 80, [3]);
   });
 
   /**

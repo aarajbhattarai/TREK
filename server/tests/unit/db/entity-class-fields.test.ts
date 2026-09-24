@@ -20,7 +20,7 @@ import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
  * caller's first `em.create()`.
  */
 /** NOT NULL scalars with neither a column default nor a class-field initialiser (legitimate: the caller must supply them). */
-const KNOWN_UNINITIALISED_NOT_NULL_SCALARS = 423;
+const KNOWN_UNINITIALISED_NOT_NULL_SCALARS = 424;
 
 describe('entity class fields never carry a NaN initialiser (task-4-review-shape.md, Important 1)', () => {
   it('CLASSFIELD-001: new X() has no own property whose value is NaN, across all 125 entities', () => {
