@@ -795,3 +795,75 @@ describe('DayAssignmentsRepository.setAccommodation (TP57)', () => {
     expect((testDb.prepare('SELECT accommodation_id FROM day_assignments WHERE id = ?').get(other.id) as { accommodation_id: number | null }).accommodation_id).toBeNull();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 4 Task 8b-2, item 1 (3d Task 7 review's "DayAssignments.listRoadtripVisits"
+// carry): RPL2 (`roadtrip-plan.service.ts::context`'s `visits` read) had no
+// repository-level toEqual(<legacy raw>) test — a correlated scalar subquery
+// inside a LEFT JOIN ON clause, exercised here with every nullable column
+// both null (no stay, no leg transport, coalesce falls back to the place)
+// and set (a matching stay + its checkout day, explicit assignment overrides).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const LEGACY_LIST_ROADTRIP_VISITS = `
+  SELECT a.id, a.day_id, a.place_id, p.name, p.lat, p.lng,
+    COALESCE(a.assignment_time, p.place_time) AS time,
+    COALESCE(a.assignment_end_time, p.end_time) AS end_time,
+    p.duration_minutes, a.end_day,
+    a.leg_transport_mode, a.incoming_leg_transport_mode, p.stop_type, p.fill_percent,
+    stay.id AS stay_id, stay.check_in, stay.check_out, checkout.day_number AS checkout_day
+  FROM day_assignments a
+  JOIN days d ON d.id = a.day_id
+  JOIN places p ON p.id = a.place_id
+  LEFT JOIN day_accommodations stay
+    ON stay.id = (SELECT id FROM day_accommodations WHERE place_id = p.id AND start_day_id = d.id ORDER BY id LIMIT 1)
+  LEFT JOIN days checkout ON checkout.id = stay.end_day_id
+  WHERE d.trip_id = ?
+  ORDER BY d.day_number, a.order_index, a.created_at
+`;
+
+describe('DayAssignmentsRepository.listRoadtripVisits (RPL2, roadtrip-plan.service.ts::context)', () => {
+  it('ASSIGNREPO-031: matches the legacy statement — no stay, coalesce falls back to the place, leg transport NULL', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id, { name: 'Museum' });
+    testDb.prepare('UPDATE places SET place_time = ?, end_time = ?, duration_minutes = ?, stop_type = ?, fill_percent = ? WHERE id = ?')
+      .run('09:00', '11:00', 90, null, null, place.id);
+    createDayAssignment(testDb, day.id, place.id);
+
+    const legacy = testDb.prepare(LEGACY_LIST_ROADTRIP_VISITS).all(trip.id);
+    const typed = await assignments.listRoadtripVisits(trip.id);
+    expect(typed).toEqual(legacy);
+    expect(typed[0]).toMatchObject({ time: '09:00', end_time: '11:00', stay_id: null, check_in: null, check_out: null, checkout_day: null, leg_transport_mode: null });
+  });
+
+  it('ASSIGNREPO-032: matches the legacy statement — a matching stay populates stay/checkout columns, explicit overrides win over coalesce', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id, { day_number: 1 });
+    const checkoutDay = createDay(testDb, trip.id, { day_number: 2 });
+    const place = createPlace(testDb, trip.id, { name: 'Grand Hotel' });
+    testDb.prepare('UPDATE places SET place_time = ?, end_time = ?, duration_minutes = ?, stop_type = ?, fill_percent = ? WHERE id = ?')
+      .run('08:00', '10:00', 45, 'lodging', 80, place.id);
+    const stay = createDayAccommodation(testDb, trip.id, place.id, day.id, checkoutDay.id, { check_in: '15:00', check_out: '11:00' });
+    const assignment = createDayAssignment(testDb, day.id, place.id);
+    testDb.prepare('UPDATE day_assignments SET assignment_time = ?, assignment_end_time = ?, leg_transport_mode = ?, incoming_leg_transport_mode = ?, end_day = ? WHERE id = ?')
+      .run('14:00', '14:30', 'driving', 'walking', 1, assignment.id);
+
+    const legacy = testDb.prepare(LEGACY_LIST_ROADTRIP_VISITS).all(trip.id);
+    const typed = await assignments.listRoadtripVisits(trip.id);
+    expect(typed).toEqual(legacy);
+    expect(typed[0]).toMatchObject({
+      time: '14:00', end_time: '14:30', stay_id: stay.id, check_in: '15:00', check_out: '11:00',
+      checkout_day: 2, leg_transport_mode: 'driving', incoming_leg_transport_mode: 'walking', end_day: 1,
+      stop_type: 'lodging', fill_percent: 80, duration_minutes: 45,
+    });
+  });
+
+  it('ASSIGNREPO-033: empty array for a trip with no assignments', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await assignments.listRoadtripVisits(trip.id)).toEqual([]);
+  });
+});

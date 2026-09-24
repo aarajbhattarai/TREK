@@ -352,4 +352,76 @@ describe('DaysRepository.listForPublicApi (Plan 4 Task 1, public-api.service.ts:
     const trip = createTrip(testDb, user.id);
     expect(await days.listForPublicApi(trip.id)).toEqual([]);
   });
+
+  it('DAYREPO-029 (rule 19): title/notes SET (not just the default NULL) still matches the legacy row, key for key', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id, { date: '2026-06-03', title: 'Departure' });
+    testDb.prepare('UPDATE days SET notes = ? WHERE id = ?').run('Pack early', day.id);
+
+    const legacy = testDb.prepare('SELECT id, day_number, date, title, notes FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(trip.id);
+    const rows = await days.listForPublicApi(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows).toEqual([{ id: day.id, day_number: day.day_number, date: '2026-06-03', title: 'Departure', notes: 'Pack early' }]);
+  });
+});
+
+describe('DaysRepository.listPlanDays (Plan 4 Task 8b-2, RPL1 — roadtrip-plan.service.ts::context)', () => {
+  it('DAYREPO-030: id/day_number/date/title/default_transport_mode, ordered by day_number, both NULL and SET nullable columns', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const day2 = createDay(testDb, trip.id, { day_number: 2, date: '2026-06-02', title: 'Day two' });
+    testDb.prepare("UPDATE days SET default_transport_mode = ? WHERE id = ?").run('cycling', day2.id);
+    const day1 = createDay(testDb, trip.id, { day_number: 1 }); // date/title/default_transport_mode all NULL
+    createDay(testDb, other.id, { day_number: 1 });
+
+    const legacy = testDb
+      .prepare('SELECT id, day_number, date, title, default_transport_mode FROM days WHERE trip_id = ? ORDER BY day_number')
+      .all(trip.id);
+    const rows = await days.listPlanDays(trip.id);
+
+    expect(rows).toEqual(legacy);
+    expect(rows).toEqual([
+      { id: day1.id, day_number: 1, date: null, title: null, default_transport_mode: null },
+      { id: day2.id, day_number: 2, date: '2026-06-02', title: 'Day two', default_transport_mode: 'cycling' },
+    ]);
+  });
+
+  it('DAYREPO-031: empty array for a trip with no days', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await days.listPlanDays(trip.id)).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 4 Task 8b-2, item 1 (3d Task 7 review's "Days.listPlanDays" carry):
+// RPL1 (`roadtrip-plan.service.ts::context`) had no repository-level
+// toEqual(<legacy raw>) test.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('DaysRepository.listPlanDays (RPL1, roadtrip-plan.service.ts::context)', () => {
+  it('DAYREPO-029: id/day_number/date/title/default_transport_mode, ordered by day_number, default_transport_mode both NULL and set', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const day2 = createDay(testDb, trip.id, { day_number: 2, date: '2026-06-02', title: 'Day 2' });
+    const day1 = createDay(testDb, trip.id, { day_number: 1, date: '2026-06-01', title: null });
+    testDb.prepare('UPDATE days SET default_transport_mode = ? WHERE id = ?').run('walking', day2.id);
+    createDay(testDb, other.id, { day_number: 1 });
+
+    const legacy = testDb.prepare('SELECT id, day_number, date, title, default_transport_mode FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(trip.id);
+    const rows = await days.listPlanDays(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).toEqual([day1.id, day2.id]);
+    expect(rows[0].default_transport_mode).toBeNull();
+    expect(rows[1].default_transport_mode).toBe('walking');
+  });
+
+  it('DAYREPO-030: empty array for a trip with no days', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await days.listPlanDays(trip.id)).toEqual([]);
+  });
 });

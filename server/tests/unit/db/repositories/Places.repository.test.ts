@@ -1255,4 +1255,127 @@ describe('PlacesRepository.listAssignedForPublicApi (Plan 4 Task 1, public-api.s
     const trip = createTrip(testDb, user.id);
     expect(await places.listAssignedForPublicApi(trip.id)).toEqual([]);
   });
+
+  it('PLACEREPO-032 (rule 19): matches the legacy JOIN run raw, every nullable projected column both NULL and SET', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const category = createCategory(testDb, { name: 'Landmark' });
+    const day = createDay(testDb, trip.id);
+    const sparse = createPlace(testDb, trip.id, { name: 'Sparse' });
+    testDb.prepare(
+      'UPDATE places SET address = NULL, lat = NULL, lng = NULL, place_time = NULL, end_time = NULL, duration_minutes = NULL, notes = NULL, transport_mode = NULL, category_id = NULL WHERE id = ?',
+    ).run(sparse.id);
+    const full = createPlace(testDb, trip.id, { name: 'Full', lat: 10.5, lng: 20.5, category_id: category.id });
+    testDb.prepare(
+      "UPDATE places SET address = ?, place_time = ?, end_time = ?, duration_minutes = ?, notes = ?, transport_mode = ? WHERE id = ?",
+    ).run('123 Main St', '09:00', '10:00', 60, 'Bring a jacket', 'walking', full.id);
+    createDayAssignment(testDb, day.id, sparse.id, { order_index: 0 });
+    createDayAssignment(testDb, day.id, full.id, { order_index: 1 });
+
+    const legacy = testDb.prepare(`
+      SELECT da.day_id, p.name, p.address, p.lat, p.lng, p.place_time, p.end_time, p.duration_minutes, p.notes, p.transport_mode, c.name as category
+      FROM day_assignments da JOIN places p ON p.id = da.place_id LEFT JOIN categories c ON c.id = p.category_id
+      WHERE p.trip_id = ? AND da.accommodation_id IS NULL
+      ORDER BY da.day_id ASC, da.order_index ASC`).all(trip.id);
+
+    const rows = await places.listAssignedForPublicApi(trip.id);
+    expect(rows).toEqual(legacy);
+    expect(rows).toEqual([
+      { day_id: day.id, name: 'Sparse', address: null, lat: null, lng: null, place_time: null, end_time: null, duration_minutes: null, notes: null, transport_mode: null, category: null },
+      { day_id: day.id, name: 'Full', address: '123 Main St', lat: 10.5, lng: 20.5, place_time: '09:00', end_time: '10:00', duration_minutes: 60, notes: 'Bring a jacket', transport_mode: 'walking', category: 'Landmark' },
+    ]);
+  });
+});
+
+describe('PlacesRepository.isTrackInTrip (Plan 4 Task 8b-2, RT13 — RoadtripService.trackExists)', () => {
+  it('PLACEREPO-033: true only when route_geometry is set AND non-empty AND the place belongs to the trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const withTrack = createPlace(testDb, trip.id, { name: 'Has track' });
+    testDb.prepare('UPDATE places SET route_geometry = ? WHERE id = ?').run('{"type":"LineString"}', withTrack.id);
+    const nullGeometry = createPlace(testDb, trip.id, { name: 'Null geometry' });
+    const emptyGeometry = createPlace(testDb, trip.id, { name: 'Empty geometry' });
+    testDb.prepare("UPDATE places SET route_geometry = '' WHERE id = ?").run(emptyGeometry.id);
+    const foreignTrack = createPlace(testDb, other.id, { name: 'Foreign track' });
+    testDb.prepare('UPDATE places SET route_geometry = ? WHERE id = ?').run('{"type":"LineString"}', foreignTrack.id);
+
+    const legacy = (id: number) =>
+      testDb.prepare("SELECT id FROM places WHERE id = ? AND trip_id = ? AND route_geometry IS NOT NULL AND route_geometry != ''").get(id, trip.id);
+
+    expect(await places.isTrackInTrip(withTrack.id, trip.id)).toBe(true);
+    expect(!!legacy(withTrack.id)).toBe(true);
+
+    expect(await places.isTrackInTrip(nullGeometry.id, trip.id)).toBe(false);
+    expect(!!legacy(nullGeometry.id)).toBe(false);
+
+    expect(await places.isTrackInTrip(emptyGeometry.id, trip.id)).toBe(false);
+    expect(!!legacy(emptyGeometry.id)).toBe(false);
+
+    // Belongs to a different trip — the trip_id predicate excludes it even though its geometry is set.
+    expect(await places.isTrackInTrip(foreignTrack.id, trip.id)).toBe(false);
+    expect(!!legacy(foreignTrack.id)).toBe(false);
+  });
+
+  it('PLACEREPO-034: an unknown place id is false', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await places.isTrackInTrip(999999, trip.id)).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 4 Task 8b-2, item 1 (3d Task 7 review's "Places.findTrackInTrip" carry,
+// the actual method is `isTrackInTrip`): RT13 (`RoadtripService.trackExists`)
+// had no repository-level parity test. `SELECT id FROM places WHERE id = ?
+// AND trip_id = ? AND route_geometry IS NOT NULL AND route_geometry != ''`,
+// both nullable/empty-string edges pinned against the legacy predicate.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PlacesRepository.isTrackInTrip (RT13, RoadtripService.trackExists)', () => {
+  const legacyIsTrackInTrip = (id: number, tripId: number): boolean =>
+    !!testDb.prepare(
+      "SELECT id FROM places WHERE id = ? AND trip_id = ? AND route_geometry IS NOT NULL AND route_geometry != ''",
+    ).get(id, tripId);
+
+  it('PLACEREPO-032: a place with route_geometry set matches the legacy predicate — true', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET route_geometry = ? WHERE id = ?').run('{"type":"LineString"}', place.id);
+
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(legacyIsTrackInTrip(place.id, trip.id));
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(true);
+  });
+
+  it('PLACEREPO-033: route_geometry NULL matches the legacy predicate — false', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET route_geometry = NULL WHERE id = ?').run(place.id);
+
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(legacyIsTrackInTrip(place.id, trip.id));
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(false);
+  });
+
+  it('PLACEREPO-034: route_geometry \'\' (empty string) matches the legacy predicate — false', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare("UPDATE places SET route_geometry = '' WHERE id = ?").run(place.id);
+
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(legacyIsTrackInTrip(place.id, trip.id));
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(false);
+  });
+
+  it('PLACEREPO-035: a track on a DIFFERENT trip is not found — false', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const place = createPlace(testDb, other.id);
+    testDb.prepare('UPDATE places SET route_geometry = ? WHERE id = ?').run('{"type":"LineString"}', place.id);
+
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(legacyIsTrackInTrip(place.id, trip.id));
+    expect(await places.isTrackInTrip(place.id, trip.id)).toBe(false);
+  });
 });
