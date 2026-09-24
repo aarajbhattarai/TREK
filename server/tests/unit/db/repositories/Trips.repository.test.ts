@@ -970,3 +970,37 @@ describe('TripsRepository.listIdTitleOrderedByTitle (Plan 4 Task 1, RI2)', () =>
     expect(await trips.listIdTitleOrderedByTitle()).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 4 Task 8b-2, item 3 (3f L6 carry): AT42 (AtlasService#getTravelStats)
+// had no repository-level toEqual(<legacy raw>) parity test.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('TripsRepository.countTripsAndDaysForUser (AT42, AtlasService#getTravelStats)', () => {
+  it('TRIPREPO-066: matches the legacy COUNT(DISTINCT) statement, owner and member trips, archived trips still counted', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const tripA = createTrip(testDb, owner.id);
+    createDay(testDb, tripA.id);
+    createDay(testDb, tripA.id);
+    const tripB = createTrip(testDb, owner.id); // archived, still counts
+    testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(tripB.id);
+    createDay(testDb, tripB.id);
+    addTripMember(testDb, tripA.id, member.id);
+
+    const legacy = testDb.prepare(`
+      SELECT COUNT(DISTINCT t.id) as trips, COUNT(DISTINCT d.id) as days
+      FROM trips t LEFT JOIN days d ON d.trip_id = t.id LEFT JOIN trip_members tm ON t.id = tm.trip_id
+      WHERE (t.user_id = ? OR tm.user_id = ?)`).get(owner.id, owner.id) as { trips: number; days: number };
+
+    const typedOwner = await trips.countTripsAndDaysForUser(owner.id);
+    expect(typedOwner).toEqual(legacy);
+    expect(typedOwner).toEqual({ trips: 2, days: 3 });
+
+    const typedMember = await trips.countTripsAndDaysForUser(member.id);
+    expect(typedMember).toEqual({ trips: 1, days: 2 });
+
+    expect(await trips.countTripsAndDaysForUser(stranger.id)).toEqual({ trips: 0, days: 0 });
+  });
+});

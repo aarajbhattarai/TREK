@@ -10,7 +10,7 @@ import { TRACK_COLORS } from '@trek/shared';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
-import { createCategory, createDay, createDayAssignment, createPlace, createTag, createTrip, createUser } from '../../../helpers/factories';
+import { addTripMember, createCategory, createDay, createDayAssignment, createPlace, createTag, createTrip, createUser } from '../../../helpers/factories';
 import { Places } from '../../../../src/db/entities/Places.entity';
 import type { PlacesRepository } from '../../../../src/db/repositories/Places.repository';
 
@@ -1310,5 +1310,67 @@ describe('PlacesRepository.isTrackInTrip (RT13, RoadtripService.trackExists)', (
 
     expect(await places.isTrackInTrip(place.id, trip.id)).toBe(legacyIsTrackInTrip(place.id, trip.id));
     expect(await places.isTrackInTrip(place.id, trip.id)).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 4 Task 8b-2, item 3 (3f L6 carry): AtlasService's own reads on
+// PlacesRepository — AT2 (listForTripIds) and AT41 (listAddressesForUser) —
+// had no repository-level toEqual(<legacy raw>) parity test.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PlacesRepository.listForTripIds (AT2, AtlasService#getPlacesForTrips)', () => {
+  it('PLACEREPO-036: matches SELECT * FROM places WHERE trip_id IN (...) run raw', async () => {
+    const { user } = createUser(testDb);
+    const tripA = createTrip(testDb, user.id);
+    const tripB = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const pa = createPlace(testDb, tripA.id, { name: 'A' });
+    const pb = createPlace(testDb, tripB.id, { name: 'B' });
+    createPlace(testDb, other.id, { name: 'Not in the batch' });
+
+    const legacy = testDb.prepare(`SELECT * FROM places WHERE trip_id IN (${[tripA.id, tripB.id].join(',')})`).all();
+    const typed = await places.listForTripIds([tripA.id, tripB.id]);
+    expect(typed).toEqual(legacy);
+    expect(typed.map((p) => p.id).sort((a, b) => a - b)).toEqual([pa.id, pb.id].sort((a, b) => a - b));
+  });
+
+  it('PLACEREPO-037: an empty trip-id array short-circuits to [] without a query', async () => {
+    expect(await places.listForTripIds([])).toEqual([]);
+  });
+});
+
+describe('PlacesRepository.listAddressesForUser (AT41, AtlasService#getTravelStats)', () => {
+  it('PLACEREPO-038: matches the legacy DISTINCT statement, owner and member trips, region_name joined from place_regions', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, member.id);
+    const place = createPlace(testDb, trip.id, { name: 'Tower', lat: 48.85, lng: 2.35 });
+    testDb.prepare('UPDATE places SET address = ? WHERE id = ?').run('5 Avenue Anatole France', place.id);
+    testDb.prepare('INSERT INTO place_regions (place_id, country_code, region_code, region_name) VALUES (?, ?, ?, ?)')
+      .run(place.id, 'FR', 'FR-IDF', 'Île-de-France');
+    const noAddress = createPlace(testDb, trip.id, { name: 'No address' });
+    testDb.prepare('UPDATE places SET address = NULL, lat = NULL, lng = NULL WHERE id = ?').run(noAddress.id);
+
+    const legacy = testDb.prepare(`
+      SELECT DISTINCT p.address, p.lat, p.lng, pr.region_name
+      FROM places p JOIN trips t ON p.trip_id = t.id
+      LEFT JOIN trip_members tm ON t.id = tm.trip_id
+      LEFT JOIN place_regions pr ON pr.place_id = p.id
+      WHERE t.user_id = ? OR tm.user_id = ?`).all(owner.id, owner.id);
+
+    const typedOwner = await places.listAddressesForUser(owner.id);
+    expect(typedOwner).toEqual(legacy);
+    expect(typedOwner).toEqual([
+      { address: '5 Avenue Anatole France', lat: 48.85, lng: 2.35, region_name: 'Île-de-France' },
+      { address: null, lat: null, lng: null, region_name: null },
+    ]);
+
+    const typedMember = await places.listAddressesForUser(member.id);
+    expect(typedMember).toEqual(typedOwner);
+
+    expect(await places.listAddressesForUser(stranger.id)).toEqual([]);
   });
 });
