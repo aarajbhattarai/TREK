@@ -186,17 +186,13 @@ export default tseslint.config(
       // task-3-report.md / the plan's R1 ruling — not debt for a later plan
       // to close.
       'src/nest/backup/backup.impl.ts',
-      // TODO(plan 4): pre-existing importers, to be migrated onto the ORM /
-      // DatabaseService rather than by loosening this rule. All type-only except
-      // reseat-booked-nights.ts, which opens its own handle.
+      // Frozen forever (ruling 7): invoked from inside numbered, already-shipped
+      // MikroORM migrations — rewriting either onto the ORM would change what a
+      // re-run of an old migration against an old schema snapshot produces,
+      // which is never done to a landed migration. Not Plan 4's or any future
+      // plan's to touch.
       'src/db/reseat-booked-nights.ts',
       'src/db/document-provider-seed.ts',
-      'src/nest/database/database.service.ts',
-      'src/nest/plugins/contributions/plugin-route-normalize.ts',
-      'src/nest/plugins/host/plugin-host-state.ts',
-      'src/nest/plugins/install/discovery.ts',
-      'src/nest/plugins/settings-defaults.ts',
-      'src/nest/plugins/signature-status.ts',
     ],
     rules: {
       'no-restricted-imports': [
@@ -206,7 +202,7 @@ export default tseslint.config(
             {
               name: 'better-sqlite3',
               message:
-                'The SQLite driver is an implementation detail of src/db. Go through the ORM (src/db/entities + src/db/repositories) or the injected DatabaseService; the handle itself is owned by src/db/database.ts.',
+                'The SQLite driver is an implementation detail of src/db. Go through the ORM (src/db/entities + src/db/repositories) or UnitOfWork; the handle itself is owned by src/db/database.ts.',
             },
           ],
           patterns: [
