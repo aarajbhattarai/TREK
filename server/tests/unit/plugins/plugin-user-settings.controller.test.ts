@@ -10,13 +10,11 @@ const { pluginsEnabled, getMock } = vi.hoisted(() => ({
   getMock: vi.fn(() => ({ 1: 1 })), // active by default
 }));
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
-vi.mock('../../../src/db/database', () => ({ db: { prepare: () => ({ get: getMock }) } }));
-import { db as dbConn } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 
 import { PluginUserSettingsController } from '../../../src/nest/plugins/plugin-user-settings.controller';
 import type { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
 import type { PluginsService } from '../../../src/nest/plugins/plugins.service';
+import type { PluginsRepository } from '../../../src/db/repositories/Plugins.repository';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const req = (id?: number) => ({ user: id === undefined ? undefined : { id } }) as any;
@@ -28,7 +26,9 @@ function ctrl() {
   } as unknown as PluginsService;
   // The controller now also takes the runtime (for settings-page actions).
   const runtime = { actionsOf: vi.fn(async () => []), invokeAction: vi.fn(async () => ({ ok: true })) } as unknown as PluginRuntimeService;
-  return { c: new PluginUserSettingsController(svc, runtime, new DatabaseService(dbConn)), svc, runtime };
+  // PUC1 (Plan 3j Task 5) — the active-plugin guard is now Plugins.repository.ts#existsActive.
+  const plugins = { existsActive: vi.fn(async () => !!getMock()) } as unknown as PluginsRepository;
+  return { c: new PluginUserSettingsController(svc, runtime, plugins), svc, runtime };
 }
 
 describe('PluginUserSettingsController', () => {

@@ -16,6 +16,12 @@ import { PluginMetaMigrations } from '../../db/entities/PluginMetaMigrations.ent
 import { PluginCapabilityAudit } from '../../db/entities/PluginCapabilityAudit.entity';
 import { Settings } from '../../db/entities/Settings.entity';
 import { NotificationChannelPreferences } from '../../db/entities/NotificationChannelPreferences.entity';
+import { Users } from '../../db/entities/Users.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { Days } from '../../db/entities/Days.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
 import { PluginsService } from './plugins.service';
 import { PluginUserSettingsService } from './plugin-user-settings.service';
 import { PluginRuntimeService } from './plugin-runtime.service';
@@ -87,6 +93,14 @@ import { SchedulingModule } from '../scheduling/scheduling.module';
       PluginSettingsFields, PluginActions, PluginUserConfig, PluginEntityMetadata,
       PluginOauthTokens, PluginOauthState, PluginMetaMigrations, PluginCapabilityAudit,
       Settings, NotificationChannelPreferences,
+      // Plan 3j Task 5 — HostSurfaceRpc's (Users, Trips, PluginScheduledTasks
+      // above) and MetaRpc's (PluginEntityMetadata above, Trips, Places, Days,
+      // Reservations, DayAccommodations) own `@InjectRepository` params; both
+      // classes are constructed in THIS module's `providers`, so — same
+      // reasoning every entry above already documents — it owns their
+      // registration too, even though `TripsModule`/`PlacesModule`/etc are
+      // already imported (none of them export `MikroOrmModule`).
+      Users, Trips, Days, Places, Reservations, DayAccommodations,
     ]),
     // A leaf that hands the resource gates to the domain modules. It must not be this
     // module: the domains would then have to import this one back and close a cycle.

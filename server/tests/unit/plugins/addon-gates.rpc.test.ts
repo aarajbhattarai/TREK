@@ -76,9 +76,8 @@ function build(addonOn: boolean) {
       { put: async () => undefined, delete: async () => undefined } as never,
       { get: () => '*' } as never,
       { schedule: () => undefined } as never,
-      // Plan 3g Task 3: JR1's demo-mode gate reads through `UsersRepository
-      // .getEmail`, not `DatabaseService.prepare`.
-      { getEmail: async () => 'u@example.test' } as never),
+      // SV8 — Plan 3i: DemoService.isDemoUserId, the shared demo-gate primitive.
+      { isDemoUserId: async () => false } as never),
     new CollectionsRpc(spyService(calls, 'collections'), guards),
     new CostsRpc(spyService(calls, 'budget'), db, { broadcast: vi.fn() } as never, guards, spyService(calls, 'membership')),
   ]);

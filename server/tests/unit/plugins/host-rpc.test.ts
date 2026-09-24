@@ -74,6 +74,13 @@ import type { LlmConfigResolver } from '../../../src/nest/llm-parse/llm-config.r
 import type { PluginOAuthService } from '../../../src/nest/plugins/oauth/plugin-oauth.service';
 import type { RpcError, RpcResponse } from '../../../src/nest/plugins/protocol/envelope';
 import type { PluginCapabilityAuditRepository } from '../../../src/db/repositories/PluginCapabilityAudit.repository';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import type { PlacesRepository } from '../../../src/db/repositories/Places.repository';
+import type { DaysRepository } from '../../../src/db/repositories/Days.repository';
+import type { ReservationsRepository } from '../../../src/db/repositories/Reservations.repository';
+import type { DayAccommodationsRepository } from '../../../src/db/repositories/DayAccommodations.repository';
+import type { PluginEntityMetadataRepository } from '../../../src/db/repositories/PluginEntityMetadata.repository';
+import type { PluginScheduledTasksRepository } from '../../../src/db/repositories/PluginScheduledTasks.repository';
 
 // Typed from the real method rather than from the always-true body below, so a case that
 // swaps in an implementation reading the action key (HOSTRPC-015) still type-checks.
@@ -130,6 +137,117 @@ const pluginAuditRepo = {
   },
 } as unknown as PluginCapabilityAuditRepository;
 
+/**
+ * Plan 3j Task 5: `MetaRpc`/`HostSurfaceRpc`'s own repository conversions
+ * (MR#/HR#). Same reasoning as `pluginAuditRepo` above — this file's
+ * hand-trimmed `:memory:` schema (no top-level await here) means a real
+ * MikroORM repository isn't reachable, so every converted method is
+ * reproduced as real raw SQL against `mockDb`, wrapped in the repository's
+ * own method shape, rather than a canned stub — HOSTRPC-014/028/029/030
+ * read the real table state back out through `mockDb.prepare(...)`
+ * directly, so this HAS to be the real table.
+ */
+type RawDb = {
+  prepare(sql: string): { get(...a: unknown[]): unknown; all(...a: unknown[]): unknown[]; run(...a: unknown[]): { changes: number } };
+};
+const raw = mockDb as unknown as RawDb;
+
+const tripsRepo = {
+  async sharesTripWith(userIdA: number, userIdB: number) {
+    return !!raw
+      .prepare(
+        `SELECT 1 FROM trips t
+           LEFT JOIN trip_members m1 ON m1.trip_id = t.id AND m1.user_id = ?
+           LEFT JOIN trip_members m2 ON m2.trip_id = t.id AND m2.user_id = ?
+          WHERE (t.user_id = ? OR m1.user_id IS NOT NULL)
+            AND (t.user_id = ? OR m2.user_id IS NOT NULL)
+          LIMIT 1`,
+      )
+      .get(userIdA, userIdB, userIdA, userIdB);
+  },
+  async existsById(id: number) {
+    return !!raw.prepare('SELECT id FROM trips WHERE id = ?').get(id);
+  },
+} as unknown as TripsRepository;
+
+const placesRepo = {
+  async findTripId(id: number) {
+    return (raw.prepare('SELECT trip_id FROM places WHERE id = ?').get(id) as { trip_id: number } | undefined)?.trip_id;
+  },
+} as unknown as PlacesRepository;
+
+const daysRepo = {
+  async findTripId(id: number) {
+    return (raw.prepare('SELECT trip_id FROM days WHERE id = ?').get(id) as { trip_id: number } | undefined)?.trip_id;
+  },
+} as unknown as DaysRepository;
+
+const reservationsRepo = {
+  async findTripId(id: number) {
+    return (raw.prepare('SELECT trip_id FROM reservations WHERE id = ?').get(id) as { trip_id: number } | undefined)?.trip_id;
+  },
+} as unknown as ReservationsRepository;
+
+const dayAccommodationsRepo = {
+  async getTripId(id: number) {
+    return (raw.prepare('SELECT trip_id FROM day_accommodations WHERE id = ?').get(id) as { trip_id: number } | undefined)?.trip_id;
+  },
+} as unknown as DayAccommodationsRepository;
+
+const metaRepo = {
+  async findValue(pluginId: string, entityType: string, entityId: number, key: string) {
+    const row = raw
+      .prepare('SELECT value FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? AND key=?')
+      .get(pluginId, entityType, entityId, key) as { value: string } | undefined;
+    return row?.value ?? null;
+  },
+  async countForEntity(pluginId: string, entityType: string, entityId: number) {
+    return (
+      raw
+        .prepare('SELECT COUNT(*) AS n FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=?')
+        .get(pluginId, entityType, entityId) as { n: number }
+    ).n;
+  },
+  async upsertValue(pluginId: string, entityType: string, entityId: number, key: string, value: string) {
+    raw
+      .prepare(
+        `INSERT INTO plugin_entity_metadata (plugin_id, entity_type, entity_id, key, value, updated_at)
+             VALUES (?, ?, ?, ?, ?, datetime('now'))
+             ON CONFLICT(plugin_id, entity_type, entity_id, key)
+             DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      )
+      .run(pluginId, entityType, entityId, key, value);
+  },
+  async listForEntity(pluginId: string, entityType: string, entityId: number) {
+    return raw
+      .prepare('SELECT key, value FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? ORDER BY key')
+      .all(pluginId, entityType, entityId) as Array<{ key: string; value: string }>;
+  },
+  async deleteValue(pluginId: string, entityType: string, entityId: number, key: string) {
+    return raw.prepare('DELETE FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? AND key=?').run(pluginId, entityType, entityId, key).changes > 0;
+  },
+} as unknown as PluginEntityMetadataRepository;
+
+const scheduledTasksRepo = {
+  async existsForPluginAndName(pluginId: string, name: string) {
+    return !!raw.prepare('SELECT id FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?').get(pluginId, name);
+  },
+  async countForPlugin(pluginId: string) {
+    return (raw.prepare('SELECT COUNT(*) AS c FROM plugin_scheduled_tasks WHERE plugin_id = ?').get(pluginId) as { c: number }).c;
+  },
+  async upsertTask(input: { plugin_id: string; name: string; due_at: number; payload: string; every_ms: number | null }) {
+    raw
+      .prepare(
+        `INSERT INTO plugin_scheduled_tasks (plugin_id, name, due_at, payload, every_ms) VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT (plugin_id, name) DO UPDATE SET due_at = excluded.due_at, payload = excluded.payload, every_ms = excluded.every_ms`,
+      )
+      .run(input.plugin_id, input.name, input.due_at, input.payload, input.every_ms);
+  },
+  async deleteByPluginAndName(pluginId: string, name: string) {
+    return raw.prepare('DELETE FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?').run(pluginId, name).changes > 0;
+  },
+} as unknown as PluginScheduledTasksRepository;
+
 const dbs = new DatabaseService(mockDb);
 // Plan 3c Task 0b: `canAccessTrip` is `TripsRepository.findAccessible` now,
 // which needs a real EntityManager over the full migrated schema — this
@@ -152,12 +270,21 @@ vi.spyOn(dbs, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
 const seededRoles: Record<number, string> = { 5: 'trip_owner', 6: 'user', 9: 'user' };
 const usersRepo = {
   getRole: vi.fn(async (id: number) => seededRoles[id] ?? null),
+  // HR1 (Plan 3j Task 5) — same "real SQL against mockDb" reasoning as the
+  // repository stubs above; HOSTRPC-019 asserts the exact returned shape.
+  async findPublicIdentity(id: number) {
+    return (
+      (raw.prepare('SELECT id, username, display_name, avatar FROM users WHERE id = ?').get(id) as
+        | { id: number; username: string; display_name: string | null; avatar: string | null }
+        | undefined) ?? null
+    );
+  },
 } as unknown as UsersRepository;
 const guards = new PluginGuards(dbs, permissions, addons, usersRepo);
 const registry = createTestPluginRegistry([
   new DbRpc(userSettings),
-  new MetaRpc(dbs, guards),
-  new HostSurfaceRpc(dbs, new RealtimeService(), notifications, llmConfig, oauth, guards, pluginAuditRepo),
+  new MetaRpc(dbs, guards, metaRepo, tripsRepo, placesRepo, daysRepo, reservationsRepo, dayAccommodationsRepo),
+  new HostSurfaceRpc(dbs, new RealtimeService(), notifications, llmConfig, oauth, guards, pluginAuditRepo, usersRepo, tripsRepo, scheduledTasksRepo),
 ]);
 const factory = new PluginRpcHostFactory(pluginAuditRepo, registry as unknown as PluginRpcRegistryService);
 const stubRouter: PluginCallRouter = { callPlugin: async () => undefined, emitPluginEvent: async () => {} };

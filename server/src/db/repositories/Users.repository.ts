@@ -1509,6 +1509,22 @@ export class UsersRepository extends TrekRepository<Users> {
     const row = await this.findOne({ id }, { fields: ['id', 'email', 'mfa_enabled'] });
     return row ? { id: row.id, email: row.email, mfa_enabled: row.mfa_enabled ?? null } : null;
   }
+
+  // ---------------------------------------------------------------------
+  // HR1 (Plan 3j Task 5, `plugins/host/rpc/host-surface.rpc.ts#getUser`)
+  // ---------------------------------------------------------------------
+
+  /**
+   * HR1 — `SELECT id, username, display_name, avatar FROM users WHERE id =
+   * ?`. Returned RAW to the calling plugin (the RPC handler's own access
+   * gate runs first — self, or `TripsRepository.sharesTripWith`) — this
+   * repository method itself does no shaping, matching `findProfileBasic`'s
+   * narrower-but-similarly-shaped precedent above.
+   */
+  async findPublicIdentity(id: number): Promise<{ id: number; username: string; display_name: string | null; avatar: string | null } | null> {
+    const row = await this.findOne({ id }, { fields: ['id', 'username', 'display_name', 'avatar'] });
+    return row ? { id: row.id, username: row.username, display_name: row.display_name ?? null, avatar: row.avatar ?? null } : null;
+  }
 }
 
 /**

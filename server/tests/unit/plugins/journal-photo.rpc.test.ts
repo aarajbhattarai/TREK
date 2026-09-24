@@ -5,19 +5,8 @@
  * to link and no provider asset. These cases pin what the handler refuses before
  * it writes anything, and that a refused write leaves no object behind.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// vi.mock is hoisted above the imports, so the flag it reads has to be too.
-// Only readEnv().demo is overridden: the module is shared, and replacing it
-// wholesale takes defaultLanguage and the rest of the env with it.
-const { demo } = vi.hoisted(() => ({ demo: { enabled: false } }));
-vi.mock('../../../src/app-config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../src/app-config')>();
-  return { ...actual, readEnv: () => ({ ...actual.readEnv(), demo }) };
-});
-
+import { describe, it, expect, vi } from 'vitest';
 import { JournalRpc } from '../../../src/nest/journey/journal.rpc';
-import { DEMO_EMAIL_PRIMARY } from '../../../src/nest/common/demo';
 
 const ACTOR = { actingUserId: 7 } as never;
 const PNG = Buffer.from('89504e470d0a1a0a', 'hex').toString('base64');
@@ -25,8 +14,10 @@ const PNG = Buffer.from('89504e470d0a1a0a', 'hex').toString('base64');
 function build(overrides: {
   addPhoto?: unknown;
   allowed?: string;
-  demoEnabled?: boolean;
-  email?: string;
+  /** SV8 (Plan 3i, R-survivors) — JournalRpc now delegates the whole demo-mode
+   *  check (env-enabled + email match) to `DemoService.isDemoUserId`, so the
+   *  test double only needs to say whether that call refuses. */
+  demoBlocked?: boolean;
 } = {}) {
   // Typed parameters so the assertions below can index mock.calls.
   const put = vi.fn(async (_category: string, _filename: string, _body?: unknown, _opts?: unknown) => undefined);
@@ -36,26 +27,19 @@ function build(overrides: {
     ? () => ({ id: 5, photo_id: 42 })
     : () => overrides.addPhoto);
 
-  demo.enabled = overrides.demoEnabled ?? false;
-
   const rpc = new JournalRpc(
     { addPhoto } as never,
     { requireAddon: vi.fn() } as never,
     { put, delete: del } as never,
     { get: () => overrides.allowed ?? '*' } as never,
     { schedule } as never,
-    // Plan 3g Task 3: JR1's demo-mode gate reads through `UsersRepository
-    // .getEmail`, not `DatabaseService.prepare`.
-    { getEmail: async () => overrides.email ?? 'user@example.test' } as never,
+    // SV8 — Plan 3i: DemoService.isDemoUserId, the shared demo-gate primitive.
+    { isDemoUserId: async () => overrides.demoBlocked ?? false } as never,
   );
   return { rpc, put, del, schedule, addPhoto };
 }
 
 const input = (over: Record<string, unknown> = {}) => ({ name: 'photo.jpg', content_base64: PNG, ...over });
-
-beforeEach(() => {
-  demo.enabled = false;
-});
 
 describe('journal.addEntryPhoto', () => {
   it('JPHOTO-001: stores the bytes under a name of its own, then links the photo', async () => {
@@ -129,7 +113,7 @@ describe('journal.addEntryPhoto', () => {
   });
 
   it('JPHOTO-007: refuses to write bytes for a demo user, exactly as the REST upload does', async () => {
-    const { rpc, put } = build({ demoEnabled: true, email: DEMO_EMAIL_PRIMARY });
+    const { rpc, put } = build({ demoBlocked: true });
 
     await expect(rpc.addEntryPhoto({ entryId: 3, input: input() }, ACTOR)).rejects.toThrow(/disabled in demo mode/);
     expect(put).not.toHaveBeenCalled();

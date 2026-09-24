@@ -7,6 +7,12 @@ import { budgetFor } from '../plugin-host-state';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { PluginCapabilityAudit } from '../../../../db/entities/PluginCapabilityAudit.entity';
 import type { PluginCapabilityAuditRepository } from '../../../../db/repositories/PluginCapabilityAudit.repository';
+import { Users } from '../../../../db/entities/Users.entity';
+import type { UsersRepository } from '../../../../db/repositories/Users.repository';
+import { Trips } from '../../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../../db/repositories/Trips.repository';
+import { PluginScheduledTasks } from '../../../../db/entities/PluginScheduledTasks.entity';
+import type { PluginScheduledTasksRepository } from '../../../../db/repositories/PluginScheduledTasks.repository';
 import { DatabaseService } from '../../../database/database.service';
 import { RealtimeService } from '../../../realtime/realtime.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -46,6 +52,12 @@ export class HostSurfaceRpc {
     private readonly oauth: PluginOAuthService,
     private readonly guards: PluginGuards,
     @InjectRepository(PluginCapabilityAudit) private readonly audit: PluginCapabilityAuditRepository,
+    // HR1 (Plan 3j Task 5) — the plugin-visible user row.
+    @InjectRepository(Users) private readonly users: UsersRepository,
+    // HR9 (Plan 3j Task 5) — the bilateral "do these two users share a trip" gate.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
+    // HR5–HR8 (Plan 3j Task 5) — a plugin's own scheduler.set/scheduler.cancel RPCs.
+    @InjectRepository(PluginScheduledTasks) private readonly scheduledTasks: PluginScheduledTasksRepository,
   ) {}
 
   @PluginMethod('users.getById', { permission: 'db:read:users' })
@@ -57,7 +69,11 @@ export class HostSurfaceRpc {
     if (id !== ctx.actingUserId && !(await this.sharesATrip(ctx.actingUserId, id))) {
       throw new ForbiddenResource(`no access to user ${id}`);
     }
-    return this.db.prepare('SELECT id, username, display_name, avatar FROM users WHERE id = ?').get(id);
+    // `?? undefined`: `findPublicIdentity` returns `null` on a miss (this
+    // repository's own convention); the legacy `better-sqlite3` `.get()`
+    // returned `undefined` — preserved so a missing row still serializes
+    // the same way over the wire to the plugin.
+    return (await this.users.findPublicIdentity(id)) ?? undefined;
   }
 
   @PluginMethod('ws.broadcastToTrip', { permission: 'ws:broadcast:trip' })
@@ -188,41 +204,32 @@ export class HostSurfaceRpc {
     }
     const json = JSON.stringify(params.payload ?? null);
     if (json.length > SCHED_PAYLOAD_MAX) throw new BadParams(`scheduler payload too large (max ${SCHED_PAYLOAD_MAX} bytes)`);
-    const existing = this.db
-      .prepare('SELECT id FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?')
-      .get(ctx.pluginId, name) as { id: number } | undefined;
+    const existing = await this.scheduledTasks.existsForPluginAndName(ctx.pluginId, name); // HR5 — Plan 3j
     if (!existing) {
-      const n = (this.db.prepare('SELECT COUNT(*) AS c FROM plugin_scheduled_tasks WHERE plugin_id = ?').get(ctx.pluginId) as { c: number }).c;
+      const n = await this.scheduledTasks.countForPlugin(ctx.pluginId); // HR6 — Plan 3j
       if (n >= SCHED_MAX) throw new BadParams(`too many scheduled tasks (max ${SCHED_MAX})`);
     }
     // Upsert by (plugin, name): re-scheduling the same name replaces it.
-    this.db
-      .prepare(`INSERT INTO plugin_scheduled_tasks (plugin_id, name, due_at, payload, every_ms) VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT (plugin_id, name) DO UPDATE SET due_at = excluded.due_at, payload = excluded.payload, every_ms = excluded.every_ms`)
-      .run(ctx.pluginId, name, Math.max(dueAt, Date.now()), json, everyMs ?? null);
+    await this.scheduledTasks.upsertTask({
+      // HR7 — Plan 3j
+      plugin_id: ctx.pluginId,
+      name,
+      due_at: Math.max(dueAt, Date.now()),
+      payload: json,
+      every_ms: everyMs ?? null,
+    });
     return { scheduled: true };
   }
 
   @PluginMethod('scheduler.cancel', { permission: 'jobs:run' })
   async schedulerCancel(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
-    const r = this.db
-      .prepare('DELETE FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?')
-      .run(ctx.pluginId, str(params.name, 'name'));
-    return { cancelled: r.changes > 0 };
+    const cancelled = await this.scheduledTasks.deleteByPluginAndName(ctx.pluginId, str(params.name, 'name')); // HR8 — Plan 3j
+    return { cancelled };
   }
 
   /** Two users share a trip when both are owner-or-member of the same one. */
   private async sharesATrip(actingUserId: number, targetUserId: number): Promise<boolean> {
-    return !!this.db
-      .prepare(
-        `SELECT 1 FROM trips t
-               LEFT JOIN trip_members m1 ON m1.trip_id = t.id AND m1.user_id = ?
-               LEFT JOIN trip_members m2 ON m2.trip_id = t.id AND m2.user_id = ?
-              WHERE (t.user_id = ? OR m1.user_id IS NOT NULL)
-                AND (t.user_id = ? OR m2.user_id IS NOT NULL)
-              LIMIT 1`,
-      )
-      .get(actingUserId, targetUserId, actingUserId, targetUserId);
+    return await this.trips.sharesTripWith(actingUserId, targetUserId); // HR9 — Plan 3j
   }
 
   private async requireLlm(userId: number) {

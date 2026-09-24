@@ -21,6 +21,7 @@ vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
 import { DayTintsController } from '../../../src/nest/plugins/contributions/day-tints.controller';
 import type { PluginHooks } from '../../../src/nest/plugins/plugin-hooks.service';
+import type { DaysRepository } from '../../../src/db/repositories/Days.repository';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const req = (id?: number) => ({ user: id === undefined ? undefined : { id } }) as any;
@@ -29,7 +30,9 @@ function controller(invoke: (id: string) => unknown, providers = ['p1']) {
     providersOf: vi.fn(() => providers),
     dayTints: vi.fn(async (id: string) => invoke(id)),
   } as unknown as PluginHooks;
-  return { c: new DayTintsController(runtime, { canAccessTrip, connection: { prepare: () => ({ all: () => tripDays.value }) } } as unknown as DatabaseService), runtime };
+  // CT2 (Plan 3j Task 5) — the day-id-set read is now DaysRepository.listIdsByTrip.
+  const days = { listIdsByTrip: vi.fn(async () => tripDays.value.map((d) => d.id)) } as unknown as DaysRepository;
+  return { c: new DayTintsController(runtime, { canAccessTrip } as unknown as DatabaseService, days), runtime };
 }
 const tint = (over: Record<string, unknown> = {}) => ({ dayId: 10, tone: 'success', ...over });
 

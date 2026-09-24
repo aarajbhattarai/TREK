@@ -5,6 +5,8 @@ import { AddonsModule } from '../../addons/addons.module';
 import { JourneyDomainModule } from '../../journey/journey-domain.module';
 import { JourneyEntries } from '../../../db/entities/JourneyEntries.entity';
 import { Plugins } from '../../../db/entities/Plugins.entity';
+import { Days } from '../../../db/entities/Days.entity';
+import { Places } from '../../../db/entities/Places.entity';
 import { PlaceDetailsController } from './place-details.controller';
 import { PluginSearchController } from './plugin-search.controller';
 import { TripWarningsController } from './trip-warnings.controller';
@@ -45,7 +47,10 @@ import { DemoModule } from '../../common/demo.module';
  * entity needs its own registration here too. `Plugins` is the same shape
  * (Plan 3j Task 3): `PluginRoutesController`'s `declaredProfiles` call now
  * takes `PluginsRepository`, and `PluginsRuntimeModule`'s own registration
- * of the same entity isn't exported either.
+ * of the same entity isn't exported either. `Days`/`Places` (Plan 3j Task 5,
+ * CT1/CT2/CT7): `DayScheduleController`/`DayTintsController`'s own day-id-set
+ * read and `PlaceDetailsController`'s own trip-id lookup, same reasoning —
+ * `DaysModule`/`PlacesModule` do not export `MikroOrmModule` either.
  *
  * `DemoModule` is imported explicitly (Plan 3i Task 4 fix wave): it is
  * `@Global()`, but that broadcast only reaches a module graph that actually
@@ -54,7 +59,7 @@ import { DemoModule } from '../../common/demo.module';
  * dependency unresolved.
  */
 @Module({
-  imports: [PluginsRuntimeModule, AddonsModule, JourneyDomainModule, DemoModule, MikroOrmModule.forFeature([JourneyEntries, Plugins])],
+  imports: [PluginsRuntimeModule, AddonsModule, JourneyDomainModule, DemoModule, MikroOrmModule.forFeature([JourneyEntries, Plugins, Days, Places])],
   controllers: [
     PlaceDetailsController,
     PluginSearchController,

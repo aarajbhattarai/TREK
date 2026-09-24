@@ -1,6 +1,15 @@
 import type { PluginScheduledTasks } from '../entities/PluginScheduledTasks.entity';
 import { TrekRepository } from './_shared/trek-repository';
 
+/** HR7's insert-only shape (`schedulerSet`'s VALUES list — `payload`/`every_ms` are always caller-supplied, never defaulted the way `id`/`created_at` are). */
+export interface PluginScheduledTaskUpsertInput {
+  plugin_id: string;
+  name: string;
+  due_at: number;
+  payload: string;
+  every_ms: number | null;
+}
+
 /** PR4 — the sweep's own due-task projection. */
 export interface DueScheduledTaskRow {
   id: number;
@@ -60,5 +69,48 @@ export class PluginScheduledTasksRepository extends TrekRepository<PluginSchedul
   /** PR37 (uninstall cascade) — `DELETE FROM plugin_scheduled_tasks WHERE plugin_id = ?`. */
   async deleteAllForPlugin(pluginId: string): Promise<void> {
     await this.nativeDelete({ plugin_id: pluginId });
+  }
+
+  // -----------------------------------------------------------------------
+  // HR5–HR8 (Plan 3j Task 5, `plugins/host/rpc/host-surface.rpc.ts`'s
+  // `scheduler.set`/`scheduler.cancel` RPC handlers — a plugin's own
+  // request to schedule/cancel one of its named tasks, distinct from PR4–
+  // PR10's sweep-tick statements above).
+  // -----------------------------------------------------------------------
+
+  /** HR5 — `SELECT id FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?`, existence-only (the pre-quota check `schedulerSet` runs before counting). */
+  async existsForPluginAndName(pluginId: string, name: string): Promise<boolean> {
+    const row = await this.findOne({ plugin_id: pluginId, name }, { fields: ['id'] });
+    return row !== null;
+  }
+
+  /** HR6 — `SELECT COUNT(*) AS c FROM plugin_scheduled_tasks WHERE plugin_id = ?`, the `SCHED_MAX` DoS-quota count. */
+  async countForPlugin(pluginId: string): Promise<number> {
+    return await this.count({ plugin_id: pluginId });
+  }
+
+  /**
+   * HR7 — `` INSERT INTO plugin_scheduled_tasks (plugin_id, name, due_at,
+   * payload, every_ms) VALUES (?, ?, ?, ?, ?) ON CONFLICT (plugin_id, name)
+   * DO UPDATE SET due_at = excluded.due_at, payload = excluded.payload,
+   * every_ms = excluded.every_ms `` — the composite-key upsert on
+   * `(plugin_id, name)` (the entity's own `uniques`, `PluginScheduledTasks
+   * .entity.ts`): re-scheduling the same name replaces it in place. No
+   * COALESCE — every non-key column is re-assigned verbatim from `excluded`
+   * — so `em.upsert`'s `onConflictMergeFields` expresses it directly,
+   * `PluginUserConfigRepository.upsertConfig`'s own precedent for a plain
+   * (non-merging) composite upsert.
+   */
+  async upsertTask(input: PluginScheduledTaskUpsertInput): Promise<void> {
+    await this.upsert(
+      { plugin_id: input.plugin_id, name: input.name, due_at: input.due_at, payload: input.payload, every_ms: input.every_ms },
+      { onConflictFields: ['plugin_id', 'name'], onConflictAction: 'merge', onConflictMergeFields: ['due_at', 'payload', 'every_ms'] },
+    );
+  }
+
+  /** HR8 — `DELETE FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?` (`scheduler.cancel`), returning whether a row existed (`.changes > 0`). */
+  async deleteByPluginAndName(pluginId: string, name: string): Promise<boolean> {
+    const changed = await this.nativeDelete({ plugin_id: pluginId, name });
+    return changed > 0;
   }
 }

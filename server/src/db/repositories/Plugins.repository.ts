@@ -54,6 +54,16 @@ export interface PluginNameCapabilitiesRow {
   capabilities: string;
 }
 
+/** PFC1 — `plugins-feed.controller.ts#list`'s own client-facing feed projection. */
+export interface PluginFeedRow {
+  id: string;
+  name: string;
+  type: string;
+  icon: string | null;
+  capabilities: string;
+  granted_permissions: string;
+}
+
 /** PS-list — `list()`'s admin projection, every column `PluginsService.list()` re-shapes. */
 export interface PluginAdminRow {
   id: string;
@@ -520,6 +530,46 @@ export class PluginsRepository extends TrekRepository<Plugins> {
   async findSourceRepoAndAuthorPubkey(id: string): Promise<{ source_repo: string | null; author_pubkey: string | null } | null> {
     const row = await this.findOne({ id }, { fields: ['source_repo', 'author_pubkey'] });
     return row ? { source_repo: row.source_repo ?? null, author_pubkey: row.author_pubkey ?? null } : null;
+  }
+
+  // -----------------------------------------------------------------------
+  // Plan 3j Task 5 — the small plugin controllers' own statements (PFC1,
+  // PUC1/POC1). PAC1/PRF1 (the audit-read/append delegates) are Task 3's
+  // `plugin-audit.ts` conversion, not this repository's.
+  // -----------------------------------------------------------------------
+
+  /**
+   * PFC1 (`plugins-feed.controller.ts#list`) — `SELECT id, name, type, icon,
+   * capabilities, granted_permissions FROM plugins WHERE status = 'active'
+   * ORDER BY sort_order, name`. This row goes to the CLIENT, not a plugin
+   * process — R-facade's `withCamelCase` wrapper is never applied here (the
+   * client already speaks snake_case per the wire contract, D1); stays
+   * exactly as read.
+   */
+  async findActiveFeedRows(): Promise<PluginFeedRow[]> {
+    const rows = await this.find(
+      { status: 'active' },
+      { fields: ['id', 'name', 'type', 'icon', 'capabilities', 'granted_permissions'], orderBy: [{ sort_order: 'asc' }, { name: 'asc' }] },
+    );
+    return rows.map((r) => ({
+      id: r.id ?? '',
+      name: r.name,
+      type: r.type,
+      icon: r.icon ?? null,
+      capabilities: r.capabilities,
+      granted_permissions: r.granted_permissions ?? '',
+    }));
+  }
+
+  /**
+   * PUC1/POC1 — `SELECT 1 FROM plugins WHERE id = ? AND status = 'active'`,
+   * byte-identical text, two call sites (`plugin-user-settings.controller.ts
+   * #activeWithUserFields`, `oauth/plugin-oauth.controller.ts#isActive`) —
+   * one shared method for both, existence-only.
+   */
+  async existsActive(id: string): Promise<boolean> {
+    const row = await this.findOne({ id, status: 'active' }, { fields: ['id'] });
+    return row !== null;
   }
 }
 

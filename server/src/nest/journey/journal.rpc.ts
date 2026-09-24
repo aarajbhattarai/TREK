@@ -2,20 +2,16 @@ import pathMod from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { journalPluginPhotoInputSchema } from '@trek/shared';
-import { InjectRepository } from '@mikro-orm/nestjs';
 import { PluginController, PluginMethod } from '../plugins/host/rpc-kit/decorators';
 import { PluginGuards } from '../plugins/host/plugin-guards.service';
 import { BadParams, ForbiddenResource } from '../plugins/host/rpc-errors';
 import { asPayload, num } from '../plugins/host/rpc-params';
 import type { PluginRpcContext } from '../plugins/host/rpc-kit/types';
 import { ADDON_IDS } from '../../addons';
-import { readEnv } from '../../app-config';
-import { isDemoEmail } from '../common/demo';
 import { AllowedFileTypesService } from '../files/allowed-file-types.service';
 import { PhotoCaptureBackfillService } from '../memories/photo-capture-backfill.service';
 import { StorageService } from '../storage/storage.service';
-import { Users } from '../../db/entities/Users.entity';
-import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { DemoService } from '../common/demo.service';
 import { JourneyDomainService } from './journey-domain.service';
 
 /** 10MB decoded, the same cap the file surface applies to plugin uploads. */
@@ -48,7 +44,11 @@ export class JournalRpc {
     private readonly storage: StorageService,
     private readonly allowedTypes: AllowedFileTypesService,
     private readonly captureBackfill: PhotoCaptureBackfillService,
-    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
+    // SV8 (R-survivors) — Plan 3i: DemoService.isDemoUserId replaces the inline
+    // env + email lookup + isDemoEmail check (3g's own JR1 conversion of the
+    // SELECT onto UsersRepository.getEmail still duplicated the demo-gating
+    // LOGIC; this collapses it onto the shared primitive).
+    private readonly demo: DemoService,
   ) {}
 
   @PluginMethod('journal.listMine', { permission: 'db:read:journal' })
@@ -147,12 +147,7 @@ export class JournalRpc {
 
     // Mirrors the REST upload guard: a demo user must not write bytes to the
     // shared demo instance, not even through a plugin's db:write:journal.
-    // JR1 — reuses `UsersRepository.getEmail` (already built by another
-    // domain's demo-mode-check conversion), not a near-duplicate.
-    if (readEnv().demo.enabled) {
-      const uploaderEmail = await this.usersRepo.getEmail(userId);
-      if (isDemoEmail(uploaderEmail)) throw new ForbiddenResource('Uploads are disabled in demo mode.');
-    }
+    if (await this.demo.isDemoUserId(userId)) throw new ForbiddenResource('Uploads are disabled in demo mode.'); // SV8 — Plan 3i
 
     // basename first: a name is a name, never a path.
     const original = pathMod.basename(input.name);

@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
 import { MemoriesModule } from '../memories/memories.module';
 import { PluginGuardsModule } from '../plugins/host/plugin-guards.module';
 import { StorageModule } from '../storage/storage.module';
+import { DemoModule } from '../common/demo.module';
 import { JourneyDomainModule } from './journey-domain.module';
 import { JournalRpc } from './journal.rpc';
-import { Users } from '../../db/entities/Users.entity';
 
 /**
  * The journal plugin surface, in its own container.
@@ -22,13 +21,19 @@ import { Users } from '../../db/entities/Users.entity';
  * JourneyDomainModule is re-exported so importing this one is a superset of
  * importing that one, and nothing that already depended on it has to change.
  *
- * `MikroOrmModule.forFeature([Users])` — Plan 3g Task 3: `JournalRpc`'s
- * demo-mode gate (JR1) now injects `UsersRepository.getEmail`, and
- * `@InjectRepository` resolves from THIS module's own `forFeature` graph,
- * not `AuthModule`'s (which this module does not import).
+ * `DemoModule` is imported explicitly (Plan 3i Task 4 fix wave's own
+ * precedent, restated here — Plan 3j Task 5, SV8): `DemoService` is
+ * `@Global()`, but that broadcast only reaches a module graph that actually
+ * imports it somewhere — a hand-built e2e `TestingModule` that never pulls in
+ * `AppModule` otherwise leaves `JournalRpc`'s `DemoService` dependency
+ * unresolved. The earlier `MikroOrmModule.forFeature([Users])` entry (Plan 3g
+ * Task 3, `JournalRpc`'s own `UsersRepository.getEmail` injection) is gone —
+ * `DemoService.isDemoUserId` resolves `Users` through its OWN constructor
+ * (an injected `EntityManager`, not `@InjectRepository`), so this module no
+ * longer needs the entity registered for that call.
  */
 @Module({
-  imports: [JourneyDomainModule, StorageModule, AllowedFileTypesModule, MemoriesModule, PluginGuardsModule, MikroOrmModule.forFeature([Users])],
+  imports: [JourneyDomainModule, StorageModule, AllowedFileTypesModule, MemoriesModule, PluginGuardsModule, DemoModule],
   providers: [JournalRpc],
   exports: [JourneyDomainModule],
 })

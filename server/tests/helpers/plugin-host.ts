@@ -62,6 +62,7 @@ import { CollabRpc } from '../../src/nest/collab/collab.rpc';
 import { AtlasRpc } from '../../src/nest/atlas/atlas.rpc';
 import { VacayRpc } from '../../src/nest/vacay/vacay.rpc';
 import { JournalRpc } from '../../src/nest/journey/journal.rpc';
+import { DemoService } from '../../src/nest/common/demo.service';
 import { CollectionsRpc } from '../../src/nest/collections/collections.rpc';
 import { makeNotificationsService } from './notifications';
 import { notificationsStub } from './notifications';
@@ -315,13 +316,25 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     new VacayRpc(vacay, guards),
     // The photo half needs storage plus the allowed-types setting and the EXIF
     // backfill; none of the tests on this harness write bytes, so they are stubs.
-    // Plan 3g Task 3 — the constructor-ripple fix: `JournalRpc`'s demo-mode
-    // gate (JR1) now injects `UsersRepository.getEmail`, not `DatabaseService`.
-    new JournalRpc(journey, guards, generalStorage, { get: () => '*' } as never, { schedule: () => {} } as never, usersRepo),
+    // SV8 (Plan 3i, R-survivors) — JournalRpc's demo-mode gate (addEntryPhoto)
+    // now injects DemoService, the same shared primitive mcp-test-controllers.ts
+    // wires into the 4 *.mcp.ts survivor sites.
+    new JournalRpc(journey, guards, generalStorage, { get: () => '*' } as never, { schedule: () => {} } as never, new DemoService(new RuntimeEnvService(), (await sharedTestOrm(dbs.connection)).em)),
     new CollectionsRpc(collections, guards),
     new DbRpc(new PluginUserSettingsService(pluginOrm.repo(PluginSettingsFields), pluginOrm.repo(PluginUserConfig))),
-    new MetaRpc(dbs, guards),
-    new HostSurfaceRpc(dbs, realtime, notifications, llmConfig, oauth, guards, pluginAuditRepo),
+    // Plan 3j Task 5 — MetaRpc's own MR1–MR9 conversion: PluginEntityMetadata plus
+    // one typed trip-id read per entity table (R12's dispatch, no interpolation).
+    new MetaRpc(
+      dbs, guards, pluginOrm.repo(PluginEntityMetadata), await createTestTripsRepo(dbs.connection),
+      await createTestPlacesRepo(dbs.connection), await createTestDaysRepo(dbs.connection),
+      await createTestReservationsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection),
+    ),
+    // Plan 3j Task 5 — HostSurfaceRpc's own HR1/HR5–HR9 conversion: the plugin-visible
+    // user row, the bilateral trip-sharing gate, and its own scheduler.set/cancel.
+    new HostSurfaceRpc(
+      dbs, realtime, notifications, llmConfig, oauth, guards, pluginAuditRepo,
+      usersRepo, await createTestTripsRepo(dbs.connection), pluginOrm.repo(PluginScheduledTasks),
+    ),
     new PluginHooks(undefined as never),
   ]);
   return new PluginRpcHostFactory(pluginAuditRepo, registry as unknown as PluginRpcRegistryService);

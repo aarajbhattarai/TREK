@@ -216,6 +216,52 @@ export class TripsRepository extends TrekRepository<Trips> {
   }
 
   /**
+   * MR8 (Plan 3j Task 5, `host/rpc/meta.rpc.ts#entityTrip`'s `'trip'` arm) —
+   * `SELECT id FROM trips WHERE id = ?`, a bare existence probe (the entity
+   * type IS the trip, so the id resolves to itself once the row is
+   * confirmed to exist).
+   */
+  async existsById(id: number): Promise<boolean> {
+    const row = await this.qb('t')
+      .select(['t.id'])
+      .where({ id })
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /**
+   * HR9 (Plan 3j Task 5, `host/rpc/host-surface.rpc.ts#sharesATrip`, private)
+   * — byte-for-byte the legacy self-joined statement:
+   *   SELECT 1 FROM trips t
+   *     LEFT JOIN trip_members m1 ON m1.trip_id = t.id AND m1.user_id = ?
+   *     LEFT JOIN trip_members m2 ON m2.trip_id = t.id AND m2.user_id = ?
+   *    WHERE (t.user_id = ? OR m1.user_id IS NOT NULL)
+   *      AND (t.user_id = ? OR m2.user_id IS NOT NULL)
+   *    LIMIT 1
+   * — "does ANY trip exist where both users are owner-or-member" (the
+   * `users.getById` plugin RPC's own access gate — a bespoke bilateral
+   * membership check, NOT `canAccessTrip`-shaped, which is why it lives here
+   * rather than reusing `accessibleTripsQuery` — that builder joins ONE
+   * user's membership; this needs two independent joins, one per user, so
+   * neither side's `$or` can be satisfied by the other's row.
+   */
+  async sharesTripWith(userIdA: number, userIdB: number): Promise<boolean> {
+    const row = await this.qb('t')
+      .leftJoin('t.trip_members_collection', 'm1', { 'm1.user': userIdA })
+      .leftJoin('t.trip_members_collection', 'm2', { 'm2.user': userIdB })
+      .select(['t.id'])
+      .andWhere({
+        $and: [
+          { $or: [{ 't.user': userIdA }, { 'm1.user': { $ne: null } }] },
+          { $or: [{ 't.user': userIdB }, { 'm2.user': { $ne: null } }] },
+        ],
+      })
+      .limit(1)
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /**
    * `SELECT t.id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id
    *  AND m.user_id = :userId WHERE (t.user_id = :userId OR m.user_id IS NOT NULL)
    *  ORDER BY t.created_at DESC` (`trip-membership.service.ts:40-46`, TB3) —

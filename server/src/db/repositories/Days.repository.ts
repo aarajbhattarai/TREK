@@ -2,6 +2,7 @@ import type { Days } from '../entities/Days.entity';
 import { DayAssignments } from '../entities/DayAssignments.entity';
 import { DayNotes } from '../entities/DayNotes.entity';
 import { DayAccommodations } from '../entities/DayAccommodations.entity';
+import { columnRef } from '../dialect/sql-functions';
 import { toRow, type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -51,6 +52,34 @@ export class DaysRepository extends TrekRepository<Days> {
   async findInTrip(id: number, trip_id: number): Promise<DayRow | undefined> {
     const day = await this.findOne({ id, trip: trip_id });
     return day ? (toRow(day) as DayRow) : undefined;
+  }
+
+  /**
+   * CT1/CT2 (Plan 3j Task 5, `contributions/day-schedule.controller.ts` /
+   * `day-tints.controller.ts`, byte-identical text) — `SELECT id FROM days
+   * WHERE trip_id = ?`, the trip's own day-id set (used only for a
+   * membership check against a plugin-contributed `dayId`).
+   */
+  async listIdsByTrip(trip_id: number): Promise<number[]> {
+    const rows = await this.find({ trip: trip_id }, { fields: ['id'] });
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * MR9 (Plan 3j Task 5, `host/rpc/meta.rpc.ts#entityTrip`'s `'day'` arm,
+   * R12's "one method per target table, no dynamic identifier dispatch"
+   * precedent — `PlacesRepository.findTripId`/`ReservationsRepository
+   * .findTripId`'s own docstrings) — `SELECT trip_id FROM days WHERE id =
+   * ?`. `trip_id` is a `persist(false)` mirror of the `trip` relation —
+   * `columnRef`, not a bare select (the program-wide trap).
+   */
+  async findTripId(id: number): Promise<number | undefined> {
+    const platform = this.getEntityManager().getPlatform();
+    const row = await this.qb('d')
+      .select([columnRef(platform, 'd.trip_id').as('trip_id')])
+      .where({ id })
+      .execute<{ trip_id: number } | undefined>('get', false);
+    return row?.trip_id;
   }
 
   /**

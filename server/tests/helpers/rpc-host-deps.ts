@@ -81,8 +81,12 @@ export function allRpcControllers(): object[] {
     new JournalRpc(anyService(), anyService(), anyService(), anyService(), anyService(), anyService()),
     new CollectionsRpc(anyService(), anyService()),
     new DbRpc(anyService()),
-    new MetaRpc(anyService(), anyService()),
-    new HostSurfaceRpc(anyService(), anyService(), anyService(), anyService(), anyService(), anyService(), anyService()),
+    // Plan 3j Task 5 — MetaRpc/HostSurfaceRpc's own repository conversions (MR#/HR#).
+    new MetaRpc(anyService(), anyService(), anyService(), anyService(), anyService(), anyService(), anyService(), anyService()),
+    new HostSurfaceRpc(
+      anyService(), anyService(), anyService(), anyService(), anyService(), anyService(), anyService(),
+      anyService(), anyService(), anyService(),
+    ),
     // Owns no wire method, but declares all 18 hook contracts, which requireTotalCoverage checks too.
     new PluginHooks(anyService()),
   ];

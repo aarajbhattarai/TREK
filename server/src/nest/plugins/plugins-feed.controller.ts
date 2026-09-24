@@ -1,5 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Plugins } from '../../db/entities/Plugins.entity';
+import type { PluginsRepository } from '../../db/repositories/Plugins.repository';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { pluginsEnabled } from './kill-switch';
 
@@ -30,14 +32,14 @@ interface ActivePlugin {
 @Controller('api/plugins')
 @UseGuards(JwtAuthGuard)
 export class PluginsFeedController {
-  constructor(private readonly dbs: DatabaseService) {}
+  constructor(@InjectRepository(Plugins) private readonly plugins: PluginsRepository) {}
 
   @Get()
   async list(): Promise<{ plugins: ActivePlugin[] }> {
     if (!pluginsEnabled()) return { plugins: [] };
-    const rows = this.dbs.connection
-      .prepare("SELECT id, name, type, icon, capabilities, granted_permissions FROM plugins WHERE status = 'active' ORDER BY sort_order, name")
-      .all() as Array<Omit<ActivePlugin, 'slot' | 'tripPage'> & { capabilities: string; granted_permissions: string }>;
+    // PFC1 — Plan 3j: this row goes to the CLIENT, not a plugin process — stays
+    // exactly snake_case, R-facade's wrapper is never applied here.
+    const rows = await this.plugins.findActiveFeedRows();
     const plugins = rows.map(({ capabilities, granted_permissions, ...p }) => {
       const tripPage = p.type === 'trip-page' ? tripPageOf(capabilities) : undefined;
       const routeProfiles = routeProfilesOf(capabilities, granted_permissions);

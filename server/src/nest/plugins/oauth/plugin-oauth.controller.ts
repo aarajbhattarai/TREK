@@ -1,9 +1,11 @@
 import { Controller, Get, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginOAuthService } from './plugin-oauth.service';
-import { DatabaseService } from '../../database/database.service';
+import { Plugins } from '../../../db/entities/Plugins.entity';
+import type { PluginsRepository } from '../../../db/repositories/Plugins.repository';
 
 /**
  * Host-brokered outbound OAuth endpoints (#plugins). All are gated by JwtAuthGuard —
@@ -17,11 +19,12 @@ import { DatabaseService } from '../../database/database.service';
 export class PluginOAuthController {
   constructor(
     private readonly oauth: PluginOAuthService,
-    private readonly dbs: DatabaseService,
+    // POC1 (Plan 3j Task 5) — shared with plugin-user-settings.controller.ts's activeWithUserFields.
+    @InjectRepository(Plugins) private readonly pluginsRepo: PluginsRepository,
   ) {}
 
   private async isActive(id: string): Promise<boolean> {
-    return !!this.dbs.connection.prepare("SELECT 1 FROM plugins WHERE id = ? AND status = 'active'").get(id);
+    return await this.pluginsRepo.existsActive(id);
   }
 
   @Get(':id/status')

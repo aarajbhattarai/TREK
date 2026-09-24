@@ -11,12 +11,10 @@ const { pluginsEnabled, getMock } = vi.hoisted(() => ({
   getMock: vi.fn(() => ({ 1: 1 })), // plugin is active by default
 }));
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
-vi.mock('../../../src/db/database', () => ({ db: { prepare: () => ({ get: getMock }) } }));
-import { db as dbConn } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 
 import { PluginOAuthController } from '../../../src/nest/plugins/oauth/plugin-oauth.controller';
 import type { PluginOAuthService } from '../../../src/nest/plugins/oauth/plugin-oauth.service';
+import type { PluginsRepository } from '../../../src/db/repositories/Plugins.repository';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const req = (id?: number) => ({ user: id === undefined ? undefined : { id } }) as any;
@@ -32,7 +30,9 @@ function ctrl(over: Partial<PluginOAuthService> = {}) {
     disconnect: vi.fn(async () => undefined),
     ...over,
   } as unknown as PluginOAuthService;
-  return { c: new PluginOAuthController(svc, new DatabaseService(dbConn)), svc };
+  // POC1 (Plan 3j Task 5) — the active-plugin guard is now Plugins.repository.ts#existsActive.
+  const plugins = { existsActive: vi.fn(async () => !!getMock()) } as unknown as PluginsRepository;
+  return { c: new PluginOAuthController(svc, plugins), svc };
 }
 
 describe('PluginOAuthController', () => {

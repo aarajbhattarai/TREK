@@ -11,6 +11,7 @@ import { PluginOAuthModule } from './oauth/plugin-oauth.module';
 import { PluginContributionsModule } from './contributions/plugin-contributions.module';
 import { AppConfigModule } from '../app-config/app-config.module';
 import { PluginCapabilityAudit } from '../../db/entities/PluginCapabilityAudit.entity';
+import { Plugins } from '../../db/entities/Plugins.entity';
 
 /**
  * Plugin system (#plugins), composition root.
@@ -34,9 +35,17 @@ import { PluginCapabilityAudit } from '../../db/entities/PluginCapabilityAudit.e
  * registers the same entity for ITS OWN providers but does not export the repository
  * token, so this module (the one that constructs the controller) needs its own entry,
  * same reasoning `PluginContributionsModule`'s own docstring gives for `JourneyEntries`.
+ * `Plugins` (Plan 3j Task 5, PFC1/PUC1) — `PluginsFeedController`'s own feed read and
+ * `PluginUserSettingsController`'s own active-plugin guard, same reasoning.
  */
 @Module({
-  imports: [AppConfigModule, PluginsRuntimeModule, PluginOAuthModule, PluginContributionsModule, MikroOrmModule.forFeature([PluginCapabilityAudit])],
+  imports: [
+    AppConfigModule,
+    PluginsRuntimeModule,
+    PluginOAuthModule,
+    PluginContributionsModule,
+    MikroOrmModule.forFeature([PluginCapabilityAudit, Plugins]),
+  ],
   controllers: [
     PluginsController,
     PluginsFeedController,

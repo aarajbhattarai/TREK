@@ -67,6 +67,17 @@ async function makeService(): Promise<PluginsService> {
   );
 }
 
+/**
+ * PFC1 (Plan 3j Task 5) — PluginsFeedController's own feed read, now
+ * Plugins.repository.ts#findActiveFeedRows, resolved over the SAME `testDb`
+ * handle every raw-SQL fixture line above writes to (same `sharedTestOrm`
+ * reasoning as `makeService` above).
+ */
+async function makeFeedController(): Promise<PluginsFeedController> {
+  const orm = await sharedTestOrm(testDb);
+  return new PluginsFeedController(orm.repo(Plugins));
+}
+
 beforeEach(() => {
   testDb.exec('DELETE FROM plugins');
   testDb.exec('DELETE FROM plugin_settings_fields');
@@ -247,7 +258,7 @@ describe('PluginsFeedController (client feed)', () => {
   it('returns active plugins when enabled, nothing when disabled', async () => {
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status) VALUES ('w','W','widget','Box','active')").run();
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status) VALUES ('i','I','integration','Plug','inactive')").run();
-    const feed = new PluginsFeedController(new DatabaseService(dbConn));
+    const feed = await makeFeedController();
 
     process.env.TREK_PLUGINS_ENABLED = 'true';
     const active = await feed.list();
@@ -261,7 +272,7 @@ describe('PluginsFeedController (client feed)', () => {
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status, capabilities) VALUES ('h','H','widget','Box','active','{\"widget\":{\"slot\":\"hero\"}}')").run();
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status, capabilities) VALUES ('b','B','widget','Box','active','not-json')").run();
     process.env.TREK_PLUGINS_ENABLED = 'true';
-    const out = await new PluginsFeedController(new DatabaseService(dbConn)).list();
+    const out = await (await makeFeedController()).list();
     expect(out.plugins.find((p) => p.id === 'h')?.slot).toBe('hero');
     expect(out.plugins.find((p) => p.id === 'b')?.slot).toBe('sidebar');
   });
@@ -269,14 +280,14 @@ describe('PluginsFeedController (client feed)', () => {
   it('exposes the day-detail slot (a day-panel widget must not fall back to the dashboard)', async () => {
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status, capabilities) VALUES ('d','D','widget','Box','active','{\"widget\":{\"slot\":\"day-detail\"}}')").run();
     process.env.TREK_PLUGINS_ENABLED = 'true';
-    expect((await new PluginsFeedController(new DatabaseService(dbConn)).list()).plugins.find((p) => p.id === 'd')?.slot).toBe('day-detail');
+    expect((await (await makeFeedController()).list()).plugins.find((p) => p.id === 'd')?.slot).toBe('day-detail');
   });
 
   it('exposes settingsUi only when the capability is exactly true', async () => {
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status, capabilities) VALUES ('su','S','widget','Box','active','{\"settingsUi\":true}')").run();
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status, capabilities) VALUES ('no','N','widget','Box','active','{\"settingsUi\":\"yes\"}')").run();
     process.env.TREK_PLUGINS_ENABLED = 'true';
-    const out = await new PluginsFeedController(new DatabaseService(dbConn)).list();
+    const out = await (await makeFeedController()).list();
     expect(out.plugins.find((p) => p.id === 'su')?.settingsUi).toBe(true);
     expect(out.plugins.find((p) => p.id === 'no')?.settingsUi).toBeUndefined();
   });
@@ -284,7 +295,7 @@ describe('PluginsFeedController (client feed)', () => {
   it('exposes the reservation-detail slot (a booking-card widget must not fall back to the dashboard)', async () => {
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status, capabilities) VALUES ('r','R','widget','Box','active','{\"widget\":{\"slot\":\"reservation-detail\"}}')").run();
     process.env.TREK_PLUGINS_ENABLED = 'true';
-    expect((await new PluginsFeedController(new DatabaseService(dbConn)).list()).plugins.find((p) => p.id === 'r')?.slot).toBe('reservation-detail');
+    expect((await (await makeFeedController()).list()).plugins.find((p) => p.id === 'r')?.slot).toBe('reservation-detail');
   });
 
   it('exposes tripPage for trip-page plugins, re-validated against the replaceable-tab whitelist', async () => {
@@ -294,7 +305,7 @@ describe('PluginsFeedController (client feed)', () => {
     // the capability is meaningless off a trip-page and must not leak onto widgets
     testDb.prepare("INSERT INTO plugins (id, name, type, icon, status, capabilities) VALUES ('w2','W2','widget','Box','active','{\"tripPage\":{\"replaces\":[\"transports\"]}}')").run();
     process.env.TREK_PLUGINS_ENABLED = 'true';
-    const out = await new PluginsFeedController(new DatabaseService(dbConn)).list();
+    const out = await (await makeFeedController()).list();
     expect(out.plugins.find((p) => p.id === 't')?.tripPage).toEqual({ replaces: ['transports', 'buchungen'], position: 1 });
     expect(out.plugins.find((p) => p.id === 'evil')?.tripPage).toBeUndefined();
     expect(out.plugins.find((p) => p.id === 'w2')?.tripPage).toBeUndefined();

@@ -1,6 +1,9 @@
 import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../../database/database.service';
+import { Places } from '../../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../../db/repositories/Places.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
@@ -64,6 +67,8 @@ export class PlaceDetailsController {
   constructor(
     private readonly hooks: PluginHooks,
     private readonly dbs: DatabaseService,
+    // CT7 (Plan 3j Task 5) — the place's owning trip id, converted onto Places.repository.ts.
+    @InjectRepository(Places) private readonly places: PlacesRepository,
   ) {}
 
   @Get(':placeId')
@@ -77,8 +82,8 @@ export class PlaceDetailsController {
     if (!Number.isFinite(placeId) || userId == null) return { providers: [] };
 
     // The place must belong to a trip the caller can access — same gate as a read.
-    const row = this.dbs.connection.prepare('SELECT trip_id FROM places WHERE id = ?').get(placeId) as { trip_id: number } | undefined;
-    if (!row || !(await this.dbs.canAccessTrip(row.trip_id, userId))) return { providers: [] };
+    const tripId = await this.places.findTripId(placeId); // CT7 — Plan 3j
+    if (tripId === undefined || !(await this.dbs.canAccessTrip(tripId, userId))) return { providers: [] };
 
     const ids = this.hooks.providersOf('placeDetailProvider');
     const results = await Promise.all(

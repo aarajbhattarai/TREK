@@ -12,12 +12,10 @@ const { rows, pluginsEnabled } = vi.hoisted(() => ({
   rows: { value: [] as Array<Record<string, unknown>> },
   pluginsEnabled: vi.fn(() => true),
 }));
-vi.mock('../../../src/db/database', () => ({ db: { prepare: () => ({ all: () => rows.value }) } }));
-import { db as dbConn } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
 import { PluginsFeedController } from '../../../src/nest/plugins/plugins-feed.controller';
+import type { PluginsRepository } from '../../../src/db/repositories/Plugins.repository';
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'p1', name: 'P', type: 'integration', icon: null,
@@ -26,7 +24,9 @@ const row = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('PluginsFeedController', () => {
-  const c = new PluginsFeedController(new DatabaseService(dbConn));
+  // PFC1 (Plan 3j Task 5) — the feed read is now Plugins.repository.ts#findActiveFeedRows.
+  const plugins = { findActiveFeedRows: vi.fn(async () => rows.value) } as unknown as PluginsRepository;
+  const c = new PluginsFeedController(plugins);
   beforeEach(() => { pluginsEnabled.mockReturnValue(true); rows.value = []; });
 
   it('returns an empty feed when the runtime is disabled', async () => {

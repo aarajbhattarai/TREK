@@ -1,6 +1,9 @@
 import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../../database/database.service';
+import { Days } from '../../../db/entities/Days.entity';
+import type { DaysRepository } from '../../../db/repositories/Days.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
@@ -81,6 +84,8 @@ export class DayScheduleController {
   constructor(
     private readonly hooks: PluginHooks,
     private readonly dbs: DatabaseService,
+    // CT1 (Plan 3j Task 5) — the trip's day-id set, converted onto Days.repository.ts.
+    @InjectRepository(Days) private readonly days: DaysRepository,
   ) {}
 
   @Get(':tripId')
@@ -95,8 +100,8 @@ export class DayScheduleController {
 
     const ids = this.hooks.providersOf('dayScheduleProvider');
     if (ids.length === 0) return { items: [] };
-    const dayRows = this.dbs.connection.prepare('SELECT id FROM days WHERE trip_id = ?').all(tripId) as Array<{ id: number }>;
-    const tripDayIds: ReadonlySet<number> = new Set(dayRows.map((d) => d.id));
+    const dayIds = await this.days.listIdsByTrip(tripId); // CT1 — Plan 3j
+    const tripDayIds: ReadonlySet<number> = new Set(dayIds);
 
     const perProvider = await Promise.all(
       ids.map(async (id): Promise<DayScheduleItem[]> => {
