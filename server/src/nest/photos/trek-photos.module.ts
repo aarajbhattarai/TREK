@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { TrekPhotoRegistrationService } from './trek-photos.repository';
+import { TrekPhotoRegistrationService } from './trek-photo-registration.service';
 import { TrekPhotos } from '../../db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../db/entities/TripPhotos.entity';
 import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import path from 'path';
 import { EntityManager } from '@mikro-orm/core';
-import { DatabaseService } from '../database/database.service';
 import { Trips } from '../../db/entities/Trips.entity';
 import { Days } from '../../db/entities/Days.entity';
 import { JourneyEntries } from '../../db/entities/JourneyEntries.entity';
@@ -160,7 +159,6 @@ export interface GuestMember {
 @Injectable()
 export class TripsService {
   constructor(
-    private readonly dbs: DatabaseService,
     private readonly reservations: ReservationsService,
     private readonly days: DaysService,
     private readonly permissions: PermissionsService,
@@ -181,18 +179,14 @@ export class TripsService {
 
   // Plan 3c Task 7: the raw better-sqlite3 handle used to back `remove`'s
   // TP32/TP33 (journey_entries) — converted by Plan 3g Task 4 onto
-  // `JourneyEntriesRepository` below, leaving `db`/`dbs` unused in this file
-  // (kept rather than removed, to avoid a `TripsService` constructor-shape
-  // change outside this survivor task's scope). Every method in this file
+  // `JourneyEntriesRepository` below. Every method in this file
   // reads/writes through `tripsRepo`/`daysRepo`/`journeyEntriesRepo` (or a
   // sibling repository reached the same way `TripsService.canAccessTrip`/
   // `.isOwner` already did since Task 0b: `this.em.getRepository(...)`, not
-  // a new constructor parameter — the shared per-request `EntityManager`
+  // a constructor parameter — the shared per-request `EntityManager`
   // caches repositories, so this is the same instance a hand-constructed
-  // test spies on).
-  private get db() {
-    return this.dbs.connection;
-  }
+  // test spies on). Plan 4 Task 4 dropped the dead `DatabaseService`
+  // injection and this `get db()` getter with it.
 
   private get tripsRepo() {
     return this.em.getRepository(Trips);

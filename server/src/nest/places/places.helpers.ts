@@ -7,7 +7,7 @@ import {
   type PlaceMatchCandidate,
 } from '@trek/shared';
 import type { Place } from '../../types';
-import type { PlaceWithTags } from '../database/database.service';
+import type { PlaceWithTagsRow as PlaceWithTags } from '../../db/repositories/Places.repository';
 import type { KmlImportSummary } from './kml-import.helpers';
 import type { PlacePhotoCacheService } from '../place-photos/place-photo-cache.service';
 import { haversineMetres } from '../common/geo';

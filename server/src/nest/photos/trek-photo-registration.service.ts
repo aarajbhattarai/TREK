@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { encrypt_api_key } from '../common/crypto/apiKeyCrypto';
-import { DatabaseService } from '../database/database.service';
 import type { TrekPhoto } from '../../types';
 import { TrekPhotos } from '../../db/entities/TrekPhotos.entity';
 import type { TrekPhotosRepository } from '../../db/repositories/TrekPhotos.repository';
@@ -33,13 +32,11 @@ import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhoto
  * §18.3 `ReservationsReadRepository` → `ReservationsReadService` precedent.
  *
  * File/test renamed to match (Plan 4 Task 8a — 3e Task 6 renamed only the
- * class). The old path, `trek-photos.repository.ts`, is kept as a thin
- * re-export stub (the same `src/websocket.ts` shape) rather than updated at
- * every one of its ~20 importers in this pass: several of those files sit in
- * two sibling tasks' exclusively-owned windows on this shared branch (Task
- * 3's `nest/{budget,packing,todo,accommodations,places}/**` ripple and Task
- * 5c's held-back test files) and are off limits here. The stub can be
- * deleted and every importer repointed once those tasks land.
+ * class). The old path, `trek-photos.repository.ts`, was kept as a thin
+ * re-export stub (the same `src/websocket.ts` shape) while its ~20
+ * importers sat in sibling tasks' exclusively-owned windows on this shared
+ * branch; Plan 4 Task 4 repointed every one of them at this file directly
+ * and deleted the stub.
  */
 @Injectable()
 export class TrekPhotoRegistrationService {
@@ -49,7 +46,6 @@ export class TrekPhotoRegistrationService {
     // Plan 3g Task 4 (PH10) — the `journey_photos` half of `deleteIfOrphan`'s
     // split orphan-check.
     @InjectRepository(JourneyPhotos) private readonly journeyPhotos: JourneyPhotosRepository,
-    private readonly db: DatabaseService,
   ) {}
 
   /** PH1 — find-or-register a remote provider asset, re-encrypting a changed album passphrase on an existing row. */

@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService } from '../database/database.service';
 import { Plugins } from '../../db/entities/Plugins.entity';
 import type { PluginsRepository } from '../../db/repositories/Plugins.repository';
 import { PluginErrorLog } from '../../db/entities/PluginErrorLog.entity';
@@ -134,7 +133,6 @@ export interface PluginListItem {
 @Injectable()
 export class PluginsService {
   constructor(
-    private readonly dbs: DatabaseService,
     private readonly addons: AddonsService,
     // Plan 3j Task 2 — PS1-PS13's own tables, injected as repositories. All 6
     // REQUIRED (not `@Optional()`), matching `PluginRuntimeService`'s own ruling
@@ -153,10 +151,6 @@ export class PluginsService {
     // it too, not a new site of its own.
     @InjectRepository(PluginCapabilityAudit) private readonly pluginCapabilityAudit: PluginCapabilityAuditRepository,
   ) {}
-
-  private get db() {
-    return this.dbs.connection;
-  }
 
   /** PS1 — Hosts an admin has added for a plugin (0 unless it declared operatorEgress). */
   private async egressHostCount(id: string): Promise<number> {

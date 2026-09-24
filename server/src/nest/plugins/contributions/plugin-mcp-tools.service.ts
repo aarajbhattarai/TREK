@@ -12,7 +12,6 @@
  */
 import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common';
 
-import { DatabaseService } from '../../database/database.service';
 import { RuntimeEnvService } from '../../app-config/runtime-env.service';
 import { DemoService } from '../../common/demo.service';
 import { pluginsEnabled } from '../kill-switch';
@@ -55,7 +54,6 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
     private readonly hooks: PluginHooks,
     private readonly runtime: PluginRuntimeService,
     private readonly env: RuntimeEnvService,
-    private readonly dbs: DatabaseService,
     private readonly demo: DemoService,
   ) {}
 

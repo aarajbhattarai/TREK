@@ -6,7 +6,6 @@ import {
 import { z } from 'zod';
 import { getAppUrl } from '../../app-config';
 import { AuditService } from '../audit/audit.service';
-import { DatabaseService } from '../database/database.service';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
 import { DemoService } from '../common/demo.service';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
@@ -34,7 +33,6 @@ import { TripInviteService, type TripInviteInfo } from './trip-invite.service';
 export class TripInviteMcp {
   constructor(
     private readonly invites: TripInviteService,
-    private readonly db: DatabaseService,
     private readonly env: RuntimeEnvService,
     private readonly guards: McpToolGuardsService,
     private readonly audit: AuditService,

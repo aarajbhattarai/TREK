@@ -2,7 +2,6 @@ import { Injectable, Optional, type OnApplicationBootstrap, type OnModuleDestroy
 import { InjectRepository } from '@mikro-orm/nestjs';
 import semver from 'semver';
 import { MikroORM } from '@mikro-orm/core';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { withRequestContext } from '../database/request-context';
 import { CronRegistrarService } from '../scheduling/cron-registrar.service';
@@ -238,7 +237,6 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   // (both providers are in the module). audit sits before the optionals
   // because a required param cannot follow optional ones.
   constructor(
-    private readonly dbs: DatabaseService,
     private readonly audit: AuditService,
     private readonly addons: AddonsService,
     // Required, and therefore ahead of the two optionals: the notification-channel
@@ -272,16 +270,13 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     @InjectRepository(PluginCapabilityAudit) private readonly pluginCapabilityAudit: PluginCapabilityAuditRepository,
     @InjectRepository(Settings) private readonly settingsRepo: SettingsRepository,
     @InjectRepository(NotificationChannelPreferences) private readonly notificationChannelPreferences: NotificationChannelPreferencesRepository,
+    // Plan 4 Task 4: no longer `@Optional()` — every hand-built test instance now
+    // passes a real one (the same requirement the 14 repositories above already
+    // carry). Ordered ahead of `registry?`/`hostFactory?` below because TypeScript
+    // refuses a required parameter after an optional one.
+    private readonly uow: UnitOfWork,
     private readonly registry?: PluginRegistryService,
     private readonly hostFactory?: PluginRpcHostFactory,
-    // Optional only because TypeScript forbids a required parameter after an
-    // optional one — Nest always injects it (OrmModule is global). A hand-built
-    // test instance that exercises a transaction must pass one; setOperatorEgressHosts
-    // refuses rather than writing outside a transaction (same shape as hostFactory).
-    // `@Optional()` (task-6-rereview.md M2 — harmonised with the `orm?` param two
-    // lines below, which got one in the previous fix wave for exactly this reason;
-    // a plain `?` is TS-only and does not tell Nest's DI a provider may be absent).
-    @Optional() private readonly uow?: UnitOfWork,
     // D6 (task-2-review.md C3): the supervisor wraps every plugin RPC dispatch in a
     // request context built from this. Nest always injects it (MikroOrmCoreModule is
     // global); a hand-built test instance that dispatches through a real
@@ -310,21 +305,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     @Optional() private readonly registrar?: CronRegistrarService,
   ) {}
 
-  private get db() {
-    return this.dbs.connection;
-  }
-
   // Plan 3j Task 3: `discoverPlugins` composes `DiscoveryRepos` from the repositories
   // this class already injects for its own PR-numbered statements — no new params.
-  // Plan 4 Task 8a: `uow` (already injected, `@Optional()`, for `setOperatorEgressHosts`
-  // above) is threaded through too, so `upsert`'s DI5–DI8 delete/re-insert pairs run
-  // in one transaction — `DiscoveryRepos.uow`'s own docstring covers why this is
-  // optional rather than a throwing guard like `setOperatorEgressHosts`'s: several
-  // hand-built partial-DI-graph test instances of this class (e.g.
-  // `boot-registry-order.test.ts`) exercise `onApplicationBootstrap`'s discovery
-  // call with no `uow`, and discovery — unlike a write an admin is actively waiting
-  // on — must never refuse outright; it degrades to the pre-existing untransacted
-  // sequence instead.
+  // Plan 4 Task 8a threaded `uow` through too, so `upsert`'s DI5–DI8 delete/re-insert
+  // pairs run in one transaction. Plan 4 Task 4: `uow` is no longer `@Optional()` —
+  // every hand-built test instance now passes a real one (the same requirement
+  // `PluginsService`'s six repositories already carried).
   private get discoveryRepos(): DiscoveryRepos {
     return { plugins: this.plugins, actions: this.pluginActions, settingsFields: this.pluginSettingsFields, errorLog: this.pluginErrorLog, uow: this.uow };
   }
@@ -819,7 +805,6 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       if (host === '*' || !EGRESS_HOST_RE.test(host)) throw new ForbiddenResource(`invalid host "${raw}"`);
       if (!clean.includes(host)) clean.push(host);
     }
-    if (!this.uow) throw new Error('UnitOfWork not provided — tests that set egress hosts must pass one');
     // PR22/PR23: the delete-then-insert-loop is atomic (`PluginEgressHostsRepository
     // .replaceAllForPlugin`) — a crash mid-write leaves the OLD host set intact instead
     // of a plugin with zero egress hosts. Plan 3j Task 7 fix (should-land 6,

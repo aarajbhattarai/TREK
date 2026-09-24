@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import type { TrekPhoto } from '../../types';
 import { decrypt_api_key } from '../common/crypto/apiKeyCrypto';
-import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../photos/trek-photo-registration.service';
 import { ThumbnailService } from './thumbnail.service';
 import { TrekPhotoCacheService } from './trek-photo-cache.service';
 import { fail, success, type AssetInfo, type ServiceResult } from './memories.helpers';
@@ -13,7 +13,7 @@ import { StorageService } from '../storage/storage.service';
 /**
  * Resolves a stored trek_photo to bytes or metadata by asking whichever provider
  * owns it. The storage half of the old photoResolverService lives in
- * nest/photos/trek-photos.repository.ts; this is the dispatch half.
+ * nest/photos/trek-photo-registration.service.ts; this is the dispatch half.
  *
  * It no longer knows WHICH providers exist (#584). It held ImmichService and
  * SynologyService and a `switch` over their ids; it holds the registry now, so

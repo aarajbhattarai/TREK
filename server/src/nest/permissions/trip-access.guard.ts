@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { EntityManager } from '@mikro-orm/core';
 import type { Request } from 'express';
 import { Trips } from '../../db/entities/Trips.entity';
-import type { TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { PermissionsService } from './permissions.service';
 import type { User } from '../../types';
 

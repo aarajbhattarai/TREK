@@ -6,7 +6,6 @@ import {
 } from '../../nest-mcp';
 import { z } from 'zod';
 import { createCategoryRequestSchema, updateCategoryRequestSchema } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
 import { DemoService } from '../common/demo.service';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
@@ -36,10 +35,8 @@ export class CategoriesMcp {
     // Plan 3i Task 3: `isDemoUser` now goes through the injected
     // `DemoService` below, not `DatabaseService`/`RuntimeEnvService`
     // directly — this domain's own reads/writes are all repository-backed
-    // (unrelated to `db`/`env`, kept injected here only because removing
-    // them is a constructor-arity change this task's file scope does not
-    // cover; see `task-3-report.md`).
-    private readonly db: DatabaseService,
+    // (unrelated to `env`). Plan 4 Task 4 dropped the now-unused
+    // `DatabaseService` injection.
     private readonly env: RuntimeEnvService,
     private readonly guards: McpToolGuardsService,
     private readonly demo: DemoService,

@@ -3,12 +3,11 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { avatarUrl } from '../common/avatarUrl';
 import type { GalleryPhoto, Journey, JourneyEntry, JourneyPhoto, JourneyContributor } from '../../types';
 import { decodeEntryRow, type JourneyEntryWire } from './journey-entry-row';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { RealtimeService } from '../realtime/realtime.service';
 import type { JourneyStats, JourneyTrack, TrekWsUserEventName } from '@trek/shared';
 import { todayUtc } from '@trek/shared';
-import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../photos/trek-photo-registration.service';
 import { getCountryFromCoords } from '../atlas/atlas-geo';
 import { computeJourneyStats, type StatsInputPoint } from './journey-stats';
 import { Journeys } from '../../db/entities/Journeys.entity';
@@ -104,7 +103,6 @@ function countryNamesFor(points: { country: string | null }[]): Record<string, s
 @Injectable()
 export class JourneyDomainService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
     private readonly photos: TrekPhotoRegistrationService,
     private readonly uow: UnitOfWork,

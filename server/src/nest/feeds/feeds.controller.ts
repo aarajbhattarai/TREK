@@ -18,7 +18,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { User } from '../../types';
 import { RequirePermission, TripAccessGuard } from '../permissions/trip-access.guard';
 import { Trip } from '../permissions/trip.decorator';
-import type { TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { Public } from '../auth/public.decorator';
 
 // Resolve the public origin used to build feed URLs. APP_URL wins — it is the

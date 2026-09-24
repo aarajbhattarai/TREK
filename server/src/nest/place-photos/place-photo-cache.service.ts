@@ -3,7 +3,6 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { Jimp, JimpMime } from 'jimp';
 import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
-import { DatabaseService } from '../database/database.service';
 import { StorageService } from '../storage/storage.service';
 import { GooglePlacePhotoMeta } from '../../db/entities/GooglePlacePhotoMeta.entity';
 import type { GooglePlacePhotoMetaRepository } from '../../db/repositories/GooglePlacePhotoMeta.repository';
@@ -55,13 +54,10 @@ interface CachedPhoto {
  * cache itself is mode-agnostic.
  *
  * `DatabaseService` was injected (Plan 3c Task 1, PP6 ruling option 2) purely
- * for the `collection_places` half of `isReferenced`; Plan 3h Task 6 converts
+ * for the `collection_places` half of `isReferenced`; Plan 3h Task 6 converted
  * that half onto `CollectionPlacesRepository.existsByGoogleIdOrImageUrl`, so
- * every statement in this file is now repository-backed — `DatabaseService`
- * itself is left injected (out of this task's one-line-swap scope: several
- * other domains' test files hand-construct this class positionally) but is
- * now unused in the body; flagged for whoever next touches this file's
- * constructor to drop.
+ * every statement in this file was already repository-backed —
+ * Plan 4 Task 4 dropped the now-unused `DatabaseService` injection.
  */
 @Injectable()
 export class PlacePhotoCacheService {
@@ -73,7 +69,6 @@ export class PlacePhotoCacheService {
   private readonly knownOnDisk = new Set<string>();
 
   constructor(
-    private readonly db: DatabaseService,
     private readonly storage: StorageService,
     @InjectRepository(GooglePlacePhotoMeta) private readonly meta: GooglePlacePhotoMetaRepository,
     @InjectRepository(Places) private readonly places: PlacesRepository,

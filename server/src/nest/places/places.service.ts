@@ -5,7 +5,6 @@ import { XMLValidator } from 'fast-xml-parser';
 import { TRACK_COLORS, placeMatchStrategies, type PlaceMatchCandidate } from '@trek/shared';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService } from '../database/database.service';
 import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { UnitOfWork } from '../database/unit-of-work';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -145,14 +144,9 @@ export interface PlaceUpdateInput {
 @Injectable()
 export class PlacesService {
   constructor(
-    // `dbs` field is unused by this class's own code (canAccessTrip below
-    // reuses `tripsRepo`) but is kept in this exact constructor slot: an
-    // in-flight Task 5c file (`tests/unit/services/conflictUpdate.test.ts`,
-    // uncommitted at this task's start, out of this task's file-ownership
-    // window) still hand-constructs `PlacesService` positionally with a
-    // `DatabaseService` here — dropping the param would break that file
-    // without being able to fix it. Safe to drop once that file lands.
-    private readonly dbs: DatabaseService,
+    // Plan 4 Task 4: the dead `DatabaseService` param dropped —
+    // `canAccessTrip` below reuses `tripsRepo` directly and never read
+    // `this.dbs`. `conflictUpdate.test.ts`'s hand-construction updated too.
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly maps: MapsService,

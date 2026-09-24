@@ -1,5 +1,5 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
-import type { TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { TRIP_REQUEST_KEY } from './trip-access.guard';
 
 /**

@@ -14,18 +14,15 @@ import type { UnitOfWork } from '../../database/unit-of-work';
  * §0): the raw `BetterSqlite3.Database` parameter becomes this bundle of the four
  * repositories the scan actually writes through, plus the `UnitOfWork` `upsert`
  * uses to make its own delete-then-reinsert pairs (DI5–DI8, Plan 4 Task 8a)
- * atomic. Optional, not required: both call sites' own `uow` is itself
- * `@Optional()` (Nest always injects it in the real app; only a hand-built
- * partial-DI-graph test instance omits it — the same "boot must never block
- * app init" defensiveness this file's own callers already apply elsewhere) —
- * `upsert` runs the pairs sequentially, un-transacted, exactly as before,
- * when it is absent, rather than refusing to discover at all. */
+ * atomic. Required (Plan 4 Task 4 — `PluginRuntimeService`'s own `uow` is no
+ * longer `@Optional()` either): `upsert` always wraps the pair in
+ * `uow.transactional`, never falls back to an un-transacted sequential run. */
 export interface DiscoveryRepos {
   plugins: PluginsRepository;
   actions: PluginActionsRepository;
   settingsFields: PluginSettingsFieldsRepository;
   errorLog: PluginErrorLogRepository;
-  uow?: UnitOfWork;
+  uow: UnitOfWork;
 }
 
 /**
@@ -112,9 +109,8 @@ async function upsert(repos: DiscoveryRepos, m: PluginManifest): Promise<void> {
   // re-insert with no transaction spanning them, so a crash between the two
   // (of either pair) left that plugin with an EMPTY actions or settings-field
   // set until the next discovery run, rather than its previous (still valid)
-  // rows. Wrapped in one `uow.transactional` (when a `uow` is available —
-  // see `DiscoveryRepos.uow`'s own docstring) so a discovery refresh for a
-  // single plugin's descriptors is now all-or-nothing: either both pairs land
+  // rows. Wrapped in one `uow.transactional` so a discovery refresh for a
+  // single plugin's descriptors is all-or-nothing: either both pairs land
   // or neither does, and the plugin keeps its prior rows on any failure.
   const refreshDescriptors = async (): Promise<void> => {
     await repos.actions.deleteAllForPlugin(m.id);
@@ -142,9 +138,5 @@ async function upsert(repos: DiscoveryRepos, m: PluginManifest): Promise<void> {
       })),
     );
   };
-  if (repos.uow) {
-    await repos.uow.transactional(refreshDescriptors);
-  } else {
-    await refreshDescriptors();
-  }
+  await repos.uow.transactional(refreshDescriptors);
 }

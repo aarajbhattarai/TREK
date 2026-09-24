@@ -3,7 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
 import { encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { AddonsService } from '../addons/addons.service';
-import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../photos/trek-photo-registration.service';
 import { ImmichService } from './immich.service';
 import { SynologyService } from './synology.service';
 import { MemoriesAccessService } from './memories-access.service';

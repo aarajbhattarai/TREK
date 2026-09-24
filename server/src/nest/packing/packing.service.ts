@@ -6,7 +6,7 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { avatarUrl } from '../common/avatarUrl';
 import type { UpdateConflict } from '../common/conflictResult';
 import type { User } from '../../types';
-import { DatabaseService, type TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { PackingItems } from '../../db/entities/PackingItems.entity';
@@ -84,7 +84,6 @@ const BAG_COLORS = ['#6366f1', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#8b5
 @Injectable()
 export class PackingService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
@@ -98,21 +97,16 @@ export class PackingService {
     @InjectRepository(PackingTemplateItems) private readonly templateItemsRepo: PackingTemplateItemsRepository,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
     // Plan 4 Task 3: `DatabaseService.rosterUserIds` inlined onto
-    // `TripMembersRepository.rosterUserIds` — optional (not a trailing
-    // required param) because an in-flight Task 5c file
-    // (`tests/unit/services/conflictUpdate.test.ts`, out of this task's
-    // file-ownership window) hand-constructs `PackingService` positionally
-    // without it; every real (DI-built) instance gets it via `forFeature`.
-    // `tripRosterIds` below falls back to the `db` facade only when absent.
-    // Safe to make required, and drop the fallback + `db`, once that file lands.
-    @InjectRepository(TripMembers) private readonly tripMembersRepo?: TripMembersRepository,
+    // `TripMembersRepository.rosterUserIds`. Plan 4 Task 4 made this
+    // required (`conflictUpdate.test.ts`'s hand-construction landed) and
+    // dropped the `DatabaseService` fallback in `tripRosterIds` below.
+    @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
     // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
     // gone: this reuses the TripsRepository already injected for other
-    // reads and calls findAccessible. `db` stays injected only for the
-    // `tripRosterIds` fallback below (Task 3's own).
+    // reads and calls findAccessible.
     return await this.tripsRepo.findAccessible(tripId, userId);
   }
 
@@ -572,13 +566,9 @@ export class PackingService {
    * grew up without it.
    */
   private async tripRosterIds(tripId: string | number): Promise<Set<number>> {
-    // Plan 4 Task 3: `TripMembersRepository.rosterUserIds`, inlined, when a
-    // real (DI-built) instance has it — falls back to the `DatabaseService`
-    // facade only for the one hand-built test instance that still omits it
-    // (see the constructor comment above).
-    return this.tripMembersRepo
-      ? await this.tripMembersRepo.rosterUserIds(tripId)
-      : await this.db.rosterUserIds(tripId);
+    // Plan 4 Task 3/4: `DatabaseService.rosterUserIds` inlined onto
+    // `TripMembersRepository.rosterUserIds`.
+    return await this.tripMembersRepo.rosterUserIds(tripId);
   }
 
   async setBagMembers(tripId: string | number, bagId: string | number, userIds: number[]) {

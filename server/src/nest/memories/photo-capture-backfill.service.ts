@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import exifr from 'exifr';
 import { PhotoResolverService } from './photo-resolver.service';
 import { StorageService } from '../storage/storage.service';
-import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../photos/trek-photo-registration.service';
 
 /**
  * Ask the provider when and where a photo was taken, and record it (#1614).

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
-import { DatabaseService } from '../database/database.service';
 import { getPhotoProviderConfig } from '../memories/memories.helpers';
 import { readTransitProvider, writeTransitProvider } from '../transit/transit-provider';
 import { resolveApiKey, type ApiKeySource } from '../settings/instance-api-keys';
@@ -34,16 +33,9 @@ import type { UsersRepository } from '../../db/repositories/Users.repository';
  * `DatabaseService` was injected (Plan 3a Task 4) purely as a passthrough for
  * `transit-provider.ts`'s readTransitProvider/writeTransitProvider. Plan 4
  * Task 1 converted those two functions to take an `AppSettingsRepository`
- * instead, so this service now passes its own already-injected
+ * instead, so this service passes its own already-injected
  * `AppSettingsRepository` (the same one `googleKeySource` below already
- * uses) — `this.dbs` is no longer read anywhere in this file. The
- * constructor parameter itself stays (rather than being removed) because
- * `tests/integration/plugins/boot-registry-order.test.ts` hand-constructs
- * this class with a trailing `DatabaseService` argument and is a
- * concurrently-owned file this task does not touch (Plan 3j fix-wave
- * territory, `tests/integration/plugins/**`); removing the parameter here
- * would need editing that file in the same change. Safe to drop as dead-param
- * cleanup once that file is free.
+ * uses). Plan 4 Task 4 dropped the now-dead `DatabaseService` param entirely.
  */
 @Injectable()
 export class AddonsService {
@@ -53,7 +45,6 @@ export class AddonsService {
     @InjectRepository(PhotoProviderFields) private readonly photoProviderFields: PhotoProviderFieldsRepository,
     @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     @InjectRepository(Users) private readonly users: UsersRepository,
-    private readonly dbs: DatabaseService,
   ) {}
 
   async isAddonEnabled(addonId: string): Promise<boolean> {

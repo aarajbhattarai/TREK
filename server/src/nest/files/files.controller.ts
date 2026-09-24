@@ -27,7 +27,7 @@ import { FilesService } from './files.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TripAccessGuard } from '../permissions/trip-access.guard';
-import type { TripAccess } from '../database/database.service';
+import type { TripAccess } from '../../db/repositories/Trips.repository';
 import { Trip } from '../permissions/trip.decorator';
 import { MAX_FILE_SIZE, BLOCKED_EXTENSIONS, isVideoExtension } from './files.constants';
 import { FileUploadDto, FileUpdateDto, FileLinkDto } from './files.dto';
