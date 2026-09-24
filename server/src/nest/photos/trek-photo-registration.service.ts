@@ -31,6 +31,15 @@ import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhoto
  * .repository.ts`, also `TrekPhotosRepository`, per the `EntityRepositoryType`
  * convention every entity in this program follows). Same shape as the 3d
  * §18.3 `ReservationsReadRepository` → `ReservationsReadService` precedent.
+ *
+ * File/test renamed to match (Plan 4 Task 8a — 3e Task 6 renamed only the
+ * class). The old path, `trek-photos.repository.ts`, is kept as a thin
+ * re-export stub (the same `src/websocket.ts` shape) rather than updated at
+ * every one of its ~20 importers in this pass: several of those files sit in
+ * two sibling tasks' exclusively-owned windows on this shared branch (Task
+ * 3's `nest/{budget,packing,todo,accommodations,places}/**` ripple and Task
+ * 5c's held-back test files) and are off limits here. The stub can be
+ * deleted and every importer repointed once those tasks land.
  */
 @Injectable()
 export class TrekPhotoRegistrationService {

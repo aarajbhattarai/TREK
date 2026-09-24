@@ -1,7 +1,8 @@
 /**
- * TrekPhotoRegistrationService (renamed from `TrekPhotosRepository`, Plan 3e
- * R13 — collided with the generated ORM `TrekPhotos.repository.ts`) — PH1-11,
- * now onto `TrekPhotosRepository`/`TripPhotosRepository` (the ORM ones).
+ * TrekPhotoRegistrationService (class renamed from `TrekPhotosRepository`,
+ * Plan 3e R13 — collided with the generated ORM `TrekPhotos.repository.ts`;
+ * file/test renamed to match, Plan 4 Task 8a) — PH1-11, now onto
+ * `TrekPhotosRepository`/`TripPhotosRepository` (the ORM ones).
  *
  * The three sources of a photo's "when and where" disagree in how much they
  * know: a provider search answers with coordinates, the same provider's
@@ -15,7 +16,7 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { createUser, createTrip } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photo-registration.service';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyPhotos } from '../../../src/db/entities/JourneyPhotos.entity';
