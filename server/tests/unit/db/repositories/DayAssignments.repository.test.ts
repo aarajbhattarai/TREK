@@ -867,3 +867,95 @@ describe('DayAssignmentsRepository.listRoadtripVisits (RPL2, roadtrip-plan.servi
     expect(await assignments.listRoadtripVisits(trip.id)).toEqual([]);
   });
 });
+
+/**
+ * Plan 4 Task 8b-4a (3h L4) — full-key `toEqual(<legacy raw>)` parity for
+ * `DayAssignmentsRepository.listPublicForShare` (SH9), flagged by the 3h
+ * ledger as having no repository-level parity test. Same WHERE/ORDER BY
+ * shape as {@link legacyProjectionRow}'s join above (`listForDay`'s single-
+ * id form widened to `day_id IN (...)`), but a narrower SELECT list: the
+ * six columns `SharePublicAssignmentRow` omits (`google_place_id`,
+ * `google_ftid`, `osm_id`, `amap_poi_id`, `stop_type`, `fill_percent`) must
+ * never appear on the row at all — a public share must not leak them.
+ */
+function legacyPublicForShare(dayIds: number[]): unknown {
+  if (dayIds.length === 0) return [];
+  const placeholders = dayIds.map(() => '?').join(',');
+  return testDb.prepare(`
+    SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
+      p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
+      COALESCE(da.assignment_time, p.place_time) as place_time,
+      COALESCE(da.assignment_end_time, p.end_time) as end_time,
+      p.duration_minutes, p.notes as place_notes,
+      p.image_url, p.transport_mode, p.website, p.phone,
+      c.name as category_name, c.color as category_color, c.icon as category_icon
+    FROM day_assignments da
+    JOIN places p ON da.place_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE da.day_id IN (${placeholders})
+    ORDER BY da.order_index ASC, da.created_at ASC
+  `).all(...dayIds);
+}
+
+describe('DayAssignmentsRepository.listPublicForShare (SH9, share.service.ts)', () => {
+  it('matches the legacy statement across multiple days, every nullable column both null and set, owner-only columns withheld', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day1 = createDay(testDb, trip.id, { day_number: 1 });
+    const day2 = createDay(testDb, trip.id, { day_number: 2 });
+    const excludedDay = createDay(testDb, trip.id, { day_number: 3 });
+    const category = createCategory(testDb, { name: 'Museum', color: '#111111', icon: '🏛️' });
+
+    const placeFull = createPlace(testDb, trip.id, { name: 'Louvre', lat: 48.86, lng: 2.34, category_id: category.id, description: 'Art museum' });
+    testDb.prepare(`
+      UPDATE places SET address = ?, price = ?, currency = ?, place_time = ?, end_time = ?,
+        duration_minutes = ?, notes = ?, image_url = ?, transport_mode = ?, website = ?, phone = ?,
+        google_place_id = 'ChIJ123', google_ftid = 'ftid1', osm_id = 'osm1', amap_poi_id = 'amap1',
+        stop_type = 'lodging', fill_percent = 80
+      WHERE id = ?`).run('Rue de Rivoli', 17.5, 'EUR', '09:00', '11:00', 120, 'bring ID', 'https://img/louvre.jpg', 'walking', 'https://louvre.fr', '+33140205050', placeFull.id);
+    const assignmentOnFullPlace = createDayAssignment(testDb, day1.id, placeFull.id, { order_index: 2 });
+    testDb.prepare(`
+      UPDATE day_assignments SET assignment_time = ?, assignment_end_time = ?, reservation_status = 'confirmed',
+        reservation_notes = 'window seat', reservation_datetime = '2026-09-01T09:00:00.000Z',
+        leg_transport_mode = 'driving', incoming_leg_transport_mode = 'walking', accommodation_id = NULL
+      WHERE id = ?`).run('14:00', '14:30', assignmentOnFullPlace.id);
+
+    const placeBare = createPlace(testDb, trip.id, { name: 'Unnamed spot' });
+    testDb.prepare(`
+      UPDATE places SET category_id = NULL, lat = NULL, lng = NULL, address = NULL, price = NULL,
+        currency = NULL, place_time = NULL, end_time = NULL, duration_minutes = NULL, notes = NULL,
+        image_url = NULL, transport_mode = NULL, website = NULL, phone = NULL, description = NULL
+      WHERE id = ?`).run(placeBare.id);
+    const assignmentOnBarePlace = createDayAssignment(testDb, day2.id, placeBare.id, { order_index: 1 });
+
+    // A second assignment on day1, ordered before both of the above by order_index.
+    const placeSecond = createPlace(testDb, trip.id, { name: 'Second stop' });
+    const earlierOrderAssignment = createDayAssignment(testDb, day1.id, placeSecond.id, { order_index: 0 });
+
+    // An assignment on a day NOT in the requested set — must never leak in.
+    const excludedPlace = createPlace(testDb, trip.id, { name: 'Excluded' });
+    createDayAssignment(testDb, excludedDay.id, excludedPlace.id);
+
+    const dayIds = [day1.id, day2.id];
+    const legacy = legacyPublicForShare(dayIds);
+    const typed = await assignments.listPublicForShare(dayIds);
+    expect(typed).toEqual(legacy);
+    expect(typed.map((r) => r.id)).toEqual([earlierOrderAssignment.id, assignmentOnBarePlace.id, assignmentOnFullPlace.id]);
+
+    const fullRow = typed.find((r) => r.id === assignmentOnFullPlace.id)!;
+    expect(fullRow).toMatchObject({ category_name: 'Museum', category_color: '#111111', category_icon: '🏛️', place_time: '14:00', end_time: '14:30' });
+    expect(fullRow).not.toHaveProperty('google_place_id');
+    expect(fullRow).not.toHaveProperty('google_ftid');
+    expect(fullRow).not.toHaveProperty('osm_id');
+    expect(fullRow).not.toHaveProperty('amap_poi_id');
+    expect(fullRow).not.toHaveProperty('stop_type');
+    expect(fullRow).not.toHaveProperty('fill_percent');
+
+    const bareRow = typed.find((r) => r.id === assignmentOnBarePlace.id)!;
+    expect(bareRow).toMatchObject({ category_id: null, category_name: null, category_color: null, category_icon: null, place_time: null, end_time: null });
+  });
+
+  it('[] for an empty day_ids array (no query issued)', async () => {
+    expect(await assignments.listPublicForShare([])).toEqual([]);
+  });
+});
