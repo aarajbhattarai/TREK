@@ -814,10 +814,13 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       if (!clean.includes(host)) clean.push(host);
     }
     if (!this.uow) throw new Error('UnitOfWork not provided — tests that set egress hosts must pass one');
-    // PR22/PR23, R-uninstall's ONE named transaction: the delete-then-insert-loop is now
-    // atomic (`PluginEgressHostsRepository.replaceAllForPlugin`) — a crash mid-write
-    // leaves the OLD host set intact instead of a plugin with zero egress hosts, a
-    // deliberate behavior change ("For the user" in the plan document), not silent parity.
+    // PR22/PR23: the delete-then-insert-loop is atomic (`PluginEgressHostsRepository
+    // .replaceAllForPlugin`) — a crash mid-write leaves the OLD host set intact instead
+    // of a plugin with zero egress hosts. Plan 3j Task 7 fix (should-land 6,
+    // task-7-review.md): this transaction is PARITY, not a new behaviour — the legacy
+    // code already wrapped this delete+insert in a transaction (base: line 679). It was
+    // wrongly reported as a deliberate deviation; corrected here, and the egress "For
+    // the user" item is dropped (no decision needed — nothing changed).
     await this.uow.transactional(async () => {
       await this.pluginEgressHosts.replaceAllForPlugin(id, clean);
     });

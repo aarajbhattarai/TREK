@@ -113,4 +113,29 @@ export class PluginScheduledTasksRepository extends TrekRepository<PluginSchedul
     const changed = await this.nativeDelete({ plugin_id: pluginId, name });
     return changed > 0;
   }
+
+  /**
+   * Plan 3j Task 7 fix wave, must-land 3 (task-7-review.md): HR5 (the
+   * pre-write existence check), HR6 (the `SCHED_MAX` count gate) and HR7
+   * (the upsert) made atomic — the SAME shape and SAME reason as
+   * `PluginEntityMetadataRepository.upsertValueCapped` (must-land 2): two
+   * concurrent `scheduler.set` calls for two different new task names on the
+   * same plugin could both read `count < max` before either's write landed
+   * (live: 130 rows on a 100 cap). `this.getEntityManager().transactional` —
+   * no new constructor dependency on `HostSurfaceRpc`, for the same
+   * `tests/helpers/plugin-host.ts` (dirty, mid-edit by a concurrent Plan 4
+   * task) reason `upsertValueCapped`'s docstring gives. Returns whether the
+   * write happened; `false` means a NEW task name was blocked by the cap.
+   */
+  async upsertTaskCapped(input: PluginScheduledTaskUpsertInput, maxTasks: number): Promise<boolean> {
+    return this.getEntityManager().transactional(async () => {
+      const exists = await this.existsForPluginAndName(input.plugin_id, input.name);
+      if (!exists) {
+        const n = await this.countForPlugin(input.plugin_id);
+        if (n >= maxTasks) return false;
+      }
+      await this.upsertTask(input);
+      return true;
+    });
+  }
 }

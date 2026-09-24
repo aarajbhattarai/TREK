@@ -78,12 +78,10 @@ export class MetaRpc {
     if (key.length > META_KEY_MAX) throw new BadParams(`metadata key too long (>${META_KEY_MAX} chars)`);
     const json = JSON.stringify(params.value ?? null);
     if (json.length > META_VALUE_MAX) throw new BadParams(`metadata value too large (>${META_VALUE_MAX} bytes)`);
-    const exists = (await this.meta.findValue(ctx.pluginId, entityType, entityId, key)) !== null; // MR2 — Plan 3j
-    if (!exists) {
-      const n = await this.meta.countForEntity(ctx.pluginId, entityType, entityId); // MR3 — Plan 3j
-      if (n >= META_KEYS_MAX) throw new BadParams(`too many metadata keys on this ${entityType} (max ${META_KEYS_MAX})`);
-    }
-    await this.meta.upsertValue(ctx.pluginId, entityType, entityId, key, json); // MR4 — Plan 3j
+    // MR2/MR3/MR4 — Plan 3j Task 7 fix (must-land 2): one atomic call, not
+    // three separately-awaited ones (task-7-review.md's concurrent-cap-bypass).
+    const written = await this.meta.upsertValueCapped(ctx.pluginId, entityType, entityId, key, json, META_KEYS_MAX);
+    if (!written) throw new BadParams(`too many metadata keys on this ${entityType} (max ${META_KEYS_MAX})`);
     return { key, value: params.value ?? null };
   }
 

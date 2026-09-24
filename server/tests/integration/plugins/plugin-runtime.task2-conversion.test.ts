@@ -301,21 +301,28 @@ describe('Plan 3j Task 2 — R-uninstall\'s ONE named transaction: PR22/PR23 egr
     await rt.setOperatorEgressHosts(id, ['old-a.example.com', 'old-b.example.com']);
     expect((await rt.operatorEgressHosts(id)).sort()).toEqual(['old-a.example.com', 'old-b.example.com']);
 
-    // Force the INSERT half of the DELETE+loop-INSERT to throw on the second host,
-    // inside the SAME uow.transactional call the runtime already wraps this in.
+    // Plan 3j Task 7 fix (must-land 4a, task-7-review.md): mocking the WHOLE
+    // `replaceAllForPlugin` call (the old shape of this test) throws before the real
+    // DELETE ever runs, so it proves nothing about the transaction — M13 (deleting the
+    // `uow.transactional` wrapper entirely) still passed against it. Spy on the per-host
+    // `upsert` call INSIDE `replaceAllForPlugin` instead, and only throw on the SECOND
+    // host: the real DELETE and the real first-host INSERT both already happened by the
+    // time this throws, so the assertion below can only pass if the transaction actually
+    // rolled both of them back, not just skipped a write that was never attempted.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const egressRepo = (rt as any).pluginEgressHosts;
-    const originalReplace = egressRepo.replaceAllForPlugin.bind(egressRepo);
-    const spy = vi.spyOn(egressRepo, 'replaceAllForPlugin').mockImplementation(async (pluginId: string, hosts: string[]) => {
-      if (hosts.includes('boom')) throw new Error('simulated mid-write failure');
-      return originalReplace(pluginId, hosts);
+    const originalUpsert = egressRepo.upsert.bind(egressRepo);
+    const spy = vi.spyOn(egressRepo, 'upsert').mockImplementation(async (data: { plugin_id: string; host: string }, ...rest: unknown[]) => {
+      if (data.host === 'boom') throw new Error('simulated mid-write failure');
+      return originalUpsert(data, ...rest);
     });
 
     await expect(rt.setOperatorEgressHosts(id, ['new-a.example.com', 'boom'])).rejects.toThrow(/simulated mid-write failure/);
     spy.mockRestore();
 
-    // The OLD set survives untouched — the transaction rolled the DELETE back too,
-    // not a partially-cleared allow-list.
+    // The OLD set survives untouched — the transaction rolled the DELETE AND the
+    // already-succeeded 'new-a.example.com' insert back too, not a partially-cleared or
+    // partially-replaced allow-list.
     expect((await rt.operatorEgressHosts(id)).sort()).toEqual(['old-a.example.com', 'old-b.example.com']);
   });
 });
@@ -378,6 +385,45 @@ describe('Plan 3j Task 2 — two racing ticks (scheduler claim/re-arm + erasure 
       expect(delivered).toBe(1); // claimed (re-armed/deleted) by exactly one pass
       const row = testDb.prepare('SELECT id FROM plugin_scheduled_tasks WHERE plugin_id=? AND name=?').get(pluginId, 'once');
       expect(row).toBeUndefined(); // deleted, not left dangling or double-inserted
+    } finally {
+      invokeSpy.mockRestore();
+      supervisor.running.delete(pluginId);
+    }
+  });
+
+  it('RACE-SCHED-002: two concurrent fireDueScheduled passes deliver a due RECURRING task exactly once (the re-arm claim guard, unproven by RACE-SCHED-001)', async () => {
+    // Plan 3j Task 7 fix (must-land 4b, task-7-review.md): RACE-SCHED-001 above only
+    // exercises the ONE-SHOT branch (`deleteById`'s claim guard) — the recurring branch
+    // (`rearm`'s claim guard) went untested, and both mutations dropping IT survived
+    // (M6/M6b). Same shape as RACE-SCHED-001, on a task with `every_ms` set instead.
+    const pluginId = 'race-sched-recur';
+    seedPlugin(pluginId, { enabled: 1 });
+    const everyMs = 60_000;
+    testDb.prepare('INSERT INTO plugin_scheduled_tasks (plugin_id, name, due_at, every_ms) VALUES (?, ?, ?, ?)').run(pluginId, 'recurring', Date.now() - 1000, everyMs);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supervisor = (rt as any).supervisor;
+    supervisor.running.set(pluginId, { id: pluginId, status: 'active' });
+    let delivered = 0;
+    const invokeSpy = vi.spyOn(supervisor, 'invoke').mockImplementation(async () => {
+      delivered += 1;
+      // Yield, so the second concurrent pass's own claim-read genuinely overlaps
+      // this one's window rather than running strictly after it.
+      await new Promise((r) => setTimeout(r, 5));
+      return {};
+    });
+    const before = Date.now();
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await Promise.all([(rt as any).fireDueScheduled(), (rt as any).fireDueScheduled()]);
+      // Without the `due_at <= now` guard on `rearm`, BOTH concurrent passes would read
+      // `claimed = true` and both invoke — this is the assertion RACE-SCHED-001's own
+      // shape proves for the one-shot branch, now proven for the recurring one.
+      expect(delivered).toBe(1);
+      const row = testDb.prepare('SELECT due_at FROM plugin_scheduled_tasks WHERE plugin_id=? AND name=?').get(pluginId, 'recurring') as { due_at: number } | undefined;
+      expect(row).toBeDefined(); // a recurring task is re-armed, never deleted
+      expect(row?.due_at).toBeGreaterThanOrEqual(before + everyMs); // moved forward, not left due in the past
     } finally {
       invokeSpy.mockRestore();
       supervisor.running.delete(pluginId);

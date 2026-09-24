@@ -68,4 +68,34 @@ export class PluginEntityMetadataRepository extends TrekRepository<PluginEntityM
     const changed = await this.nativeDelete({ plugin_id: pluginId, entity_type: entityType, entity_id: entityId, key });
     return changed > 0;
   }
+
+  /**
+   * Plan 3j Task 7 fix wave, must-land 2 (task-7-review.md): MR2 (the
+   * pre-write existence check), MR3 (the `META_KEYS_MAX` count gate) and MR4
+   * (the upsert) made atomic. `meta.rpc.ts#set` used to run these as three
+   * separately-awaited calls — two concurrent `meta.set` calls for two
+   * DIFFERENT new keys on the same (plugin, entity) could both read
+   * `count < max` before either's write landed, so a 100-key cap let a live
+   * burst land 130 rows. Wrapped in `this.getEntityManager().transactional`
+   * — the same MikroORM API `UnitOfWork.transactional` itself calls (see
+   * that class's own docstring on why its default NESTED/savepoint
+   * propagation is safe even when a caller is already inside a transaction)
+   * — so `MetaRpc` needs no new constructor dependency: this fix wave found
+   * `tests/helpers/plugin-host.ts` (which hand-constructs `MetaRpc`) mid-edit
+   * by a concurrent Plan 4 task and could not touch its construction site,
+   * so the fix stays entirely inside the repository it already owns.
+   * Returns whether the write happened; `false` means a NEW key was blocked
+   * by the cap (the caller maps that to `BadParams`, same message as before).
+   */
+  async upsertValueCapped(pluginId: string, entityType: string, entityId: number, key: string, value: string, maxKeys: number): Promise<boolean> {
+    return this.getEntityManager().transactional(async () => {
+      const exists = (await this.findValue(pluginId, entityType, entityId, key)) !== null;
+      if (!exists) {
+        const n = await this.countForEntity(pluginId, entityType, entityId);
+        if (n >= maxKeys) return false;
+      }
+      await this.upsertValue(pluginId, entityType, entityId, key, value);
+      return true;
+    });
+  }
 }

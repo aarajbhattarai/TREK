@@ -63,6 +63,7 @@ import { MetaRpc } from '../../../src/nest/plugins/host/rpc/meta.rpc';
 import { HostSurfaceRpc } from '../../../src/nest/plugins/host/rpc/host-surface.rpc';
 import { UnreadableLlmResponse } from '../../../src/nest/llm-parse/clients/openai-compatible.client';
 import { getPluginDataDb, closePluginDataDb } from '../../../src/nest/plugins/host/plugin-host-state';
+import { verifyChain } from '../../../src/nest/plugins/host/plugin-audit';
 import { db as mockDb } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
@@ -226,6 +227,24 @@ const metaRepo = {
   async deleteValue(pluginId: string, entityType: string, entityId: number, key: string) {
     return raw.prepare('DELETE FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? AND key=?').run(pluginId, entityType, entityId, key).changes > 0;
   },
+  // Plan 3j Task 7 fix (must-land 2) — `meta.rpc.ts#set` now calls this ONE method
+  // instead of `findValue`+`countForEntity`+`upsertValue` separately. One synchronous
+  // better-sqlite3 statement (no `await` gap between the cap check and the write),
+  // the same atomicity property the real `PluginEntityMetadataRepository
+  // .upsertValueCapped` gets from `getEntityManager().transactional`.
+  async upsertValueCapped(pluginId: string, entityType: string, entityId: number, key: string, value: string, maxKeys: number) {
+    const result = raw
+      .prepare(
+        `INSERT INTO plugin_entity_metadata (plugin_id, entity_type, entity_id, key, value, updated_at)
+             SELECT ?, ?, ?, ?, ?, datetime('now')
+             WHERE EXISTS (SELECT 1 FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? AND key=?)
+                OR (SELECT COUNT(*) FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=?) < ?
+             ON CONFLICT(plugin_id, entity_type, entity_id, key)
+             DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      )
+      .run(pluginId, entityType, entityId, key, value, pluginId, entityType, entityId, key, pluginId, entityType, entityId, maxKeys);
+    return result.changes > 0;
+  },
 } as unknown as PluginEntityMetadataRepository;
 
 const scheduledTasksRepo = {
@@ -245,6 +264,22 @@ const scheduledTasksRepo = {
   },
   async deleteByPluginAndName(pluginId: string, name: string) {
     return raw.prepare('DELETE FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?').run(pluginId, name).changes > 0;
+  },
+  // Plan 3j Task 7 fix (must-land 3) — `host-surface.rpc.ts#schedulerSet` now calls
+  // this ONE method instead of `existsForPluginAndName`+`countForPlugin`+`upsertTask`
+  // separately. Same one-statement atomicity shape as `metaRepo.upsertValueCapped`
+  // above, mirroring the real `PluginScheduledTasksRepository.upsertTaskCapped`.
+  async upsertTaskCapped(input: { plugin_id: string; name: string; due_at: number; payload: string; every_ms: number | null }, maxTasks: number) {
+    const result = raw
+      .prepare(
+        `INSERT INTO plugin_scheduled_tasks (plugin_id, name, due_at, payload, every_ms)
+             SELECT ?, ?, ?, ?, ?
+             WHERE EXISTS (SELECT 1 FROM plugin_scheduled_tasks WHERE plugin_id=? AND name=?)
+                OR (SELECT COUNT(*) FROM plugin_scheduled_tasks WHERE plugin_id=?) < ?
+             ON CONFLICT (plugin_id, name) DO UPDATE SET due_at = excluded.due_at, payload = excluded.payload, every_ms = excluded.every_ms`,
+      )
+      .run(input.plugin_id, input.name, input.due_at, input.payload, input.every_ms, input.plugin_id, input.name, input.plugin_id, maxTasks);
+    return result.changes > 0;
   },
 } as unknown as PluginScheduledTasksRepository;
 
@@ -560,6 +595,30 @@ describe('HostSurfaceRpc — users, broadcasts, notify, ai, oauth, scheduler', (
     // A stranger is refused, which is what stops id enumeration.
     expect((await call(host, 'users.getById', { id: 9 }, 5)).error?.code).toBe('RESOURCE_FORBIDDEN');
     expect((await call(host, 'users.getById', { id: 6 }, undefined)).error?.code).toBe('RESOURCE_FORBIDDEN');
+  });
+
+  it('HOSTRPC-033 a burst of concurrent auditable RPC calls for the SAME plugin never forks the capability-audit hash chain (Plan 3j Task 7 fix, must-land 1)', async () => {
+    // The REAL production path, not a direct `appendAudit` unit call: `dispatch()`
+    // audits every `isAuditable` method AFTER computing its answer (`users.getById`
+    // here, permission `db:read:users` != `db:own`), through the SAME per-plugin
+    // promise-tail `appendAudit` now serializes on — task-7-review.md's SDK default of
+    // 16 in-flight RPCs is what made this reachable live.
+    const host = makeHost('auditburst', 'db:read:users');
+    const N = 20;
+    const results = await Promise.all(Array.from({ length: N }, () => call(host, 'users.getById', { id: 5 }, 5)));
+    expect(results.every((r) => r.ok)).toBe(true);
+    const rows = (
+      mockDb as unknown as {
+        prepare(s: string): { all(...a: unknown[]): Array<{ plugin_id: string; acting_user_id: number | null; method: string; resource: string | null; code: string; ts: string; prev_hash: string | null; hash: string }> };
+      }
+    )
+      .prepare("SELECT plugin_id, acting_user_id, method, resource, code, ts, prev_hash, hash FROM plugin_capability_audit WHERE plugin_id = 'auditburst' ORDER BY id ASC")
+      .all();
+    expect(rows).toHaveLength(N);
+    expect(verifyChain(rows)).toBe(true);
+    const prevHashes = rows.map((r) => r.prev_hash ?? '');
+    expect(new Set(prevHashes).size).toBe(prevHashes.length); // no two rows read the same "previous" tip
+    closePluginDataDb('auditburst');
   });
 
   it('HOSTRPC-020 trip broadcasts are force-namespaced and membership-gated', async () => {

@@ -142,6 +142,29 @@ describe('appendAudit hash chain (converted, through PluginCapabilityAuditReposi
   });
 });
 
+describe('R-hash-chain: concurrency (Plan 3j Task 7 fix wave, must-land 1)', () => {
+  it('R3J-CHAIN-002: 10 concurrent appendAudit calls for the SAME plugin produce a linear, gap-free chain (red without the per-plugin serialization fix)', async () => {
+    // The exact real code path production uses: `appendAudit`, racing N callers, not a
+    // sequential loop — task-7-review.md's own live 40-way burst found 108 of 120 rows
+    // unlinked (108 duplicate prev_hash values) before this fix; 9 of 10 broken in an
+    // earlier, in-process 10-way version of this same test.
+    await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        appendAudit(audit, { pluginId: 'burst', actingUserId: 1, method: 'trips.getById', resource: `trip:${i}`, code: 'ok' }),
+      ),
+    );
+    const rows = chainRows('burst');
+    expect(rows).toHaveLength(10);
+    expect(verifyChain(rows)).toBe(true); // every row's prev_hash === the previous row's hash
+    // No two rows share a prev_hash — the exact shape a forked chain (two racers reading
+    // the SAME "previous" tip) would produce.
+    const prevHashes = rows.map((r) => r.prev_hash ?? '');
+    expect(new Set(prevHashes).size).toBe(prevHashes.length);
+    // Exactly one row has no predecessor (the genesis of this plugin's chain).
+    expect(prevHashes.filter((h) => h === '').length).toBe(1);
+  });
+});
+
 describe('R-hash-chain: replay, extension, mutation', () => {
   it('AUDITCHAIN-001 REPLAY+EXTENSION: verifies a legacy-produced chain, then extends it through the converted appendAudit and the WHOLE chain stays consistent', async () => {
     // 1. Write three rows the way the PRE-CONVERSION code did: raw SQL, no repository.

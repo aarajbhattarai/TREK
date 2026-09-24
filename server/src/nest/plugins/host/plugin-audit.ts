@@ -82,6 +82,57 @@ const MAX_AUDIT_ROWS = envInt('TREK_PLUGIN_AUDIT_MAX_ROWS', 20_000);
 const PRUNE_EVERY = 500; // amortise the COUNT/DELETE over this many appends per plugin
 const appendsSincePrune = new Map<string, number>();
 
+/**
+ * Plan 3j Task 7 fix wave, must-land 1 (task-7-review.md R-hash-chain): a
+ * per-plugin promise tail serializing `appendAudit`'s read-previous-hash +
+ * insert pair. Before this, two RPCs from the SAME plugin racing through
+ * `appendAudit` concurrently could both read the same `lastHash` before
+ * either's INSERT committed, forking the chain — a live 40-way burst left
+ * 108 of 120 rows unlinked. Queuing per plugin id (the SAME module-mutable-
+ * state shape `appendsSincePrune` above already uses for the amortised
+ * prune counter) fixes it: a plugin's Nth append always reads the (N-1)th's
+ * committed hash, while a DIFFERENT plugin's chain never waits on this one's.
+ *
+ * `uow.transactional` (wrapping `lastHash` + `insertRow` in a real SQLite
+ * transaction) was the fix brief's other option, but `isAuditable` covers
+ * EVERY core-data/broadcast method, so it runs on nearly every granted RPC
+ * call — wrapping each one in a transaction would serialize the app's single
+ * connection mutex (`unit-of-work.ts`'s own docstring: "an open transaction
+ * holds it for every other request") behind the audit write on every
+ * authorized plugin call, a far larger blast radius than queuing one
+ * plugin's own chain in JS. No DB transaction opens here, so rule 24 ("a
+ * transactional body awaits DB work only") is not engaged either way. The
+ * IPC answer-then-throw ruling (`rpc-host.ts#dispatch` computes the RPC
+ * answer FIRST, then `try { await this.deps.audit(...) } catch { /*
+ * auditing must never break a call * / }` afterward) is preserved unchanged:
+ * a queued append's rejection surfaces only to the dispatch() call that
+ * queued it, through that same swallow — never to an unrelated later call.
+ */
+const auditAppendTails = new Map<string, Promise<unknown>>();
+
+/**
+ * Runs `run` after every earlier queued append for `pluginId` has settled,
+ * whether that one resolved or rejected — `.then(run, run)`, never a bare
+ * `.then(run)`, which would leave every later append for this plugin
+ * permanently queued behind one rejected promise. The stored tail is a
+ * swallowed copy (`.then(() => undefined, () => undefined)`) so a later
+ * call's own `auditAppendTails.get(pluginId)` read never itself rejects;
+ * the returned promise is the UNswallowed one, so the caller that queued
+ * THIS run still sees its own failure.
+ */
+function serializePerPlugin<T>(pluginId: string, run: () => Promise<T>): Promise<T> {
+  const prevTail = auditAppendTails.get(pluginId) ?? Promise.resolve();
+  const result = prevTail.then(run, run);
+  auditAppendTails.set(
+    pluginId,
+    result.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
+  return result;
+}
+
 function envInt(name: string, def: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw.trim() === '') return def;
@@ -110,19 +161,23 @@ export async function pruneAudit(audit: PluginCapabilityAuditRepository, pluginI
  * handle.
  */
 export async function appendAudit(audit: PluginCapabilityAuditRepository, e: AuditEntry): Promise<void> {
-  const prev = (await audit.lastHash(e.pluginId)) ?? '';
-  const ts = new Date().toISOString();
-  const row = JSON.stringify([e.pluginId, e.actingUserId ?? null, e.method, e.resource ?? null, e.code, ts]);
-  const hash = crypto.createHash('sha256').update(prev + row).digest('hex');
-  await audit.insertRow({
-    plugin_id: e.pluginId,
-    acting_user_id: e.actingUserId ?? null,
-    method: e.method,
-    resource: e.resource ?? null,
-    code: e.code,
-    ts,
-    prev_hash: prev || null,
-    hash,
+  // The read-previous-hash + insert pair, serialized per plugin — see
+  // `serializePerPlugin`'s docstring above (must-land 1).
+  await serializePerPlugin(e.pluginId, async () => {
+    const prev = (await audit.lastHash(e.pluginId)) ?? '';
+    const ts = new Date().toISOString();
+    const row = JSON.stringify([e.pluginId, e.actingUserId ?? null, e.method, e.resource ?? null, e.code, ts]);
+    const hash = crypto.createHash('sha256').update(prev + row).digest('hex');
+    await audit.insertRow({
+      plugin_id: e.pluginId,
+      acting_user_id: e.actingUserId ?? null,
+      method: e.method,
+      resource: e.resource ?? null,
+      code: e.code,
+      ts,
+      prev_hash: prev || null,
+      hash,
+    });
   });
   // Amortised retention: prune roughly every PRUNE_EVERY appends per plugin.
   const n = (appendsSincePrune.get(e.pluginId) ?? 0) + 1;

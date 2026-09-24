@@ -204,20 +204,14 @@ export class HostSurfaceRpc {
     }
     const json = JSON.stringify(params.payload ?? null);
     if (json.length > SCHED_PAYLOAD_MAX) throw new BadParams(`scheduler payload too large (max ${SCHED_PAYLOAD_MAX} bytes)`);
-    const existing = await this.scheduledTasks.existsForPluginAndName(ctx.pluginId, name); // HR5 — Plan 3j
-    if (!existing) {
-      const n = await this.scheduledTasks.countForPlugin(ctx.pluginId); // HR6 — Plan 3j
-      if (n >= SCHED_MAX) throw new BadParams(`too many scheduled tasks (max ${SCHED_MAX})`);
-    }
+    // HR5/HR6/HR7 — Plan 3j Task 7 fix (must-land 3): one atomic call, not
+    // three separately-awaited ones (task-7-review.md's concurrent-cap-bypass).
     // Upsert by (plugin, name): re-scheduling the same name replaces it.
-    await this.scheduledTasks.upsertTask({
-      // HR7 — Plan 3j
-      plugin_id: ctx.pluginId,
-      name,
-      due_at: Math.max(dueAt, Date.now()),
-      payload: json,
-      every_ms: everyMs ?? null,
-    });
+    const written = await this.scheduledTasks.upsertTaskCapped(
+      { plugin_id: ctx.pluginId, name, due_at: Math.max(dueAt, Date.now()), payload: json, every_ms: everyMs ?? null },
+      SCHED_MAX,
+    );
+    if (!written) throw new BadParams(`too many scheduled tasks (max ${SCHED_MAX})`);
     return { scheduled: true };
   }
 
