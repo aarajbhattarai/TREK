@@ -2,6 +2,7 @@ import type { Trips } from '../entities/Trips.entity';
 import { coalesceParam, currentTimestamp, nowDateOffset } from '../dialect/sql-functions';
 import type { AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
+import { tripAccessExpr } from './_shared/trip-access';
 
 /** What a trip-scoped request learns about the trip once access is verified. */
 export interface TripAccess {
@@ -405,7 +406,7 @@ export class TripsRepository extends TrekRepository<Trips> {
     const row = await this.tripSelectQuery(user_id)
       .leftJoin('trip_members as m', (join) => join.onRef('m.trip_id', '=', 't.id').on('m.user_id', '=', user_id))
       .where('t.id', '=', trip_id)
-      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('m.user_id', 'is not', null)]))
+      .where((eb) => tripAccessExpr(eb, 't.user_id', 'm.user_id', user_id))
       .executeTakeFirst();
     return row as TripSelectRow | undefined;
   }
@@ -419,7 +420,7 @@ export class TripsRepository extends TrekRepository<Trips> {
   async listForUser(user_id: number, archived: number | null): Promise<TripSelectRow[]> {
     let query = this.tripSelectQuery(user_id)
       .leftJoin('trip_members as m', (join) => join.onRef('m.trip_id', '=', 't.id').on('m.user_id', '=', user_id))
-      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('m.user_id', 'is not', null)]));
+      .where((eb) => tripAccessExpr(eb, 't.user_id', 'm.user_id', user_id));
     if (archived !== null) query = query.where('t.is_archived', '=', archived);
     const rows = await query.orderBy('t.created_at', 'desc').execute();
     return rows as TripSelectRow[];
@@ -459,7 +460,7 @@ export class TripsRepository extends TrekRepository<Trips> {
           .end()
           .as('relevance'),
       ])
-      .where((eb) => eb.or([eb('t.user_id', '=', user_id), eb('m.user_id', 'is not', null)]))
+      .where((eb) => tripAccessExpr(eb, 't.user_id', 'm.user_id', user_id))
       .where('t.is_archived', '=', 0)
       .orderBy((eb) =>
         eb.case()

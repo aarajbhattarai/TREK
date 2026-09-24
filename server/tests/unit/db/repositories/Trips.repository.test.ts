@@ -564,18 +564,27 @@ describe('TripsRepository.insertTripCopy (TP37)', () => {
 
 // ── Task 7 security review M1, absorbed here (Task 8 touches the same file) ──
 //
-// The trip access predicate (`t.user_id = ? OR EXISTS a trip_members row`) is
+// The trip access predicate (`t.user_id = ? OR EXISTS a trip_members row`) was
 // written out FOUR times in this file: once as the shared QB helper
 // `accessibleTripsQuery` (`findAccessible`/`listAccessibleIds`), and three
 // more times by hand in the Kysely methods (`findForViewer`, `listForUser`,
-// `activeTrip`) — a different builder API that cannot share the QB helper.
-// A single Kysely `.$call()` helper for the latter three was evaluated and
-// set aside for this task (real typing risk across three different `DB`
-// shapes on a security-sensitive predicate, under this task's own time
-// budget) in favor of the review's own stated fallback: a cross-method
-// parity test proving all five agree on who can see a trip. A future task
-// unifying the three Kysely copies should keep this test green as its own
-// regression guard.
+// `activeTrip`) — a different builder API that cannot share the QB helper. A
+// single Kysely `.$call()` helper for the latter three was evaluated and set
+// aside by Task 7 (real typing risk across three different `DB` shapes on a
+// security-sensitive predicate, under that task's own time budget) in favor
+// of the review's own stated fallback: this cross-method parity test proving
+// all five agree on who can see a trip.
+//
+// Plan 4 Task 8a unified the three Kysely copies onto ONE shared boolean
+// expression, `tripAccessExpr` (`_shared/trip-access.ts`) — fully generic
+// over `<DB, TB>` (no correlated subquery forces the narrower fixed-alias
+// shape `reservation-visibility.ts`'s `publicStayExists` needs, so it
+// composes across `TripSelectKyselyDB` and `ActiveTripKyselyDB` without a
+// `.$call()` helper). The LEFT JOIN itself stays hand-written at each call
+// site (unchanged, still three copies) — `tripSelectQuery`'s own docstring
+// records why a shared join helper can't be typed across these
+// differently-joined outer queries. This test stays green as the
+// unification's own regression guard, exactly as it always was.
 describe('Cross-method access parity (Task 7 security review M1, absorbed)', () => {
   it('TRIPREPO-041: owner, member, stranger and an admin with no membership get the identical accessible/inaccessible verdict from all five access-checking methods', async () => {
     const { user: owner } = createUser(testDb);
