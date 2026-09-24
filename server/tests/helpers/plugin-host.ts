@@ -150,6 +150,9 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const generalStorage = makeStorageFixture('').storage;
   const appSettings = (await sharedTestOrm(dbs.connection)).repo(AppSettings);
   const usersRepo = (await sharedTestOrm(dbs.connection)).repo(Users);
+  // Plan 3j Task 3 — `PluginRpcHostFactory`'s `audit` callback and `HostSurfaceRpc`'s
+  // `budgetFor` calls now take `PluginCapabilityAuditRepository`, not a raw connection.
+  const pluginAuditRepo = (await sharedTestOrm(dbs.connection)).repo(PluginCapabilityAudit);
   const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
@@ -257,7 +260,8 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const membership = new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection));
   const notifications = await makeNotificationsService(dbs, realtime);
   const llmConfig = new LlmConfigResolver(new SettingsService(await createTestUnitOfWork(dbs.connection), appSettings, await createTestSettingsRepo(dbs.connection)), dbs, addons);
-  const oauth = new PluginOAuthService(dbs);
+  const pluginOrm = await sharedTestOrm(dbs.connection);
+  const oauth = new PluginOAuthService(pluginOrm.repo(Plugins), pluginOrm.repo(PluginOauthTokens), pluginOrm.repo(PluginOauthState), pluginOrm.repo(PluginSettingsFields));
   const accommodations = new AccommodationsService(
     dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
     await createTestDayAccommodationsRepo(dbs.connection),
@@ -315,12 +319,12 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     // gate (JR1) now injects `UsersRepository.getEmail`, not `DatabaseService`.
     new JournalRpc(journey, guards, generalStorage, { get: () => '*' } as never, { schedule: () => {} } as never, usersRepo),
     new CollectionsRpc(collections, guards),
-    new DbRpc(new PluginUserSettingsService(dbs)),
+    new DbRpc(new PluginUserSettingsService(pluginOrm.repo(PluginSettingsFields), pluginOrm.repo(PluginUserConfig))),
     new MetaRpc(dbs, guards),
-    new HostSurfaceRpc(dbs, realtime, notifications, llmConfig, oauth, guards),
+    new HostSurfaceRpc(dbs, realtime, notifications, llmConfig, oauth, guards, pluginAuditRepo),
     new PluginHooks(undefined as never),
   ]);
-  return new PluginRpcHostFactory(dbs, registry as unknown as PluginRpcRegistryService);
+  return new PluginRpcHostFactory(pluginAuditRepo, registry as unknown as PluginRpcRegistryService);
 }
 
 /** A PluginRuntimeService constructed the way Nest would: with a real host factory. */
@@ -336,7 +340,7 @@ export async function createPluginRuntime(dbs: DatabaseService, registry?: Plugi
     dbs,
     new AuditService(orm.repo(AuditLog), orm.repo(Users)),
     await createTestAddonsService(dbs.connection, dbs),
-    new PluginUserSettingsService(dbs),
+    new PluginUserSettingsService(orm.repo(PluginSettingsFields), orm.repo(PluginUserConfig)),
     // Plan 3j Task 2 — PR1-PR53's own tables, all repository-backed now.
     orm.repo(Plugins),
     orm.repo(PluginErrorLog),

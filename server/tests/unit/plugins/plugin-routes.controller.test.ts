@@ -21,6 +21,7 @@ vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
 import { PluginRoutesController } from '../../../src/nest/plugins/contributions/plugin-routes.controller';
 import type { PluginHooks } from '../../../src/nest/plugins/plugin-hooks.service';
+import type { PluginsRepository } from '../../../src/db/repositories/Plugins.repository';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const req = (id?: number) => ({ user: id === undefined ? undefined : { id } }) as any;
@@ -29,7 +30,13 @@ function controller(invoke: () => unknown, providers = ['ev-plug']) {
     providersOf: vi.fn(() => providers),
     route: vi.fn(async () => invoke()),
   } as unknown as PluginHooks;
-  return { c: new PluginRoutesController(runtime, { canAccessTrip, connection: { prepare: () => ({ get: () => (capabilitiesRow.value === undefined ? undefined : { capabilities: capabilitiesRow.value }) }) } } as unknown as DatabaseService), runtime };
+  // Plan 3j Task 3: `declaredProfiles` now takes `PluginsRepository`, not the raw
+  // connection — `findCapabilities` reads the same `capabilitiesRow` fixture the
+  // old `connection.prepare(...).get()` stub above read.
+  const plugins = {
+    findCapabilities: vi.fn(async () => (capabilitiesRow.value === undefined ? null : capabilitiesRow.value)),
+  } as unknown as PluginsRepository;
+  return { c: new PluginRoutesController(runtime, { canAccessTrip } as unknown as DatabaseService, plugins), runtime };
 }
 const wp = (n = 3) => Array.from({ length: n }, (_, i) => ({ lat: 48 + i * 0.1, lng: 2 + i * 0.1 }));
 const goodRoute = (n = 3, over: Record<string, unknown> = {}) => ({

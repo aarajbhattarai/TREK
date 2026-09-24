@@ -383,7 +383,7 @@ export class PluginsService {
    */
   private async assertRequiredFilled(id: string, scope: 'instance' | 'user', config: Record<string, unknown>): Promise<void> {
     const required = await this.pluginSettingsFields.listRequiredFieldKeys(id, scope);
-    const defaults = await settingDefaults(this.db, id, scope);
+    const defaults = await settingDefaults(this.pluginSettingsFields, id, scope);
     for (const fieldKey of required) {
       // The runtime resolves the default too, so it counts as filled here as well.
       if (!isFilled(config[fieldKey] ?? defaults[fieldKey])) throw new MissingRequiredSettingError(fieldKey);

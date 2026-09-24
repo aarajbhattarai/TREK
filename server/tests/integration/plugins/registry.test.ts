@@ -3,7 +3,7 @@
  * install a pinned version through the full verify -> extract -> validate ->
  * move -> register pipeline (with the network download mocked).
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,21 +16,20 @@ vi.mock('../../../src/nest/plugins/install/safe-fetch', async (orig) => ({
   safeDownload,
 }));
 
-const { testDb } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec(`
-    CREATE TABLE plugins (id TEXT PRIMARY KEY, name TEXT, description TEXT, type TEXT, icon TEXT, version TEXT,
-      api_version INTEGER, min_trek_version TEXT, trek_range TEXT, permissions TEXT, capabilities TEXT DEFAULT '{}', dependencies TEXT DEFAULT '{}', operator_egress INTEGER DEFAULT 0, granted_permissions TEXT, status TEXT, enabled INTEGER DEFAULT 0, config TEXT,
-      source_repo TEXT, source_commit TEXT, sha256 TEXT, reviewed_at TEXT, author_pubkey TEXT, updated_at TEXT,
-      update_block_code TEXT, update_block_detail TEXT, update_block_version TEXT, update_hold INTEGER NOT NULL DEFAULT 0);
-    CREATE TABLE plugin_settings_fields (plugin_id TEXT, field_key TEXT, label TEXT, input_type TEXT, placeholder TEXT, hint TEXT, required INTEGER, secret INTEGER, scope TEXT, options TEXT, oauth_config TEXT, default_value TEXT, sort_order INTEGER);
-    CREATE TABLE plugin_error_log (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, level TEXT, message TEXT, ts TEXT);`);
-  return { testDb: db };
-});
-vi.mock('../../../src/db/database', () => ({ db: testDb, canAccessTrip: () => undefined }));
-import { db as dbConn } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+// Plan 3j Task 3: `PluginRegistryService`'s own statements (RG#) and its
+// `discoverPlugins`/`setUpdateBlock`/`clearUpdateBlock` calls are all
+// repository-backed now — no more raw `DatabaseService`/`db/database` mock.
+// A real MikroORM over the full migrated schema (`createSnapshotTestDb` +
+// `createTestOrm`) replaces the old hand-rolled `:memory:` table set; every
+// `testDb.prepare(...)` fixture/assertion below still works unchanged since
+// the real schema is a strict superset of the old one's columns.
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { resetTestDb } from '../../helpers/test-db';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
 
 import { PluginRegistryService, RegistryError, __clearRegistryCacheForTests } from '../../../src/nest/plugins/registry/registry.service';
 import type { ManifestPreview } from '../../../src/nest/plugins/registry/registry.service';
@@ -77,19 +76,31 @@ const REGISTRY = {
   ],
 };
 
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+
 let dataRoot: string;
 let codeRoot: string;
 let svc: PluginRegistryService;
+
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+});
+afterAll(async () => {
+  await t.close();
+  testDb.close();
+});
 
 beforeEach(() => {
   dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'reg-data-'));
   codeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'reg-code-'));
   process.env.TREK_PLUGINS_DATA_DIR = dataRoot;
   process.env.TREK_PLUGINS_DIR = codeRoot;
-  testDb.exec('DELETE FROM plugins; DELETE FROM plugin_settings_fields; DELETE FROM plugin_error_log');
+  resetTestDb(testDb);
+  t.clear();
   __clearRegistryCacheForTests();
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => REGISTRY }) as unknown as Response));
-  svc = new PluginRegistryService(new DatabaseService(dbConn));
+  svc = new PluginRegistryService(t.repo(Plugins), t.repo(PluginActions), t.repo(PluginSettingsFields), t.repo(PluginErrorLog));
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -275,7 +286,7 @@ describe('PluginRegistryService', () => {
       ],
     };
     const seedRow = (hold = 0) =>
-      testDb.prepare("INSERT INTO plugins (id, status, enabled, update_hold) VALUES ('flight-tracker','inactive',0,?)").run(hold);
+      testDb.prepare("INSERT INTO plugins (id, name, status, enabled, update_hold) VALUES ('flight-tracker','Flight','inactive',0,?)").run(hold);
     const holdInDb = () =>
       (testDb.prepare("SELECT update_hold FROM plugins WHERE id='flight-tracker'").get() as { update_hold: number }).update_hold;
 
@@ -377,7 +388,7 @@ describe('PluginRegistryService', () => {
   it('fetchRegistry soft-fails to an empty registry on a cold cache', async () => {
     __clearRegistryCacheForTests();
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
-    expect((await new PluginRegistryService(new DatabaseService(dbConn)).fetchRegistry()).plugins).toEqual([]);
+    expect((await new PluginRegistryService(t.repo(Plugins), t.repo(PluginActions), t.repo(PluginSettingsFields), t.repo(PluginErrorLog)).fetchRegistry()).plugins).toEqual([]);
   });
 
   it('installs a pinned version end to end (verify -> extract -> register inactive)', async () => {

@@ -106,7 +106,9 @@ async function installFixturePlugin(opts: { settings: Array<Record<string, unkno
     JSON.stringify({ id: 'fixture-id', name: 'Fixture', version: '1.0.0', type: 'integration', trek: '>=4.0.0 <5.0.0', settings: opts.settings }),
   );
   fs.writeFileSync(path.join(dir, 'index.js'), 'module.exports={}');
-  await discoverPlugins(testDb);
+  // Plan 3j Task 3: `discoverPlugins` takes a `DiscoveryRepos` bundle now, not a raw
+  // connection — the same repositories this file already resolves via `sharedTestOrm`.
+  await discoverPlugins({ plugins: pluginsRepo, actions: pluginActionsRepo, settingsFields: pluginSettingsFieldsRepo, errorLog: pluginErrorLogRepo });
 }
 
 beforeAll(async () => {

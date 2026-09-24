@@ -30,4 +30,29 @@ export class PluginActionsRepository extends TrekRepository<PluginActions> {
   async deleteAllForPlugin(pluginId: string): Promise<void> {
     await this.nativeDelete({ plugin_id: pluginId });
   }
+
+  /**
+   * DI6 (Plan 3j Task 3, `install/discovery.ts#upsert`) — `INSERT INTO plugin_actions
+   * (plugin_id, action_key, label, hint, danger, scope, sort_order) VALUES (?,?,?,?,?,?,?)`,
+   * looped once per manifest action, paired with DI5's `deleteAllForPlugin` above (the
+   * same delete-then-reinsert re-declare sequence). `insertMany` over a per-row loop:
+   * one batched native insert, same rows the legacy per-row `.run()` loop produced. A
+   * no-op on an empty manifest `actions[]`.
+   */
+  async insertActions(pluginId: string, actions: NewPluginActionRow[]): Promise<void> {
+    if (!actions.length) return;
+    await this.insertMany(
+      actions.map((a) => ({ plugin_id: pluginId, action_key: a.action_key, label: a.label, hint: a.hint, danger: a.danger, scope: a.scope, sort_order: a.sort_order })),
+    );
+  }
+}
+
+/** DI6's own row shape — `discoverPlugins#upsert`'s per-manifest-action insert. */
+export interface NewPluginActionRow {
+  action_key: string;
+  label: string;
+  hint: string | null;
+  danger: number;
+  scope: PluginActionScope;
+  sort_order: number;
 }

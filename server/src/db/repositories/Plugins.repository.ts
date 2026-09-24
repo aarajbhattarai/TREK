@@ -388,4 +388,154 @@ export class PluginsRepository extends TrekRepository<Plugins> {
     const platform = this.getEntityManager().getPlatform();
     await this.nativeUpdate({ id }, { config, updated_at: currentTimestamp(platform) });
   }
+
+  // -----------------------------------------------------------------------
+  // Plan 3j Task 3 — install/discovery.ts's manifest ingestion (DI2–DI4;
+  // DI2's existence check reuses `existsById` above)
+  // -----------------------------------------------------------------------
+
+  /** DI3/DI4 — the manifest-derived column set `discoverPlugins#upsert` writes on both the new-plugin INSERT and the existing-plugin UPDATE branches (the UPDATE branch is a strict subset — see `updateManifestFields`). */
+  async insertManifest(m: PluginManifestRow): Promise<void> {
+    await this.insert({
+      id: m.id,
+      name: m.name,
+      description: m.description,
+      type: m.type,
+      icon: m.icon,
+      version: m.version,
+      api_version: m.api_version,
+      min_trek_version: m.min_trek_version,
+      trek_range: m.trek_range,
+      permissions: m.permissions,
+      capabilities: m.capabilities,
+      dependencies: m.dependencies,
+      operator_egress: m.operator_egress,
+      // '' (empty, not '[]') marks "never consented" so the first activation is
+      // distinguishable from a plugin consented to zero permissions.
+      granted_permissions: '',
+      status: 'inactive',
+    });
+  }
+
+  /**
+   * DI4 — `` UPDATE plugins SET name = ?, description = ?, type = ?, icon = ?, version = ?,
+   * api_version = ?, min_trek_version = ?, trek_range = ?, permissions = ?, capabilities = ?,
+   * dependencies = ?, operator_egress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? ``.
+   * Deliberately narrower than `insertManifest`'s column set — `status`/`granted_permissions`/
+   * `config` are NEVER touched here, so a re-discovery of an already-installed plugin never
+   * silently re-activates it or wipes its settings/consent.
+   */
+  async updateManifestFields(id: string, m: Omit<PluginManifestRow, 'id'>): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate(
+      { id },
+      {
+        name: m.name,
+        description: m.description,
+        type: m.type,
+        icon: m.icon,
+        version: m.version,
+        api_version: m.api_version,
+        min_trek_version: m.min_trek_version,
+        trek_range: m.trek_range,
+        permissions: m.permissions,
+        capabilities: m.capabilities,
+        dependencies: m.dependencies,
+        operator_egress: m.operator_egress,
+        updated_at: currentTimestamp(platform),
+      },
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Plan 3j Task 3 — signature-status.ts's setUpdateBlock/clearUpdateBlock (SG1/SG2)
+  // -----------------------------------------------------------------------
+
+  /** SG1 — `UPDATE plugins SET update_block_code = ?, update_block_detail = ?, update_block_version = ? WHERE id = ?` (`setUpdateBlock`, a signature-verification failure). */
+  async setUpdateBlockColumns(id: string, code: string, detail: string, version: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { update_block_code: code, update_block_detail: detail, update_block_version: version });
+  }
+
+  /** SG2 — `UPDATE plugins SET update_block_code = NULL, update_block_detail = NULL, update_block_version = NULL WHERE id = ?` (`clearUpdateBlock`, the inverse — a successful install/update). */
+  async clearUpdateBlockColumns(id: string): Promise<void> {
+    await this.nativeUpdate({ id }, { update_block_code: null, update_block_detail: null, update_block_version: null });
+  }
+
+  // -----------------------------------------------------------------------
+  // Plan 3j Task 3 — registry/registry.service.ts's own statements (RG#).
+  // RG9 (`verifySignatureAndTofu`'s pinned-key read) reuses `findAuthorPubkey`
+  // above (identical text to PR28) rather than adding a duplicate method.
+  // -----------------------------------------------------------------------
+
+  /** RG2 (`install`'s post-discover provenance write) — `UPDATE plugins SET source_repo = ?, source_commit = ?, sha256 = ?, reviewed_at = ? WHERE id = ?`. */
+  async setInstallProvenance(id: string, sourceRepo: string, sourceCommit: string, sha256: string, reviewedAt: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { source_repo: sourceRepo, source_commit: sourceCommit, sha256, reviewed_at: reviewedAt });
+  }
+
+  /** RG3 (`install`'s TOFU pin) — `UPDATE plugins SET author_pubkey = ? WHERE id = ?`. Security-sensitive: only ever called with a key the artifact just verified under (see `registry.service.ts#install`'s own docstring) — never cleared to NULL by this method. */
+  async setAuthorPubkey(id: string, authorPubkey: string): Promise<void> {
+    await this.nativeUpdate({ id }, { author_pubkey: authorPubkey });
+  }
+
+  /** RG5 (`installWithDependencies`'s already-installed set) — `SELECT id FROM plugins`. */
+  async listAllIds(): Promise<string[]> {
+    const rows = await this.find({}, { fields: ['id'] });
+    return rows.map((r) => r.id ?? '');
+  }
+
+  /** RG6 (`recomputeUpdateHold`) — `UPDATE plugins SET update_hold = ? WHERE id = ?`. */
+  async setUpdateHold(id: string, hold: boolean): Promise<void> {
+    await this.nativeUpdate({ id }, { update_hold: hold ? 1 : 0 });
+  }
+
+  /**
+   * RG8 (`commitUpload`, sideload step 2) — `` UPDATE plugins SET source_repo = ?,
+   * source_commit = NULL, sha256 = NULL, reviewed_at = NULL, author_pubkey = NULL,
+   * update_block_code = NULL, update_block_detail = NULL, update_block_version = NULL,
+   * status = 'inactive', enabled = 0 WHERE id = ? ``. The sideload twin of PR31's
+   * `clearForDevLink` above — same registry-trust-column clear, plus `reviewed_at`
+   * (a sideload was never registry-reviewed) — kept as its own method rather than
+   * widening `clearForDevLink`, since the two back separate legacy statements with
+   * different column sets, not one shared text.
+   */
+  async clearForSideload(id: string, sourceRepo: string): Promise<void> {
+    await this.nativeUpdate(
+      { id },
+      {
+        source_repo: sourceRepo,
+        source_commit: null,
+        sha256: null,
+        reviewed_at: null,
+        author_pubkey: null,
+        update_block_code: null,
+        update_block_detail: null,
+        update_block_version: null,
+        status: 'inactive',
+        enabled: 0,
+      },
+    );
+  }
+
+  /** RG11 (`assertRetrustable`) — `SELECT source_repo, author_pubkey FROM plugins WHERE id = ?`. */
+  async findSourceRepoAndAuthorPubkey(id: string): Promise<{ source_repo: string | null; author_pubkey: string | null } | null> {
+    const row = await this.findOne({ id }, { fields: ['source_repo', 'author_pubkey'] });
+    return row ? { source_repo: row.source_repo ?? null, author_pubkey: row.author_pubkey ?? null } : null;
+  }
+}
+
+/** DI3/DI4 — the manifest-derived column set `discoverPlugins#upsert` writes on both the new-plugin INSERT and the existing-plugin UPDATE branches (the UPDATE branch is a strict subset — see `updateManifestFields`). */
+export interface PluginManifestRow {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  icon: string;
+  version: string | null;
+  api_version: number;
+  min_trek_version: string | null;
+  trek_range: string | null;
+  permissions: string;
+  capabilities: string;
+  dependencies: string;
+  operator_egress: number;
 }

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { METHOD_PERMISSION } from '../protocol/envelope';
+import type { PluginCapabilityAuditRepository, AuditForPluginRow, AuditForUserRow } from '../../../db/repositories/PluginCapabilityAudit.repository';
 
 /**
  * Host-side, hash-chained capability audit (#plugins, L1 hardening).
@@ -11,14 +12,6 @@ import { METHOD_PERMISSION } from '../protocol/envelope';
  * attributable, tamper-evident, and user-visible, which is exactly what lets
  * TREK grant broad reads to large addons without raising risk.
  */
-
-interface AuditDb {
-  prepare(sql: string): {
-    get(...args: unknown[]): unknown;
-    run(...args: unknown[]): unknown;
-    all(...args: unknown[]): unknown[];
-  };
-}
 
 export interface AuditEntry {
   pluginId: string;
@@ -98,30 +91,42 @@ function envInt(name: string, def: number): number {
 
 /** Keep only the newest `MAX_AUDIT_ROWS` rows for a plugin. Called amortised from
  * appendAudit; exported for tests. No-op when disabled or under the cap. */
-export async function pruneAudit(db: AuditDb, pluginId: string, keep = MAX_AUDIT_ROWS): Promise<void> {
+export async function pruneAudit(audit: PluginCapabilityAuditRepository, pluginId: string, keep = MAX_AUDIT_ROWS): Promise<void> {
   if (keep <= 0) return;
-  db.prepare(
-    `DELETE FROM plugin_capability_audit WHERE plugin_id = ? AND id NOT IN
-       (SELECT id FROM plugin_capability_audit WHERE plugin_id = ? ORDER BY id DESC LIMIT ?)`,
-  ).run(pluginId, pluginId, keep);
+  await audit.pruneKeepingNewest(pluginId, keep);
 }
 
-/** Append one entry to the per-plugin hash chain. The statements themselves are
- * synchronous (better-sqlite3); the method is async for the ORM seam. */
-export async function appendAudit(db: AuditDb, e: AuditEntry): Promise<void> {
-  const prev =
-    (db.prepare('SELECT hash FROM plugin_capability_audit WHERE plugin_id = ? ORDER BY id DESC LIMIT 1').get(e.pluginId) as
-      | { hash: string }
-      | undefined)?.hash ?? '';
+/**
+ * Append one entry to the per-plugin hash chain.
+ *
+ * R-hash-chain: the hash input is `prev_hash + JSON.stringify([pluginId,
+ * actingUserId ?? null, method, resource ?? null, code, ts])`, in that field
+ * order, with `ts` computed in JS as `new Date().toISOString()` BEFORE the
+ * hash (never a DB-generated timestamp — see {@link verifyChain}'s docstring
+ * for why that would make the chain non-reproducible). This construction is
+ * byte-for-byte unchanged from the pre-conversion function; only the
+ * persistence calls (the previous-hash read, the row write, the amortised
+ * prune) now go through the repository instead of a raw `better-sqlite3`
+ * handle.
+ */
+export async function appendAudit(audit: PluginCapabilityAuditRepository, e: AuditEntry): Promise<void> {
+  const prev = (await audit.lastHash(e.pluginId)) ?? '';
   const ts = new Date().toISOString();
   const row = JSON.stringify([e.pluginId, e.actingUserId ?? null, e.method, e.resource ?? null, e.code, ts]);
   const hash = crypto.createHash('sha256').update(prev + row).digest('hex');
-  db.prepare(
-    'INSERT INTO plugin_capability_audit (plugin_id, acting_user_id, method, resource, code, ts, prev_hash, hash) VALUES (?,?,?,?,?,?,?,?)',
-  ).run(e.pluginId, e.actingUserId ?? null, e.method, e.resource ?? null, e.code, ts, prev || null, hash);
+  await audit.insertRow({
+    plugin_id: e.pluginId,
+    acting_user_id: e.actingUserId ?? null,
+    method: e.method,
+    resource: e.resource ?? null,
+    code: e.code,
+    ts,
+    prev_hash: prev || null,
+    hash,
+  });
   // Amortised retention: prune roughly every PRUNE_EVERY appends per plugin.
   const n = (appendsSincePrune.get(e.pluginId) ?? 0) + 1;
-  if (n >= PRUNE_EVERY) { appendsSincePrune.set(e.pluginId, 0); await pruneAudit(db, e.pluginId); }
+  if (n >= PRUNE_EVERY) { appendsSincePrune.set(e.pluginId, 0); await pruneAudit(audit, e.pluginId); }
   else appendsSincePrune.set(e.pluginId, n);
 }
 
@@ -129,19 +134,40 @@ export async function appendAudit(db: AuditDb, e: AuditEntry): Promise<void> {
  * "what have plugins done in my name?" view. This is what legitimizes the broad
  * read grants: the user, not just the admin, can see every plugin action bound to
  * them. Joined with the plugin name for display; capped. */
-export async function readAuditForUser(db: AuditDb, userId: number, limit = 200): Promise<unknown[]> {
-  return db
-    .prepare(
-      `SELECT a.ts, a.plugin_id, p.name AS plugin_name, a.method, a.resource, a.code
-       FROM plugin_capability_audit a LEFT JOIN plugins p ON p.id = a.plugin_id
-       WHERE a.acting_user_id = ? ORDER BY a.id DESC LIMIT ?`,
-    )
-    .all(userId, limit);
+export async function readAuditForUser(audit: PluginCapabilityAuditRepository, userId: number, limit = 200): Promise<AuditForUserRow[]> {
+  return audit.forUser(userId, limit);
 }
 
 /** Read the most recent audit rows for a plugin (admin view). */
-export async function readAudit(db: AuditDb, pluginId: string, limit = 200): Promise<unknown[]> {
-  return db
-    .prepare('SELECT ts, acting_user_id, method, resource, code FROM plugin_capability_audit WHERE plugin_id = ? ORDER BY id DESC LIMIT ?')
-    .all(pluginId, limit);
+export async function readAudit(audit: PluginCapabilityAuditRepository, pluginId: string, limit = 200): Promise<AuditForPluginRow[]> {
+  return audit.forPlugin(pluginId, limit);
+}
+
+/**
+ * Verify a hash chain's internal consistency: every row's `hash` reproduces
+ * from its OWN `prev_hash` + fields (the exact {@link appendAudit}
+ * construction above), and every row's `prev_hash` equals the immediately
+ * preceding row's `hash` (or `''`/absent for the first row in the given
+ * slice). `rows` must be ordered OLDEST FIRST (ascending `id`) — the reverse
+ * of {@link readAudit}/{@link readAuditForUser}, which return newest-first
+ * for display.
+ *
+ * Built to prove R-hash-chain's replay/extension property in tests (a
+ * mutation dropping one field from the hash input makes this return false
+ * on a chain that construction would otherwise still accept); kept as a
+ * permanent utility rather than a throwaway test fixture, since an eventual
+ * admin "verify audit integrity" surface would want exactly this.
+ */
+export function verifyChain(
+  rows: Array<{ plugin_id: string; acting_user_id: number | null; method: string; resource: string | null; code: string; ts: string; prev_hash: string | null; hash: string }>,
+): boolean {
+  let prev = '';
+  for (const r of rows) {
+    if ((r.prev_hash ?? '') !== prev) return false;
+    const row = JSON.stringify([r.plugin_id, r.acting_user_id ?? null, r.method, r.resource ?? null, r.code, r.ts]);
+    const hash = crypto.createHash('sha256').update(prev + row).digest('hex');
+    if (hash !== r.hash) return false;
+    prev = r.hash;
+  }
+  return true;
 }

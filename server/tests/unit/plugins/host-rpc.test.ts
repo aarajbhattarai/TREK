@@ -73,6 +73,7 @@ import type { NotificationsService } from '../../../src/nest/notifications/notif
 import type { LlmConfigResolver } from '../../../src/nest/llm-parse/llm-config.resolver';
 import type { PluginOAuthService } from '../../../src/nest/plugins/oauth/plugin-oauth.service';
 import type { RpcError, RpcResponse } from '../../../src/nest/plugins/protocol/envelope';
+import type { PluginCapabilityAuditRepository } from '../../../src/db/repositories/PluginCapabilityAudit.repository';
 
 // Typed from the real method rather than from the always-true body below, so a case that
 // swaps in an implementation reading the action key (HOSTRPC-015) still type-checks.
@@ -95,6 +96,39 @@ const oauth = {
 const userSettings = {
   readOne: vi.fn((_pid: string, uid: number, key: string) => (uid === 5 && key === 'apiKey' ? 'k-5' : undefined)),
 } as unknown as PluginUserSettingsService;
+
+// Plan 3j Task 3: `budgetFor`/`appendAudit` now take `PluginCapabilityAuditRepository`,
+// not a raw connection. `plugin_capability_audit`'s hand-rolled table above (unlike
+// `trips`/`users`) matches the real entity's full column set, so a real MikroORM
+// repository would work here too — but every other cross-cutting dependency in this
+// file (`canAccessTrip`, `getRole`) is a synchronous stub against this same `mockDb`
+// for the same reason (no top-level await in this file), so this stays consistent:
+// real raw SQL against `mockDb`, wrapped in the repository's own method shapes.
+// HOSTRPC-031 seeds real rows through `mockDb.prepare(...)` and reads them back
+// through `budgetSeed`, so this must be backed by the real table, not a canned stub.
+const pluginAuditRepo = {
+  async budgetSeed(pluginId: string, since: string) {
+    return (mockDb as unknown as { prepare(s: string): { all(...a: unknown[]): unknown[] } })
+      .prepare(
+        "SELECT method, COUNT(*) AS n FROM plugin_capability_audit WHERE plugin_id = ? AND code = 'ok' AND ts >= ? AND method IN ('ai.complete','ai.extract','notify.send') GROUP BY method",
+      )
+      .all(pluginId, since) as Array<{ method: string; n: number }>;
+  },
+  async lastHash(pluginId: string) {
+    const row = (mockDb as unknown as { prepare(s: string): { get(...a: unknown[]): unknown } })
+      .prepare('SELECT hash FROM plugin_capability_audit WHERE plugin_id = ? ORDER BY id DESC LIMIT 1')
+      .get(pluginId) as { hash: string } | undefined;
+    return row?.hash ?? null;
+  },
+  async insertRow(entry: { plugin_id: string; acting_user_id: number | null; method: string; resource: string | null; code: string; ts: string; prev_hash: string | null; hash: string }) {
+    (mockDb as unknown as { prepare(s: string): { run(...a: unknown[]): unknown } })
+      .prepare('INSERT INTO plugin_capability_audit (plugin_id, acting_user_id, method, resource, code, ts, prev_hash, hash) VALUES (?,?,?,?,?,?,?,?)')
+      .run(entry.plugin_id, entry.acting_user_id, entry.method, entry.resource, entry.code, entry.ts, entry.prev_hash, entry.hash);
+  },
+  async pruneKeepingNewest() {
+    // Not exercised in this suite (PRUNE_EVERY = 500 appends/plugin) — a no-op stub.
+  },
+} as unknown as PluginCapabilityAuditRepository;
 
 const dbs = new DatabaseService(mockDb);
 // Plan 3c Task 0b: `canAccessTrip` is `TripsRepository.findAccessible` now,
@@ -123,9 +157,9 @@ const guards = new PluginGuards(dbs, permissions, addons, usersRepo);
 const registry = createTestPluginRegistry([
   new DbRpc(userSettings),
   new MetaRpc(dbs, guards),
-  new HostSurfaceRpc(dbs, new RealtimeService(), notifications, llmConfig, oauth, guards),
+  new HostSurfaceRpc(dbs, new RealtimeService(), notifications, llmConfig, oauth, guards, pluginAuditRepo),
 ]);
-const factory = new PluginRpcHostFactory(dbs, registry as unknown as PluginRpcRegistryService);
+const factory = new PluginRpcHostFactory(pluginAuditRepo, registry as unknown as PluginRpcRegistryService);
 const stubRouter: PluginCallRouter = { callPlugin: async () => undefined, emitPluginEvent: async () => {} };
 const makeHost = (id: string, ...perms: string[]) => factory.create(id, new Set(perms), stubRouter);
 /**

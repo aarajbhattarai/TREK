@@ -4,6 +4,9 @@ import { BadParams, ForbiddenResource } from '../rpc-errors';
 import { asPayload, num, str } from '../rpc-params';
 import type { PluginRpcContext } from '../rpc-kit/types';
 import { budgetFor } from '../plugin-host-state';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { PluginCapabilityAudit } from '../../../../db/entities/PluginCapabilityAudit.entity';
+import type { PluginCapabilityAuditRepository } from '../../../../db/repositories/PluginCapabilityAudit.repository';
 import { DatabaseService } from '../../../database/database.service';
 import { RealtimeService } from '../../../realtime/realtime.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -42,6 +45,7 @@ export class HostSurfaceRpc {
     private readonly llmConfig: LlmConfigResolver,
     private readonly oauth: PluginOAuthService,
     private readonly guards: PluginGuards,
+    @InjectRepository(PluginCapabilityAudit) private readonly audit: PluginCapabilityAuditRepository,
   ) {}
 
   @PluginMethod('users.getById', { permission: 'db:read:users' })
@@ -105,7 +109,7 @@ export class HostSurfaceRpc {
       throw new ForbiddenResource('the acting user is not a member of that trip');
     }
     const link = this.safeLink(input.link);
-    if (!(await budgetFor(ctx.pluginId, this.db.connection)).take('notify', Date.now())) {
+    if (!(await budgetFor(ctx.pluginId, this.audit)).take('notify', Date.now())) {
       throw new BadParams('daily notification budget exhausted (resets at UTC midnight)');
     }
     await this.notifications.send({
@@ -246,7 +250,7 @@ export class HostSurfaceRpc {
   }
 
   private async takeAiBudget(ctx: PluginRpcContext): Promise<void> {
-    if (!(await budgetFor(ctx.pluginId, this.db.connection)).take('ai', Date.now())) {
+    if (!(await budgetFor(ctx.pluginId, this.audit)).take('ai', Date.now())) {
       throw new BadParams('daily AI budget exhausted (resets at UTC midnight)');
     }
   }

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { PluginsController } from './plugins.controller';
 import { PluginsFeedController } from './plugins-feed.controller';
 import { PluginsProxyController } from './plugins-proxy.controller';
@@ -9,6 +10,7 @@ import { PluginsRuntimeModule } from './plugins-runtime.module';
 import { PluginOAuthModule } from './oauth/plugin-oauth.module';
 import { PluginContributionsModule } from './contributions/plugin-contributions.module';
 import { AppConfigModule } from '../app-config/app-config.module';
+import { PluginCapabilityAudit } from '../../db/entities/PluginCapabilityAudit.entity';
 
 /**
  * Plugin system (#plugins), composition root.
@@ -26,9 +28,15 @@ import { AppConfigModule } from '../app-config/app-config.module';
  * What is left here is the CRUD and delivery surface: install/activate/configure, the
  * feed the client reads, the proxy to a child's HTTP routes, and the sandboxed frame
  * that serves page and widget assets.
+ *
+ * `MikroOrmModule.forFeature([PluginCapabilityAudit])` (Plan 3j Task 3):
+ * `PluginActivityController`'s own `@InjectRepository` param — `PluginsRuntimeModule`
+ * registers the same entity for ITS OWN providers but does not export the repository
+ * token, so this module (the one that constructs the controller) needs its own entry,
+ * same reasoning `PluginContributionsModule`'s own docstring gives for `JourneyEntries`.
  */
 @Module({
-  imports: [AppConfigModule, PluginsRuntimeModule, PluginOAuthModule, PluginContributionsModule],
+  imports: [AppConfigModule, PluginsRuntimeModule, PluginOAuthModule, PluginContributionsModule, MikroOrmModule.forFeature([PluginCapabilityAudit])],
   controllers: [
     PluginsController,
     PluginsFeedController,

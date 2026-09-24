@@ -56,7 +56,7 @@ import { closePluginDataDb } from './host/plugin-host-state';
 import { ForbiddenResource } from './host/rpc-host';
 import { removePluginData } from './host/plugin-data.service';
 import { isKnownPermission } from './protocol/envelope';
-import { discoverPlugins } from './install/discovery';
+import { discoverPlugins, type DiscoveryRepos } from './install/discovery';
 import { parseJsonText, parseManifest, parseMcpToolCapabilities } from './install/manifest';
 import { scanForNativeBinaries } from './install/native-scan';
 import { devLinkEnabled, DEV_LINK_SOURCE } from './dev-link';
@@ -313,6 +313,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     return this.dbs.connection;
   }
 
+  // Plan 3j Task 3: `discoverPlugins` composes `DiscoveryRepos` from the repositories
+  // this class already injects for its own PR-numbered statements — no new params.
+  private get discoveryRepos(): DiscoveryRepos {
+    return { plugins: this.plugins, actions: this.pluginActions, settingsFields: this.pluginSettingsFields, errorLog: this.pluginErrorLog };
+  }
+
   // onApplicationBootstrap, NOT onModuleInit: boot activation builds each plugin's
   // rpc host synchronously, and the host snapshots PluginRpcRegistryService at
   // construction (bindInto). Same-module onModuleInit hooks fire in providers-array
@@ -359,24 +365,32 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       // being raw SQL. Plan 3j Task 2: `installedDepRows` now reads `plugins` through
       // `PluginsRepository.listDepRows` (PR15/16/25 converted) — a genuine request-context
       // dependency the no-ORM branch below cannot satisfy (there is no ORM to wrap with).
-      // `discoverPlugins` itself stays raw (Task 3's own file, unconverted) and safe to run
-      // unwrapped either way. DEVIATION from Task 0's own note (task-0-report.md) and from
-      // RT-BOOT-NOORM-001's prior assertion: the no-ORM branch can no longer read `plugins`
-      // at all, so it no longer names which plugin(s) it is skipping — it logs a single
-      // generic line instead. This is a strictly MORE conservative outcome (skip more,
-      // never throw out of onApplicationBootstrap, same "fail closed, never abort app.init()"
-      // invariant) than before, not a correctness regression — and it can only ever be
-      // observed by a hand-built test instance that constructs this service without the
-      // `orm` param its own `plugins`/other repositories are drawn from; production always
-      // provides both together from the same DI graph. See task-2-report.md.
+      // Plan 3j Task 3: `discoverPlugins` is repository-backed too now (DI1–DI8), so it
+      // joins `installedDepRows` inside the SAME `withRequestContext` wrap — both need one,
+      // and both come from the same DI graph, so one wrap covers both. In the no-ORM
+      // branch `discoverPlugins` is skipped along with `installedDepRows`, not called
+      // unwrapped: a repository read/write outside a request context now fails closed
+      // (`cannotUseGlobalContext`) instead of running, so calling it there would only
+      // trade an explicit skip for a caught-and-swallowed throw — the outer try/catch
+      // still yields the same "boot must never block app init" outcome either way, but
+      // the explicit skip (matching `installedDepRows`'s own shape) is the intended one.
+      // DEVIATION from Task 0's own note (task-0-report.md) and from RT-BOOT-NOORM-001's
+      // prior assertion: the no-ORM branch can no longer read OR write `plugins` at all,
+      // so it no longer names which plugin(s) it is skipping and never discovers new ones
+      // on disk — it logs a single generic line instead. This is a strictly MORE
+      // conservative outcome (skip more, never throw out of onApplicationBootstrap, same
+      // "fail closed, never abort app.init()" invariant) than before, not a correctness
+      // regression — and it can only ever be observed by a hand-built test instance that
+      // constructs this service without the `orm` param its own `plugins`/other
+      // repositories are drawn from; production always provides both together from the
+      // same DI graph. See task-2-report.md.
       let installed: Map<string, PluginDepRow>;
       if (this.orm) {
         installed = await withRequestContext(this.orm, async () => {
-          await discoverPlugins(this.db);
+          await discoverPlugins(this.discoveryRepos);
           return this.installedDepRows();
         });
       } else {
-        await discoverPlugins(this.db);
         installed = new Map();
       }
       const enabledIds = [...installed.values()].filter((r) => r.enabled).map((r) => r.id);
@@ -613,7 +627,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   /** Re-scan the plugins volume on demand (admin action). */
   async rescan(): Promise<{ discovered: string[]; skipped: string[] }> {
-    return await discoverPlugins(this.db);
+    return await discoverPlugins(this.discoveryRepos);
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -753,7 +767,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     await this.plugins.grantPermissionsAndEnable(id, JSON.stringify(declared));
     // Manifest defaults fill whatever the admin never set, so the child's ctx.config is
     // the same effective value the settings form shows (see settings-defaults.ts).
-    const config = applySettingDefaults(decryptConfig(parseObject(row.config)), await settingDefaults(this.db, id, 'instance'));
+    const config = applySettingDefaults(decryptConfig(parseObject(row.config)), await settingDefaults(this.pluginSettingsFields, id, 'instance'));
     const manifestHosts = declared.filter((p) => p.startsWith(HTTP_OUTBOUND)).map((p) => p.slice(HTTP_OUTBOUND.length));
     // Union in the hosts the ADMIN added post-install. A plugin that talks to a
     // self-hosted service can't name the operator's hostname in its manifest, so without
@@ -1027,7 +1041,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     removePluginCodeEntry(dest); // drop any prior link — never follows into the author's source
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.symlinkSync(sourceDir, dest, 'junction'); // Windows junction (no elevation); POSIX ignores the type -> dir symlink
-    await discoverPlugins(this.db); // registers/updates the row from the linked manifest, INACTIVE
+    await discoverPlugins(this.discoveryRepos); // registers/updates the row from the linked manifest, INACTIVE
     // Same as a sideload: the plugin has left the registry trust model, so a block that
     // described a refused REGISTRY update no longer describes the code that will run.
     await this.plugins.clearForDevLink(id, DEV_LINK_SOURCE);

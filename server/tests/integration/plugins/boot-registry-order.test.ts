@@ -124,12 +124,14 @@ afterAll(async () => {
 describe('plugin boot vs registry scan ordering', () => {
   it('BOOT-REG-001 a plugin enabled before a restart activates cleanly even though the registry scan runs in a LATER provider\'s onModuleInit', async () => {
     const dbs = new DatabaseService(dbConn);
-    const userSettings = new PluginUserSettingsService(dbs);
     // Empty at construction — exactly what PluginRpcRegistryService is before its
     // own onModuleInit scan has run.
     const registry = new PluginRpcRegistry();
-    const hostFactory = new PluginRpcHostFactory(dbs, registry as unknown as PluginRpcRegistryService);
     t = await createTestOrm(dbConn);
+    // Plan 3j Task 3: `PluginRpcHostFactory`'s `audit` callback now takes
+    // `PluginCapabilityAuditRepository`, not `DatabaseService`.
+    const hostFactory = new PluginRpcHostFactory(t.repo(PluginCapabilityAudit), registry as unknown as PluginRpcRegistryService);
+    const userSettings = new PluginUserSettingsService((t as TestOrm).repo(PluginSettingsFields), (t as TestOrm).repo(PluginUserConfig));
     const auditLogRepo = t.repo(AuditLog);
     const usersRepo = t.repo(Users);
     const addonsService = await createTestAddonsService(dbConn, dbs);
@@ -236,12 +238,12 @@ describe('plugin boot vs registry scan ordering', () => {
     let mod2: TestingModule | undefined;
     try {
       const dbs2 = new DatabaseService(dbConn);
-      const userSettings2 = new PluginUserSettingsService(dbs2);
+      const userSettings2 = new PluginUserSettingsService(t2.repo(PluginSettingsFields), t2.repo(PluginUserConfig));
       const registry2 = new PluginRpcRegistry();
       // Registry already scanned — this test is about the addon check, not the
       // registry-ordering bug BOOT-REG-001 pins.
       registry2.register(new DbRpc(userSettings2));
-      const hostFactory2 = new PluginRpcHostFactory(dbs2, registry2 as unknown as PluginRpcRegistryService);
+      const hostFactory2 = new PluginRpcHostFactory(t2.repo(PluginCapabilityAudit), registry2 as unknown as PluginRpcRegistryService);
       // Built directly on t2 (not createTestAddonsService's sharedTestOrm) so
       // its repositories share t2's allowGlobalContext: false ORM.
       const addonsService2 = new AddonsService(

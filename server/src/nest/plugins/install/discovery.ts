@@ -1,10 +1,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type BetterSqlite3 from 'better-sqlite3';
 import { pluginsCodeRoot, pluginCodeDir } from '../paths';
 import { parseJsonText, parseManifest, type PluginManifest } from './manifest';
 import { scanForNativeBinaries } from './native-scan';
 import { devLinkEnabled } from '../dev-link';
+import type { PluginsRepository } from '../../../db/repositories/Plugins.repository';
+import type { PluginActionsRepository } from '../../../db/repositories/PluginActions.repository';
+import type { PluginSettingsFieldsRepository } from '../../../db/repositories/PluginSettingsFields.repository';
+import type { PluginErrorLogRepository } from '../../../db/repositories/PluginErrorLog.repository';
+
+/** `discoverPlugins`/`upsert`'s repository set — "swap the parameter type" (plan3j-inputs.md
+ * §0): the raw `BetterSqlite3.Database` parameter becomes this bundle of the four
+ * repositories the scan actually writes through. */
+export interface DiscoveryRepos {
+  plugins: PluginsRepository;
+  actions: PluginActionsRepository;
+  settingsFields: PluginSettingsFieldsRepository;
+  errorLog: PluginErrorLogRepository;
+}
 
 /**
  * Discover plugins placed on the /plugins volume (#plugins, M4, "install from
@@ -14,7 +27,7 @@ import { devLinkEnabled } from '../dev-link';
  * manifest is invalid or that ships native binaries is skipped (recorded to its
  * error log if it already existed).
  */
-export async function discoverPlugins(db: BetterSqlite3.Database): Promise<{ discovered: string[]; skipped: string[] }> {
+export async function discoverPlugins(repos: DiscoveryRepos): Promise<{ discovered: string[]; skipped: string[] }> {
   const root = pluginsCodeRoot();
   const discovered: string[] = [];
   const skipped: string[] = [];
@@ -50,62 +63,64 @@ export async function discoverPlugins(db: BetterSqlite3.Database): Promise<{ dis
       const manifest = parseManifest(parseJsonText(fs.readFileSync(manifestPath, 'utf8')));
       if (manifest.id !== entry.name) throw new Error(`manifest id "${manifest.id}" != directory "${entry.name}"`);
       if (scanForNativeBinaries(dir).length) throw new Error('directory contains native binaries');
-      await upsert(db, manifest);
+      await upsert(repos, manifest);
       discovered.push(manifest.id);
     } catch (e) {
       skipped.push(entry.name);
       const msg = e instanceof Error ? e.message : 'invalid plugin';
-      db.prepare('INSERT INTO plugin_error_log (plugin_id, level, message) VALUES (?, ?, ?)').run(entry.name, 'error', `discovery: ${msg}`);
+      await repos.errorLog.insertLog(entry.name, 'error', `discovery: ${msg}`);
     }
   }
   return { discovered, skipped };
 }
 
-async function upsert(db: BetterSqlite3.Database, m: PluginManifest): Promise<void> {
+async function upsert(repos: DiscoveryRepos, m: PluginManifest): Promise<void> {
   const dependencies = JSON.stringify({ requiredAddons: m.requiredAddons, pluginDependencies: m.pluginDependencies });
-  const existing = db.prepare('SELECT id FROM plugins WHERE id = ?').get(m.id) as { id: string } | undefined;
+  const manifestRow = {
+    name: m.name,
+    description: m.description ?? null,
+    type: m.type,
+    icon: m.icon ?? 'Blocks',
+    version: m.version,
+    api_version: m.apiVersion,
+    min_trek_version: m.minTrekVersion ?? null,
+    trek_range: m.trekRange,
+    permissions: JSON.stringify(m.permissions),
+    capabilities: JSON.stringify(m.capabilities),
+    dependencies,
+    operator_egress: m.operatorEgress ? 1 : 0,
+  };
+  const existing = await repos.plugins.existsById(m.id);
   if (existing) {
-    db.prepare(
-      `UPDATE plugins SET name = ?, description = ?, type = ?, icon = ?, version = ?, api_version = ?,
-         min_trek_version = ?, trek_range = ?, permissions = ?, capabilities = ?, dependencies = ?, operator_egress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-    ).run(m.name, m.description ?? null, m.type, m.icon ?? 'Blocks', m.version, m.apiVersion, m.minTrekVersion ?? null, m.trekRange, JSON.stringify(m.permissions), JSON.stringify(m.capabilities), dependencies, m.operatorEgress ? 1 : 0, m.id);
+    await repos.plugins.updateManifestFields(m.id, manifestRow);
   } else {
-    db.prepare(
-      // granted_permissions '' (empty, not '[]') marks "never consented" so the
-      // first activation is distinguishable from a plugin consented to zero perms.
-      `INSERT INTO plugins (id, name, description, type, icon, version, api_version, min_trek_version, trek_range, permissions, capabilities, dependencies, operator_egress, granted_permissions, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', 'inactive')`,
-    ).run(m.id, m.name, m.description ?? null, m.type, m.icon ?? 'Blocks', m.version, m.apiVersion, m.minTrekVersion ?? null, m.trekRange, JSON.stringify(m.permissions), JSON.stringify(m.capabilities), dependencies, m.operatorEgress ? 1 : 0);
+    await repos.plugins.insertManifest({ id: m.id, ...manifestRow });
   }
 
   // Refresh the settings-page action descriptors from the manifest.
-  db.prepare('DELETE FROM plugin_actions WHERE plugin_id = ?').run(m.id);
-  const insertAction = db.prepare(
-    'INSERT INTO plugin_actions (plugin_id, action_key, label, hint, danger, scope, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  await repos.actions.deleteAllForPlugin(m.id);
+  await repos.actions.insertActions(
+    m.id,
+    m.actions.map((a, i) => ({ action_key: a.key, label: a.label, hint: a.hint ?? null, danger: a.danger ? 1 : 0, scope: a.scope, sort_order: i })),
   );
-  m.actions.forEach((a, i) => insertAction.run(m.id, a.key, a.label, a.hint ?? null, a.danger ? 1 : 0, a.scope, i));
 
   // Refresh the settings-field descriptors from the manifest.
-  db.prepare('DELETE FROM plugin_settings_fields WHERE plugin_id = ?').run(m.id);
-  const insert = db.prepare(
-    `INSERT INTO plugin_settings_fields (plugin_id, field_key, label, input_type, placeholder, hint, required, secret, scope, options, oauth_config, default_value, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  await repos.settingsFields.deleteAllForPlugin(m.id);
+  await repos.settingsFields.insertFields(
+    m.id,
+    m.settings.map((f, i) => ({
+      field_key: f.key,
+      label: f.label ?? f.key,
+      input_type: f.input_type ?? 'text',
+      placeholder: f.placeholder ?? null,
+      hint: f.hint ?? null,
+      required: f.required ? 1 : 0,
+      secret: f.secret ? 1 : 0,
+      scope: f.scope ?? 'instance',
+      options: f.options ? JSON.stringify(f.options) : null,
+      oauth_config: f.oauth ? JSON.stringify(f.oauth) : null,
+      default_value: f.default === undefined ? null : JSON.stringify(f.default),
+      sort_order: i,
+    })),
   );
-  m.settings.forEach((f, i) => {
-    insert.run(
-      m.id,
-      f.key,
-      f.label ?? f.key,
-      f.input_type ?? 'text',
-      f.placeholder ?? null,
-      f.hint ?? null,
-      f.required ? 1 : 0,
-      f.secret ? 1 : 0,
-      f.scope ?? 'instance',
-      f.options ? JSON.stringify(f.options) : null,
-      f.oauth ? JSON.stringify(f.oauth) : null,
-      f.default === undefined ? null : JSON.stringify(f.default),
-      i,
-    );
-  });
 }

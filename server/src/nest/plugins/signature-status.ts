@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3';
+import type { PluginsRepository } from '../../db/repositories/Plugins.repository';
 
 /**
  * Signature/trust status shared between the registry installer, the read-side
@@ -67,14 +67,9 @@ export function keyFingerprint(pubkey: string | null | undefined): string | null
  * old code. A blocked update is not a broken runtime, and conflating them would
  * make the isolation-health dot lie.
  */
-export async function setUpdateBlock(conn: Database.Database, id: string, code: SignatureCode, detail: string, version: string | null): Promise<void> {
+export async function setUpdateBlock(plugins: PluginsRepository, id: string, code: SignatureCode, detail: string, version: string | null): Promise<void> {
   try {
-    conn.prepare('UPDATE plugins SET update_block_code = ?, update_block_detail = ?, update_block_version = ? WHERE id = ?').run(
-      code,
-      detail,
-      version,
-      id,
-    );
+    await plugins.setUpdateBlockColumns(id, code, detail, version);
   } catch {
     // Columns absent (a slimmed test app) — the block is a nicety, never a gate.
   }
@@ -84,9 +79,9 @@ export async function setUpdateBlock(conn: Database.Database, id: string, code: 
  * activating the plugin at its OLD version resolves nothing, and letting an off/on
  * toggle erase the warning is exactly the silent-stops-updating failure this exists
  * to prevent. (Uninstall drops the row entirely, so it needs no explicit clear.) */
-export async function clearUpdateBlock(conn: Database.Database, id: string): Promise<void> {
+export async function clearUpdateBlock(plugins: PluginsRepository, id: string): Promise<void> {
   try {
-    conn.prepare('UPDATE plugins SET update_block_code = NULL, update_block_detail = NULL, update_block_version = NULL WHERE id = ?').run(id);
+    await plugins.clearUpdateBlockColumns(id);
   } catch {
     // See setUpdateBlock.
   }

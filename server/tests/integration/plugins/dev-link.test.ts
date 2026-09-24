@@ -9,30 +9,23 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-
-const { testDb } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec(`CREATE TABLE plugins (
-    id TEXT PRIMARY KEY, name TEXT, description TEXT, type TEXT, icon TEXT, version TEXT, api_version INTEGER,
-    min_trek_version TEXT, trek_range TEXT, permissions TEXT DEFAULT '[]', capabilities TEXT DEFAULT '{}', dependencies TEXT DEFAULT '{}',
-    operator_egress INTEGER DEFAULT 0, granted_permissions TEXT DEFAULT '', status TEXT, enabled INTEGER DEFAULT 0, config TEXT DEFAULT '{}',
-    source_repo TEXT, source_commit TEXT, sha256 TEXT, author_pubkey TEXT, reviewed_at TEXT, last_error TEXT, updated_at TEXT,
-    update_block_code TEXT, update_block_detail TEXT, update_block_version TEXT);
-    CREATE TABLE plugin_error_log (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, level TEXT, message TEXT, ts TEXT);
-    CREATE TABLE plugin_settings_fields (plugin_id TEXT, field_key TEXT, label TEXT, input_type TEXT, placeholder TEXT, hint TEXT, required INTEGER, secret INTEGER, scope TEXT, options TEXT, oauth_config TEXT, default_value TEXT, sort_order INTEGER);
-    CREATE TABLE settings (user_id INTEGER, key TEXT, value TEXT);
-    CREATE TABLE plugin_entity_metadata (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, entity_type TEXT, entity_id INTEGER, key TEXT, value TEXT, updated_at TEXT);
-    CREATE TABLE addons (id TEXT PRIMARY KEY, enabled INTEGER DEFAULT 0);`);
-  return { testDb: db };
-});
-vi.mock('../../../src/db/database', () => ({ db: testDb, canAccessTrip: () => undefined }));
-import { db as dbConn } from '../../../src/db/database';
+// Plan 3j Task 3: `discoverPlugins` (called from `runtime.link`) is repository-backed
+// now (DI1–DI8) — a native `em.insert()` writes every `Opt`-defaulted entity column
+// (`sort_order`, `installed_at`, `crash_count`, `update_hold`, …), not only the ones
+// the legacy raw `INSERT` statement named, so a hand-trimmed `:memory:` table missing
+// those columns throws inside `discoverPlugins`'s own try/catch (silently: the plugin
+// lands in `skipped`, not `discovered`). A real MikroORM over the full migrated schema
+// (`createSnapshotTestDb` + `createTestOrm`) replaces the old hand-rolled table set,
+// same fix `registry.test.ts` needed.
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
 import { createPluginRuntime } from '../../helpers/plugin-host';
+
+const testDb = createSnapshotTestDb();
+const dbConn = testDb;
 
 let codeRoot: string;
 let dataRoot: string;
@@ -71,6 +64,7 @@ afterAll(async () => {
   delete process.env.TREK_PLUGINS_DATA_DIR;
   delete process.env.TREK_PLUGINS_ENABLED;
   delete process.env.TREK_PLUGINS_DEV_LINK;
+  testDb.close();
 });
 
 describe('PluginRuntimeService dev-link', () => {

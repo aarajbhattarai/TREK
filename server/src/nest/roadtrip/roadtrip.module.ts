@@ -43,6 +43,7 @@ import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
 import { RoadtripDayTracks } from '../../db/entities/RoadtripDayTracks.entity';
 import { RoadtripPreferences } from '../../db/entities/RoadtripPreferences.entity';
 import { RoadtripDayBoundaries } from '../../db/entities/RoadtripDayBoundaries.entity';
+import { Plugins } from '../../db/entities/Plugins.entity';
 
 /** Road trip domain (#1797): the points a drive is routed through. Registered in AppModule. */
 @Module({
@@ -60,6 +61,9 @@ import { RoadtripDayBoundaries } from '../../db/entities/RoadtripDayBoundaries.e
   // `DayAssignmentsRepository.findInTrip`/`listRoadtripVisits`) all need
   // their own entry here, even though `PlacesModule`/`AssignmentsModule`
   // already register some of the same entities for THEIR OWN providers.
+  // `Plugins` (Plan 3j Task 3): `RoadtripRouterService`'s RRT1/RRT2 call
+  // `declaredProfiles`, now `PluginsRepository`-typed; `PluginsRuntimeModule`
+  // registers the same entity but does not export the repository token.
   imports: [
     McpSharedModule,
     PermissionsModule,
@@ -69,7 +73,7 @@ import { RoadtripDayBoundaries } from '../../db/entities/RoadtripDayBoundaries.e
     SettingsModule,
     PluginsRuntimeModule,
     MapsModule, PlacesModule, AssignmentsModule,
-    MikroOrmModule.forFeature([Trips, Days, Places, Users, DayAssignments, RoadtripVias, RoadtripDayTracks, RoadtripPreferences, RoadtripDayBoundaries]),
+    MikroOrmModule.forFeature([Trips, Days, Places, Users, DayAssignments, RoadtripVias, RoadtripDayTracks, RoadtripPreferences, RoadtripDayBoundaries, Plugins]),
   ],
   controllers: [ChargingController, ChargingLookupController, GoogleRouteController, RoadtripSearchController, RoadtripPreferencesController, RoadtripController, DayBoundariesController, RoadtripHazardsController],
   providers: [ChargingMcp, ChargingService, GoogleRouteService, GoogleRouteMcp,

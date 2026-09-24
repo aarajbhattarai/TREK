@@ -1,6 +1,6 @@
-import type Database from 'better-sqlite3';
 import { PluginDataDb } from './plugin-data.service';
 import { DailyBudget, DEFAULT_DAILY_BUDGET } from './daily-budget';
+import type { PluginCapabilityAuditRepository } from '../../../db/repositories/PluginCapabilityAudit.repository';
 
 /**
  * Process-wide plugin host state, deliberately module-level (NOT a Nest
@@ -11,9 +11,10 @@ import { DailyBudget, DEFAULT_DAILY_BUDGET } from './daily-budget';
  * this state into the injectable would create a provider cycle for no gain.
  *
  * It does NOT reach for the `db` singleton, though: the one read it needs is the
- * budget seed, so the caller passes its own injected connection in. That keeps the
- * module-level state (which is the point) without a second route to the database
- * that no test can substitute.
+ * budget seed, so the caller passes its own injected `PluginCapabilityAuditRepository`
+ * in (Plan 3j Task 3 — was a raw `better-sqlite3` connection before conversion).
+ * That keeps the module-level state (which is the point) without a second route
+ * to the database that no test can substitute.
  */
 
 const dataDbs = new Map<string, PluginDataDb>();
@@ -44,14 +45,12 @@ export function closePluginDataDb(id: string): void {
 // nothing persisted or phoned home.
 const budgets = new Map<string, DailyBudget>();
 
-export async function budgetFor(id: string, conn: Database.Database): Promise<DailyBudget> {
+export async function budgetFor(id: string, audit: PluginCapabilityAuditRepository): Promise<DailyBudget> {
   let b = budgets.get(id);
   if (!b) {
     const now = Date.now();
     const since = new Date(now).toISOString().slice(0, 10) + 'T00:00:00';
-    const rows = conn
-      .prepare("SELECT method, COUNT(*) AS n FROM plugin_capability_audit WHERE plugin_id = ? AND code = 'ok' AND ts >= ? AND method IN ('ai.complete','ai.extract','notify.send') GROUP BY method")
-      .all(id, since) as Array<{ method: string; n: number }>;
+    const rows = await audit.budgetSeed(id, since);
     let ai = 0, notify = 0;
     for (const r of rows) {
       if (r.method === 'notify.send') notify += r.n;
@@ -64,6 +63,6 @@ export async function budgetFor(id: string, conn: Database.Database): Promise<Da
 }
 
 /** Today's broker usage for one plugin (admin view). Seeds the counter if unseen. */
-export async function pluginBudgetUsage(id: string, conn: Database.Database): Promise<ReturnType<DailyBudget['used']>> {
-  return (await budgetFor(id, conn)).used(Date.now());
+export async function pluginBudgetUsage(id: string, audit: PluginCapabilityAuditRepository): Promise<ReturnType<DailyBudget['used']>> {
+  return (await budgetFor(id, audit)).used(Date.now());
 }

@@ -1,6 +1,9 @@
 import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../../database/database.service';
+import { Plugins } from '../../../db/entities/Plugins.entity';
+import type { PluginsRepository } from '../../../db/repositories/Plugins.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
@@ -33,6 +36,7 @@ export class PluginRoutesController {
   constructor(
     private readonly hooks: PluginHooks,
     private readonly dbs: DatabaseService,
+    @InjectRepository(Plugins) private readonly plugins: PluginsRepository,
   ) {}
 
   @Post(':pluginId/:profileId')
@@ -56,7 +60,7 @@ export class PluginRoutesController {
     // one the manifest declared — re-validated from the DB row like the plugins feed,
     // so a hand-edited capabilities blob can't invent profiles.
     if (!this.hooks.providersOf('routeProvider').includes(pluginId)) return { route: null };
-    if (!(await declaredProfiles(this.dbs.connection, pluginId)).includes(profileId)) return { route: null };
+    if (!(await declaredProfiles(this.plugins, pluginId)).includes(profileId)) return { route: null };
 
     try {
       const raw = await this.hooks.route(pluginId, { tripId, dayId, profile: profileId, waypoints }, userId);

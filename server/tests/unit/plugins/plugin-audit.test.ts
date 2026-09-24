@@ -1,18 +1,59 @@
 /**
  * Host-side capability audit log (#plugins, L1 hardening): resource projection,
  * which methods are auditable, and the per-plugin hash chain.
+ *
+ * Plan 3j Task 3 — converted onto `PluginCapabilityAuditRepository`. R-hash-chain:
+ * `legacyAppendAudit` below is a byte-for-byte replica of the PRE-CONVERSION
+ * `appendAudit` body (a raw `better-sqlite3` INSERT, the exact hash construction
+ * this task's `plugin-audit.ts` now reproduces through the repository) — it exists
+ * SOLELY so these tests can produce a "legacy-written" chain to replay against the
+ * converted code, without keeping a second, unused copy of the production function
+ * around.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
-import Database from 'better-sqlite3';
-import { appendAudit, readAudit, readAuditForUser, auditResource, isAuditable, pruneAudit } from '../../../src/nest/plugins/host/plugin-audit';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import crypto from 'node:crypto';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { resetTestDb } from '../../helpers/test-db';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
+import type { PluginCapabilityAuditRepository } from '../../../src/db/repositories/PluginCapabilityAudit.repository';
+import { appendAudit, readAudit, readAuditForUser, auditResource, isAuditable, pruneAudit, verifyChain } from '../../../src/nest/plugins/host/plugin-audit';
 
-function makeDb() {
-  const db = new Database(':memory:');
-  db.exec(`CREATE TABLE plugin_capability_audit (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT NOT NULL, acting_user_id INTEGER,
-    method TEXT NOT NULL, resource TEXT, code TEXT NOT NULL, ts TEXT NOT NULL,
-    prev_hash TEXT, hash TEXT NOT NULL);`);
-  return db;
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+let audit: PluginCapabilityAuditRepository;
+
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  audit = t.repo(PluginCapabilityAudit);
+});
+beforeEach(() => { resetTestDb(testDb); t.clear(); });
+afterAll(async () => { await t.close(); testDb.close(); });
+
+interface LegacyEntry {
+  pluginId: string;
+  actingUserId?: number;
+  method: string;
+  resource?: string | null;
+  code: string;
+}
+
+/** The pre-conversion `appendAudit` body, verbatim, against a raw connection. */
+function legacyAppendAudit(prevHash: string, e: LegacyEntry): { ts: string; hash: string } {
+  const ts = new Date().toISOString();
+  const row = JSON.stringify([e.pluginId, e.actingUserId ?? null, e.method, e.resource ?? null, e.code, ts]);
+  const hash = crypto.createHash('sha256').update(prevHash + row).digest('hex');
+  testDb
+    .prepare('INSERT INTO plugin_capability_audit (plugin_id, acting_user_id, method, resource, code, ts, prev_hash, hash) VALUES (?,?,?,?,?,?,?,?)')
+    .run(e.pluginId, e.actingUserId ?? null, e.method, e.resource ?? null, e.code, ts, prevHash || null, hash);
+  return { ts, hash };
+}
+
+/** Every row for a plugin, oldest first — the shape `verifyChain` needs. */
+function chainRows(pluginId: string) {
+  return testDb
+    .prepare('SELECT plugin_id, acting_user_id, method, resource, code, ts, prev_hash, hash FROM plugin_capability_audit WHERE plugin_id = ? ORDER BY id ASC')
+    .all(pluginId) as Array<{ plugin_id: string; acting_user_id: number | null; method: string; resource: string | null; code: string; ts: string; prev_hash: string | null; hash: string }>;
 }
 
 describe('auditResource + isAuditable', () => {
@@ -40,14 +81,11 @@ describe('auditResource + isAuditable', () => {
   });
 });
 
-describe('appendAudit hash chain', () => {
-  let db: ReturnType<typeof makeDb>;
-  beforeEach(() => { db = makeDb(); });
-
+describe('appendAudit hash chain (converted, through PluginCapabilityAuditRepository)', () => {
   it('chains each entry off the previous hash (per plugin)', async () => {
-    await appendAudit(db, { pluginId: 'p', actingUserId: 42, method: 'trips.getById', resource: 'trip:1', code: 'ok' });
-    await appendAudit(db, { pluginId: 'p', actingUserId: 42, method: 'trips.getById', resource: 'trip:2', code: 'ok' });
-    const rows = db.prepare('SELECT prev_hash, hash FROM plugin_capability_audit ORDER BY id').all() as Array<{ prev_hash: string | null; hash: string }>;
+    await appendAudit(audit, { pluginId: 'p', actingUserId: 42, method: 'trips.getById', resource: 'trip:1', code: 'ok' });
+    await appendAudit(audit, { pluginId: 'p', actingUserId: 42, method: 'trips.getById', resource: 'trip:2', code: 'ok' });
+    const rows = testDb.prepare('SELECT prev_hash, hash FROM plugin_capability_audit ORDER BY id').all() as Array<{ prev_hash: string | null; hash: string }>;
     expect(rows).toHaveLength(2);
     expect(rows[0].prev_hash).toBeNull();
     expect(rows[1].prev_hash).toBe(rows[0].hash); // chain links
@@ -55,52 +93,99 @@ describe('appendAudit hash chain', () => {
   });
 
   it('keeps separate chains per plugin', async () => {
-    await appendAudit(db, { pluginId: 'a', method: 'trips.getById', resource: 'trip:1', code: 'ok' });
-    await appendAudit(db, { pluginId: 'b', method: 'trips.getById', resource: 'trip:1', code: 'ok' });
-    const a = db.prepare("SELECT prev_hash FROM plugin_capability_audit WHERE plugin_id='b'").get() as { prev_hash: string | null };
-    expect(a.prev_hash).toBeNull(); // b's first entry doesn't chain off a's
+    await appendAudit(audit, { pluginId: 'a', method: 'trips.getById', resource: 'trip:1', code: 'ok' });
+    await appendAudit(audit, { pluginId: 'b', method: 'trips.getById', resource: 'trip:1', code: 'ok' });
+    const b = testDb.prepare("SELECT prev_hash FROM plugin_capability_audit WHERE plugin_id='b'").get() as { prev_hash: string | null };
+    expect(b.prev_hash).toBeNull(); // b's first entry doesn't chain off a's
   });
 
   it('records denials too (code is the error code)', async () => {
-    await appendAudit(db, { pluginId: 'p', actingUserId: 99, method: 'trips.getById', resource: 'trip:1', code: 'RESOURCE_FORBIDDEN' });
-    const row = (await readAudit(db, 'p'))[0] as { code: string; method: string };
+    await appendAudit(audit, { pluginId: 'p', actingUserId: 99, method: 'trips.getById', resource: 'trip:1', code: 'RESOURCE_FORBIDDEN' });
+    const row = (await readAudit(audit, 'p'))[0];
     expect(row.code).toBe('RESOURCE_FORBIDDEN');
   });
 
-  it('readAuditForUser returns one user\'s actions across ALL plugins, newest first, with the plugin name', async () => {
-    db.exec("CREATE TABLE plugins (id TEXT PRIMARY KEY, name TEXT)");
-    db.prepare("INSERT INTO plugins (id, name) VALUES ('koffi','Koffi'), ('flight','Flight Tracker')").run();
-    await appendAudit(db, { pluginId: 'koffi', actingUserId: 42, method: 'trips.getById', resource: 'trip:1', code: 'ok' });
-    await appendAudit(db, { pluginId: 'flight', actingUserId: 42, method: 'reservations.create', resource: 'trip:1', code: 'ok' });
-    await appendAudit(db, { pluginId: 'koffi', actingUserId: 99, method: 'trips.getById', resource: 'trip:2', code: 'ok' }); // another user
-    const mine = (await readAuditForUser(db, 42)) as Array<{ plugin_id: string; plugin_name: string; method: string }>;
-    expect(mine).toHaveLength(2);                       // only user 42's rows, across both plugins
+  it("readAuditForUser returns one user's actions across ALL plugins, newest first, with the plugin name", async () => {
+    testDb.prepare("INSERT INTO plugins (id, name) VALUES ('koffi','Koffi'), ('flight','Flight Tracker')").run();
+    await appendAudit(audit, { pluginId: 'koffi', actingUserId: 42, method: 'trips.getById', resource: 'trip:1', code: 'ok' });
+    await appendAudit(audit, { pluginId: 'flight', actingUserId: 42, method: 'reservations.create', resource: 'trip:1', code: 'ok' });
+    await appendAudit(audit, { pluginId: 'koffi', actingUserId: 99, method: 'trips.getById', resource: 'trip:2', code: 'ok' }); // another user
+    const mine = await readAuditForUser(audit, 42);
+    expect(mine).toHaveLength(2); // only user 42's rows, across both plugins
     expect(mine[0]).toMatchObject({ plugin_id: 'flight', plugin_name: 'Flight Tracker', method: 'reservations.create' }); // newest first
     expect(mine[1]).toMatchObject({ plugin_id: 'koffi', plugin_name: 'Koffi' });
-    expect(mine.some((r) => r.plugin_id === 'koffi' && r.method === 'trips.getById' && (r as { resource?: string }).resource === 'trip:2')).toBe(false); // never another user's
+    expect(mine.some((r) => r.plugin_id === 'koffi' && r.method === 'trips.getById' && r.resource === 'trip:2')).toBe(false); // never another user's
   });
 
   it('readAudit returns newest first with the projected fields only', async () => {
-    await appendAudit(db, { pluginId: 'p', actingUserId: 42, method: 'trips.getById', resource: 'trip:1', code: 'ok' });
-    const rows = (await readAudit(db, 'p')) as Array<Record<string, unknown>>;
+    await appendAudit(audit, { pluginId: 'p', actingUserId: 42, method: 'trips.getById', resource: 'trip:1', code: 'ok' });
+    const rows = await readAudit(audit, 'p');
     expect(rows[0]).toHaveProperty('method', 'trips.getById');
     expect(rows[0]).not.toHaveProperty('prev_hash'); // internal chain fields not exposed
   });
 
   it('pruneAudit keeps only the newest N rows per plugin, leaving the retained window chain-consistent', async () => {
-    for (let i = 0; i < 50; i++) await appendAudit(db, { pluginId: 'p', actingUserId: 1, method: 'trips.getById', resource: `trip:${i}`, code: 'ok' });
-    await appendAudit(db, { pluginId: 'other', actingUserId: 1, method: 'trips.getById', resource: 'trip:x', code: 'ok' });
-    await pruneAudit(db, 'p', 10);
-    const rows = db.prepare("SELECT resource, prev_hash, hash FROM plugin_capability_audit WHERE plugin_id = 'p' ORDER BY id ASC").all() as Array<{ resource: string; prev_hash: string | null; hash: string }>;
+    for (let i = 0; i < 50; i++) await appendAudit(audit, { pluginId: 'p', actingUserId: 1, method: 'trips.getById', resource: `trip:${i}`, code: 'ok' });
+    await appendAudit(audit, { pluginId: 'other', actingUserId: 1, method: 'trips.getById', resource: 'trip:x', code: 'ok' });
+    await pruneAudit(audit, 'p', 10);
+    const rows = testDb.prepare("SELECT resource, prev_hash, hash FROM plugin_capability_audit WHERE plugin_id = 'p' ORDER BY id ASC").all() as Array<{ resource: string; prev_hash: string | null; hash: string }>;
     expect(rows).toHaveLength(10);
     expect(rows[rows.length - 1].resource).toBe('trip:49'); // newest kept
     // each retained row is still self-consistent: hash === sha256(prev_hash + row-content)
     // (proven by re-appending on top — the chain continues from the surviving tip)
-    await appendAudit(db, { pluginId: 'p', actingUserId: 1, method: 'trips.getById', resource: 'trip:new', code: 'ok' });
-    expect(db.prepare("SELECT COUNT(*) c FROM plugin_capability_audit WHERE plugin_id='p'").get()).toMatchObject({ c: 11 });
+    await appendAudit(audit, { pluginId: 'p', actingUserId: 1, method: 'trips.getById', resource: 'trip:new', code: 'ok' });
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_capability_audit WHERE plugin_id='p'").get()).toMatchObject({ c: 11 });
     // pruning one plugin never touches another's rows
-    expect(db.prepare("SELECT COUNT(*) c FROM plugin_capability_audit WHERE plugin_id='other'").get()).toMatchObject({ c: 1 });
-    await expect(pruneAudit(db, 'p', 0)).resolves.toBeUndefined(); // 0 = disabled, no-op
-    expect(db.prepare("SELECT COUNT(*) c FROM plugin_capability_audit WHERE plugin_id='p'").get()).toMatchObject({ c: 11 });
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_capability_audit WHERE plugin_id='other'").get()).toMatchObject({ c: 1 });
+    await expect(pruneAudit(audit, 'p', 0)).resolves.toBeUndefined(); // 0 = disabled, no-op
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_capability_audit WHERE plugin_id='p'").get()).toMatchObject({ c: 11 });
+  });
+});
+
+describe('R-hash-chain: replay, extension, mutation', () => {
+  it('AUDITCHAIN-001 REPLAY+EXTENSION: verifies a legacy-produced chain, then extends it through the converted appendAudit and the WHOLE chain stays consistent', async () => {
+    // 1. Write three rows the way the PRE-CONVERSION code did: raw SQL, no repository.
+    let prev = '';
+    for (let i = 0; i < 3; i++) {
+      const { hash } = legacyAppendAudit(prev, { pluginId: 'legacy-p', actingUserId: 7, method: 'trips.getById', resource: `trip:${i}`, code: 'ok' });
+      prev = hash;
+    }
+    // 2. REPLAY: the converted verification logic (verifyChain) accepts the legacy-written rows.
+    expect(verifyChain(chainRows('legacy-p'))).toBe(true);
+
+    // 3. EXTENSION: append two more rows through the CONVERTED appendAudit, on top of the
+    //    legacy tip — the repository reads the legacy row's hash as its own prev_hash.
+    await appendAudit(audit, { pluginId: 'legacy-p', actingUserId: 7, method: 'trips.getById', resource: 'trip:3', code: 'ok' });
+    await appendAudit(audit, { pluginId: 'legacy-p', actingUserId: 7, method: 'trips.getById', resource: 'trip:4', code: 'ok' });
+
+    const rows = chainRows('legacy-p');
+    expect(rows).toHaveLength(5);
+    expect(rows[3].prev_hash).toBe(rows[2].hash); // the converted append linked onto the legacy tip
+    // 4. The WHOLE chain (3 legacy rows + 2 converted rows) verifies end to end.
+    expect(verifyChain(rows)).toBe(true);
+  });
+
+  it('AUDITCHAIN-002 MUTATION: a row whose stored hash omits one field from the hash input fails verification', async () => {
+    // A row constructed EXACTLY like appendAudit's real one, except `resource` is
+    // dropped from the JSON array fed to sha256 — the drift R-hash-chain warns
+    // never errors anywhere on write, only on a verification pass.
+    const pluginId = 'mutant';
+    const actingUserId = 1;
+    const method = 'trips.getById';
+    const resource = 'trip:1';
+    const code = 'ok';
+    const ts = new Date().toISOString();
+    const mutatedRow = JSON.stringify([pluginId, actingUserId, method, code, ts]); // resource OMITTED
+    const mutatedHash = crypto.createHash('sha256').update('' + mutatedRow).digest('hex');
+    testDb
+      .prepare('INSERT INTO plugin_capability_audit (plugin_id, acting_user_id, method, resource, code, ts, prev_hash, hash) VALUES (?,?,?,?,?,?,?,?)')
+      .run(pluginId, actingUserId, method, resource, code, ts, null, mutatedHash);
+
+    expect(verifyChain(chainRows(pluginId))).toBe(false);
+
+    // Control: the same row, hashed with the REAL (resource-included) construction, verifies.
+    testDb.prepare('DELETE FROM plugin_capability_audit WHERE plugin_id = ?').run(pluginId);
+    legacyAppendAudit('', { pluginId, actingUserId, method, resource, code });
+    expect(verifyChain(chainRows(pluginId))).toBe(true);
   });
 });
