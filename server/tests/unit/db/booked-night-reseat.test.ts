@@ -8,16 +8,20 @@
  *
  * The rules live in reseat-booked-nights.ts and are tested there directly on a fully
  * migrated database: the columns the step reads (assignment_time, accommodation_id)
- * and the vias table come from migrations, so seeding before runMigrations is not an
- * option, and rewinding schema_version would tie this file to the tail of the
- * append-only array.
+ * and the vias table come from migrations, so seeding before the schema is fully
+ * migrated is not an option.
+ *
+ * As the numbered migration (step 242, `Migration20200101040300`): ported off the
+ * legacy `createTables`+`runMigrations` builder onto the real `Migrator`, same shape
+ * as `tests/unit/db/trip-days-backfill-migration.test.ts` — migrate to the step
+ * immediately before it, seed rows with raw SQL, apply just that one migration, assert.
  */
 import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import type { MikroORM } from '@mikro-orm/sqlite';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { reseatBookedNights } from '../../../src/db/reseat-booked-nights';
+import { createMigrationOrm, migrateTo, pendingNames, rawExec, rawQuery } from '../../helpers/migration-step';
 
 function freshDb() {
   const db = createSnapshotTestDb();
@@ -198,38 +202,63 @@ describe('booked night reseat', () => {
     expect(order(db)).toEqual(once);
   });
 
-  it('RESEAT-009: the migration runs the step on a database being upgraded', () => {
-    // Plan 4 Task 5c FINDING: unlike ruling 7's claim, `reseatBookedNights` is
-    // NOT invoked from inside any numbered MikroORM migration — only from the
-    // legacy `db/migrations.ts` array (its last step, #242). Grepped the whole
-    // `src/db/migrations/` tree for `reseat`/`reseatBookedNights` and every
-    // check-in/seat-ordering wording: no hit. The two numbered migrations that
-    // DO touch booked nights near the end of the chain
-    // (`Migration20200101034900_give_every_stay_booked_before_this_release`,
-    // `Migration20200101035000_the_same_sweep_once_more_for_the`) both call
-    // `attachStayStopsToCheckInDay` (creates the day stop), a DIFFERENT legacy
-    // step (#229/#230) from the reseat/reorder step (#242) this test exercises.
-    // So this one case is left on the legacy `createTables`+`runMigrations`
-    // builder deliberately, NOT swapped: there is no numbered-migration target
-    // to port it onto. Flagged for the controller/Task 6 — this is a real "no
-    // equivalent found" gap (ruling 10), not an oversight: an install upgrading
-    // through the numbered chain never gets this one-time reorder applied, and
-    // this file will still show up in Task 6's "zero test files import
-    // db/schema or db/migrations" precondition grep until that gap is resolved
-    // one way or another.
-    const db = new Database(':memory:');
-    db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA foreign_keys = ON');
-    createTables(db);
-    db.prepare("INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'u', 'u@test.local', 'x', 'user')").run();
-    db.prepare("INSERT INTO trips (id, user_id, title) VALUES (1, 1, 'T')").run();
-    db.prepare("INSERT INTO days (id, trip_id, day_number, date) VALUES (1, 1, 1, '2026-10-02')").run();
-    db.prepare("INSERT INTO places (id, trip_id, name, lat, lng) VALUES (901, 1, 'Aral', 50.1, 10), (902, 1, 'Rostock', 50.2, 10)").run();
-    db.prepare('INSERT INTO day_assignments (day_id, place_id, order_index) VALUES (1, 901, 0)').run();
-    db.prepare("INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in) VALUES (1, 902, 1, 1, '10:00')").run();
+});
 
-    runMigrations(db);
+describe('booked night reseat — as the numbered migration (step 242)', () => {
+  // Plan 4 Task 6 item 1: ruling 7 assumed `reseatBookedNights` was already
+  // invoked from a shipped migration; Task 5c found it wasn't (only the
+  // legacy `db/migrations.ts` array called it, as its last step, #242). This
+  // is that missing numbered migration, appended at the end of the chain.
+  const MIGRATION = 'Migration20200101040300_a_booked_night_finally_took_the_seat_a_new';
 
-    expect(order(db)).toEqual([902, 901]);
-  });
+  async function ormBefore(): Promise<MikroORM> {
+    const orm = await createMigrationOrm();
+    const names = await pendingNames(orm);
+    const idx = names.indexOf(MIGRATION);
+    expect(idx).toBeGreaterThan(0);
+    await migrateTo(orm, names[idx - 1]);
+    return orm;
+  }
+
+  it('RESEAT-009: an install upgrading through the chain gets an out-of-order night reseated', async () => {
+    const orm = await ormBefore();
+    try {
+      await rawExec(orm, "INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'u', 'u@test.local', 'x', 'user')");
+      await rawExec(orm, "INSERT INTO trips (id, user_id, title) VALUES (1, 1, 'T')");
+      await rawExec(orm, "INSERT INTO days (id, trip_id, day_number, date) VALUES (1, 1, 1, '2026-10-02')");
+      await rawExec(orm, "INSERT INTO places (id, trip_id, name, lat, lng) VALUES (901, 1, 'Aral', 50.1, 10), (902, 1, 'Rostock', 50.2, 10)");
+      await rawExec(orm, "INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in) VALUES (1, 902, 1, 1, '10:00')");
+      const accRow = await rawQuery<{ id: number }>(orm, 'SELECT last_insert_rowid() as id');
+      const accId = accRow[0]!.id;
+      // The stop step 229/230 (Migration20200101034900/035000) puts on a
+      // booked night's check-in day already ran by the time `ormBefore()`
+      // returns, so it must be seeded here rather than left for that earlier
+      // migration to create — same convention `stop()`/`night()` above use.
+      await rawExec(orm, 'INSERT INTO day_assignments (day_id, place_id, order_index) VALUES (1, 901, 0)');
+      await rawExec(orm, 'INSERT INTO day_assignments (day_id, place_id, order_index, accommodation_id) VALUES (1, 902, 1, ?)', [accId]);
+
+      await migrateTo(orm, MIGRATION);
+
+      const rows = await rawQuery<{ place_id: number }>(orm, 'SELECT place_id FROM day_assignments WHERE day_id = 1 ORDER BY order_index');
+      expect(rows.map((r) => r.place_id)).toEqual([902, 901]);
+    } finally {
+      await orm.close(true);
+    }
+  }, 30000);
+
+  it('RESEAT-011: a fresh install with no booked nights out of order migrates through cleanly', async () => {
+    const orm = await ormBefore();
+    try {
+      await rawExec(orm, "INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'u', 'u@test.local', 'x', 'user')");
+      await rawExec(orm, "INSERT INTO trips (id, user_id, title) VALUES (1, 1, 'T')");
+      await rawExec(orm, "INSERT INTO days (id, trip_id, day_number, date) VALUES (1, 1, 1, '2026-10-02')");
+
+      await expect(migrateTo(orm, MIGRATION)).resolves.toBeUndefined();
+
+      const rows = await rawQuery(orm, 'SELECT * FROM day_assignments WHERE day_id = 1');
+      expect(rows).toHaveLength(0);
+    } finally {
+      await orm.close(true);
+    }
+  }, 30000);
 });

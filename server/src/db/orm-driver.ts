@@ -42,7 +42,19 @@ class NonClosingSqliteDriver extends KyselySqliteDriver {
 export function createBoundSqliteDriver(getHandle: () => Database.Database): typeof SqliteDriver {
   class BoundSqliteConnection extends SqliteConnection {
     override createKyselyDialect(): Dialect {
-      const config: SqliteDialectConfig = { database: getHandle() };
+      const handle = getHandle();
+      const config: SqliteDialectConfig = { database: handle };
+      // `SqliteConnection.getNativeClient()` reads this private field, but only
+      // ever sets it from the base class's own `createKyselyDialect()` — which
+      // this override replaces entirely, so it never runs. Capturing it here
+      // too is what lets a migration reach this exact synchronous
+      // better-sqlite3 handle via `getNativeClient()` in production, not just
+      // under the unbound test driver (`createMigrationOrm()` in
+      // tests/helpers/migration-step.ts, whose stock SqliteConnection sets it
+      // unmodified). Needed by migrations that call a frozen, hand-written
+      // step directly instead of through `this.execute()` — e.g.
+      // Migration20200101040300, which calls reseat-booked-nights.ts.
+      (this as unknown as { database: Database.Database }).database = handle;
       // Delegate the compiler/adapter/introspector to a throwaway stock dialect
       // (stateless factories); only `createDriver()` needs the non-closing swap.
       const stock = new SqliteDialect(config);
