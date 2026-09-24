@@ -330,10 +330,16 @@ export class BudgetService {
    * money. Callers must invoke this *before* the (synchronous) DB write — the raw
    * create/update stay sync because better-sqlite3 transactions can't await.
    */
+  /**
+   * `existingItemId?: number` (Plan 4 Task 8b, U6 — the program's gate-level
+   * id parsing carry: `BudgetController.update` now parses `:id` once via
+   * `toRowId` and threads the number down through `update` to here; the
+   * other caller, `booking-import.service.ts`, never passes this param).
+   */
   async freezeForeignRate(
     tripId: string | number,
     data: { currency?: string | null; exchange_rate?: number },
-    existingItemId?: string | number,
+    existingItemId?: number,
     existingCurrency?: string | null,
   ): Promise<void> {
     if (data.exchange_rate != null) return; // an explicit rate from the caller wins
@@ -518,8 +524,13 @@ export class BudgetService {
     });
   }
 
-  /** Fetch a single budget item hydrated with its members, payers, and receipts, scoped to the trip. */
-  async getBudgetItem(id: string | number, tripId: string | number): Promise<BudgetItem | null> {
+  /**
+   * Fetch a single budget item hydrated with its members, payers, and
+   * receipts, scoped to the trip. `id: number` — Plan 4 Task 8b (U6): every
+   * caller is `budget.mcp.ts`'s Zod-typed `itemId`/`created.id`, already a
+   * real row id (this route has no REST `GET /:id` counterpart).
+   */
+  async getBudgetItem(id: number, tripId: string | number): Promise<BudgetItem | null> {
     const row = await this.budgetItemsRepo.findInTrip(id, tripId);
     if (!row) return null;
     const item = this.toBudgetItem(row);
@@ -539,8 +550,14 @@ export class BudgetService {
     return await this.createBudgetItem(tripId, { ...data, reservation_id: reservationId });
   }
 
+  /**
+   * `id: number` (Plan 4 Task 8b, U6 — the program's gate-level id parsing
+   * carry: `BudgetController.update` now parses `:id` once via `toRowId`
+   * and threads the number down through `update` to here; the other
+   * caller, `reservations.service.ts`, already passed a real row id).
+   */
   async updateBudgetItem(
-    id: string | number,
+    id: number,
     tripId: string | number,
     data: {
       category?: string; name?: string; total_price?: number;
@@ -593,17 +610,17 @@ export class BudgetService {
       if (data.members !== undefined) {
         const known = await this.rosterMemberIds(tripId, data.members.map(m => m.user_id));
         const members = data.members.filter(m => known.has(m.user_id));
-        await this.budgetItemMembersRepo.deleteForItem(id as number);
+        await this.budgetItemMembersRepo.deleteForItem(id);
         for (const m of members) {
-          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id as number, user_id: m.user_id, paid: 0, amount: m.amount !== undefined && m.amount !== null ? m.amount : null });
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id, user_id: m.user_id, paid: 0, amount: m.amount !== undefined && m.amount !== null ? m.amount : null });
         }
         await this.budgetItemsRepo.setPersons(id, members.length || null);
       } else if (data.member_ids !== undefined) {
         const known = await this.rosterMemberIds(tripId, data.member_ids);
         const memberIds = data.member_ids.filter(uid => known.has(uid));
-        await this.budgetItemMembersRepo.deleteForItem(id as number);
+        await this.budgetItemMembersRepo.deleteForItem(id);
         for (const uid of memberIds) {
-          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id as number, user_id: uid, paid: 0, amount: null });
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id, user_id: uid, paid: 0, amount: null });
         }
         await this.budgetItemsRepo.setPersons(id, memberIds.length || null);
       }
@@ -660,7 +677,8 @@ export class BudgetService {
   // Payers
   // -------------------------------------------------------------------------
 
-  async setItemPayers(id: string | number, tripId: string | number, payers: { user_id: number; amount: number }[]) {
+  /** `id: number` — same Plan 4 Task 8b (U6) gate-level narrowing as {@link updateBudgetItem} (`BudgetController.setPayers` parses `:id` via `toRowId`). */
+  async setItemPayers(id: number, tripId: string | number, payers: { user_id: number; amount: number }[]) {
     return await this.uow.transactional(async () => {
       const item = await this.budgetItemsRepo.existsInTrip(id, tripId);
       if (!item) return null;
@@ -672,7 +690,8 @@ export class BudgetService {
     });
   }
 
-  async deleteBudgetItem(id: string | number, tripId: string | number): Promise<boolean> {
+  /** `id: number` — same Plan 4 Task 8b (U6) gate-level narrowing as {@link updateBudgetItem} (`BudgetController.remove` parses `:id` via `toRowId`; `reservations.service.ts` already passed a real row id). */
+  async deleteBudgetItem(id: number, tripId: string | number): Promise<boolean> {
     const item = await this.budgetItemsRepo.findForDelete(id, tripId);
     if (!item) return false;
     return await this.uow.transactional(async () => {
@@ -718,22 +737,23 @@ export class BudgetService {
   // Members
   // -------------------------------------------------------------------------
 
-  async updateMembers(id: string | number, tripId: string | number, userIds: number[]) {
+  /** `id: number` — same Plan 4 Task 8b (U6) gate-level narrowing as {@link updateBudgetItem} (`BudgetController.updateMembers` parses `:id` via `toRowId`). */
+  async updateMembers(id: number, tripId: string | number, userIds: number[]) {
     return await this.uow.transactional(async () => {
       const item = await this.budgetItemsRepo.findInTrip(id, tripId);
       if (!item) return null;
 
       const existingPaid: Record<number, number> = {};
-      const existing = await this.budgetItemMembersRepo.listUserPaid(id as number);
+      const existing = await this.budgetItemMembersRepo.listUserPaid(id);
       for (const e of existing) existingPaid[e.user_id] = e.paid;
 
-      await this.budgetItemMembersRepo.deleteForItem(id as number);
+      await this.budgetItemMembersRepo.deleteForItem(id);
 
       const known = await this.rosterMemberIds(tripId, userIds);
       const memberIds = userIds.filter(uid => known.has(uid));
       if (memberIds.length > 0) {
         for (const userId of memberIds) {
-          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id as number, user_id: userId, paid: existingPaid[userId] || 0 });
+          await this.budgetItemMembersRepo.insertIgnore({ budget_item_id: id, user_id: userId, paid: existingPaid[userId] || 0 });
         }
         await this.budgetItemsRepo.setPersons(id, memberIds.length);
       } else {
@@ -771,15 +791,16 @@ export class BudgetService {
    * surprise 4). Wrapped here so a forced mid-transaction failure leaves no
    * partial update.
    */
-  async toggleMemberPaid(id: string | number, tripId: string | number, userId: string | number, paid: boolean) {
+  /** `id`/`userId`: number — same Plan 4 Task 8b (U6) gate-level narrowing as {@link updateBudgetItem} (`BudgetController.toggleMemberPaid` parses both via `toRowId`). */
+  async toggleMemberPaid(id: number, tripId: string | number, userId: number, paid: boolean) {
     return await this.uow.transactional(async () => {
       // Resolve the item within the caller's trip before updating.
       const item = await this.budgetItemsRepo.existsInTrip(id, tripId);
       if (!item) return null;
 
-      await this.budgetItemMembersRepo.setPaid(id as number, userId as number, paid ? 1 : 0);
+      await this.budgetItemMembersRepo.setPaid(id, userId, paid ? 1 : 0);
 
-      const member = await this.budgetItemMembersRepo.findMemberWithUser(id as number, userId as number);
+      const member = await this.budgetItemMembersRepo.findMemberWithUser(id, userId);
 
       return member ? { ...member, avatar_url: avatarUrl(member) } : null;
     });
@@ -1114,8 +1135,13 @@ export class BudgetService {
     return rows.map(r => this.mapSettlementRow(r));
   }
 
-  /** Targeted single-row read (the legacy re-select was a full listSettlements scan). */
-  async getSettlement(id: string | number, tripId: string | number) {
+  /**
+   * Targeted single-row read (the legacy re-select was a full
+   * listSettlements scan). `id: number` — Plan 4 Task 8b (U6): every caller
+   * (`insertSettlement`'s own `newId`, `applySettlementUpdate` below) is
+   * already a real row id.
+   */
+  async getSettlement(id: number, tripId: string | number) {
     const row = await this.budgetSettlementsRepo.findWithUsers(id, tripId);
     return row ? this.mapSettlementRow(row) : null;
   }
@@ -1137,9 +1163,14 @@ export class BudgetService {
     return await this.getSettlement(newId, tripId);
   }
 
-  /** Raw settlement update (no FX freeze) — the REST path wraps it in updateSettlement. */
+  /**
+   * Raw settlement update (no FX freeze) — the REST path wraps it in
+   * updateSettlement. `id: number` — Plan 4 Task 8b (U6): `BudgetController
+   * .updateSettlement` parses `:settlementId` via `toRowId` and threads the
+   * number down through `updateSettlement` to here.
+   */
   async applySettlementUpdate(
-    id: string | number,
+    id: number,
     tripId: string | number,
     data: { from_user_id: number; to_user_id: number; amount: number; currency?: string | null; exchange_rate?: number; settled_at?: string | null },
   ) {
@@ -1154,7 +1185,8 @@ export class BudgetService {
     return await this.getSettlement(id, tripId);
   }
 
-  async deleteSettlement(id: string | number, tripId: string | number): Promise<boolean> {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link applySettlementUpdate} (`BudgetController.deleteSettlement` parses `:settlementId` via `toRowId`). */
+  async deleteSettlement(id: number, tripId: string | number): Promise<boolean> {
     const row = await this.budgetSettlementsRepo.findGuard(id, tripId);
     if (!row) return false;
     await this.budgetSettlementsRepo.deleteById(id);
@@ -1184,16 +1216,19 @@ export class BudgetService {
     return await this.createBudgetItem(tripId, data);
   }
 
-  async update(id: string | number, tripId: string | number, data: Parameters<BudgetService['updateBudgetItem']>[2]) {
+  /** `id: number` — Plan 4 Task 8b (U6): `BudgetController.update`/the `costs.update` RPC method both parse/hand this a real row id now (`toRowId`/`num()`). */
+  async update(id: number, tripId: string | number, data: Parameters<BudgetService['updateBudgetItem']>[2]) {
     await this.freezeForeignRate(tripId, data, id);
     return await this.updateBudgetItem(id, tripId, data);
   }
 
-  async remove(id: string, tripId: string): Promise<boolean> {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link update} (`BudgetController.remove`/the `costs.delete` RPC method). */
+  async remove(id: number, tripId: string): Promise<boolean> {
     return await this.deleteBudgetItem(id, tripId);
   }
 
-  async setPayers(id: string, tripId: string, payers: { user_id: number; amount: number }[]) {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link update} (`BudgetController.setPayers`). */
+  async setPayers(id: number, tripId: string, payers: { user_id: number; amount: number }[]) {
     return await this.setItemPayers(id, tripId, payers);
   }
 
@@ -1218,7 +1253,8 @@ export class BudgetService {
     return await this.insertSettlement(tripId, data, userId);
   }
 
-  async updateSettlement(id: string | number, tripId: string | number, data: { from_user_id: number; to_user_id: number; amount: number; currency?: string | null; settled_at?: string | null }) {
+  /** `id: number` — Plan 4 Task 8b (U6): `BudgetController.updateSettlement` parses `:settlementId` via `toRowId` and threads the number here; the MCP tool's Zod-typed `settlementId` was already a number. */
+  async updateSettlement(id: number, tripId: string | number, data: { from_user_id: number; to_user_id: number; amount: number; currency?: string | null; settled_at?: string | null }) {
     // Pass the settlement's stored currency so an edit that doesn't change it keeps
     // the already-frozen rate (#1445) — otherwise a live-rate drift would re-open a
     // settled position on an unrelated edit.

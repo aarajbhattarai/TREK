@@ -18,6 +18,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { RequirePermission, TripAccessGuard } from '../permissions/trip-access.guard';
 import { Trip } from '../permissions/trip.decorator';
 import type { TripAccess } from '../../db/repositories/Trips.repository';
+import { toRowId } from '../common/row-id';
 import {
   BudgetCreateItemDto,
   BudgetUpdateItemDto,
@@ -112,7 +113,17 @@ export class BudgetController {
     @Body() body: BudgetUpdateSettlementDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const settlement = await this.budget.updateSettlement(settlementId, tripId, {
+    // Plan 4 Task 8b (U6) — :settlementId is parsed ONCE here (toRowId, not
+    // Number(): rule 15's NaN-into-SQL trap), and the parsed number is what
+    // flows into the service instead of the raw route string reaching the
+    // repository. A malformed id never matched under the legacy affinity
+    // CAST either, so it 404s with the same body updateSettlement's own
+    // not-found branch already produces below.
+    const settlementIdNum = toRowId(settlementId);
+    if (settlementIdNum === null) {
+      throw new HttpException({ error: 'Settlement not found' }, 404);
+    }
+    const settlement = await this.budget.updateSettlement(settlementIdNum, tripId, {
       from_user_id: body.from_user_id,
       to_user_id: body.to_user_id,
       amount: body.amount,
@@ -134,10 +145,15 @@ export class BudgetController {
     @Param('settlementId') settlementId: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!(await this.budget.deleteSettlement(settlementId, tripId))) {
+    // Plan 4 Task 8b (U6) — same single gate-level parse as updateSettlement above.
+    const settlementIdNum = toRowId(settlementId);
+    if (settlementIdNum === null) {
       throw new HttpException({ error: 'Settlement not found' }, 404);
     }
-    this.budget.broadcast(tripId, 'budget:settlement-deleted', { settlementId: Number(settlementId) }, socketId);
+    if (!(await this.budget.deleteSettlement(settlementIdNum, tripId))) {
+      throw new HttpException({ error: 'Settlement not found' }, 404);
+    }
+    this.budget.broadcast(tripId, 'budget:settlement-deleted', { settlementId: settlementIdNum }, socketId);
     return { success: true };
   }
 
@@ -189,7 +205,17 @@ export class BudgetController {
     @Body() body: BudgetUpdateItemDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const updated = await this.budget.update(id, tripId, body);
+    // Plan 4 Task 8b (U6) — :id is parsed ONCE here (toRowId, not Number():
+    // rule 15's NaN-into-SQL trap), and the parsed number is what flows
+    // into the service instead of the raw route string reaching the
+    // repository. A malformed id never matched under the legacy affinity
+    // CAST either, so it 404s with the same body this handler's own
+    // not-found branch already produces below.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Budget item not found' }, 404);
+    }
+    const updated = await this.budget.update(itemId, tripId, body);
     if (!updated) {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
@@ -209,11 +235,16 @@ export class BudgetController {
     @Body() body: BudgetUpdateMembersDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const result = await this.budget.updateMembers(id, tripId, body.user_ids);
+    // Plan 4 Task 8b (U6) — same single gate-level parse as update above.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Budget item not found' }, 404);
+    }
+    const result = await this.budget.updateMembers(itemId, tripId, body.user_ids);
     if (!result) {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
-    this.budget.broadcast(tripId, 'budget:members-updated', { itemId: Number(id), members: result.members, persons: result.item.persons }, socketId);
+    this.budget.broadcast(tripId, 'budget:members-updated', { itemId, members: result.members, persons: result.item.persons }, socketId);
     return { members: result.members, item: result.item };
   }
 
@@ -226,7 +257,12 @@ export class BudgetController {
     @Body() body: BudgetUpdatePayersDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const item = await this.budget.setPayers(id, tripId, body.payers);
+    // Plan 4 Task 8b (U6) — same single gate-level parse as update above.
+    const itemId = toRowId(id);
+    if (itemId === null) {
+      throw new HttpException({ error: 'Budget item not found' }, 404);
+    }
+    const item = await this.budget.setPayers(itemId, tripId, body.payers);
     if (!item) {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
@@ -244,8 +280,23 @@ export class BudgetController {
     @Body() body: BudgetToggleMemberPaidDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const member = await this.budget.toggleMemberPaid(id, tripId, userId, body.paid);
-    this.budget.broadcast(tripId, 'budget:member-paid-updated', { itemId: Number(id), userId: Number(userId), paid: body.paid ? 1 : 0 }, socketId);
+    // Plan 4 Task 8b (U6) — :id/:userId parsed ONCE here (toRowId). Unlike
+    // every other handler in this controller, the legacy route
+    // (server/src/routes/budget.ts, pre-ORM) never 404'd an unknown item or
+    // member on this one either: it always answered 200 { member } (member
+    // undefined on a miss) and always broadcast Number(id)/Number(userId)
+    // regardless of the result. A malformed id already short-circuits to
+    // that exact "no match" shape today — existsInTrip's affinity-seam
+    // WHERE simply never matches it — so a null parse here isn't a 404, it
+    // is that same no-op: the service call is skipped (nothing would have
+    // matched) and the broadcast keeps its legacy Number(id)/Number(userId)
+    // fallback for a malformed id.
+    const itemId = toRowId(id);
+    const memberUserId = toRowId(userId);
+    const member = itemId !== null && memberUserId !== null
+      ? await this.budget.toggleMemberPaid(itemId, tripId, memberUserId, body.paid)
+      : null;
+    this.budget.broadcast(tripId, 'budget:member-paid-updated', { itemId: itemId ?? Number(id), userId: memberUserId ?? Number(userId), paid: body.paid ? 1 : 0 }, socketId);
     return { member };
   }
 
@@ -257,10 +308,15 @@ export class BudgetController {
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!(await this.budget.remove(id, tripId))) {
+    // Plan 4 Task 8b (U6) — same single gate-level parse as update above.
+    const itemId = toRowId(id);
+    if (itemId === null) {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
-    this.budget.broadcast(tripId, 'budget:deleted', { itemId: Number(id) }, socketId);
+    if (!(await this.budget.remove(itemId, tripId))) {
+      throw new HttpException({ error: 'Budget item not found' }, 404);
+    }
+    this.budget.broadcast(tripId, 'budget:deleted', { itemId }, socketId);
     return { success: true };
   }
 }

@@ -75,20 +75,27 @@ export class BudgetSettlementsRepository extends TrekRepository<BudgetSettlement
       .execute();
   }
 
-  /** BG77 (`getSettlement`) — `SETTLEMENT_SELECT WHERE s.trip_id = ? AND s.id = ?`, the targeted single-row read. */
-  async findWithUsers(id: number | string, trip_id: number | string): Promise<BudgetSettlementWithUsersRow | undefined> {
+  /**
+   * BG77 (`getSettlement`) — `SETTLEMENT_SELECT WHERE s.trip_id = ? AND s.id
+   * = ?`, the targeted single-row read. `id: number` (Plan 4 Task 8b, U6 —
+   * the program's gate-level id parsing carry: `BudgetController
+   * .updateSettlement`/`.deleteSettlement` parse `:settlementId` once via
+   * `toRowId` and thread the number down; `trip_id` stays `number | string`,
+   * a separate, still-accepted carry).
+   */
+  async findWithUsers(id: number, trip_id: number | string): Promise<BudgetSettlementWithUsersRow | undefined> {
     return await this.joinedQuery()
       .where('s.trip_id', '=', trip_id as number)
-      .where('s.id', '=', id as number)
+      .where('s.id', '=', id)
       .executeTakeFirst();
   }
 
-  /** BG79/BG81 — `SELECT id FROM budget_settlements WHERE id = ? AND trip_id = ?`, the trip-scoping existence guard. */
-  async findGuard(id: number | string, trip_id: number | string): Promise<{ id: number } | undefined> {
+  /** BG79/BG81 — `SELECT id FROM budget_settlements WHERE id = ? AND trip_id = ?`, the trip-scoping existence guard. `id: number`, same Plan 4 Task 8b narrowing as {@link findWithUsers}. */
+  async findGuard(id: number, trip_id: number | string): Promise<{ id: number } | undefined> {
     return await this.kysely<BudgetSettlementsKyselyDB>()
       .selectFrom('budget_settlements')
       .select('id')
-      .where('id', '=', id as number)
+      .where('id', '=', id)
       .where('trip_id', '=', trip_id as number)
       .executeTakeFirst();
   }
@@ -119,7 +126,8 @@ export class BudgetSettlementsRepository extends TrekRepository<BudgetSettlement
    * `exchange_rate`/`settled_at` presence-gated) — R11's helper, the same
    * shape `BudgetItemsRepository.update` (BG33) lands.
    */
-  async update(id: number | string, write: {
+  /** `id: number`, same Plan 4 Task 8b narrowing as {@link findWithUsers} (its one caller, `applySettlementUpdate`, is only reached with a `toRowId`-parsed id). */
+  async update(id: number, write: {
     from_user_id: number; to_user_id: number; amount: number;
     currency?: [present: boolean, value: string | null];
     exchange_rate?: [present: boolean, value: number];
@@ -133,13 +141,13 @@ export class BudgetSettlementsRepository extends TrekRepository<BudgetSettlement
     await this.kysely<BudgetSettlementsKyselyDB>()
       .updateTable('budget_settlements')
       .set({ from_user_id: write.from_user_id, to_user_id: write.to_user_id, amount: write.amount, ...data })
-      .where('id', '=', id as number)
+      .where('id', '=', id)
       .execute();
   }
 
-  /** BG82 — `DELETE FROM budget_settlements WHERE id = ?`. */
-  async deleteById(id: number | string): Promise<void> {
-    await this.kysely<BudgetSettlementsKyselyDB>().deleteFrom('budget_settlements').where('id', '=', id as number).execute();
+  /** BG82 — `DELETE FROM budget_settlements WHERE id = ?`. `id: number`, same Plan 4 Task 8b narrowing as {@link findWithUsers}. */
+  async deleteById(id: number): Promise<void> {
+    await this.kysely<BudgetSettlementsKyselyDB>().deleteFrom('budget_settlements').where('id', '=', id).execute();
   }
 
   /** BG17's `budget_settlements` half — `UPDATE budget_settlements SET currency = ? WHERE trip_id = ? AND (currency IS NULL OR currency = '')`. */

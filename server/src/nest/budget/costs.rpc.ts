@@ -90,7 +90,9 @@ export class CostsRpc {
     if (!parsed.success) throw new BadParams(`invalid cost: ${schemaMessage(parsed.error)}`);
     await this.requireCostEdit(tripId, actor);
     // update re-freezes the FX rate on a currency change, exactly like create.
-    const item = await this.budget.update(String(itemId), String(tripId), parsed.data);
+    // Plan 4 Task 8b (U6) — itemId is already a real row id (num() above);
+    // BudgetService.update's id param no longer needs the String() wrapper.
+    const item = await this.budget.update(itemId, String(tripId), parsed.data);
     if (item == null) throw new ForbiddenResource(`no cost ${itemId} on trip ${tripId}`);
     this.realtime.broadcast(tripId, 'budget:updated', { item });
     return item;
@@ -103,7 +105,8 @@ export class CostsRpc {
     const actor = this.requireCostActor(ctx);
     await this.requireBudgetAddon();
     await this.requireCostEdit(tripId, actor);
-    if (!(await this.budget.remove(String(itemId), String(tripId)))) {
+    // Plan 4 Task 8b (U6) — same drop of itemId's String() wrapper as update above.
+    if (!(await this.budget.remove(itemId, String(tripId)))) {
       throw new ForbiddenResource(`no cost ${itemId} on trip ${tripId}`);
     }
     this.realtime.broadcast(tripId, 'budget:deleted', { itemId });

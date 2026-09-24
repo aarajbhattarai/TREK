@@ -128,30 +128,30 @@ export class BudgetItemsRepository extends TrekRepository<BudgetItems> {
       .execute();
   }
 
-  /** BG14 — `SELECT currency FROM budget_items WHERE id = ?`. */
-  async getCurrency(id: number | string): Promise<string | null | undefined> {
-    const row = await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').select('currency').where('id', '=', id as number).executeTakeFirst();
+  /** BG14 — `SELECT currency FROM budget_items WHERE id = ?`. `id: number` (Plan 4 Task 8b, U6 — the program's gate-level id parsing carry: its one caller, `freezeForeignRate`, is only reached with `BudgetController.update`'s `toRowId`-parsed id). */
+  async getCurrency(id: number): Promise<string | null | undefined> {
+    const row = await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').select('currency').where('id', '=', id).executeTakeFirst();
     return row?.currency;
   }
 
-  /** BG31/BG32/BG57 — `SELECT * FROM budget_items WHERE id = ? AND trip_id = ?`, the full-row trip-scoping guard. */
-  async findInTrip(id: number | string, trip_id: number | string): Promise<BudgetItemRow | undefined> {
-    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').selectAll().where('id', '=', id as number).where('trip_id', '=', trip_id as number).executeTakeFirst();
+  /** BG31/BG32/BG57 — `SELECT * FROM budget_items WHERE id = ? AND trip_id = ?`, the full-row trip-scoping guard. `id: number`, same Plan 4 Task 8b narrowing as {@link getCurrency}; `trip_id` stays `number | string`, a separate, still-accepted carry. */
+  async findInTrip(id: number, trip_id: number | string): Promise<BudgetItemRow | undefined> {
+    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').selectAll().where('id', '=', id).where('trip_id', '=', trip_id as number).executeTakeFirst();
   }
 
-  /** BG50/BG68 — `SELECT id FROM budget_items WHERE id = ? AND trip_id = ?`, the id-only trip-scoping guard. */
-  async existsInTrip(id: number | string, trip_id: number | string): Promise<{ id: number } | undefined> {
-    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').select('id').where('id', '=', id as number).where('trip_id', '=', trip_id as number).executeTakeFirst();
+  /** BG50/BG68 — `SELECT id FROM budget_items WHERE id = ? AND trip_id = ?`, the id-only trip-scoping guard. `id: number`, same Plan 4 Task 8b narrowing as {@link getCurrency}. */
+  async existsInTrip(id: number, trip_id: number | string): Promise<{ id: number } | undefined> {
+    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').select('id').where('id', '=', id).where('trip_id', '=', trip_id as number).executeTakeFirst();
   }
 
-  /** BG52 (`deleteBudgetItem`'s pre-image) — `SELECT id, reservation_id FROM budget_items WHERE id = ? AND trip_id = ?`. */
-  async findForDelete(id: number | string, trip_id: number | string): Promise<{ id: number; reservation_id: number | null } | undefined> {
-    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').select(['id', 'reservation_id']).where('id', '=', id as number).where('trip_id', '=', trip_id as number).executeTakeFirst();
+  /** BG52 (`deleteBudgetItem`'s pre-image) — `SELECT id, reservation_id FROM budget_items WHERE id = ? AND trip_id = ?`. `id: number`, same Plan 4 Task 8b narrowing as {@link getCurrency}. */
+  async findForDelete(id: number, trip_id: number | string): Promise<{ id: number; reservation_id: number | null } | undefined> {
+    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').select(['id', 'reservation_id']).where('id', '=', id).where('trip_id', '=', trip_id as number).executeTakeFirst();
   }
 
-  /** BG30/BG49/BG51/BG63 — `SELECT * FROM budget_items WHERE id = ?`, the post-write re-select (no trip filter — the caller already knows `id` is in-scope, having just written it). */
-  async findById(id: number | string): Promise<BudgetItemRow | undefined> {
-    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').selectAll().where('id', '=', id as number).executeTakeFirst();
+  /** BG30/BG49/BG51/BG63 — `SELECT * FROM budget_items WHERE id = ?`, the post-write re-select (no trip filter — the caller already knows `id` is in-scope, having just written it). `id: number`, same Plan 4 Task 8b narrowing as {@link getCurrency}. */
+  async findById(id: number): Promise<BudgetItemRow | undefined> {
+    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').selectAll().where('id', '=', id).executeTakeFirst();
   }
 
   /** BG21 — `SELECT MAX(sort_order) as max FROM budget_items WHERE trip_id = ?`. */
@@ -201,7 +201,8 @@ export class BudgetItemsRepository extends TrekRepository<BudgetItems> {
    * `data.category || null`'s fall-through-on-falsy exactly); every other
    * column is a true presence sentinel (`present = data.field !== undefined`).
    */
-  async update(id: number | string, write: {
+  /** `id: number` — same Plan 4 Task 8b (U6) narrowing as {@link getCurrency} (its one caller, `updateBudgetItem`, is only reached with a `toRowId`-parsed id). */
+  async update(id: number, write: {
     category?: readonly [present: boolean, value: string];
     name?: readonly [present: boolean, value: string];
     total_price?: readonly [present: boolean, value: number];
@@ -220,7 +221,7 @@ export class BudgetItemsRepository extends TrekRepository<BudgetItems> {
       sort_order: number; expense_date: string | null;
     }>(write);
     if (Object.keys(data).length === 0) return;
-    await this.kysely<BudgetKyselyDB>().updateTable('budget_items').set(data).where('id', '=', id as number).execute();
+    await this.kysely<BudgetKyselyDB>().updateTable('budget_items').set(data).where('id', '=', id).execute();
   }
 
   /** BG6/BG34 — `UPDATE budget_items SET total_price = ? WHERE id = ?`. */
@@ -238,9 +239,9 @@ export class BudgetItemsRepository extends TrekRepository<BudgetItems> {
     await this.kysely<BudgetKyselyDB>().updateTable('budget_items').set({ sort_order }).where('id', '=', id as number).where('trip_id', '=', trip_id as number).execute();
   }
 
-  /** BG53 — `DELETE FROM budget_items WHERE id = ?` (no trip scoping in the statement itself — relies on the caller's prior {@link findForDelete} gate, matching legacy). */
-  async deleteById(id: number | string): Promise<void> {
-    await this.kysely<BudgetKyselyDB>().deleteFrom('budget_items').where('id', '=', id as number).execute();
+  /** BG53 — `DELETE FROM budget_items WHERE id = ?` (no trip scoping in the statement itself — relies on the caller's prior {@link findForDelete} gate, matching legacy). `id: number`, same Plan 4 Task 8b narrowing as {@link getCurrency}. */
+  async deleteById(id: number): Promise<void> {
+    await this.kysely<BudgetKyselyDB>().deleteFrom('budget_items').where('id', '=', id).execute();
   }
 
   /** BG72 (`calculateSettlement`) — `SELECT * FROM budget_items WHERE trip_id = ?`. */

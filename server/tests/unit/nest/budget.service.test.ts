@@ -172,21 +172,22 @@ describe('BudgetService', () => {
     expect(createSpy).toHaveBeenCalledWith('5', { name: 'Hotel' });
 
     const updateSpy = vi.spyOn(s, 'updateBudgetItem').mockReturnValue({ id: 9 } as never);
-    await s.update('9', '5', { name: 'X' });
+    // Plan 4 Task 8b (U6) — the controller/RPC now hand this a gate-parsed number.
+    await s.update(9, '5', { name: 'X' });
     // the item id is threaded through so an unchanged-currency edit keeps the frozen rate
-    expect(freezeSpy).toHaveBeenCalledWith('5', { name: 'X' }, '9');
-    expect(updateSpy).toHaveBeenCalledWith('9', '5', { name: 'X' });
+    expect(freezeSpy).toHaveBeenCalledWith('5', { name: 'X' }, 9);
+    expect(updateSpy).toHaveBeenCalledWith(9, '5', { name: 'X' });
   });
 
   it('remove / setPayers resolve through the folded SQL methods', async () => {
     const s = svc();
     const deleteSpy = vi.spyOn(s, 'deleteBudgetItem').mockResolvedValue(true);
-    expect(await s.remove('9', '5')).toBe(true);
-    expect(deleteSpy).toHaveBeenCalledWith('9', '5');
+    expect(await s.remove(9, '5')).toBe(true);
+    expect(deleteSpy).toHaveBeenCalledWith(9, '5');
 
     const payersSpy = vi.spyOn(s, 'setItemPayers').mockResolvedValue({ id: 9 } as never);
-    await s.setPayers('9', '5', [{ user_id: 2, amount: 10 }]);
-    expect(payersSpy).toHaveBeenCalledWith('9', '5', [{ user_id: 2, amount: 10 }]);
+    await s.setPayers(9, '5', [{ user_id: 2, amount: 10 }]);
+    expect(payersSpy).toHaveBeenCalledWith(9, '5', [{ user_id: 2, amount: 10 }]);
   });
 
   describe('settlement ledger wrappers (#1445 freeze-then-write)', () => {
@@ -218,11 +219,12 @@ describe('BudgetService', () => {
       // a full listSettlements scan.
       const getSpy = vi.spyOn(s, 'getSettlement').mockReturnValue({ id: 7, currency: 'USD' } as never);
       const applySpy = vi.spyOn(s, 'applySettlementUpdate').mockReturnValue({ id: 7 } as never);
-      await s.updateSettlement('7', '5', { from_user_id: 1, to_user_id: 2, amount: 12, currency: 'USD' });
+      // Plan 4 Task 8b (U6) — the controller/MCP tool now hand this a gate-parsed number.
+      await s.updateSettlement(7, '5', { from_user_id: 1, to_user_id: 2, amount: 12, currency: 'USD' });
       // the settlement's stored currency is threaded through so an unchanged-currency edit keeps the frozen rate (#1445)
-      expect(getSpy).toHaveBeenCalledWith('7', '5');
+      expect(getSpy).toHaveBeenCalledWith(7, '5');
       expect(freezeSpy).toHaveBeenCalledWith('5', { from_user_id: 1, to_user_id: 2, amount: 12, currency: 'USD' }, undefined, 'USD');
-      expect(applySpy).toHaveBeenCalledWith('7', '5', { from_user_id: 1, to_user_id: 2, amount: 12, currency: 'USD' });
+      expect(applySpy).toHaveBeenCalledWith(7, '5', { from_user_id: 1, to_user_id: 2, amount: 12, currency: 'USD' });
     });
 
     it('refuses a party who is not on the trip, before freezing or writing', async () => {
