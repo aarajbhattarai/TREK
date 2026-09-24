@@ -31,7 +31,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vites
 import fs from 'node:fs';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
-import { createTestDb } from '../../helpers/test-db';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm } from '../../helpers/test-orm';
 import { withRequestContext } from '../../../src/nest/database/request-context';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -70,10 +70,14 @@ describe('demo-reset DB path', () => {
   beforeEach(async () => {
     dbStub.name = LIVE_DB;
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    // Built before the existsSync spy below is installed: createSnapshotTestDb()
+    // reads the schema snapshot through schema-snapshot.ts's own fs.existsSync
+    // (locating the migrations dir to key the snapshot file), which the spy
+    // would otherwise answer `false` for every path except BASELINE.
+    ormDb = createSnapshotTestDb();
     copyFileSync = vi.spyOn(fs, 'copyFileSync').mockImplementation(() => undefined);
     vi.spyOn(fs, 'unlinkSync').mockImplementation(() => undefined);
     vi.spyOn(fs, 'existsSync').mockImplementation(((p: fs.PathLike) => String(p) === BASELINE) as typeof fs.existsSync);
-    ormDb = createTestDb();
   });
 
   afterEach(() => {
