@@ -15,12 +15,19 @@ import fs from 'node:fs';
  * step 26 overwrites every user-set `day_assignments.assignment_time`. So the
  * replay must never happen.
  *
- * Instead, a legacy database is baselined once: the migrations standing for
- * `createTables()` plus every migration whose legacy step the database already
- * applied are recorded as executed, and the ordinary migrator run then applies
- * only what is genuinely new. Anything this cannot map exactly refuses the boot
- * rather than guessing — a refused boot leaves the file untouched, a wrong guess
- * does not.
+ * Instead, a legacy database is baselined once: every migration whose legacy
+ * step the database already applied is recorded as executed, and the ordinary
+ * migrator run then applies only the rest. The baseline itself (`createTables()`)
+ * is deliberately NOT recorded: the legacy runner ran the running release's
+ * `createTables()` on every boot before its pending steps, and about thirty
+ * tables exist only there (no numbered step creates them), so an install older
+ * than those tables gets them the same way — the baseline's `IF NOT EXISTS`
+ * DDL runs first, then steps N+1 onwards.
+ *
+ * The rows are recorded inside the same transaction as the migrator run, so a
+ * first boot that fails leaves nothing behind and the next boot baselines again.
+ * Anything this cannot map exactly refuses the boot rather than guessing — a
+ * refused boot leaves the file untouched, a wrong guess does not.
  */
 
 /**
@@ -121,17 +128,17 @@ async function legacyVersion(connection: Connection, migrator: Migrator): Promis
 }
 
 /**
- * Records what a positional-runner database already has as executed, so the
- * migrator run that follows applies only the rest. A no-op on every database
- * that is not one. Returns how many migrations it recorded.
+ * The migrations a positional-runner database already has — steps 1..N, never
+ * the baseline (see the file header) — or `[]` for every database that is not
+ * one. Writes nothing; {@link migrateToHead} records them.
  */
-export async function baselineLegacyInstall(
+export async function planLegacyBaseline(
   connection: Connection,
   migrator: Migrator,
   readSource: ReadSource = readFromDisk,
-): Promise<number> {
+): Promise<string[]> {
   const version = await legacyVersion(connection, migrator);
-  if (version === null) return 0;
+  if (version === null) return [];
 
   const map = buildLegacyStepMap(await migrator.getPending(), readSource);
   if (version > map.finalStep) {
@@ -140,14 +147,36 @@ export async function baselineLegacyInstall(
     );
   }
 
-  const executed = [...map.baseline];
+  const executed: string[] = [];
   for (const [step, name] of map.steps) if (step <= version) executed.push(name);
   console.log(`[DB] Legacy install at schema_version ${version} — baselining ${executed.length} migration(s)`);
+  return executed;
+}
+
+/**
+ * Runs every pending migration. On a positional-runner database it first
+ * records steps 1..N as executed, in the SAME transaction as the run, so the
+ * two commit or roll back together.
+ */
+export async function migrateToHead(
+  connection: Connection,
+  migrator: Migrator,
+  readSource: ReadSource = readFromDisk,
+): Promise<void> {
+  const baselined = await planLegacyBaseline(connection, migrator, readSource);
+  const already = new Set(baselined);
+  const pending = (await migrator.getPending()).filter((migration) => !already.has(migration.name));
+  if (pending.length === 0 && baselined.length === 0) return;
+  console.log(`[DB] Applying ${pending.length} pending migration(s)`);
+  if (baselined.length === 0) {
+    await migrator.up();
+    return;
+  }
 
   const storage = migrator.getStorage();
   await storage.ensureTable();
   await connection.transactional(async (trx) => {
-    for (const name of executed) await storage.logMigration({ name }, trx);
+    for (const name of baselined) await storage.logMigration({ name }, trx);
+    await migrator.up({ transaction: trx });
   });
-  return executed.length;
 }

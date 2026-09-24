@@ -9,7 +9,7 @@
  * The end-to-end upgrade of real legacy databases is
  * `tests/integration/legacy-upgrade-v*.test.ts`.
  */
-import { baselineLegacyInstall, buildLegacyStepMap } from '../../../src/db/legacy-baseline';
+import { buildLegacyStepMap, migrateToHead, planLegacyBaseline } from '../../../src/db/legacy-baseline';
 import {
   createMigrationOrm,
   migrateTo,
@@ -129,7 +129,7 @@ describe('the legacy step map', () => {
   });
 });
 
-describe('baselineLegacyInstall', () => {
+describe('planLegacyBaseline / migrateToHead', () => {
   let orm: MikroORM;
 
   beforeEach(async () => {
@@ -140,12 +140,13 @@ describe('baselineLegacyInstall', () => {
     await orm.close(true);
   });
 
-  const baseline = () => baselineLegacyInstall(orm.em.getConnection(), migratorOf(orm));
+  const baseline = () => planLegacyBaseline(orm.em.getConnection(), migratorOf(orm));
+  const migrate = () => migrateToHead(orm.em.getConnection(), migratorOf(orm));
   const recorded = async () =>
     (await rawQuery<{ name: string }>(orm, 'SELECT name FROM mikro_orm_migrations ORDER BY id')).map((r) => r.name);
 
   it('LEGACYBASE-001: a fresh database (no schema_version) is left alone', async () => {
-    await expect(baseline()).resolves.toBe(0);
+    await expect(baseline()).resolves.toEqual([]);
     expect(await recorded()).toEqual([]);
   });
 
@@ -153,17 +154,19 @@ describe('baselineLegacyInstall', () => {
     await migrateTo(orm, 'Migration20200101020900_create_schema_version_new');
     await rawExec(orm, 'INSERT INTO schema_version (version) VALUES (241)');
     const before = await recorded();
-    await expect(baseline()).resolves.toBe(0);
+    await expect(baseline()).resolves.toEqual([]);
     expect(await recorded()).toEqual(before);
   });
 
-  it('LEGACYBASE-003: a legacy database at step N records the baseline and steps 1..N, in application order, and nothing else', async () => {
+  it('LEGACYBASE-003: a legacy database at step N plans steps 1..N in application order — never the baseline — and writes nothing', async () => {
     const all = await pendingNames(orm);
     await rawExec(orm, 'CREATE TABLE schema_version (version INTEGER NOT NULL)');
     await rawExec(orm, 'INSERT INTO schema_version (version) VALUES (10)');
-    await expect(baseline()).resolves.toBe(11);
-    expect(await recorded()).toEqual(all.slice(0, 11));
-    expect((await pendingNames(orm))[0]).toBe(all[11]);
+    // Review N1: the legacy runner ran createTables() before its steps on every
+    // boot, and ~30 tables exist only in the baseline, so it must run, not be marked.
+    await expect(baseline()).resolves.toEqual(all.slice(1, 11));
+    expect(all[0]).toBe(BASELINE);
+    expect(await recorded()).toEqual([]);
   });
 
   it('LEGACYBASE-004: refuses a schema_version newer than the last legacy step, and records nothing', async () => {
@@ -190,4 +193,18 @@ describe('baselineLegacyInstall', () => {
       expect(await recorded()).toEqual([]);
     },
   );
+
+  it('LEGACYBASE-006: the baseline rows commit with the run — a failed first run leaves nothing recorded, so the next boot baselines again', async () => {
+    const all = await pendingNames(orm);
+    await rawExec(orm, 'CREATE TABLE schema_version (version INTEGER NOT NULL)');
+    await rawExec(orm, 'INSERT INTO schema_version (version) VALUES (241)');
+    // An obstacle for Migration20200101040200's rebuild, which runs after the baseline.
+    await rawExec(orm, 'CREATE TABLE trek_photo_cache_meta_new (x INTEGER)');
+    await expect(migrate()).rejects.toThrow();
+    expect(await recorded()).toEqual([]);
+
+    // Nothing half-done: the next boot still sees a legacy install and plans the same steps.
+    await expect(baseline()).resolves.toEqual(all.filter((name) => name !== BASELINE).slice(0, 241));
+    expect(await recorded()).toEqual([]);
+  });
 });

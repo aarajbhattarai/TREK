@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export type LegacyFixture = 'legacy-v082' | 'legacy-v205' | 'legacy-v242';
+export type LegacyFixture = 'legacy-v066' | 'legacy-v082' | 'legacy-v205' | 'legacy-v242';
 
 const FIXTURES = path.join(__dirname, '../fixtures/legacy');
 

@@ -29,6 +29,12 @@ export interface LegacyUpgradeCase {
   nightOrderIndex: number | null;
   /** Test-id prefix. */
   id: string;
+  /**
+   * Schema lines (see `schemaShape`) that differ from a fresh install because the
+   * legacy chain itself never converged there — carried, not caused by the
+   * upgrade. Empty for an install that ends identical to a fresh one.
+   */
+  carriedSchemaDiffs?: { onlyUpgraded: string[]; onlyFresh: string[] };
 }
 
 const MIGRATIONS = path.join(__dirname, '../../src/db/migrations');
@@ -69,11 +75,12 @@ export function describeLegacyUpgrade(c: LegacyUpgradeCase, legacyDb: Database.D
     });
 
     const files = migrationFiles();
-    const firstStep = files.findIndex((file) => file.step === 1);
-    const baselined = files.filter((file, i) => i < firstStep || (file.step !== null && file.step <= c.version));
+    // Steps 1..N only: the baseline (createTables()) is never marked — it runs
+    // first, as the legacy runner's own boot did (review N1).
+    const baselined = files.filter((file) => file.step !== null && file.step <= c.version);
     const applied = files.filter((file) => !baselined.includes(file));
 
-    it(`${c.id}-001: records the baseline and steps 1..${c.version} as executed, then applies only the rest, in order`, () => {
+    it(`${c.id}-001: records steps 1..${c.version} as executed, then applies the baseline and the rest, in order`, () => {
       expect(logged).toContain(
         `[DB] Legacy install at schema_version ${c.version} — baselining ${baselined.length} migration(s)`,
       );
@@ -118,7 +125,12 @@ export function describeLegacyUpgrade(c: LegacyUpgradeCase, legacyDb: Database.D
       if (!snapshot) throw new Error('No schema snapshot: run under vitest (tests/global-setup.ts writes it).');
       const fresh = new Database(snapshot);
       try {
-        expect(schemaShape(legacyDb)).toEqual(schemaShape(fresh));
+        const upgraded = schemaShape(legacyDb);
+        const freshShape = schemaShape(fresh);
+        expect({
+          onlyUpgraded: upgraded.filter((line) => !freshShape.includes(line)),
+          onlyFresh: freshShape.filter((line) => !upgraded.includes(line)),
+        }).toEqual(c.carriedSchemaDiffs ?? { onlyUpgraded: [], onlyFresh: [] });
       } finally {
         fresh.close();
       }
