@@ -14,6 +14,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { MikroORM } from '@mikro-orm/core';
 import type { Request } from 'express';
 import type { User } from '../../types';
 import { ADDON_IDS } from '../../addons';
@@ -23,6 +24,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TripAccessGuard } from '../permissions/trip-access.guard';
 import { RealtimeService } from '../realtime/realtime.service';
+import { withRequestContext } from '../database/request-context';
 import { docFailed } from './document-provider';
 import { DocSyncConfigService, type LinkRow } from './doc-sync-config.service';
 import { DocSyncService } from './doc-sync.service';
@@ -70,6 +72,7 @@ export class DocSyncController {
     private readonly sync: DocSyncService,
     private readonly registry: DocumentProviderRegistry,
     private readonly realtime: RealtimeService,
+    private readonly orm: MikroORM,
   ) {}
 
   /**
@@ -316,7 +319,24 @@ export class DocSyncController {
 
     // A first run right away, so the user sees something happen instead of
     // waiting out a poll interval and wondering whether it worked.
-    void this.sync.syncLink(res.data, { full: true });
+    //
+    // L1 (Plan 3h Task 7 review) — a third R9-class detached chain the
+    // inventory missed: `syncLink` runs ~36 ORM/Kysely statements, detached
+    // after this response goes out, on the request's own EntityManager fork.
+    // Wrapped in its own `withRequestContext` fork for the same reason the
+    // webhook nudge timer (`DocSyncWebhookController#schedule`) and the
+    // import-job runner (`ImportJobsService#start`) are: insurance against
+    // the request-scoped fork being gone by the time this runs, per 3f's own
+    // measurement that `AsyncLocalStorage` survives a detached chain intact
+    // in this codebase today, not a fix for an observed failure. A failure
+    // here is not a failure of the binding (the next poll carries it), so it
+    // is logged rather than thrown — same posture as the webhook
+    // subscription failure just above.
+    void withRequestContext(this.orm, () => this.sync.syncLink(res.data, { full: true })).catch((err: unknown) => {
+      this.logger.error(
+        `link ${res.data.id}: the first run after creation failed (${err instanceof Error ? err.message : String(err)}), the next poll carries it`,
+      );
+    });
     return await this.config.publicLink((await this.config.getLink(res.data.id)) ?? res.data, publicOrigin(req));
   }
 

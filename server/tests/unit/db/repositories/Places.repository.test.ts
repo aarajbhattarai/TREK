@@ -1155,3 +1155,65 @@ describe('PlacesRepository.setSource (DWS7)', () => {
     expect(row.updated_at).toBe(before.updated_at);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3h Task 7 review, M1 coverage — Plan 3h Task 4's `maps.service.ts`
+// photo-fetch (MAP9), untested at the repository level (the service test
+// stubs this method).
+// ---------------------------------------------------------------------------
+
+describe('PlacesRepository.setImageUrlIfUnset (MAP9)', () => {
+  it('MAP9-001: fills a NULL image_url, matching the legacy $or guard', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'No photo yet' });
+    testDb.prepare("UPDATE places SET google_place_id = 'ChIJ_shared' WHERE id = ?").run(place.id);
+
+    const n = await places.setImageUrlIfUnset('ChIJ_shared', '/uploads/photo-cache/new.jpg');
+
+    expect(n).toBe(1);
+    const row = testDb.prepare('SELECT image_url FROM places WHERE id = ?').get(place.id) as { image_url: string | null };
+    expect(row.image_url).toBe('/uploads/photo-cache/new.jpg');
+  });
+
+  it('MAP9-002: fills an EMPTY-STRING image_url too (the second half of the $or)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Blank photo' });
+    testDb.prepare("UPDATE places SET google_place_id = 'ChIJ_blank', image_url = '' WHERE id = ?").run(place.id);
+
+    const n = await places.setImageUrlIfUnset('ChIJ_blank', '/uploads/photo-cache/filled.jpg');
+
+    expect(n).toBe(1);
+    const row = testDb.prepare('SELECT image_url FROM places WHERE id = ?').get(place.id) as { image_url: string | null };
+    expect(row.image_url).toBe('/uploads/photo-cache/filled.jpg');
+  });
+
+  it('MAP9-003: an already-set image_url is left untouched — never clobbers a custom image', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Custom photo' });
+    testDb.prepare("UPDATE places SET google_place_id = 'ChIJ_custom', image_url = '/uploads/custom.jpg' WHERE id = ?").run(place.id);
+
+    const n = await places.setImageUrlIfUnset('ChIJ_custom', '/uploads/photo-cache/should-not-land.jpg');
+
+    expect(n).toBe(0);
+    const row = testDb.prepare('SELECT image_url FROM places WHERE id = ?').get(place.id) as { image_url: string | null };
+    expect(row.image_url).toBe('/uploads/custom.jpg');
+  });
+
+  it('MAP9-004: unscoped by trip — every empty-image row sharing the google_place_id across trips is filled in one statement', async () => {
+    const { user } = createUser(testDb);
+    const tripA = createTrip(testDb, user.id);
+    const tripB = createTrip(testDb, user.id);
+    const placeA = createPlace(testDb, tripA.id, { name: 'A' });
+    const placeB = createPlace(testDb, tripB.id, { name: 'B' });
+    testDb.prepare("UPDATE places SET google_place_id = 'ChIJ_shared2' WHERE id IN (?, ?)").run(placeA.id, placeB.id);
+
+    const n = await places.setImageUrlIfUnset('ChIJ_shared2', '/uploads/photo-cache/both.jpg');
+
+    expect(n).toBe(2);
+    expect((testDb.prepare('SELECT image_url FROM places WHERE id = ?').get(placeA.id) as { image_url: string }).image_url).toBe('/uploads/photo-cache/both.jpg');
+    expect((testDb.prepare('SELECT image_url FROM places WHERE id = ?').get(placeB.id) as { image_url: string }).image_url).toBe('/uploads/photo-cache/both.jpg');
+  });
+});

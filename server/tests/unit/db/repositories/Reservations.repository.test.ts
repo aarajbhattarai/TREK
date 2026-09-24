@@ -505,3 +505,64 @@ describe('ReservationsRepository — Task 2 reads (listForTrip / findWithJoins /
     expect(typed.map((r) => r.id).sort((a, b) => a - b)).toEqual([dinner.id, hotel.id].sort((a, b) => a - b));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Plan 3h Task 7 review, M1 coverage — the AirTrail leaf's writes/reads,
+// untested at the repository level (the airtrail-link/sync service tests
+// stub this repository).
+// ---------------------------------------------------------------------------
+
+describe('ReservationsRepository — AirTrail leaf (ATL1/ATL2/ATL4, airports)', () => {
+  it('ATL1 linkAirtrailSingleFlight — stamps every AirTrail column and switches sync on, matching the legacy statement', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const res = createReservation(testDb, trip.id, { title: 'Flight', type: 'flight' });
+
+    await reservationsRepo.linkAirtrailSingleFlight(res.id, 'AT-42', user.id, 'hash-1', '2026-09-24T10:00:00Z');
+
+    const row = testDb.prepare(
+      "SELECT external_source, external_id, external_owner_user_id, sync_enabled, external_hash, external_synced_at FROM reservations WHERE id = ?",
+    ).get(res.id);
+    expect(row).toEqual({
+      external_source: 'airtrail', external_id: 'AT-42', external_owner_user_id: user.id,
+      sync_enabled: 1, external_hash: 'hash-1', external_synced_at: '2026-09-24T10:00:00Z',
+    });
+  });
+
+  it('ATL2 setAirtrailSyncDisabled — turns sync_enabled off, matching the legacy statement, and leaves every other column alone', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const res = createReservation(testDb, trip.id, { title: 'Flight', type: 'flight' });
+    await reservationsRepo.linkAirtrailSingleFlight(res.id, 'AT-42', user.id, 'hash-1', '2026-09-24T10:00:00Z');
+
+    await reservationsRepo.setAirtrailSyncDisabled(res.id);
+
+    const row = testDb.prepare('SELECT sync_enabled, external_id FROM reservations WHERE id = ?').get(res.id);
+    expect(row).toEqual({ sync_enabled: 0, external_id: 'AT-42' });
+  });
+
+  it('ATL4 findAirtrailLinked — matches the legacy statement, scoped to external_source = \'airtrail\' (a plain flight misses)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const linked = createReservation(testDb, trip.id, { title: 'Flight', type: 'flight' });
+    await reservationsRepo.linkAirtrailSingleFlight(linked.id, 'AT-7', user.id, 'hash-2', '2026-09-24T11:00:00Z');
+    const plain = createReservation(testDb, trip.id, { title: 'Dinner', type: 'restaurant' });
+
+    const legacy = testDb.prepare(
+      "SELECT id, trip_id, external_id, external_owner_user_id, sync_enabled FROM reservations WHERE id = ? AND external_source = 'airtrail'",
+    ).get(linked.id);
+    expect(await reservationsRepo.findAirtrailLinked(linked.id)).toEqual(legacy);
+    expect(await reservationsRepo.findAirtrailLinked(plain.id)).toBeUndefined();
+  });
+
+  it('markNeedsReview (airports) — sets needs_review, matching the legacy statement', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const res = createReservation(testDb, trip.id, { title: 'Flight', type: 'flight' });
+    expect((testDb.prepare('SELECT needs_review FROM reservations WHERE id = ?').get(res.id) as { needs_review: number }).needs_review).toBe(0);
+
+    await reservationsRepo.markNeedsReview(res.id);
+
+    expect((testDb.prepare('SELECT needs_review FROM reservations WHERE id = ?').get(res.id) as { needs_review: number }).needs_review).toBe(1);
+  });
+});

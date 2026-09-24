@@ -434,7 +434,13 @@ describe('DocSyncService', () => {
       const tieBreakFirst = await makeLink({ lastSyncAt: null }); // same ties; id is the ONLY thing that can separate these two
       const midStale = await makeLink({ lastSyncAt: sqlTime('-2 hours') }); // next=NULL, last=2h ago — after the NULL/NULL pair, before the recent one
       const midRecent = await makeLink({ lastSyncAt: sqlTime('-1 minute') }); // next=NULL, last=1m ago — last of the NULL-next-attempt group
-      const backedOff = await makeLink({ nextAttemptAt: sqlTime('-1 hour'), lastSyncAt: sqlTime('-1 minute') }); // next_attempt_at is NON-null — sorts after every NULL row regardless of last_sync_at
+      // Plan 3h Task 7 review, M4: this row's `last_sync_at` used to be
+      // `-1 minute` — the newest of every row in this test — so it was
+      // ALSO the sort-first row under `last_sync_at`-before-`next_attempt_at`
+      // (the swapped-key mutation), leaving the test green either way. `-3
+      // hours` is older than every other row's `last_sync_at`, so only the
+      // correct key order (next_attempt_at first) still sorts this row last.
+      const backedOff = await makeLink({ nextAttemptAt: sqlTime('-1 hour'), lastSyncAt: sqlTime('-3 hours') }); // next_attempt_at is NON-null — sorts after every NULL row regardless of last_sync_at
 
       const ids = (await service.dueLinks()).map((l) => l.id);
       const expected = [tieBreakSecond.id, tieBreakFirst.id].sort((a, b) => a - b);
@@ -1173,6 +1179,41 @@ describe('DocSyncService', () => {
 
       expect(links.find((l) => l.id === off.id)?.providerOff).toBe(true);
       expect(links.find((l) => l.id === on.id)?.providerOff).toBe(false);
+    });
+  });
+
+  describe('itemsForTrip', () => {
+    it('M2 (Plan 3h Task 7 review): an empty `?state=` returns every item, not none — legacy truthiness, not an `undefined` check', async () => {
+      const link = await makeLink();
+      const fileId = makeFile();
+      const withFile = seedItem(link, { remoteId: 'r1', state: 'synced', fileId });
+      const withoutFile = seedItem(link, { remoteId: 'r2', state: 'conflict' });
+
+      // `state === undefined ? listForTrip : listForTripByState` (the R2
+      // regression this ratchet pins) would treat `''` as a real filter
+      // value and match nothing; the legacy/fixed gate is `state ?
+      // listForTripByState : listForTrip`, so an empty string behaves the
+      // same as omitting the query param entirely.
+      const withEmptyState = await service.itemsForTrip(tripId, '');
+      const withNoState = await service.itemsForTrip(tripId);
+
+      expect(withEmptyState.map((r) => r.id).sort()).toEqual([withFile, withoutFile].sort());
+      expect(withNoState.map((r) => r.id).sort()).toEqual([withFile, withoutFile].sort());
+      // The file-joined row carries the LEFT JOIN trip_files column; the
+      // file-less row must not, so `listForTrip`'s join shape is exercised
+      // by both a hit and a miss (M1's coverage gap on these two methods).
+      expect(withNoState.find((r) => r.id === withFile)?.file_name).toBe('boarding.pdf');
+      expect(withNoState.find((r) => r.id === withoutFile)?.file_name).toBeNull();
+    });
+
+    it('a real state value still narrows to that one state', async () => {
+      const link = await makeLink();
+      seedItem(link, { remoteId: 'r1', state: 'synced' });
+      const conflicted = seedItem(link, { remoteId: 'r2', state: 'conflict' });
+
+      const rows = await service.itemsForTrip(tripId, 'conflict');
+
+      expect(rows.map((r) => r.id)).toEqual([conflicted]);
     });
   });
 

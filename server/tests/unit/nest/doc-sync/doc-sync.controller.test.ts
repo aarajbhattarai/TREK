@@ -78,6 +78,7 @@ import type {
 } from '../../../../src/nest/doc-sync/doc-sync.dto';
 import type { User } from '../../../../src/types';
 import { createTestUnitOfWork, createTestTripsRepo } from '../../../helpers/test-uow';
+import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import {
   createTestDocumentConnectionsRepo,
   createTestDocumentProviderFieldsRepo,
@@ -156,6 +157,7 @@ const realtime = { broadcast: vi.fn() };
 // createTestUnitOfWork is async — module-scope construction cannot await it.
 let config: DocSyncConfigService;
 let controller: DocSyncController;
+let t: TestOrm;
 
 /** Only what publicOrigin reads: header lookup plus the connection's own scheme. */
 function makeReq(headers: Record<string, string> = {}, protocol = 'http'): Request {
@@ -210,6 +212,11 @@ let otherTripId: number;
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  // L1 (Plan 3h Task 7 review): createLink's fire-and-forget syncLink call
+  // is now wrapped in its own withRequestContext fork, which needs a real
+  // MikroORM instance — sync itself stays a spy, this ORM never resolves a
+  // repository through it.
+  t = await createTestOrm(testDb);
   config = new DocSyncConfigService(
     await createTestTripsRepo(testDb),
     await createTestDocumentProvidersRepo(testDb),
@@ -220,7 +227,7 @@ beforeAll(async () => {
     registry,
     await createTestUnitOfWork(testDb),
   );
-  controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, realtime as unknown as RealtimeService);
+  controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, realtime as unknown as RealtimeService, t.orm);
   const o = createUser(testDb, { username: 'owner', email: 'owner@test.local' }).user;
   const m = createUser(testDb, { username: 'member', email: 'member@test.local' }).user;
   const a = createUser(testDb, { username: 'admin', email: 'admin@test.local', role: 'admin' }).user;
@@ -232,7 +239,8 @@ beforeAll(async () => {
   testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(tripId, m.id);
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 

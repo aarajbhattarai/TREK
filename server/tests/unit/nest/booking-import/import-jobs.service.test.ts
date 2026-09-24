@@ -7,6 +7,7 @@ import { ImportJobsService } from '../../../../src/nest/booking-import/import-jo
 import { RealtimeService } from '../../../../src/nest/realtime/realtime.service';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
+import { Users } from '../../../../src/db/entities/Users.entity';
 
 // R9 (Plan 3h Task 4): `run()` now forks its own `withRequestContext`, so the
 // service needs a real `MikroORM` — the `StorageHealthNotifierService`
@@ -58,7 +59,18 @@ describe('ImportJobsService', () => {
   });
 
   it('IMPORTJOBS-CTX-001 (R9 ratchet): start() is called from a bare, non-request context (like every test above) and the detached run() still resolves cleanly — the withRequestContext wrap around it means the missing ambient context never reaches BookingImportService.preview as cannotUseGlobalContext', async () => {
-    const preview = vi.fn(async () => ({ items: [{ id: 'ctx' }] }));
+    // Plan 3h Task 7 review, M3: a plain `vi.fn` double for `preview` never
+    // touches the ORM at all, so this ratchet stayed green even with the
+    // wrap removed (the mutation log's MD4). `preview` now does a REAL read
+    // through `t`'s `allowGlobalContext: false` EntityManager — the same
+    // instance `beforeAll` built specifically so a passing suite proves the
+    // wrap load-bearing, not merely harmless — so it throws
+    // "global EntityManager"/`cannotUseGlobalContext` unless `run()`'s own
+    // `withRequestContext` fork is actually live when this executes.
+    const preview = vi.fn(async () => {
+      await t.repo(Users).findOne({ id: -1 });
+      return { items: [{ id: 'ctx' }] };
+    });
     const svc = makeService(preview);
 
     const id = svc.start('7', files(1), 'no-ai', 42);

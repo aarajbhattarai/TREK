@@ -1,5 +1,5 @@
 import type { DayAccommodations } from '../entities/DayAccommodations.entity';
-import { coalesceParam, columnRef } from '../dialect/sql-functions';
+import { coalesceOverride, columnRef } from '../dialect/sql-functions';
 import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -127,18 +127,19 @@ export class DayAccommodationsRepository extends TrekRepository<DayAccommodation
   /**
    * RS29/RS42 — `UPDATE day_accommodations SET check_in = COALESCE(?,
    * check_in), check_in_end = COALESCE(?, check_in_end), check_out =
-   * COALESCE(?, check_out) WHERE id = ?`. `coalesceParam` (value-side, a
-   * bound `?`) through `qb().update()` — `nativeUpdate`'s `EntityData`
-   * shape doesn't accept a raw fragment value (`DayAssignmentsRepository
-   * .shiftOrderFrom`'s precedent).
+   * COALESCE(?, check_out) WHERE id = ?`. `coalesceOverride` (value-side, a
+   * bound `?` FIRST, the column the fallback — the new value wins) through
+   * `qb().update()` — `nativeUpdate`'s `EntityData` shape doesn't accept a
+   * raw fragment value (`DayAssignmentsRepository.shiftOrderFrom`'s
+   * precedent).
    */
   async patchTimes(id: number, check_in: string | null, check_in_end: string | null, check_out: string | null): Promise<void> {
     const platform = this.getEntityManager().getPlatform();
     await this.qb()
       .update({
-        check_in: coalesceParam(platform, 'check_in', check_in),
-        check_in_end: coalesceParam(platform, 'check_in_end', check_in_end),
-        check_out: coalesceParam(platform, 'check_out', check_out),
+        check_in: coalesceOverride(platform, check_in, 'check_in'),
+        check_in_end: coalesceOverride(platform, check_in_end, 'check_in_end'),
+        check_out: coalesceOverride(platform, check_out, 'check_out'),
       })
       .where({ id })
       .execute('run');
@@ -148,7 +149,7 @@ export class DayAccommodationsRepository extends TrekRepository<DayAccommodation
   async patchConfirmation(id: number, confirmation: string | null): Promise<void> {
     const platform = this.getEntityManager().getPlatform();
     await this.qb()
-      .update({ confirmation: coalesceParam(platform, 'confirmation', confirmation) })
+      .update({ confirmation: coalesceOverride(platform, confirmation, 'confirmation') })
       .where({ id })
       .execute('run');
   }

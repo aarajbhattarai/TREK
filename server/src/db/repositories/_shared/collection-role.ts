@@ -1,4 +1,3 @@
-import type { ExpressionBuilder, ExpressionWrapper, SqlBool } from 'kysely';
 import type { CollectionMembers } from '../../entities/CollectionMembers.entity';
 import type { Collections } from '../../entities/Collections.entity';
 import type { TrekRepository } from './trek-repository';
@@ -42,17 +41,14 @@ import type { TrekRepository } from './trek-repository';
  * copy-to-trip/labels/invites surface go through the SAME service methods,
  * never re-deriving the predicate.
  *
- * **Kysely-callable form** ({@link collectionVisibleExpr}): an inline
- * boolean `EXISTS`/`OR` predicate for a caller already building a raw,
- * multi-join statement through `this.kysely()` (the shape Task 2's dynamic
- * OR-condition methods — `matchingCollectionPlaces`/`findMembership`,
- * CL58/CL69 — are the most likely future consumers of), modelled on
- * `packing-visibility.ts`'s `packingVisibleToActorExpr`: an owner-id equality
- * plus a correlated `EXISTS` against `collection_members`, mirroring CL2's
- * own UNION shape as a boolean OR instead of a value-returning UNION SELECT.
- * This form answers "is this collection visible to this user", not "what is
- * their role" — a caller needing the actual role (for an edit/delete gate)
- * always uses {@link resolveCollectionRole}, never this boolean form.
+ * A Kysely-callable boolean-`EXISTS`/`OR` twin of this predicate (for a
+ * caller already building a raw, multi-join statement through
+ * `this.kysely()`, modelled on `packing-visibility.ts`'s
+ * `packingVisibleToActorExpr`) was drafted alongside this QB form but had no
+ * consumer by Plan 3h's whole-plan review — Task 2's own dynamic OR-condition
+ * methods (`matchingCollectionPlaces`/`findMembership`, CL58/CL69) never
+ * needed it — and was deleted there (L5) rather than shipped untested. Add it
+ * back, with a consumer or its own parity test, if a future task needs it.
  *
  * Proven against five actor cases (owner, admin member, editor member,
  * viewer member, an invited-but-still-pending user, a complete stranger) by
@@ -88,41 +84,4 @@ export async function resolveCollectionRole(
   );
   if (!member) return null;
   return member.role === 'admin' || member.role === 'viewer' ? (member.role as 'admin' | 'viewer') : 'editor';
-}
-
-/**
- * `collections`/`collection_members`'s REAL table names, the shape
- * {@link collectionVisibleExpr} needs. A consumer's own local Kysely `DB`
- * interface satisfies this by structural extension, the
- * `ReservationVisibilityKyselyDB`/`PackingVisibilityKyselyDB` precedent.
- */
-export interface CollectionVisibilityKyselyDB {
-  collections: { id: number; owner_id: number };
-  collection_members: { collection_id: number; user_id: number; status: string };
-}
-
-/**
- * The Kysely-expression twin of CL2's UNION, as a boolean OR: owner-id
- * equality, or a correlated `EXISTS` against an accepted `collection_members`
- * row. `collections` is a genuine `p.manyToOne(Users)` FK
- * (`Collections.entity.ts`), but this form takes the raw `owner_id` column
- * directly rather than joining through the relation — matching CL2's own
- * `owner_id = ?` text, and avoiding a second join the caller's own outer
- * query may not want.
- */
-export function collectionVisibleExpr(
-  eb: ExpressionBuilder<CollectionVisibilityKyselyDB, 'collections'>,
-  userId: number,
-): ExpressionWrapper<CollectionVisibilityKyselyDB, 'collections', SqlBool> {
-  return eb.or([
-    eb('collections.owner_id', '=', userId),
-    eb.exists(
-      eb
-        .selectFrom('collection_members as cm')
-        .select('cm.collection_id')
-        .whereRef('cm.collection_id', '=', 'collections.id')
-        .where('cm.user_id', '=', userId)
-        .where('cm.status', '=', 'accepted'),
-    ),
-  ]);
 }

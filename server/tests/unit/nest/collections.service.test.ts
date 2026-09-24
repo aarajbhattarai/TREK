@@ -218,6 +218,26 @@ describe('saved places + dedup', () => {
     expect(res.place!.tags?.map((t) => t.name)).toContain('food');
   });
 
+  it('CL49 (Plan 3h Task 7 review, M1 coverage): updatePlace with tag_ids rewrites the tag set (CollectionPlacesRepository.deleteTags)', async () => {
+    const u = createUser(testDb).user;
+    const food = createTag(testDb, u.id, { name: 'food' });
+    const views = createTag(testDb, u.id, { name: 'views' });
+    const col = await svc.createCollection(u.id, { name: 'Tagged' });
+    const res = await svc.savePlace(u.id, { collection_id: col.id, name: 'Ramen', tag_ids: [food.id] });
+    expect(res.place!.tags?.map((t) => t.name)).toEqual(['food']);
+
+    // A second tag_ids write must DROP the old tag rather than accumulate —
+    // only possible if the old assignment rows were actually deleted first.
+    await svc.updatePlace(u.id, res.place!.id, { tag_ids: [views.id] });
+    const stored = (await svc.getCollection(u.id, col.id)).places.find((p) => p.id === res.place!.id)!;
+    expect(stored.tags?.map((t) => t.name)).toEqual(['views']);
+
+    // An empty tag_ids array clears every tag.
+    await svc.updatePlace(u.id, res.place!.id, { tag_ids: [] });
+    const cleared = (await svc.getCollection(u.id, col.id)).places.find((p) => p.id === res.place!.id)!;
+    expect(cleared.tags ?? []).toEqual([]);
+  });
+
   it('COLLECTIONS-SVC-013: savePlace rejects an inaccessible collection (404)', async () => {
     const a = createUser(testDb).user;
     const b = createUser(testDb).user;
@@ -238,6 +258,22 @@ describe('saved places + dedup', () => {
 
     expect(result.duplicate).toBeFalsy();
     expect(result.place).toBeDefined();
+  });
+
+  it('CL27 (Plan 3h Task 7 review, M1 coverage): an UNNAMED candidate falls back to the coordinate dedup branch (CollectionsRepository.findDuplicateByCoords)', async () => {
+    // `placeMatchStrategies` only offers `coords` when the name normalizes away
+    // to nothing (blank/whitespace); a single space satisfies the DTO's
+    // `min(1)` but still normalizes to null, so it reaches the coords branch
+    // this repository method serves.
+    const u = createUser(testDb).user;
+    const col = await svc.createCollection(u.id, { name: 'Unnamed pins' });
+    await svc.savePlace(u.id, { collection_id: col.id, name: ' ', lat: 48.8566, lng: 2.3522 });
+
+    const withinTolerance = await svc.savePlace(u.id, { collection_id: col.id, name: ' ', lat: 48.85665, lng: 2.35215 });
+    expect(withinTolerance.duplicate).toBe(true);
+
+    const outsideTolerance = await svc.savePlace(u.id, { collection_id: col.id, name: ' ', lat: 48.9, lng: 2.5 });
+    expect(outsideTolerance.duplicate).toBeFalsy();
   });
 
   it('COLLECTIONS-SVC-101: a provider id still recognises a renamed place a name/coords search would miss', async () => {

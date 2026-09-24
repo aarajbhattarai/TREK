@@ -883,6 +883,45 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     expect(row).toEqual({ check_in: '16:00', confirmation: 'KEEP' });
   });
 
+  it('H1 (Plan 3h Task 7 review) — patchTimes: updating a linked reservation OVERRIDES the stay\'s existing non-null check-in/end/out — the new value wins, matching legacy COALESCE(?, col)', async () => {
+    const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-02' });
+    const place = createPlace(testDb, trip.id);
+    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
+    // The stay already holds a DIFFERENT, non-null value on every column the
+    // sync touches — if `coalesceParam`'s (existing-wins) direction were used
+    // instead of `coalesceOverride`'s (new-wins), the stay would keep these.
+    const acc = createDayAccommodation(testDb, trip.id, place.id, days[0].id, days[1].id, {
+      check_in: '14:00', check_out: '10:00',
+    });
+    testDb.prepare('UPDATE day_accommodations SET check_in_end = ? WHERE id = ?').run('10:00', acc.id);
+    const res = createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel' });
+    testDb.prepare("UPDATE reservations SET accommodation_id = ?, metadata = ? WHERE id = ?")
+      .run(String(acc.id), JSON.stringify({ check_in_time: '16:30', check_in_end_time: '11:15', check_out_time: '09:00' }), res.id);
+    const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
+    // Touch an unrelated field so the metadata sync runs off the stored
+    // (already new) metadata, same shape as RESV-SVC-025.
+    await svc.update(String(res.id), String(trip.id), { notes: 'touch' }, current);
+    const row = testDb.prepare('SELECT check_in, check_in_end, check_out FROM day_accommodations WHERE id = ?').get(acc.id);
+    expect(row).toEqual({ check_in: '16:30', check_in_end: '11:15', check_out: '09:00' });
+  });
+
+  it('H1 (Plan 3h Task 7 review) — patchConfirmation: updating a linked reservation OVERRIDES the stay\'s existing non-null confirmation — the new value wins, matching legacy COALESCE(?, confirmation)', async () => {
+    const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-02' });
+    const place = createPlace(testDb, trip.id);
+    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
+    // The stay already holds a DIFFERENT, non-null confirmation — if
+    // `coalesceParam`'s (existing-wins) direction were used instead of
+    // `coalesceOverride`'s (new-wins), the stay would keep it.
+    const acc = createDayAccommodation(testDb, trip.id, place.id, days[0].id, days[1].id, { confirmation: 'ACC-OLD' });
+    const res = createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel' });
+    testDb.prepare("UPDATE reservations SET accommodation_id = ?, metadata = ?, confirmation_number = 'RES-NEW' WHERE id = ?")
+      .run(String(acc.id), JSON.stringify({}), res.id);
+    const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
+    await svc.update(String(res.id), String(trip.id), { notes: 'touch' }, current);
+    const row = testDb.prepare('SELECT confirmation FROM day_accommodations WHERE id = ?').get(acc.id);
+    expect(row).toEqual({ confirmation: 'RES-NEW' });
+  });
+
   it('RESV-SVC-026: resync derives the end day too, keeping the stored one when the end time is out of range', async () => {
     const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-03' });
     const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];

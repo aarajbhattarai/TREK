@@ -1,7 +1,7 @@
 import type { Reservations } from '../entities/Reservations.entity';
 import { DayAssignments } from '../entities/DayAssignments.entity';
 import { Days } from '../entities/Days.entity';
-import { castIntegerKysely, coalesceParam, columnRef, concatKysely, dayDistance, startsWithIsoDateKysely, substringKysely } from '../dialect/sql-functions';
+import { castIntegerKysely, coalesceOverride, columnRef, concatKysely, dayDistance, startsWithIsoDateKysely, substringKysely } from '../dialect/sql-functions';
 import { publicReservationExpr, publicStayExists, type ReservationVisibilityKyselyDB } from './_shared/reservation-visibility';
 import type { DayAssignmentRow } from './DayAssignments.repository';
 import { TrekRepository } from './_shared/trek-repository';
@@ -960,15 +960,16 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
    * reservations SET metadata = ?, confirmation_number = COALESCE(?,
    * confirmation_number) WHERE id = ?`. Runs AFTER `updateAccommodation`'s
    * own transaction commits (§18.6 — R5 class, flagged not fixed).
-   * `coalesceParam` for the value-side COALESCE (`DayAccommodationsRepository
-   * .patchConfirmation`'s precedent).
+   * `coalesceOverride` for the value-side COALESCE — the bound `?` FIRST,
+   * the column the fallback, so the new value wins
+   * (`DayAccommodationsRepository.patchConfirmation`'s precedent).
    */
   async setMetadataAndConfirmation(id: number, metadata: string, confirmation: string | null): Promise<void> {
     const platform = this.getEntityManager().getPlatform();
     await this.qb()
       .update({
         metadata,
-        confirmation_number: coalesceParam(platform, 'confirmation_number', confirmation),
+        confirmation_number: coalesceOverride(platform, confirmation, 'confirmation_number'),
       })
       .where({ id })
       .execute('run');

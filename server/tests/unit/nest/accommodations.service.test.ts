@@ -282,6 +282,26 @@ describe('updateAccommodation', () => {
     const reservation = testDb.prepare('SELECT confirmation_number FROM reservations WHERE accommodation_id = ?').get(accom.id) as any;
     expect(reservation.confirmation_number).toBe('RES-9');
   });
+
+  it('H1 (Plan 3h Task 7 review): a new confirmation on the stay OVERRIDES the linked reservation\'s existing, different confirmation — the new value wins, matching legacy COALESCE(?, confirmation_number)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id) as any;
+    const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
+    const { accommodation: accom } = (await svc.createAccommodation(trip.id, {
+      place_id: place.id, start_day_id: day.id, end_day_id: day.id,
+    })) as any;
+    // The linked reservation already carries a DIFFERENT, non-null confirmation —
+    // if the stay-side update used `coalesceParam`'s (existing-wins) direction
+    // instead of `coalesceOverride`'s (new-wins), it would keep this value.
+    testDb.prepare('UPDATE reservations SET confirmation_number = ? WHERE accommodation_id = ?').run('RES-OLD', accom.id);
+
+    const existing = (await svc.getAccommodation(accom.id, trip.id))!;
+    await svc.updateAccommodation(accom.id, existing as any, { confirmation: 'ACC-CHANGED' });
+
+    const reservation = testDb.prepare('SELECT confirmation_number FROM reservations WHERE accommodation_id = ?').get(accom.id) as any;
+    expect(reservation.confirmation_number).toBe('ACC-CHANGED');
+  });
 });
 
 describe('deleteAccommodation', () => {

@@ -979,9 +979,14 @@ export class DocSyncService {
    * queries (a 3rd near-duplicate listing shape alongside {@link issues}'s
    * own `LIMIT 200` fixed-state-list) stay two repository methods, per R2's
    * own instruction not to unify near-duplicate reads with different shapes.
+   * `state` is checked for TRUTHINESS, not `undefined` (Plan 3h Task 7
+   * review, M2): legacy's own gate (`doc-sync.controller.ts`, pre-R2) read
+   * `state ? <filtered> : <unfiltered>`, so `?state=` (an empty string)
+   * returns every item — an `=== undefined` check would instead filter on
+   * `state = ''`, which matches nothing.
    */
   async itemsForTrip(tripId: number, state?: string) {
-    return state === undefined ? this.items.listForTrip(tripId) : this.items.listForTripByState(tripId, state);
+    return state ? this.items.listForTripByState(tripId, state) : this.items.listForTrip(tripId);
   }
 
   /** Per-trip view for the UI: what is synced, what needs attention. */
