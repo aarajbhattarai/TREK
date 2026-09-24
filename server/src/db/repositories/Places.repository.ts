@@ -1260,29 +1260,22 @@ export class PlacesRepository extends TrekRepository<Places> {
   }
 }
 
+/** The `places` columns {@link PlacesRepository.listAssignedForPublicApi} selects, typed off {@link PlaceRow}. */
+type PublicApiPlaceColumns = Pick<
+  PlaceRow,
+  'name' | 'address' | 'lat' | 'lng' | 'place_time' | 'end_time' | 'duration_minutes' | 'notes' | 'transport_mode'
+>;
+
 /** {@link PlacesRepository.listAssignedForPublicApi}'s projection. */
-export interface PublicApiAssignedPlaceRow {
+export interface PublicApiAssignedPlaceRow extends PublicApiPlaceColumns {
   day_id: number;
-  name: string;
-  address: string | null;
-  lat: number | null;
-  lng: number | null;
-  place_time: string | null;
-  end_time: string | null;
-  duration_minutes: number | null;
-  notes: string | null;
-  transport_mode: string | null;
   category: string | null;
 }
 
 /** {@link PlacesRepository.listAssignedForPublicApi}'s narrow `day_assignments`/`places`/`categories` shape. */
 interface PublicApiAssignedPlacesKyselyDB {
   day_assignments: { day_id: number; place_id: number; accommodation_id: number | null; order_index: number | null };
-  places: {
-    id: number; trip_id: number; name: string; address: string | null; lat: number | null; lng: number | null;
-    place_time: string | null; end_time: string | null; duration_minutes: number | null; notes: string | null;
-    transport_mode: string | null; category_id: number | null;
-  };
+  places: PublicApiPlaceColumns & Pick<PlaceRow, 'id' | 'trip_id' | 'category_id'>;
   categories: { id: number; name: string };
 }
 

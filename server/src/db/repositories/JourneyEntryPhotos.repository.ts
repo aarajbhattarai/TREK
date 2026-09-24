@@ -1,5 +1,6 @@
 import type { JourneyPhoto } from '../../types';
 import type { JourneyEntryPhotos } from '../entities/JourneyEntryPhotos.entity';
+import type { JourneyPublicGalleryRow } from './JourneyShareTokens.repository';
 import { TrekRepository } from './_shared/trek-repository';
 
 /** The narrow `journey_entry_photos`/`journey_photos`/`trek_photos`/`journey_entries` shape the `JP_SELECT`/`JP_JOIN`-shaped reads need. */
@@ -41,29 +42,11 @@ const JP_COLUMNS = [
  * `JourneyShareTokens.repository.ts`'s own `JourneyPublicEntryPhotoRow` +
  * `listEntryPhotosForPublicJourney`, a fallback stub from 3g Task 3 (this
  * repository was still mid-flight when that task landed) — relocated here
- * now that it is stable.
+ * now that it is stable. Derived from the public gallery row it differs from
+ * only in the parent key (`entry_id` for `journey_id`), rather than restating
+ * the nineteen columns a second time.
  */
-export interface JourneyPublicEntryPhotoRow {
-  id: number;
-  entry_id: number;
-  photo_id: number;
-  caption: string | null;
-  sort_order: number | null;
-  shared: number;
-  created_at: number;
-  provider: string;
-  asset_id: string | null;
-  owner_id: number | null;
-  file_path: string | null;
-  thumbnail_path: string | null;
-  width: number | null;
-  height: number | null;
-  media_type: string | null;
-  duration_ms: number | null;
-  taken_at: string | null;
-  lat: number | null;
-  lng: number | null;
-}
+export type JourneyPublicEntryPhotoRow = Omit<JourneyPublicGalleryRow, 'journey_id'> & { entry_id: number };
 
 /**
  * `journey_entry_photos` — the entry↔gallery-photo junction (Plan 3g Task 2,
