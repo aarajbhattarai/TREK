@@ -18,15 +18,14 @@
  *   beforeEach(() => resetTestDb(testDb));
  *   afterAll(() => testDb.close());
  *
- * For unit suites that never boot the app, `createTestDb()` (this file) still
- * builds its own throwaway `:memory:` database via the legacy schema/migration
- * scripts.
+ * MikroORM's migrations are the only schema source, including for tests —
+ * `createSnapshotTestDb()` above is the one way any suite gets a schema; the
+ * legacy `createTestDb()` that built one by hand via `db/schema.ts` +
+ * `db/migrations.ts` is gone along with those two files (Plan 4 Task 6).
  */
 
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import type { INestApplication } from '@nestjs/common';
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
 import { AuthPublicController } from '../../src/nest/auth/auth-public.controller';
 import type { RateLimitService } from '../../src/nest/common/rate-limit.service';
 
@@ -35,12 +34,7 @@ import type { RateLimitService } from '../../src/nest/common/rate-limit.service'
 // file imports AuthPublicController (for resetRateLimits below), so a vi.mock
 // factory MUST import from db-mock.ts directly, never from here, or it
 // re-enters src/db/database while its own mock for that module is still being
-// built and captures the real one. Only buildDbMock/CAN_ACCESS_TRIP_SQL are
-// re-exported (the two a couple of unit suites use against their own
-// createTestDb()) — createSnapshotTestDb is deliberately NOT re-exported here,
-// so the re-entrant-import foot-gun above isn't reachable through this file at
-// all: nothing importing test-db.ts can accidentally build a vi.mock factory
-// that re-enters src/db/database.
+// built and captures the real one.
 export { CAN_ACCESS_TRIP_SQL, buildDbMock } from './db-mock';
 
 /**
@@ -142,21 +136,6 @@ function seedDefaults(db: Database.Database): void {
     const insertProvider = db.prepare('INSERT OR IGNORE INTO photo_providers (id, name, description, icon, enabled, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
     for (const p of DEFAULT_PHOTO_PROVIDERS) insertProvider.run(p.id, p.name, p.id, 'Image', p.enabled, 0);
   } catch { /* table may not exist in very old schemas */ }
-}
-
-/**
- * Creates a fresh in-memory SQLite database with the full schema and migrations applied.
- * Default categories and addons are seeded. No users are created.
- */
-export function createTestDb(): Database.Database {
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA busy_timeout = 5000');
-  db.exec('PRAGMA foreign_keys = ON');
-  createTables(db);
-  runMigrations(db);
-  seedDefaults(db);
-  return db;
 }
 
 /**
