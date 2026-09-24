@@ -76,4 +76,17 @@ export class SettingsRepository extends TrekRepository<Settings> {
   async upsertForUser(userId: number, key: string, value: string): Promise<void> {
     await this.upsert({ user: userId, key, value }, { onConflictFields: ['user', 'key'], onConflictAction: 'merge' });
   }
+
+  /**
+   * Plan 3j Task 2 — `plugin-runtime.service.ts#uninstall`'s `deleteData` branch
+   * (PR39): `` DELETE FROM settings WHERE key LIKE 'plugin:${id}:%' ``. No `user`
+   * filter — this deletes a plugin's settings across EVERY user, unlike every
+   * other method on this repository, which is why it takes a bare key-prefix
+   * `$like` pattern rather than the `(user, key)` shape the rest of the class
+   * uses. `prefix` is caller-built (`` `plugin:${id}:` ``) and bound as a plain
+   * parameter — never interpolated into SQL text.
+   */
+  async deleteByKeyPrefix(prefix: string): Promise<number> {
+    return await this.nativeDelete({ key: { $like: `${prefix}%` } });
+  }
 }

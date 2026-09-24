@@ -99,6 +99,21 @@ import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import { Users } from '../../../src/db/entities/Users.entity';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { PluginScheduledTasks } from '../../../src/db/entities/PluginScheduledTasks.entity';
+import { PluginUserErasureQueue } from '../../../src/db/entities/PluginUserErasureQueue.entity';
+import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.entity';
+import { PluginEntityMetadata } from '../../../src/db/entities/PluginEntityMetadata.entity';
+import { PluginOauthTokens } from '../../../src/db/entities/PluginOauthTokens.entity';
+import { PluginOauthState } from '../../../src/db/entities/PluginOauthState.entity';
+import { PluginMetaMigrations } from '../../../src/db/entities/PluginMetaMigrations.entity';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
+import { Settings } from '../../../src/db/entities/Settings.entity';
+import { NotificationChannelPreferences } from '../../../src/db/entities/NotificationChannelPreferences.entity';
 import type { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 
 const testDb = createSnapshotTestDb();
@@ -117,7 +132,32 @@ async function buildRuntime(registrar?: CronRegistrarService, orm?: TestOrm['orm
   const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
   const addons = await createTestAddonsService(testDb, dbs);
   const userSettings = new PluginUserSettingsService(dbs);
-  return new PluginRuntimeService(dbs, audit, addons, userSettings, undefined, undefined, undefined, orm, registrar);
+  return new PluginRuntimeService(
+    dbs,
+    audit,
+    addons,
+    userSettings,
+    t.repo(Plugins),
+    t.repo(PluginErrorLog),
+    t.repo(PluginScheduledTasks),
+    t.repo(PluginUserErasureQueue),
+    t.repo(PluginEgressHosts),
+    t.repo(PluginSettingsFields),
+    t.repo(PluginActions),
+    t.repo(PluginUserConfig),
+    t.repo(PluginEntityMetadata),
+    t.repo(PluginOauthTokens),
+    t.repo(PluginOauthState),
+    t.repo(PluginMetaMigrations),
+    t.repo(PluginCapabilityAudit),
+    t.repo(Settings),
+    t.repo(NotificationChannelPreferences),
+    undefined,
+    undefined,
+    undefined,
+    orm,
+    registrar,
+  );
 }
 
 beforeAll(async () => {

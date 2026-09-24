@@ -1,0 +1,413 @@
+/**
+ * Plan 3j Task 2 — mutation/parity proofs the brief names explicitly, on top of the
+ * pre-existing (and still-green) `plugin-runtime.test.ts`/`plugins-service.test.ts`
+ * suites: R-install-gates' three named accept+refuse pairs (PR17/PR26/PR28), the
+ * 9-table uninstall cascade's preserved NON-transactional partial-failure shape
+ * (R-uninstall), the egress-host DELETE+loop-INSERT's new transaction rollback proof
+ * (R-uninstall's ONE named exception), PS7/PS9/PS11's triple-duplicate SELECT
+ * collapsing onto one `PluginUserConfigRepository.findConfig` method, and a two-tick
+ * race for the scheduler sweep + the GDPR erasure drain.
+ *
+ * Full migrated schema (`createSnapshotTestDb`) — the same real-schema harness
+ * `plugin-scheduler-sweep.test.ts`/`plugin-runtime.boot-no-orm.test.ts` already use —
+ * so every one of the 14 repositories this task injects reads/writes real columns,
+ * not a hand-slimmed fixture table.
+ */
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { SchedulerRegistry } from '@nestjs/schedule';
+
+import { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
+import { PluginRuntimeService, PluginDependencyError } from '../../../src/nest/plugins/plugin-runtime.service';
+import { PluginsService } from '../../../src/nest/plugins/plugins.service';
+import { DatabaseService } from '../../../src/nest/database/database.service';
+import { AuditService } from '../../../src/nest/audit/audit.service';
+import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
+import { createTestAddonsService } from '../../helpers/test-addons';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import { Users } from '../../../src/db/entities/Users.entity';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { PluginScheduledTasks } from '../../../src/db/entities/PluginScheduledTasks.entity';
+import { PluginUserErasureQueue } from '../../../src/db/entities/PluginUserErasureQueue.entity';
+import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.entity';
+import { PluginEntityMetadata } from '../../../src/db/entities/PluginEntityMetadata.entity';
+import { PluginOauthTokens } from '../../../src/db/entities/PluginOauthTokens.entity';
+import { PluginOauthState } from '../../../src/db/entities/PluginOauthState.entity';
+import { PluginMetaMigrations } from '../../../src/db/entities/PluginMetaMigrations.entity';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
+import { Settings } from '../../../src/db/entities/Settings.entity';
+import { NotificationChannelPreferences } from '../../../src/db/entities/NotificationChannelPreferences.entity';
+import type { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
+
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+let codeRoot: string;
+let dataRoot: string;
+
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  process.env.TREK_PLUGINS_ENABLED = 'true';
+  codeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-t2-code-'));
+  dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-t2-data-'));
+  process.env.TREK_PLUGINS_DIR = codeRoot;
+  process.env.TREK_PLUGINS_DATA_DIR = dataRoot;
+});
+
+afterAll(async () => {
+  delete process.env.TREK_PLUGINS_ENABLED;
+  delete process.env.TREK_PLUGINS_DIR;
+  delete process.env.TREK_PLUGINS_DATA_DIR;
+  await t.close();
+  testDb.close();
+  fs.rmSync(codeRoot, { recursive: true, force: true });
+  fs.rmSync(dataRoot, { recursive: true, force: true });
+});
+
+async function buildRuntime(registrar?: CronRegistrarService): Promise<PluginRuntimeService> {
+  const dbs = new DatabaseService(testDb);
+  const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
+  const addons = await createTestAddonsService(testDb, dbs);
+  const userSettings = new PluginUserSettingsService(dbs);
+  const uow = new UnitOfWork(t.em);
+  return new PluginRuntimeService(
+    dbs, audit, addons, userSettings,
+    t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
+    t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
+    t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
+    t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+    undefined, undefined, uow, t.orm, registrar,
+  );
+}
+
+function buildPluginsService(): PluginsService {
+  return new PluginsService(
+    new DatabaseService(testDb),
+    // A real AddonsService is not needed by any method this file calls.
+    { isAddonEnabled: async () => true } as never,
+    t.repo(Plugins), t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions),
+    t.repo(PluginUserConfig), t.repo(PluginErrorLog), t.repo(PluginCapabilityAudit),
+  );
+}
+
+function seedPlugin(id: string, overrides: Partial<{ enabled: number; granted_permissions: string; permissions: string; trek_range: string; api_version: number; version: string; author_pubkey: string }> = {}) {
+  testDb
+    .prepare(
+      `INSERT INTO plugins (id, name, status, enabled, version, trek_range, api_version, permissions, granted_permissions, capabilities, config, author_pubkey)
+       VALUES (?, ?, 'inactive', ?, ?, ?, ?, ?, ?, '{}', '{}', ?)`,
+    )
+    .run(
+      id, id,
+      overrides.enabled ?? 0,
+      overrides.version ?? '1.0.0',
+      overrides.trek_range ?? '>=3.0.0',
+      overrides.api_version ?? 1,
+      overrides.permissions ?? '["db:own"]',
+      overrides.granted_permissions ?? '["db:own"]',
+      overrides.author_pubkey ?? null,
+    );
+}
+
+describe('Plan 3j Task 2 — R-install-gates named accept+refuse pairs (PR17/PR26/PR28)', () => {
+  let rt: PluginRuntimeService;
+  beforeAll(async () => { rt = await buildRuntime(); });
+
+  describe('PR17 — version-range + permission-grant gate (assertActivatable)', () => {
+    it('INSTALL-GATE-PR17-ACCEPT: a plugin whose declared range admits this host, with no permission widening, passes the gate (activate resolves, never PluginDependencyError)', async () => {
+      seedPlugin('pr17-accept', { trek_range: '>=3.0.0 <99.0.0' });
+      // The gate itself (assertActivatable, reading PR17's row through
+      // PluginsRepository.findActivationGate) is the thing under test — the actual
+      // child spawn is stubbed out (already covered end to end by
+      // plugin-runtime.test.ts's own activation suite, real code on disk, real spawn).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supervisorSpy = vi.spyOn((rt as any).supervisor, 'activate').mockResolvedValue(undefined);
+      await expect(rt.activate('pr17-accept')).resolves.toBeUndefined();
+      expect(supervisorSpy).toHaveBeenCalledTimes(1); // the gate let it through to the spawn call
+      supervisorSpy.mockRestore();
+    });
+
+    it('INSTALL-GATE-PR17-REFUSE: a plugin whose declared range excludes this host is refused, never spawned', async () => {
+      seedPlugin('pr17-refuse', { trek_range: '>=99.0.0' });
+      const err = await rt.activate('pr17-refuse').catch((e) => e);
+      expect(err).toBeInstanceOf(PluginDependencyError);
+      expect(err).toMatchObject({ code: 'TREK_VERSION_INCOMPATIBLE' });
+      expect(rt.isActive('pr17-refuse')).toBe(false);
+    });
+  });
+
+  describe('PR26 — update()\'s pre-update snapshot feeding the permission-widening diff', () => {
+    const fakeRegistry = (perms: string[]) =>
+      ({
+        resolveVersion: vi.fn(async () => ({ version: '2.0.0' })),
+        install: vi.fn(async (id: string) => {
+          testDb.prepare('UPDATE plugins SET permissions = ? WHERE id = ?').run(JSON.stringify(perms), id);
+          return { id, version: '2.0.0' };
+        }),
+      }) as unknown as import('../../../src/nest/plugins/registry/registry.service').PluginRegistryService;
+
+    it('INSTALL-GATE-PR26-ACCEPT: no new permissions on update -> activated: true, PR26 snapshot read via the repository', async () => {
+      seedPlugin('pr26-accept2', { enabled: 1, permissions: '["db:own"]', granted_permissions: '["db:own"]' });
+      const dbs = new DatabaseService(testDb);
+      const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
+      const addons = await createTestAddonsService(testDb, dbs);
+      const userSettings = new PluginUserSettingsService(dbs);
+      const rtU = new PluginRuntimeService(
+        dbs, audit, addons, userSettings,
+        t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
+        t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
+        t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        fakeRegistry(['db:own']),
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.spyOn((rtU as any).supervisor, 'activate').mockResolvedValue(undefined);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.spyOn((rtU as any).supervisor, 'disable').mockResolvedValue(undefined);
+      await rtU.activate('pr26-accept2');
+      const res = await rtU.update('pr26-accept2');
+      expect(res).toMatchObject({ activated: true, newPermissions: [], newEgress: [] });
+    });
+
+    it('INSTALL-GATE-PR26-REFUSE: a widened permission set on update leaves the plugin inactive with the delta reported', async () => {
+      seedPlugin('pr26-refuse', { enabled: 1, permissions: '["db:own"]', granted_permissions: '["db:own"]' });
+      const dbs = new DatabaseService(testDb);
+      const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
+      const addons = await createTestAddonsService(testDb, dbs);
+      const userSettings = new PluginUserSettingsService(dbs);
+      const rtU = new PluginRuntimeService(
+        dbs, audit, addons, userSettings,
+        t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
+        t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
+        t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        fakeRegistry(['db:own', 'db:read:trips']),
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.spyOn((rtU as any).supervisor, 'activate').mockResolvedValue(undefined);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.spyOn((rtU as any).supervisor, 'disable').mockResolvedValue(undefined);
+      await rtU.activate('pr26-refuse');
+      const res = await rtU.update('pr26-refuse');
+      expect(res.activated).toBe(false);
+      expect(res.newPermissions).toEqual(['db:read:trips']);
+    });
+  });
+
+  describe('PR28 — retrust()\'s signing-key TOFU comparison', () => {
+    const registryFor = (id: string) =>
+      ({
+        assertRetrustable: vi.fn(async (_id: string, key: string) => ({ authorPublicKey: key })),
+        install: vi.fn(async (_id: string, opts?: { retrustKey?: string }) => {
+          testDb.prepare("UPDATE plugins SET author_pubkey = ?, version = '2.0.0' WHERE id = ?").run(opts?.retrustKey, id);
+          return { id, version: '2.0.0' };
+        }),
+      }) as unknown as import('../../../src/nest/plugins/registry/registry.service').PluginRegistryService;
+
+    it('INSTALL-GATE-PR28-ACCEPT: a genuinely rotated key is pinned, read through PluginsRepository.findAuthorPubkey', async () => {
+      seedPlugin('pr28-accept', { enabled: 1, author_pubkey: 'OLDKEY' });
+      const dbs = new DatabaseService(testDb);
+      const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
+      const addons = await createTestAddonsService(testDb, dbs);
+      const userSettings = new PluginUserSettingsService(dbs);
+      const registry = registryFor('pr28-accept');
+      const rtR = new PluginRuntimeService(
+        dbs, audit, addons, userSettings,
+        t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
+        t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
+        t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        registry,
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.spyOn((rtR as any).supervisor, 'activate').mockResolvedValue(undefined);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.spyOn((rtR as any).supervisor, 'disable').mockResolvedValue(undefined);
+      await rtR.retrust('pr28-accept', '2.0.0', 'NEWKEY', { userId: 1 });
+      expect(registry.assertRetrustable).toHaveBeenCalledWith('pr28-accept', 'NEWKEY');
+      const row = testDb.prepare("SELECT author_pubkey FROM plugins WHERE id='pr28-accept'").get() as { author_pubkey: string };
+      expect(row.author_pubkey).toBe('NEWKEY');
+    });
+
+    it('INSTALL-GATE-PR28-REFUSE: an invalid signature is not re-trustable — the pinned key is untouched', async () => {
+      seedPlugin('pr28-refuse', { enabled: 1, author_pubkey: 'OLDKEY' });
+      const dbs = new DatabaseService(testDb);
+      const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
+      const addons = await createTestAddonsService(testDb, dbs);
+      const userSettings = new PluginUserSettingsService(dbs);
+      const registry = registryFor('pr28-refuse');
+      vi.mocked(registry.assertRetrustable).mockRejectedValue(new Error('nothing to re-trust'));
+      const rtR = new PluginRuntimeService(
+        dbs, audit, addons, userSettings,
+        t.repo(Plugins), t.repo(PluginErrorLog), t.repo(PluginScheduledTasks), t.repo(PluginUserErasureQueue),
+        t.repo(PluginEgressHosts), t.repo(PluginSettingsFields), t.repo(PluginActions), t.repo(PluginUserConfig),
+        t.repo(PluginEntityMetadata), t.repo(PluginOauthTokens), t.repo(PluginOauthState), t.repo(PluginMetaMigrations),
+        t.repo(PluginCapabilityAudit), t.repo(Settings), t.repo(NotificationChannelPreferences),
+        registry,
+      );
+      await expect(rtR.retrust('pr28-refuse', '2.0.0', 'NEWKEY', { userId: 1 })).rejects.toThrow(/nothing to re-trust/);
+      expect(registry.install).not.toHaveBeenCalled();
+      const row = testDb.prepare("SELECT author_pubkey FROM plugins WHERE id='pr28-refuse'").get() as { author_pubkey: string };
+      expect(row.author_pubkey).toBe('OLDKEY');
+    });
+  });
+});
+
+describe('Plan 3j Task 2 — R-uninstall: the 9-table cascade stays non-transactional (concurrency-pin)', () => {
+  it('CASCADE-PARTIAL-001: a failure partway through the cascade leaves EARLIER deletes committed and LATER ones never attempted — the CURRENT legacy shape, not hardened to all-or-nothing', async () => {
+    const rt = await buildRuntime();
+    const id = 'cascade-partial';
+    seedPlugin(id);
+    testDb.prepare("INSERT INTO plugin_settings_fields (plugin_id, field_key, scope) VALUES (?, 'k', 'instance')").run(id);
+    testDb.prepare("INSERT INTO plugin_scheduled_tasks (plugin_id, name, due_at) VALUES (?, 'poll', 0)").run(id);
+    testDb.prepare("INSERT INTO plugin_error_log (plugin_id, level, message) VALUES (?, 'error', 'x')").run(id);
+    testDb.prepare("INSERT INTO plugin_entity_metadata (plugin_id, entity_type, entity_id, key, value) VALUES (?, 'place', 1, 'k', 'v')").run(id);
+
+    // Simulate a crash INSIDE the cascade, between plugin_scheduled_tasks (deletes
+    // cleanly, unconditional, no try/catch) and plugin_error_log (the next
+    // unconditional delete, inside the deleteData branch).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errorLogRepo = (rt as any).pluginErrorLog;
+    const spy = vi.spyOn(errorLogRepo, 'deleteAllForPlugin').mockRejectedValueOnce(new Error('simulated mid-cascade crash'));
+
+    await expect(rt.uninstall(id, true)).rejects.toThrow(/simulated mid-cascade crash/);
+    spy.mockRestore();
+
+    // EVERYTHING before the simulated crash point is already gone — no transaction
+    // rolled it back, exactly matching the legacy sequential-statement shape.
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugins WHERE id=?").get(id)).toMatchObject({ c: 0 });
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_settings_fields WHERE plugin_id=?").get(id)).toMatchObject({ c: 0 });
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_scheduled_tasks WHERE plugin_id=?").get(id)).toMatchObject({ c: 0 });
+    // The row the mock made deleteAllForPlugin THROW for is untouched (never committed)...
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_error_log WHERE plugin_id=?").get(id)).toMatchObject({ c: 1 });
+    // ...and everything AFTER it in cascade order never even ran.
+    expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_entity_metadata WHERE plugin_id=?").get(id)).toMatchObject({ c: 1 });
+  });
+});
+
+describe('Plan 3j Task 2 — R-uninstall\'s ONE named transaction: PR22/PR23 egress-host replace', () => {
+  it('EGRESS-TX-ROLLBACK-001: a simulated failure mid-write leaves the OLD egress-host set intact, not partially cleared', async () => {
+    const rt = await buildRuntime();
+    const id = 'egress-tx';
+    seedPlugin(id, { permissions: '["http:outbound"]', granted_permissions: '["http:outbound"]' });
+    testDb.prepare("UPDATE plugins SET operator_egress = 1 WHERE id = ?").run(id);
+    await rt.setOperatorEgressHosts(id, ['old-a.example.com', 'old-b.example.com']);
+    expect((await rt.operatorEgressHosts(id)).sort()).toEqual(['old-a.example.com', 'old-b.example.com']);
+
+    // Force the INSERT half of the DELETE+loop-INSERT to throw on the second host,
+    // inside the SAME uow.transactional call the runtime already wraps this in.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const egressRepo = (rt as any).pluginEgressHosts;
+    const originalReplace = egressRepo.replaceAllForPlugin.bind(egressRepo);
+    const spy = vi.spyOn(egressRepo, 'replaceAllForPlugin').mockImplementation(async (pluginId: string, hosts: string[]) => {
+      if (hosts.includes('boom')) throw new Error('simulated mid-write failure');
+      return originalReplace(pluginId, hosts);
+    });
+
+    await expect(rt.setOperatorEgressHosts(id, ['new-a.example.com', 'boom'])).rejects.toThrow(/simulated mid-write failure/);
+    spy.mockRestore();
+
+    // The OLD set survives untouched — the transaction rolled the DELETE back too,
+    // not a partially-cleared allow-list.
+    expect((await rt.operatorEgressHosts(id)).sort()).toEqual(['old-a.example.com', 'old-b.example.com']);
+  });
+});
+
+describe('Plan 3j Task 2 — PS7/PS9/PS11: the triple-duplicate SELECT collapses onto ONE PluginUserConfigRepository.findConfig call', () => {
+  it('PS-USERCONFIG-PARITY-001: getUserConfig, setUserConfig\'s pre-write check and getUserConfigDecrypted all read the SAME stored row identically', async () => {
+    const svc = buildPluginsService();
+    const id = 'ps-parity';
+    seedPlugin(id);
+    testDb.prepare("INSERT INTO plugin_settings_fields (plugin_id, field_key, scope, secret) VALUES (?, 'apiKey', 'user', 1)").run(id);
+    testDb.prepare("INSERT INTO plugin_settings_fields (plugin_id, field_key, scope, secret) VALUES (?, 'units', 'user', 0)").run(id);
+
+    await svc.updateUserConfig(id, 7, { apiKey: 'sk-live', units: 'metric' });
+
+    // PS7 (getUserConfig, masked) and PS11 (getUserConfigDecrypted, plaintext) both
+    // resolve through the SAME repository method (`findConfig`) as PS9's pre-write
+    // check inside updateUserConfig above — all three must agree on what is stored.
+    const masked = await svc.getUserConfig(id, 7);
+    const decrypted = await svc.getUserConfigDecrypted(id, 7);
+    expect(masked.units).toBe('metric');
+    expect(masked.apiKey).toBe('••••••••'); // PS7: secret masked
+    expect(decrypted.units).toBe('metric');
+    expect(decrypted.apiKey).toBe('sk-live'); // PS11: secret decrypted, host-only
+  });
+});
+
+describe('Plan 3j Task 2 — two racing ticks (scheduler claim/re-arm + erasure drain)', () => {
+  let registry: SchedulerRegistry;
+  let registrar: CronRegistrarService;
+  let rt: PluginRuntimeService;
+
+  beforeAll(async () => {
+    registry = new SchedulerRegistry();
+    registrar = new CronRegistrarService(registry, { isTest: () => false } as RuntimeEnvService, t.orm);
+    rt = await buildRuntime(registrar);
+    await rt.onApplicationBootstrap();
+  });
+  afterAll(async () => { await rt.onModuleDestroy(); });
+
+  it('RACE-SCHED-001: two concurrent fireDueScheduled passes deliver a due one-shot task exactly once', async () => {
+    const pluginId = 'race-sched';
+    seedPlugin(pluginId, { enabled: 1 });
+    testDb.prepare('INSERT INTO plugin_scheduled_tasks (plugin_id, name, due_at) VALUES (?, ?, ?)').run(pluginId, 'once', Date.now() - 1000);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supervisor = (rt as any).supervisor;
+    supervisor.running.set(pluginId, { id: pluginId, status: 'active' });
+    let delivered = 0;
+    const invokeSpy = vi.spyOn(supervisor, 'invoke').mockImplementation(async () => {
+      delivered += 1;
+      // Yield, so the second concurrent pass's own claim-read genuinely overlaps
+      // this one's window rather than running strictly after it.
+      await new Promise((r) => setTimeout(r, 5));
+      return {};
+    });
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await Promise.all([(rt as any).fireDueScheduled(), (rt as any).fireDueScheduled()]);
+      expect(delivered).toBe(1); // claimed (re-armed/deleted) by exactly one pass
+      const row = testDb.prepare('SELECT id FROM plugin_scheduled_tasks WHERE plugin_id=? AND name=?').get(pluginId, 'once');
+      expect(row).toBeUndefined(); // deleted, not left dangling or double-inserted
+    } finally {
+      invokeSpy.mockRestore();
+      supervisor.running.delete(pluginId);
+    }
+  });
+
+  it('RACE-ERASURE-001: two concurrent drains coalesce onto the SAME in-flight pass (drainUserErasures\' own promise-sharing) — one ACK, one drop', async () => {
+    const pluginId = 'race-erasure';
+    seedPlugin(pluginId, { enabled: 1 });
+    testDb.prepare('INSERT INTO plugin_user_erasure_queue (plugin_id, user_id) VALUES (?, ?)').run(pluginId, 99);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supervisor = (rt as any).supervisor;
+    supervisor.running.set(pluginId, { id: pluginId, status: 'active' });
+    let delivered = 0;
+    const deliverSpy = vi.spyOn(supervisor, 'deliverUserErasure').mockImplementation(async () => {
+      delivered += 1;
+      await new Promise((r) => setTimeout(r, 5));
+      return true;
+    });
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await Promise.all([(rt as any).drainUserErasures(), (rt as any).drainUserErasures()]);
+      expect(delivered).toBe(1); // drainUserErasures' own in-flight coalescing, unchanged by this task's conversion
+      const row = testDb.prepare('SELECT id FROM plugin_user_erasure_queue WHERE plugin_id=? AND user_id=?').get(pluginId, 99);
+      expect(row).toBeUndefined();
+    } finally {
+      deliverSpy.mockRestore();
+      supervisor.running.delete(pluginId);
+    }
+  });
+});

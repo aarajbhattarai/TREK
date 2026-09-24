@@ -22,6 +22,30 @@ import { createTestAddonsService } from '../../helpers/test-addons';
 import Database from 'better-sqlite3';
 import { PluginsService } from '../../../src/nest/plugins/plugins.service';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
+import { sharedTestOrm } from '../../helpers/test-uow';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.entity';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
+
+/** Plan 3j Task 2 — PluginsService's own six repositories, over whichever fresh `getDb.current` the caller just set. */
+async function makePluginsService(dbs: DatabaseService): Promise<PluginsService> {
+  const orm = await sharedTestOrm(getDb.current as Database.Database);
+  return new PluginsService(
+    dbs,
+    await createTestAddonsService(getDb.current as Database.Database, dbs),
+    orm.repo(Plugins),
+    orm.repo(PluginEgressHosts),
+    orm.repo(PluginSettingsFields),
+    orm.repo(PluginActions),
+    orm.repo(PluginUserConfig),
+    orm.repo(PluginErrorLog),
+    orm.repo(PluginCapabilityAudit),
+  );
+}
 /** The host-side settings reads, over the same connection the test seeded. */
 const userSettings = () => new PluginUserSettingsService(new DatabaseService(dbConn));
 
@@ -46,7 +70,7 @@ describe('per-user plugin settings', () => {
   beforeEach(async () => {
     getDb.current = freshDb();
     const dbs = new DatabaseService(dbConn);
-    svc = new PluginsService(dbs, await createTestAddonsService(getDb.current as Database.Database, dbs));
+    svc = await makePluginsService(dbs);
   });
 
   it('lists only the user-scope fields, in order', async () => {
@@ -98,7 +122,7 @@ describe('manifest defaults reach the runtime reads', () => {
   beforeEach(async () => {
     getDb.current = freshDb();
     const dbs = new DatabaseService(dbConn);
-    svc = new PluginsService(dbs, await createTestAddonsService(getDb.current as Database.Database, dbs));
+    svc = await makePluginsService(dbs);
     const ins = (getDb.current as import('better-sqlite3').Database).prepare(
       'INSERT INTO plugin_settings_fields (plugin_id, field_key, input_type, required, secret, scope, sort_order, default_value) VALUES (?,?,?,?,?,?,?,?)',
     );
@@ -141,7 +165,7 @@ describe('hasRequired applies the same "filled" rule as the save gate', () => {
   beforeEach(async () => {
     getDb.current = freshDb();
     const dbs = new DatabaseService(dbConn);
-    svc = new PluginsService(dbs, await createTestAddonsService(getDb.current as Database.Database, dbs));
+    svc = await makePluginsService(dbs);
     (getDb.current as import('better-sqlite3').Database)
       .prepare('INSERT INTO plugin_settings_fields (plugin_id, field_key, input_type, required, secret, scope, sort_order) VALUES (?,?,?,?,?,?,?)')
       .run('p', 'consent', 'checkbox', 1, 0, 'user', 9);

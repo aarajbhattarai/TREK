@@ -22,6 +22,21 @@ import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import { Users } from '../../../src/db/entities/Users.entity';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { PluginScheduledTasks } from '../../../src/db/entities/PluginScheduledTasks.entity';
+import { PluginUserErasureQueue } from '../../../src/db/entities/PluginUserErasureQueue.entity';
+import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.entity';
+import { PluginEntityMetadata } from '../../../src/db/entities/PluginEntityMetadata.entity';
+import { PluginOauthTokens } from '../../../src/db/entities/PluginOauthTokens.entity';
+import { PluginOauthState } from '../../../src/db/entities/PluginOauthState.entity';
+import { PluginMetaMigrations } from '../../../src/db/entities/PluginMetaMigrations.entity';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
+import { Settings } from '../../../src/db/entities/Settings.entity';
+import { NotificationChannelPreferences } from '../../../src/db/entities/NotificationChannelPreferences.entity';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -50,21 +65,50 @@ async function buildRuntime(withOrm: boolean): Promise<PluginRuntimeService> {
   const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
   const addons = await createTestAddonsService(testDb, dbs);
   const userSettings = new PluginUserSettingsService(dbs);
-  return new PluginRuntimeService(dbs, audit, addons, userSettings, undefined, undefined, undefined, withOrm ? t.orm : undefined);
+  return new PluginRuntimeService(
+    dbs,
+    audit,
+    addons,
+    userSettings,
+    t.repo(Plugins),
+    t.repo(PluginErrorLog),
+    t.repo(PluginScheduledTasks),
+    t.repo(PluginUserErasureQueue),
+    t.repo(PluginEgressHosts),
+    t.repo(PluginSettingsFields),
+    t.repo(PluginActions),
+    t.repo(PluginUserConfig),
+    t.repo(PluginEntityMetadata),
+    t.repo(PluginOauthTokens),
+    t.repo(PluginOauthState),
+    t.repo(PluginMetaMigrations),
+    t.repo(PluginCapabilityAudit),
+    t.repo(Settings),
+    t.repo(NotificationChannelPreferences),
+    undefined,
+    undefined,
+    undefined,
+    withOrm ? t.orm : undefined,
+  );
 }
 
 describe('PluginRuntimeService.onApplicationBootstrap — absent-ORM boot branch (task-6-rereview2.md I-A)', () => {
-  it('RT-BOOT-NOORM-001: without an ORM, boot logs the skip line naming the plugin id and never calls activate', async () => {
+  it('RT-BOOT-NOORM-001: without an ORM, boot logs the skip line and never calls activate', async () => {
     installEnabledPlugin('rtboot-noorm');
     const rt = await buildRuntime(false);
     const activateSpy = vi.spyOn(rt, 'activate');
 
     await rt.onApplicationBootstrap();
 
+    // Plan 3j Task 2 (deviation, task-2-report.md): `installedDepRows` is now a
+    // repository read that needs a request context this branch cannot provide, so
+    // it is skipped rather than attempted unwrapped — the log line can no longer
+    // name which plugin(s) it skipped, only that it skipped activation entirely.
+    // Still fail-closed (never throws out of onApplicationBootstrap, never abandons
+    // app.init()), still logged exactly once, still never calls activate.
     expect(logMock.logError).toHaveBeenCalledTimes(1);
     const [message] = logMock.logError.mock.calls[0] as [string];
     expect(message).toMatch(/PluginRuntimeService\.onApplicationBootstrap: no MikroORM available/);
-    expect(message).toContain('rtboot-noorm');
     expect(activateSpy).not.toHaveBeenCalled();
   });
 

@@ -34,6 +34,21 @@ import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { discoverPlugins } from '../../../src/nest/plugins/install/discovery';
+import { sharedTestOrm } from '../../helpers/test-uow';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.entity';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
+import type { PluginsRepository } from '../../../src/db/repositories/Plugins.repository';
+import type { PluginEgressHostsRepository } from '../../../src/db/repositories/PluginEgressHosts.repository';
+import type { PluginSettingsFieldsRepository } from '../../../src/db/repositories/PluginSettingsFields.repository';
+import type { PluginActionsRepository } from '../../../src/db/repositories/PluginActions.repository';
+import type { PluginUserConfigRepository } from '../../../src/db/repositories/PluginUserConfig.repository';
+import type { PluginErrorLogRepository } from '../../../src/db/repositories/PluginErrorLog.repository';
+import type { PluginCapabilityAuditRepository } from '../../../src/db/repositories/PluginCapabilityAudit.repository';
 
 function install(id: string) {
   testDb
@@ -54,7 +69,28 @@ function declareField(pluginId: string, key: string, scope: 'instance' | 'user',
 }
 
 let addonsService: AddonsService;
-const svc = () => new PluginsService(new DatabaseService(dbConn), addonsService);
+// Plan 3j Task 2 — PluginsService's own six repositories, resolved ONCE in `beforeAll`
+// (the file's `testDb` is fixed for the whole suite) so `svc()` below can stay a plain
+// synchronous factory — every one of its ~20 call sites below chains straight off it.
+let pluginsRepo: PluginsRepository;
+let pluginEgressHostsRepo: PluginEgressHostsRepository;
+let pluginSettingsFieldsRepo: PluginSettingsFieldsRepository;
+let pluginActionsRepo: PluginActionsRepository;
+let pluginUserConfigRepo: PluginUserConfigRepository;
+let pluginErrorLogRepo: PluginErrorLogRepository;
+let pluginCapabilityAuditRepo: PluginCapabilityAuditRepository;
+const svc = () =>
+  new PluginsService(
+    new DatabaseService(dbConn),
+    addonsService,
+    pluginsRepo,
+    pluginEgressHostsRepo,
+    pluginSettingsFieldsRepo,
+    pluginActionsRepo,
+    pluginUserConfigRepo,
+    pluginErrorLogRepo,
+    pluginCapabilityAuditRepo,
+  );
 
 /**
  * Installs a real plugin through the manifest -> discovery pipeline (not a direct
@@ -77,6 +113,14 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   addonsService = await createTestAddonsService(testDb, new DatabaseService(dbConn));
+  const orm = await sharedTestOrm(dbConn);
+  pluginsRepo = orm.repo(Plugins);
+  pluginEgressHostsRepo = orm.repo(PluginEgressHosts);
+  pluginSettingsFieldsRepo = orm.repo(PluginSettingsFields);
+  pluginActionsRepo = orm.repo(PluginActions);
+  pluginUserConfigRepo = orm.repo(PluginUserConfig);
+  pluginErrorLogRepo = orm.repo(PluginErrorLog);
+  pluginCapabilityAuditRepo = orm.repo(PluginCapabilityAudit);
 });
 beforeEach(() => {
   testDb.prepare('DELETE FROM plugins').run();

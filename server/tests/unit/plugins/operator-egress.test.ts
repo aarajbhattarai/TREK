@@ -31,6 +31,14 @@ import { createPluginRuntime } from '../../helpers/plugin-host';
 import { parseManifest, ManifestError } from '../../../src/nest/plugins/install/manifest';
 import { makeHostAllow } from '../../../src/nest/plugins/runtime/egress-policy';
 import { createTestAddonsService } from '../../helpers/test-addons';
+import { sharedTestOrm } from '../../helpers/test-uow';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.entity';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
 
 function install(id: string, operatorEgress: boolean, perms: string[] = ['http:outbound:gotify.net']) {
   testDb.prepare(
@@ -174,7 +182,19 @@ describe('the admin list surfaces operator egress (so the chip can be shown)', (
     // one over the same DB. These fixtures declare no dependencies, so it is never consulted.
     const listPlugins = async () => {
       const dbs = new DatabaseService(dbConn);
-      return (await new PluginsService(dbs, await createTestAddonsService(testDb, dbs)).list()).plugins;
+      const orm = await sharedTestOrm(dbConn);
+      const service = new PluginsService(
+        dbs,
+        await createTestAddonsService(testDb, dbs),
+        orm.repo(Plugins),
+        orm.repo(PluginEgressHosts),
+        orm.repo(PluginSettingsFields),
+        orm.repo(PluginActions),
+        orm.repo(PluginUserConfig),
+        orm.repo(PluginErrorLog),
+        orm.repo(PluginCapabilityAudit),
+      );
+      return (await service.list()).plugins;
     };
 
     const before = await listPlugins();

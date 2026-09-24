@@ -32,7 +32,7 @@ const { testDb } = vi.hoisted(() => {
     trek_range TEXT DEFAULT '>=3.0.0',
     source_repo TEXT, author_pubkey TEXT, update_block_code TEXT, update_block_detail TEXT, update_block_version TEXT);
     CREATE TABLE plugin_error_log (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, level TEXT, message TEXT, ts TEXT);
-    CREATE TABLE plugin_settings_fields (plugin_id TEXT, field_key TEXT, scope TEXT, secret INTEGER, default_value TEXT);
+    CREATE TABLE plugin_settings_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, field_key TEXT, scope TEXT, secret INTEGER, default_value TEXT);
     CREATE TABLE settings (user_id INTEGER, key TEXT, value TEXT);
     CREATE TABLE plugin_entity_metadata (id INTEGER PRIMARY KEY AUTOINCREMENT, plugin_id TEXT, entity_type TEXT, entity_id INTEGER, key TEXT, value TEXT, updated_at TEXT);
     CREATE TABLE plugin_user_config (plugin_id TEXT, user_id INTEGER, field_key TEXT, value TEXT, PRIMARY KEY (plugin_id, user_id, field_key));
@@ -67,6 +67,21 @@ import { DbRpc } from '../../../src/nest/plugins/host/rpc/db.rpc';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import { Users } from '../../../src/db/entities/Users.entity';
+import { Plugins } from '../../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../../src/db/entities/PluginErrorLog.entity';
+import { PluginScheduledTasks } from '../../../src/db/entities/PluginScheduledTasks.entity';
+import { PluginUserErasureQueue } from '../../../src/db/entities/PluginUserErasureQueue.entity';
+import { PluginEgressHosts } from '../../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../../src/db/entities/PluginUserConfig.entity';
+import { PluginEntityMetadata } from '../../../src/db/entities/PluginEntityMetadata.entity';
+import { PluginOauthTokens } from '../../../src/db/entities/PluginOauthTokens.entity';
+import { PluginOauthState } from '../../../src/db/entities/PluginOauthState.entity';
+import { PluginMetaMigrations } from '../../../src/db/entities/PluginMetaMigrations.entity';
+import { PluginCapabilityAudit } from '../../../src/db/entities/PluginCapabilityAudit.entity';
+import { Settings } from '../../../src/db/entities/Settings.entity';
+import { NotificationChannelPreferences } from '../../../src/db/entities/NotificationChannelPreferences.entity';
 
 let codeRoot: string;
 let dataRoot: string;
@@ -131,7 +146,32 @@ describe('plugin boot vs registry scan ordering', () => {
           // onLoad) when resolveOrm returns undefined, instead of running it
           // unwrapped, so this hand-built double needs the same real ORM the
           // repositories above (auditLogRepo/usersRepo) already share.
-          useFactory: () => new PluginRuntimeService(dbs, new AuditService(auditLogRepo, usersRepo), addonsService, userSettings, undefined, hostFactory, undefined, t?.orm),
+          useFactory: () =>
+            new PluginRuntimeService(
+              dbs,
+              new AuditService(auditLogRepo, usersRepo),
+              addonsService,
+              userSettings,
+              (t as TestOrm).repo(Plugins),
+              (t as TestOrm).repo(PluginErrorLog),
+              (t as TestOrm).repo(PluginScheduledTasks),
+              (t as TestOrm).repo(PluginUserErasureQueue),
+              (t as TestOrm).repo(PluginEgressHosts),
+              (t as TestOrm).repo(PluginSettingsFields),
+              (t as TestOrm).repo(PluginActions),
+              (t as TestOrm).repo(PluginUserConfig),
+              (t as TestOrm).repo(PluginEntityMetadata),
+              (t as TestOrm).repo(PluginOauthTokens),
+              (t as TestOrm).repo(PluginOauthState),
+              (t as TestOrm).repo(PluginMetaMigrations),
+              (t as TestOrm).repo(PluginCapabilityAudit),
+              (t as TestOrm).repo(Settings),
+              (t as TestOrm).repo(NotificationChannelPreferences),
+              undefined,
+              hostFactory,
+              undefined,
+              t?.orm,
+            ),
         },
         {
           provide: 'REGISTRY_SCAN',
@@ -220,7 +260,31 @@ describe('plugin boot vs registry scan ordering', () => {
           {
             provide: PluginRuntimeService,
             useFactory: () =>
-              new PluginRuntimeService(dbs2, new AuditService(auditLogRepo2, usersRepo2), addonsService2, userSettings2, undefined, hostFactory2, undefined, t2.orm),
+              new PluginRuntimeService(
+                dbs2,
+                new AuditService(auditLogRepo2, usersRepo2),
+                addonsService2,
+                userSettings2,
+                t2.repo(Plugins),
+                t2.repo(PluginErrorLog),
+                t2.repo(PluginScheduledTasks),
+                t2.repo(PluginUserErasureQueue),
+                t2.repo(PluginEgressHosts),
+                t2.repo(PluginSettingsFields),
+                t2.repo(PluginActions),
+                t2.repo(PluginUserConfig),
+                t2.repo(PluginEntityMetadata),
+                t2.repo(PluginOauthTokens),
+                t2.repo(PluginOauthState),
+                t2.repo(PluginMetaMigrations),
+                t2.repo(PluginCapabilityAudit),
+                t2.repo(Settings),
+                t2.repo(NotificationChannelPreferences),
+                undefined,
+                hostFactory2,
+                undefined,
+                t2.orm,
+              ),
           },
         ],
       }).compile();

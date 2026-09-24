@@ -56,4 +56,16 @@ export class NotificationChannelPreferencesRepository extends TrekRepository<Not
   async deletePreference(userId: number, eventType: string, channel: string): Promise<number> {
     return await this.nativeDelete({ user: userId, event_type: eventType, channel });
   }
+
+  /**
+   * Plan 3j Task 2 — `plugin-runtime.service.ts#retireNotificationChannel` (PR50,
+   * cross-domain): `DELETE FROM notification_channel_preferences WHERE channel = ?`,
+   * fired when a plugin's notification channel is retired (uninstall, or the
+   * capability disappearing on update). Unlike every other write on this
+   * repository, there is no `user`/`event_type` filter — every user's opt-out for
+   * THIS channel goes, across every event.
+   */
+  async deleteAllForChannel(channel: string): Promise<void> {
+    await this.nativeDelete({ channel });
+  }
 }

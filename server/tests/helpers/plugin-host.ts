@@ -92,6 +92,21 @@ import {
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
+import { Plugins } from '../../src/db/entities/Plugins.entity';
+import { PluginErrorLog } from '../../src/db/entities/PluginErrorLog.entity';
+import { PluginScheduledTasks } from '../../src/db/entities/PluginScheduledTasks.entity';
+import { PluginUserErasureQueue } from '../../src/db/entities/PluginUserErasureQueue.entity';
+import { PluginEgressHosts } from '../../src/db/entities/PluginEgressHosts.entity';
+import { PluginSettingsFields } from '../../src/db/entities/PluginSettingsFields.entity';
+import { PluginActions } from '../../src/db/entities/PluginActions.entity';
+import { PluginUserConfig } from '../../src/db/entities/PluginUserConfig.entity';
+import { PluginEntityMetadata } from '../../src/db/entities/PluginEntityMetadata.entity';
+import { PluginOauthTokens } from '../../src/db/entities/PluginOauthTokens.entity';
+import { PluginOauthState } from '../../src/db/entities/PluginOauthState.entity';
+import { PluginMetaMigrations } from '../../src/db/entities/PluginMetaMigrations.entity';
+import { PluginCapabilityAudit } from '../../src/db/entities/PluginCapabilityAudit.entity';
+import { Settings } from '../../src/db/entities/Settings.entity';
+import { NotificationChannelPreferences } from '../../src/db/entities/NotificationChannelPreferences.entity';
 import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from './files-repos';
 import { budgetRepoArgs } from './budget-repos';
 import { createTestShareTokensRepo } from './share-repos';
@@ -322,6 +337,22 @@ export async function createPluginRuntime(dbs: DatabaseService, registry?: Plugi
     new AuditService(orm.repo(AuditLog), orm.repo(Users)),
     await createTestAddonsService(dbs.connection, dbs),
     new PluginUserSettingsService(dbs),
+    // Plan 3j Task 2 — PR1-PR53's own tables, all repository-backed now.
+    orm.repo(Plugins),
+    orm.repo(PluginErrorLog),
+    orm.repo(PluginScheduledTasks),
+    orm.repo(PluginUserErasureQueue),
+    orm.repo(PluginEgressHosts),
+    orm.repo(PluginSettingsFields),
+    orm.repo(PluginActions),
+    orm.repo(PluginUserConfig),
+    orm.repo(PluginEntityMetadata),
+    orm.repo(PluginOauthTokens),
+    orm.repo(PluginOauthState),
+    orm.repo(PluginMetaMigrations),
+    orm.repo(PluginCapabilityAudit),
+    orm.repo(Settings),
+    orm.repo(NotificationChannelPreferences),
     registry,
     await createPluginRpcHostFactory(dbs),
     await createTestUnitOfWork(dbs.connection),

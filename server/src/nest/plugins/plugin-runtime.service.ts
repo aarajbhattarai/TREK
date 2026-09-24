@@ -1,4 +1,5 @@
 import { Injectable, Optional, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import semver from 'semver';
 import { MikroORM } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
@@ -6,6 +7,36 @@ import { UnitOfWork } from '../database/unit-of-work';
 import { withRequestContext } from '../database/request-context';
 import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 import { logError } from '../audit/audit-log.logger';
+import { Plugins } from '../../db/entities/Plugins.entity';
+import type { PluginsRepository } from '../../db/repositories/Plugins.repository';
+import { PluginErrorLog } from '../../db/entities/PluginErrorLog.entity';
+import type { PluginErrorLogRepository } from '../../db/repositories/PluginErrorLog.repository';
+import { PluginScheduledTasks } from '../../db/entities/PluginScheduledTasks.entity';
+import type { PluginScheduledTasksRepository } from '../../db/repositories/PluginScheduledTasks.repository';
+import { PluginUserErasureQueue } from '../../db/entities/PluginUserErasureQueue.entity';
+import type { PluginUserErasureQueueRepository } from '../../db/repositories/PluginUserErasureQueue.repository';
+import { PluginEgressHosts } from '../../db/entities/PluginEgressHosts.entity';
+import type { PluginEgressHostsRepository } from '../../db/repositories/PluginEgressHosts.repository';
+import { PluginSettingsFields } from '../../db/entities/PluginSettingsFields.entity';
+import type { PluginSettingsFieldsRepository } from '../../db/repositories/PluginSettingsFields.repository';
+import { PluginActions } from '../../db/entities/PluginActions.entity';
+import type { PluginActionsRepository } from '../../db/repositories/PluginActions.repository';
+import { PluginUserConfig } from '../../db/entities/PluginUserConfig.entity';
+import type { PluginUserConfigRepository } from '../../db/repositories/PluginUserConfig.repository';
+import { PluginEntityMetadata } from '../../db/entities/PluginEntityMetadata.entity';
+import type { PluginEntityMetadataRepository } from '../../db/repositories/PluginEntityMetadata.repository';
+import { PluginOauthTokens } from '../../db/entities/PluginOauthTokens.entity';
+import type { PluginOauthTokensRepository } from '../../db/repositories/PluginOauthTokens.repository';
+import { PluginOauthState } from '../../db/entities/PluginOauthState.entity';
+import type { PluginOauthStateRepository } from '../../db/repositories/PluginOauthState.repository';
+import { PluginMetaMigrations } from '../../db/entities/PluginMetaMigrations.entity';
+import type { PluginMetaMigrationsRepository } from '../../db/repositories/PluginMetaMigrations.repository';
+import { PluginCapabilityAudit } from '../../db/entities/PluginCapabilityAudit.entity';
+import type { PluginCapabilityAuditRepository } from '../../db/repositories/PluginCapabilityAudit.repository';
+import { Settings } from '../../db/entities/Settings.entity';
+import type { SettingsRepository } from '../../db/repositories/Settings.repository';
+import { NotificationChannelPreferences } from '../../db/entities/NotificationChannelPreferences.entity';
+import type { NotificationChannelPreferencesRepository } from '../../db/repositories/NotificationChannelPreferences.repository';
 import { pluginsEnabled } from './kill-switch';
 import { setPluginEventSink } from '../../plugin-event-sink';
 import { setUserDeletedSink } from '../../plugin-user-lifecycle';
@@ -159,23 +190,38 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // restore the core DB is briefly CLOSED (closeDb → the this.db proxy throws on access), so a
     // status/log write in that window would otherwise take the whole process down mid-
     // restore. Swallow any DB error — a missed status row / log line is never worth a crash.
+    //
+    // Plan 3j Task 2 (§4a, inventory §8): these callbacks are plain EventEmitter hooks —
+    // NOT async, no enclosing request/tick — so there is no ambient request context a
+    // repository call could resolve through. Resolved lazily, per call, the same way
+    // `budgetFor(pluginId, this.db.connection)` resolves its own connection lazily today:
+    // `withRequestContext(this.orm, ...)` wraps EACH write attempt fresh (never a context
+    // built once at construction), and `.catch()` replaces the old synchronous try/catch
+    // (a repository call is a Promise, not a synchronous throw) — same swallow, same
+    // "a status/log write must never crash the host" guarantee, unchanged. No `this.orm`
+    // (a hand-built test instance without one) means nothing to write to safely — skipped,
+    // not thrown, mirroring `onApplicationBootstrap`'s own no-ORM branch.
     onStatus: (id, status, error) => {
-      try {
-        this.db.prepare('UPDATE plugins SET status = ?, last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, error ?? null, id);
-      } catch { /* DB unavailable (e.g. mid-restore) — a status write must never crash the host */ }
+      if (!this.orm) return;
+      void withRequestContext(this.orm, () => this.plugins.updateStatusAndError(id, status, error ?? null)).catch(() => {
+        /* DB unavailable (e.g. mid-restore) — a status write must never crash the host */
+      });
     },
     onLog: (id, level, msg) => {
       if (level !== 'error' && level !== 'warn') return;
-      try {
-        this.db.prepare('INSERT INTO plugin_error_log (plugin_id, level, message) VALUES (?, ?, ?)').run(id, level, msg);
-        // Retention: a crash-looping plugin emits a stderr line per restart, so an
-        // uncapped table grows without bound in the shared trek.db. Keep only the
-        // most recent LOG_RETENTION rows per plugin (the admin view shows 200).
-        // R1.5: this hook is a child-lifecycle EventEmitter callback the supervisor
-        // cannot await, so the now-async prune is fired off with its own handler —
-        // the same "a log line must never crash the host" rule as the catch below.
-        void this.pruneErrorLog(id).catch(() => { /* retention is best-effort */ });
-      } catch { /* DB unavailable — a log line must never crash the host */ }
+      if (!this.orm) return;
+      const orm = this.orm;
+      void withRequestContext(orm, () => this.pluginErrorLog.insertLog(id, level, msg))
+        .then(() => {
+          // Retention: a crash-looping plugin emits a stderr line per restart, so an
+          // uncapped table grows without bound in the shared trek.db. Keep only the
+          // most recent LOG_RETENTION rows per plugin (the admin view shows 200).
+          // R1.5: this hook is a child-lifecycle EventEmitter callback the supervisor
+          // cannot await, so the now-async prune is fired off with its own handler —
+          // the same "a log line must never crash the host" rule as the catch below.
+          void withRequestContext(orm, () => this.pruneErrorLog(id)).catch(() => { /* retention is best-effort */ });
+        })
+        .catch(() => { /* DB unavailable — a log line must never crash the host */ });
     },
   }, {}, () => this.orm);
 
@@ -198,6 +244,33 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // registry reads a recipient's own settings on every dispatch, so an absent one
     // would be a TypeError at send time rather than a missing-provider error at boot.
     private readonly userSettings: PluginUserSettingsService,
+    // Plan 3j Task 2 — every table this file's own statements (PR1-PR53) touch, now
+    // injected as repositories instead of raw prepared-statement calls on `this.db`. All 14 are
+    // REQUIRED (not `@Optional()`): virtually every method on this class reaches
+    // `plugins` or one of its satellite tables, so a hand-built test instance needs
+    // real ones regardless (`sharedTestOrm(...).repo(Entity)`, the same shape
+    // `PluginGuards`' `UsersRepository` injection (Task 1) already established for
+    // this plan). `PluginOauthTokens`/`PluginOauthState`/`PluginMetaMigrations`/
+    // `PluginCapabilityAudit` are used ONLY by this file's own uninstall cascade and
+    // GDPR export — Task 3/Task 4 add their own, disjoint methods to the same four
+    // repositories for their own files. `Settings`/`NotificationChannelPreferences`
+    // are cross-domain (3f) — additive methods only (`deleteByKeyPrefix`/
+    // `deleteAllForChannel`), never their own per-user CRUD surface.
+    @InjectRepository(Plugins) private readonly plugins: PluginsRepository,
+    @InjectRepository(PluginErrorLog) private readonly pluginErrorLog: PluginErrorLogRepository,
+    @InjectRepository(PluginScheduledTasks) private readonly pluginScheduledTasks: PluginScheduledTasksRepository,
+    @InjectRepository(PluginUserErasureQueue) private readonly pluginUserErasureQueue: PluginUserErasureQueueRepository,
+    @InjectRepository(PluginEgressHosts) private readonly pluginEgressHosts: PluginEgressHostsRepository,
+    @InjectRepository(PluginSettingsFields) private readonly pluginSettingsFields: PluginSettingsFieldsRepository,
+    @InjectRepository(PluginActions) private readonly pluginActions: PluginActionsRepository,
+    @InjectRepository(PluginUserConfig) private readonly pluginUserConfig: PluginUserConfigRepository,
+    @InjectRepository(PluginEntityMetadata) private readonly pluginEntityMetadata: PluginEntityMetadataRepository,
+    @InjectRepository(PluginOauthTokens) private readonly pluginOauthTokens: PluginOauthTokensRepository,
+    @InjectRepository(PluginOauthState) private readonly pluginOauthState: PluginOauthStateRepository,
+    @InjectRepository(PluginMetaMigrations) private readonly pluginMetaMigrations: PluginMetaMigrationsRepository,
+    @InjectRepository(PluginCapabilityAudit) private readonly pluginCapabilityAudit: PluginCapabilityAuditRepository,
+    @InjectRepository(Settings) private readonly settingsRepo: SettingsRepository,
+    @InjectRepository(NotificationChannelPreferences) private readonly notificationChannelPreferences: NotificationChannelPreferencesRepository,
     private readonly registry?: PluginRegistryService,
     private readonly hostFactory?: PluginRpcHostFactory,
     // Optional only because TypeScript forbids a required parameter after an
@@ -281,18 +354,21 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // boot must NEVER block app init, even in a context without plugin tables
     // (e.g. a slimmed-down test app that only imports AdminModule).
     try {
-      // Plan 3j Task 0 (R-scheduler, inventory §8): `discoverPlugins` + this dependency-
-      // order read are raw better-sqlite3 today and need no request context to run
-      // correctly, but the MOMENT either becomes a repository call (Task 2/3) this
-      // window needs one — landing the wrap now, ahead of that conversion, is the whole
-      // point of doing this in Task 0. Wrapped ONLY when an ORM is available: the
-      // no-ORM branch below still needs `order` computed (from THESE two reads) to name
-      // the skipped plugins in its own log line, so running them unwrapped when `this.
-      // orm` is absent preserves that already-tested behavior exactly (RT-BOOT-NOORM-001/
-      // 002) rather than gating discovery itself on the ORM's presence — a broader
-      // restructure (option (b): wrap the WHOLE onApplicationBootstrap body in one call,
-      // matching CronRegistrarService.runOnBoot's shape) was considered and rejected for
-      // this reason; see task-0-report.md.
+      // Plan 3j Task 0 (R-scheduler, inventory §8) landed this wrap AHEAD of Task 2's own
+      // conversion, exactly so this window would be ready once `installedDepRows` stopped
+      // being raw SQL. Plan 3j Task 2: `installedDepRows` now reads `plugins` through
+      // `PluginsRepository.listDepRows` (PR15/16/25 converted) — a genuine request-context
+      // dependency the no-ORM branch below cannot satisfy (there is no ORM to wrap with).
+      // `discoverPlugins` itself stays raw (Task 3's own file, unconverted) and safe to run
+      // unwrapped either way. DEVIATION from Task 0's own note (task-0-report.md) and from
+      // RT-BOOT-NOORM-001's prior assertion: the no-ORM branch can no longer read `plugins`
+      // at all, so it no longer names which plugin(s) it is skipping — it logs a single
+      // generic line instead. This is a strictly MORE conservative outcome (skip more,
+      // never throw out of onApplicationBootstrap, same "fail closed, never abort app.init()"
+      // invariant) than before, not a correctness regression — and it can only ever be
+      // observed by a hand-built test instance that constructs this service without the
+      // `orm` param its own `plugins`/other repositories are drawn from; production always
+      // provides both together from the same DI graph. See task-2-report.md.
       let installed: Map<string, PluginDepRow>;
       if (this.orm) {
         installed = await withRequestContext(this.orm, async () => {
@@ -301,7 +377,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
         });
       } else {
         await discoverPlugins(this.db);
-        installed = await this.installedDepRows();
+        installed = new Map();
       }
       const enabledIds = [...installed.values()].filter((r) => r.enabled).map((r) => r.id);
       let order: string[];
@@ -325,9 +401,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       // runOnBoot: no ORM means skip loudly and never call activate — never abort
       // app.init() over a partially-wired test graph.
       if (!this.orm) {
-        if (order.length) {
-          logError(`PluginRuntimeService.onApplicationBootstrap: no MikroORM available — plugin(s) not activated: ${order.join(', ')}`);
-        }
+        // Plan 3j Task 2: `order`/`enabledIds` are always empty here now (see the
+        // `installed = new Map()` note above) — the message can no longer name
+        // specific plugins, only that boot skipped activation entirely.
+        logError('PluginRuntimeService.onApplicationBootstrap: no MikroORM available — plugin activation skipped');
       } else {
         for (const id of order) {
           withRequestContext(this.orm, () => this.activate(id)).catch((e) => {
@@ -375,14 +452,17 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       const active = this.supervisor.activeIds();
       if (active.length === 0) return;
       const now = Date.now();
-      const ph = active.map(() => '?').join(',');
-      const due = this.db
-        .prepare(`SELECT id, plugin_id, name, payload, every_ms FROM plugin_scheduled_tasks WHERE due_at <= ? AND plugin_id IN (${ph}) ORDER BY due_at LIMIT 200`)
-        .all(now, ...active) as Array<{ id: number; plugin_id: string; name: string; payload: string; every_ms: number | null }>;
+      const due = await this.pluginScheduledTasks.findDueForPlugins(now, active);
       for (const t of due) {
         if (!this.supervisor.isActive(t.plugin_id)) continue; // leave for a later sweep
-        if (t.every_ms) this.db.prepare('UPDATE plugin_scheduled_tasks SET due_at = ? WHERE id = ?').run(now + t.every_ms, t.id);
-        else this.db.prepare('DELETE FROM plugin_scheduled_tasks WHERE id = ?').run(t.id);
+        // Plan 3j Task 2 deviation (named, task-2-report.md — same spirit as R-uninstall's
+        // egress-host transaction): the claim is now atomic (`due_at <= now` guarded in
+        // the repository) — a second, overlapping tick's own claim on the SAME row loses
+        // and skips delivery entirely, rather than double-firing (RACE-SCHED-001).
+        const claimed = t.every_ms
+          ? await this.pluginScheduledTasks.rearm(t.id, now + t.every_ms, now)
+          : await this.pluginScheduledTasks.deleteById(t.id, now);
+        if (!claimed) continue; // another concurrent pass already claimed this row
         let payload: unknown = null;
         try { payload = JSON.parse(t.payload); } catch { /* corrupt payload -> null */ }
         this.supervisor.deliverScheduled(t.plugin_id, t.name, payload);
@@ -398,12 +478,11 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * throws — a bookkeeping error must not fail the account deletion that triggered it. */
   private async enqueueUserErasure(userId: number): Promise<void> {
     try {
-      const rows = this.db.prepare('SELECT id, permissions FROM plugins').all() as Array<{ id: string; permissions: string | null }>;
-      const insert = this.db.prepare('INSERT OR IGNORE INTO plugin_user_erasure_queue (plugin_id, user_id) VALUES (?, ?)');
+      const rows = await this.plugins.listIdsAndPermissions();
       for (const r of rows) {
         let perms: unknown;
         try { perms = JSON.parse(r.permissions ?? '[]'); } catch { perms = []; }
-        if (Array.isArray(perms) && perms.includes('hook:user-data')) insert.run(r.id, userId);
+        if (Array.isArray(perms) && perms.includes('hook:user-data')) await this.pluginUserErasureQueue.insertIgnore(r.id, userId);
       }
     } catch {
       /* enqueue is best-effort; a later sweep reconciles from whatever landed */
@@ -434,26 +513,21 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       // honour the erasure (see uninstall()); reaping on registry-absence alone would wipe
       // exactly those preserved obligations. A deleteData=true uninstall already clears the
       // rows itself, so this only ever needs to catch a truly orphaned data dir.
-      const orphans = this.db
-        .prepare('SELECT DISTINCT plugin_id FROM plugin_user_erasure_queue WHERE plugin_id NOT IN (SELECT id FROM plugins)')
-        .all() as Array<{ plugin_id: string }>;
-      for (const { plugin_id } of orphans) {
+      const orphans = await this.pluginUserErasureQueue.listOrphanPluginIds();
+      for (const plugin_id of orphans) {
         if (!fs.existsSync(pluginDataDir(plugin_id))) {
-          this.db.prepare('DELETE FROM plugin_user_erasure_queue WHERE plugin_id = ?').run(plugin_id);
+          await this.pluginUserErasureQueue.deleteAllForPlugin(plugin_id);
         }
       }
       // Only ACTIVE plugins can be delivered to; scope the window to them so a backlog
       // of erasures for permanently-inactive plugins can't starve deliverable ones.
       const active = this.supervisor.activeIds();
       if (active.length === 0) return;
-      const ph = active.map(() => '?').join(',');
-      const pending = this.db
-        .prepare(`SELECT id, plugin_id, user_id FROM plugin_user_erasure_queue WHERE plugin_id IN (${ph}) ORDER BY id LIMIT 200`)
-        .all(...active) as Array<{ id: number; plugin_id: string; user_id: number }>;
+      const pending = await this.pluginUserErasureQueue.findPendingForPlugins(active);
       for (const row of pending) {
         if (!this.supervisor.isActive(row.plugin_id)) continue; // retry after it reactivates
         const done = await this.supervisor.deliverUserErasure(row.plugin_id, row.user_id);
-        if (done) this.db.prepare('DELETE FROM plugin_user_erasure_queue WHERE id = ?').run(row.id);
+        if (done) await this.pluginUserErasureQueue.deleteById(row.id);
       }
     } catch {
       /* a drain pass must never break the runtime */
@@ -466,7 +540,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   async exportUserData(userId: number): Promise<Array<{ pluginId: string; data?: unknown; pending?: boolean; settings?: Record<string, unknown>; oauthConnected?: boolean }>> {
     const out: Array<{ pluginId: string; data?: unknown; pending?: boolean; settings?: Record<string, unknown>; oauthConnected?: boolean }> = [];
     if (!pluginsEnabled()) return out;
-    const rows = this.db.prepare('SELECT id, permissions FROM plugins').all() as Array<{ id: string; permissions: string | null }>;
+    const rows = await this.plugins.listIdsAndPermissions();
     for (const r of rows) {
       if (this.supervisor.isActive(r.id)) {
         const res = await this.supervisor.collectUserExport(r.id, userId);
@@ -496,12 +570,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
         return e;
       };
       const secretKeys = new Map<string, Set<string>>();
-      for (const f of this.db.prepare("SELECT plugin_id, field_key FROM plugin_settings_fields WHERE scope = 'user' AND secret = 1").all() as Array<{ plugin_id: string; field_key: string }>) {
+      for (const f of await this.pluginSettingsFields.listSecretUserFields()) {
         let s = secretKeys.get(f.plugin_id);
         if (!s) { s = new Set(); secretKeys.set(f.plugin_id, s); }
         s.add(f.field_key);
       }
-      for (const c of this.db.prepare('SELECT plugin_id, config FROM plugin_user_config WHERE user_id = ?').all(userId) as Array<{ plugin_id: string; config: string }>) {
+      for (const c of await this.pluginUserConfig.listForUser(userId)) {
         let cfg: Record<string, unknown> = {};
         try { cfg = JSON.parse(c.config || '{}'); } catch { /* ignore */ }
         const secrets = secretKeys.get(c.plugin_id) ?? new Set<string>();
@@ -509,8 +583,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
         for (const [k, v] of Object.entries(cfg)) masked[k] = secrets.has(k) ? '***' : v;
         entryFor(c.plugin_id).settings = masked;
       }
-      for (const t of this.db.prepare('SELECT DISTINCT plugin_id FROM plugin_oauth_tokens WHERE user_id = ?').all(userId) as Array<{ plugin_id: string }>) {
-        entryFor(t.plugin_id).oauthConnected = true;
+      for (const pluginId of await this.pluginOauthTokens.listDistinctPluginIdsForUser(userId)) {
+        entryFor(pluginId).oauthConnected = true;
       }
     } catch (err) {
       console.warn('[plugins] GDPR export: host-side settings/oauth fold failed', err);
@@ -525,7 +599,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * requires. Returns the ids actually deactivated.
    */
   async deactivateForDisabledAddon(addonId: string): Promise<string[]> {
-    const rows = this.db.prepare('SELECT id, version, enabled, dependencies FROM plugins').all() as PluginDepRow[];
+    const rows: PluginDepRow[] = await this.plugins.listDepRows();
     const directlyAffected = rows
       .filter((r) => r.enabled && parseDependencies(r.dependencies).requiredAddons.includes(addonId))
       .map((r) => r.id);
@@ -593,7 +667,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   /** All plugin rows projected to what the dependency helpers reason over. */
   private async installedDepRows(): Promise<Map<string, PluginDepRow>> {
-    const rows = this.db.prepare('SELECT id, version, enabled, dependencies FROM plugins').all() as PluginDepRow[];
+    const rows: PluginDepRow[] = await this.plugins.listDepRows();
     return new Map(rows.map((r) => [r.id, r]));
   }
 
@@ -604,9 +678,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * missing/mismatched plugin dependency.
    */
   private async assertActivatable(id: string, installed: Map<string, PluginDepRow>, consentWiden: boolean): Promise<void> {
-    const row = this.db.prepare('SELECT permissions, granted_permissions, dependencies, trek_range, api_version FROM plugins WHERE id = ?').get(id) as
-      | { permissions: string; granted_permissions: string; dependencies: string | null; trek_range: string | null; api_version: number | null }
-      | undefined;
+    const row = await this.plugins.findActivationGate(id);
     if (!row) throw new Error(`plugin ${id} not found`);
 
     // This runs FIRST, and before the consent check in particular: a plugin that cannot
@@ -674,13 +746,11 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   /** Mark a (pre-validated) plugin enabled and spawn its child. */
   private async spawnActivated(id: string): Promise<void> {
-    const row = this.db.prepare('SELECT permissions, config FROM plugins WHERE id = ?').get(id) as
-      | { permissions: string; config: string }
-      | undefined;
+    const row = await this.plugins.findPermissionsAndConfig(id);
     if (!row) throw new Error(`plugin ${id} not found`);
     const declared = parseArray(row.permissions).filter(isKnownPermission);
     // Mark it enabled (admin intent) so it reboots after restarts/crashes.
-    this.db.prepare('UPDATE plugins SET granted_permissions = ?, enabled = 1 WHERE id = ?').run(JSON.stringify(declared), id);
+    await this.plugins.grantPermissionsAndEnable(id, JSON.stringify(declared));
     // Manifest defaults fill whatever the admin never set, so the child's ctx.config is
     // the same effective value the settings form shows (see settings-defaults.ts).
     const config = applySettingDefaults(decryptConfig(parseObject(row.config)), await settingDefaults(this.db, id, 'instance'));
@@ -699,8 +769,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   /** Hosts an admin added for this plugin (empty unless it declared `operatorEgress`). */
   async operatorEgressHosts(id: string): Promise<string[]> {
     try {
-      return (this.db.prepare('SELECT host FROM plugin_egress_hosts WHERE plugin_id = ? ORDER BY host').all(id) as Array<{ host: string }>)
-        .map((r) => r.host);
+      return await this.pluginEgressHosts.listHostsForPlugin(id);
     } catch {
       return []; // table absent (a slimmed test app) — never block activation
     }
@@ -708,8 +777,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   /** Does this plugin's manifest declare that it needs operator-supplied hosts? */
   async wantsOperatorEgress(id: string): Promise<boolean> {
-    const row = this.db.prepare('SELECT operator_egress FROM plugins WHERE id = ?').get(id) as { operator_egress: number } | undefined;
-    return row?.operator_egress === 1;
+    const flag = await this.plugins.findOperatorEgressFlag(id);
+    return flag === 1;
   }
 
   /**
@@ -731,10 +800,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       if (!clean.includes(host)) clean.push(host);
     }
     if (!this.uow) throw new Error('UnitOfWork not provided — tests that set egress hosts must pass one');
+    // PR22/PR23, R-uninstall's ONE named transaction: the delete-then-insert-loop is now
+    // atomic (`PluginEgressHostsRepository.replaceAllForPlugin`) — a crash mid-write
+    // leaves the OLD host set intact instead of a plugin with zero egress hosts, a
+    // deliberate behavior change ("For the user" in the plan document), not silent parity.
     await this.uow.transactional(async () => {
-      this.db.prepare('DELETE FROM plugin_egress_hosts WHERE plugin_id = ?').run(id);
-      const ins = this.db.prepare('INSERT OR IGNORE INTO plugin_egress_hosts (plugin_id, host) VALUES (?, ?)');
-      for (const h of clean) ins.run(id, h);
+      await this.pluginEgressHosts.replaceAllForPlugin(id, clean);
     });
     // Re-spawn so a live child actually gets the new allow-list.
     if (this.isActive(id)) {
@@ -760,7 +831,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   async deactivate(id: string): Promise<void> {
     await this.supervisor.disable(id);
     closePluginDataDb(id);
-    this.db.prepare("UPDATE plugins SET status = 'inactive', enabled = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+    await this.plugins.markInactive(id);
   }
 
   /**
@@ -773,7 +844,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * restart of update()/sideload() never disables a plugin's dependents.
    */
   async deactivateWithDependents(id: string): Promise<string[]> {
-    const rows = this.db.prepare('SELECT id, version, enabled, dependencies FROM plugins').all() as PluginDepRow[];
+    const rows: PluginDepRow[] = await this.plugins.listDepRows();
     const enabledById = new Map(rows.map((r) => [r.id, r.enabled]));
     // findDependentsTransitive returns nearest-first; reverse so the deepest dependent
     // (the furthest caller) stops before the plugin it depends on.
@@ -798,9 +869,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     id: string,
     opts?: { version?: string; retrustKey?: string },
   ): Promise<{ version: string; activated: boolean; newPermissions: string[]; newEgress: string[]; trekRangeBypassed: TrekRangeBypass | null }> {
-    const before = this.db.prepare('SELECT enabled, granted_permissions, version FROM plugins WHERE id = ?').get(id) as
-      | { enabled: number; granted_permissions: string; version: string | null }
-      | undefined;
+    const before = await this.plugins.findPreUpdateSnapshot(id);
     if (!before) throw new Error(`plugin ${id} not found`);
     if (!this.registry) throw new Error('registry service unavailable');
     const wasEnabled = before.enabled === 1;
@@ -816,9 +885,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // swaps code + refreshes declared permissions; keeps granted
     const res = await this.registry.install(id, { version: target, retrustKey: opts?.retrustKey });
 
-    const declared = parseArray(
-      (this.db.prepare('SELECT permissions FROM plugins WHERE id = ?').get(id) as { permissions: string }).permissions,
-    ).filter(isKnownPermission);
+    const declared = parseArray(await this.plugins.findPermissions(id) ?? '[]').filter(isKnownPermission);
     const newGrants = declared.filter((p) => !granted.has(p));
     const newEgress = newGrants.filter((p) => p.startsWith(HTTP_OUTBOUND)).map((p) => p.slice(HTTP_OUTBOUND.length)).filter(Boolean);
     const newPermissions = newGrants.filter((p) => !p.startsWith(HTTP_OUTBOUND));
@@ -875,7 +942,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     actor: { userId: number | null; ip?: string | null },
   ): Promise<{ version: string; activated: boolean; newPermissions: string[]; newEgress: string[] }> {
     if (!this.registry) throw new Error('registry service unavailable');
-    const before = this.db.prepare('SELECT author_pubkey FROM plugins WHERE id = ?').get(id) as { author_pubkey?: string | null } | undefined;
+    const beforePubkey = await this.plugins.findAuthorPubkey(id);
     const entry = await this.registry.assertRetrustable(id, publicKey); // throws unless SIGNATURE_KEY_CHANGED
 
     const res = await this.update(id, { version, retrustKey: publicKey });
@@ -891,7 +958,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       details: {
         plugin: id,
         version: res.version,
-        oldKeyFingerprint: keyFingerprint(before?.author_pubkey),
+        oldKeyFingerprint: keyFingerprint(beforePubkey),
         newKeyFingerprint: keyFingerprint(entry.authorPublicKey),
       },
       ip: actor.ip ?? null,
@@ -910,7 +977,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     if (!this.registry) throw new Error('registry service unavailable');
     const staged = this.registry.stageUpload(bytes);
     try {
-      const replaced = !!this.db.prepare('SELECT id FROM plugins WHERE id = ?').get(staged.id);
+      const replaced = await this.plugins.existsById(staged.id);
       // Force any replaced plugin INACTIVE before the swap: stop a running child
       // (it holds file locks and would keep executing stale code) AND clear the
       // active flag, so replaced code can never keep running — or even show active
@@ -947,7 +1014,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     if (scanForNativeBinaries(sourceDir).length) throw new Error('directory contains native binaries');
 
     const id = manifest.id;
-    const existing = this.db.prepare('SELECT source_repo FROM plugins WHERE id = ?').get(id) as { source_repo?: string } | undefined;
+    const existing = await this.plugins.findSourceRepoRow(id);
     // Never clobber a REAL installed plugin (registry/sideload) — only re-point a link.
     if (existing && existing.source_repo !== DEV_LINK_SOURCE) {
       throw new Error(`a plugin '${id}' is already installed — uninstall it before dev-linking that id`);
@@ -963,12 +1030,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     await discoverPlugins(this.db); // registers/updates the row from the linked manifest, INACTIVE
     // Same as a sideload: the plugin has left the registry trust model, so a block that
     // described a refused REGISTRY update no longer describes the code that will run.
-    this.db.prepare(
-      `UPDATE plugins SET source_repo = ?, source_commit = NULL, sha256 = NULL, author_pubkey = NULL,
-                          update_block_code = NULL, update_block_detail = NULL, update_block_version = NULL,
-                          status = 'inactive', enabled = 0
-       WHERE id = ?`,
-    ).run(DEV_LINK_SOURCE, id);
+    await this.plugins.clearForDevLink(id, DEV_LINK_SOURCE);
     this.watchLinked(id, sourceDir);
     return { id, version: manifest.version, replaced, trekRangeBypassed };
   }
@@ -982,7 +1044,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    */
   async reload(id: string): Promise<void> {
     if (!devLinkEnabled()) throw new Error('dev-link is disabled (set TREK_PLUGINS_DEV_LINK=1)');
-    const row = this.db.prepare('SELECT source_repo FROM plugins WHERE id = ?').get(id) as { source_repo?: string } | undefined;
+    const row = await this.plugins.findSourceRepoRow(id);
     if (!row) throw new Error(`plugin ${id} not found`);
     if (row.source_repo !== DEV_LINK_SOURCE) throw new Error(`plugin ${id} is not dev-linked`);
     const wasActive = this.isActive(id);
@@ -1019,6 +1081,16 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   }
 
   /** Stop the plugin, remove its code, and optionally delete all its data. */
+  /**
+   * R-uninstall: the 9-table cascade converts with the SAME statement order and the SAME
+   * (non-)transactional scope the legacy code had — NOT wrapped in `uow.transactional`.
+   * Nine independent best-effort deletes, several inside their own try/catch tolerating an
+   * absent table on a slimmed test schema (`plugin_actions`, `plugin_egress_hosts`) —
+   * `plugins`/`plugin_settings_fields`/`plugin_scheduled_tasks`/`plugin_error_log`/
+   * `plugin_entity_metadata`/`plugin_user_config`/`plugin_oauth_tokens`/`plugin_oauth_state`/
+   * `plugin_meta_migrations`/`plugin_capability_audit`/`plugin_user_erasure_queue` do NOT
+   * tolerate an absent table, unchanged from the legacy statement order and shape.
+   */
   async uninstall(id: string, deleteData: boolean): Promise<void> {
     await this.supervisor.disable(id);
     this.stopWatch(id);
@@ -1026,16 +1098,16 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // Code always goes; the DB metadata + fields go so it disappears from the UI.
     // Link-safe: a dev-linked plugin only drops the symlink, never the author's source.
     removePluginCodeEntry(pluginCodeDir(id));
-    this.db.prepare('DELETE FROM plugins WHERE id = ?').run(id);
-    this.db.prepare('DELETE FROM plugin_settings_fields WHERE plugin_id = ?').run(id);
-    try { this.db.prepare('DELETE FROM plugin_actions WHERE plugin_id = ?').run(id); } catch { /* table absent */ }
+    await this.plugins.deleteById(id);
+    await this.pluginSettingsFields.deleteAllForPlugin(id);
+    try { await this.pluginActions.deleteAllForPlugin(id); } catch { /* table absent */ }
     // The admin's egress consent dies with the plugin. Unconditional: leaving it would
     // silently grant a LATER plugin that reuses this id the hosts the admin approved for
     // a different one.
-    try { this.db.prepare('DELETE FROM plugin_egress_hosts WHERE plugin_id = ?').run(id); } catch { /* table absent */ }
+    try { await this.pluginEgressHosts.deleteAllForPlugin(id); } catch { /* table absent */ }
     // Scheduled tasks are operational (not user data), so they go unconditionally —
     // a scheduled callback for a plugin that no longer exists must never fire.
-    this.db.prepare('DELETE FROM plugin_scheduled_tasks WHERE plugin_id = ?').run(id);
+    await this.pluginScheduledTasks.deleteAllForPlugin(id);
     // If it was a notification channel, retire the channel too. Unconditional, for the
     // same reason as the settings fields: these are TREK's config ABOUT the plugin, and
     // leaving them means a later plugin that reuses this id silently inherits every
@@ -1043,23 +1115,23 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     await this.retireNotificationChannel(id);
     if (deleteData) {
       removePluginData(id);
-      this.db.prepare('DELETE FROM plugin_error_log WHERE plugin_id = ?').run(id);
-      this.db.prepare("DELETE FROM settings WHERE key LIKE ?").run(`plugin:${id}:%`);
-      this.db.prepare('DELETE FROM plugin_entity_metadata WHERE plugin_id = ?').run(id);
+      await this.pluginErrorLog.deleteAllForPlugin(id);
+      await this.settingsRepo.deleteByKeyPrefix(`plugin:${id}:`);
+      await this.pluginEntityMetadata.deleteAllForPlugin(id);
       // Per-user secrets + OAuth tokens/state live in their own tables, NOT under
       // settings — without these a "delete all data" leaves encrypted API keys and
       // refresh tokens behind, silently re-adopted if a plugin with the same id is
       // reinstalled. The migration ledger goes too, so a reinstall re-runs cleanly.
-      this.db.prepare('DELETE FROM plugin_user_config WHERE plugin_id = ?').run(id);
-      this.db.prepare('DELETE FROM plugin_oauth_tokens WHERE plugin_id = ?').run(id);
-      this.db.prepare('DELETE FROM plugin_oauth_state WHERE plugin_id = ?').run(id);
-      this.db.prepare('DELETE FROM plugin_meta_migrations WHERE plugin_id = ?').run(id);
-      this.db.prepare('DELETE FROM plugin_capability_audit WHERE plugin_id = ?').run(id);
+      await this.pluginUserConfig.deleteAllForPlugin(id);
+      await this.pluginOauthTokens.deleteAllForPlugin(id);
+      await this.pluginOauthState.deleteAllForPlugin(id);
+      await this.pluginMetaMigrations.deleteAllForPlugin(id);
+      await this.pluginCapabilityAudit.deleteAllForPlugin(id);
       // The plugin's data dir is gone now, so any pending GDPR erasure for it is moot.
       // But when deleteData is FALSE we deliberately KEEP the queue rows: the data dir
       // (which may still hold a deleted user's rows) survives, so the erasure obligation
       // must survive too — a reinstall of the same id drains the queue and honours it.
-      this.db.prepare('DELETE FROM plugin_user_erasure_queue WHERE plugin_id = ?').run(id);
+      await this.pluginUserErasureQueue.deleteAllForPlugin(id);
     }
   }
 
@@ -1069,11 +1141,9 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   /** Declared outbound hosts (from http:outbound:<host> grants) for the frame CSP. */
   async outboundHostsOf(id: string): Promise<string[]> {
-    const row = this.db.prepare('SELECT granted_permissions FROM plugins WHERE id = ?').get(id) as
-      | { granted_permissions: string }
-      | undefined;
-    if (!row) return [];
-    return parseArray(row.granted_permissions)
+    const granted = await this.plugins.findGrantedPermissions(id);
+    if (granted === null) return [];
+    return parseArray(granted)
       .filter((p) => p.startsWith('http:outbound:'))
       .map((p) => p.slice('http:outbound:'.length))
       .filter(Boolean);
@@ -1155,8 +1225,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   /** True if `caller` declares `target` as a plugin dependency whose range the
    * installed target version satisfies. */
   private async dependsOnSatisfied(callerId: string, targetId: string): Promise<boolean> {
-    const caller = this.db.prepare('SELECT dependencies FROM plugins WHERE id = ?').get(callerId) as { dependencies: string | null } | undefined;
-    const target = this.db.prepare('SELECT version FROM plugins WHERE id = ?').get(targetId) as { version: string | null } | undefined;
+    const caller = await this.plugins.findDependenciesRow(callerId);
+    const target = await this.plugins.findVersionRow(targetId);
     if (!caller || !target) return false;
     const dep = parseDependencies(caller.dependencies).pluginDependencies.find((d) => d.id === targetId);
     if (!dep) return false;
@@ -1176,7 +1246,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // without the notification tables (a slimmed test app that imports only the plugin
     // module).
     try {
-      this.db.prepare('DELETE FROM notification_channel_preferences WHERE channel = ?').run(pluginChannelId(id));
+      await this.notificationChannelPreferences.deleteAllForChannel(pluginChannelId(id));
     } catch { /* no notifications schema here — nothing to retire */ }
   }
 
@@ -1191,10 +1261,11 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    */
   async notificationChannels(): Promise<ExternalChannel[]> {
     if (!pluginsEnabled()) return [];
-    return this.supervisor.providersOf('notificationChannel').map((id) => {
-      const row = this.db.prepare('SELECT name, capabilities FROM plugins WHERE id = ?').get(id) as
-        | { name: string; capabilities: string }
-        | undefined;
+    // A `map` callback cannot await (the same reason `PluginsService.list()` uses an
+    // explicit loop) — `findNameAndCapabilities` is now a repository call.
+    const out: ExternalChannel[] = [];
+    for (const id of this.supervisor.providersOf('notificationChannel')) {
+      const row = await this.plugins.findNameAndCapabilities(id);
       let cap: { title?: string; events?: string[] } = {};
       try {
         cap = ((JSON.parse(row?.capabilities || '{}') as Record<string, unknown>).notificationChannel ?? {}) as typeof cap;
@@ -1202,7 +1273,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
       const allowed = new Set(cap.events?.length ? cap.events : PLUGIN_CHANNEL_EVENTS);
 
-      return {
+      out.push({
         id: pluginChannelId(id),
         source: 'plugin' as const,
         // A plugin-supplied display string, bounded and emoji-stripped like every other
@@ -1239,18 +1310,21 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
             return { success: false, error: e instanceof Error ? e.message : String(e) };
           }
         },
-      };
-    });
+      });
+    }
+    return out;
   }
 
   /** The settings-form action buttons a plugin declared for ONE scope (descriptors, from the DB). */
   async actionsOf(id: string, scope: PluginActionScope): Promise<PluginActionDescriptor[]> {
     try {
-      return (
-        this.db
-          .prepare('SELECT action_key, label, hint, danger, scope FROM plugin_actions WHERE plugin_id = ? AND scope = ? ORDER BY sort_order')
-          .all(id, scope) as Array<{ action_key: string; label: string; hint: string | null; danger: number; scope: PluginActionScope }>
-      ).map((r) => ({ key: r.action_key, label: r.label, hint: r.hint ?? undefined, danger: r.danger === 1, scope: r.scope }));
+      return (await this.pluginActions.listForPluginScope(id, scope)).map((r) => ({
+        key: r.action_key,
+        label: r.label,
+        hint: r.hint ?? undefined,
+        danger: r.danger === 1,
+        scope: r.scope,
+      }));
     } catch {
       return []; // table absent (a slimmed test app)
     }
@@ -1295,10 +1369,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * Public, unlike capabilityList, because PluginMcpToolsService reads it.
    */
   async mcpToolCapabilities(id: string): Promise<McpToolCapability[]> {
-    const row = this.db.prepare('SELECT capabilities FROM plugins WHERE id = ?').get(id) as { capabilities: string } | undefined;
-    if (!row) return [];
+    const capabilities = await this.plugins.findCapabilities(id);
+    if (capabilities === null) return [];
     try {
-      const c = JSON.parse(row.capabilities || '{}') as Record<string, unknown>;
+      const c = JSON.parse(capabilities || '{}') as Record<string, unknown>;
       if (c.mcpTools === undefined) return [];
       return parseMcpToolCapabilities(c.mcpTools);
     } catch {
@@ -1309,10 +1383,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   }
 
   private async capabilityList(id: string, field: 'provides' | 'emits'): Promise<string[]> {
-    const row = this.db.prepare('SELECT capabilities FROM plugins WHERE id = ?').get(id) as { capabilities: string } | undefined;
-    if (!row) return [];
+    const capabilities = await this.plugins.findCapabilities(id);
+    if (capabilities === null) return [];
     try {
-      const c = JSON.parse(row.capabilities || '{}') as Record<string, unknown>;
+      const c = JSON.parse(capabilities || '{}') as Record<string, unknown>;
       const v = c[field];
       return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
     } catch {
@@ -1323,11 +1397,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   /** Trim a plugin's error log to the most recent LOG_RETENTION rows. Cheap: onLog
    * only fires on warn/error, so this never runs on the hot path. */
   private async pruneErrorLog(pluginId: string): Promise<void> {
-    this.db.prepare(
-      `DELETE FROM plugin_error_log WHERE plugin_id = ? AND id NOT IN (
-         SELECT id FROM plugin_error_log WHERE plugin_id = ? ORDER BY id DESC LIMIT ${LOG_RETENTION}
-       )`,
-    ).run(pluginId, pluginId);
+    await this.pluginErrorLog.pruneKeepingRecent(pluginId, LOG_RETENTION);
   }
 }
 
