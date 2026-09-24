@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type { RoadtripVia, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService, type PlaceWithTags, type TripAccess } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { PermissionsService } from '../permissions/permissions.service';
 import { AssignmentsService } from '../assignments/assignments.service';
@@ -12,11 +11,11 @@ import type { DayAccommodationsRepository, DayAccommodationRow } from '../../db/
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
 import { Places } from '../../db/entities/Places.entity';
-import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import type { PlacesRepository, PlaceWithTagsRow as PlaceWithTags } from '../../db/repositories/Places.repository';
 import { Days } from '../../db/entities/Days.entity';
 import type { DaysRepository } from '../../db/repositories/Days.repository';
 import { Trips } from '../../db/entities/Trips.entity';
-import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import type { TripsRepository, TripAccess } from '../../db/repositories/Trips.repository';
 import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
 import type { RoadtripViasRepository } from '../../db/repositories/RoadtripVias.repository';
 import { Reservations } from '../../db/entities/Reservations.entity';
@@ -111,9 +110,6 @@ export interface CreateAccommodationData {
 @Injectable()
 export class AccommodationsService {
   constructor(
-    // `dbs` stays: `stampLodging` still reaches `getPlaceWithTags`
-    // (Task 3/4's own delegate, not this task's).
-    private readonly dbs: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly assignments: AssignmentsService,
@@ -130,10 +126,6 @@ export class AccommodationsService {
     // Plan 3e Task 2 (budget) — additive, AC41/42 only.
     @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
   ) {}
-
-  private get db() {
-    return this.dbs;
-  }
 
   /** Owner or member, returning the trip. Takes a number too: the MCP tools pass
    *  the parsed id, the REST path the raw param. */
@@ -385,8 +377,10 @@ export class AccommodationsService {
     if (!place || place.stop_type) return null;
     // AC10
     await this.placesRepo.stampHotel(placeId);
-    // AC11 — primitive, already-converted (`DatabaseService.getPlaceWithTags` → `PlacesRepository.findWithTagsAndRatings`).
-    return await this.db.getPlaceWithTags(placeId);
+    // AC11 — Plan 4 Task 3: `DatabaseService.getPlaceWithTags` inlined onto
+    // `PlacesRepository.findWithTagsAndRatings` directly (`placesRepo` was
+    // already injected below for other reads).
+    return await this.placesRepo.findWithTagsAndRatings(placeId);
   }
 
   /**

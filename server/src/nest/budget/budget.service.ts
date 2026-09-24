@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService, type TripAccess } from '../database/database.service';
 import type { BudgetParticipantFinal, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -23,7 +22,9 @@ import type { ReservationsRepository } from '../../db/repositories/Reservations.
 import { Places } from '../../db/entities/Places.entity';
 import type { PlacesRepository } from '../../db/repositories/Places.repository';
 import { Trips } from '../../db/entities/Trips.entity';
-import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import type { TripsRepository, TripAccess } from '../../db/repositories/Trips.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 
 type Trip = TripAccess;
 
@@ -126,7 +127,6 @@ function allocateDisplayCents(cents: number[], factor: number, total = Math.roun
 @Injectable()
 export class BudgetService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly exchangeRates: ExchangeRatesService,
     private readonly realtime: RealtimeService,
@@ -139,13 +139,15 @@ export class BudgetService {
     @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
     @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    // Plan 4 Task 3 — DatabaseService.rosterUserIds inlined onto
+    // TripMembersRepository.rosterUserIds directly.
+    @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
     // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
     // gone: this reuses the TripsRepository already injected for other
-    // reads and calls findAccessible. `db` stays injected for
-    // `rosterUserIds` (Task 3's own).
+    // reads and calls findAccessible.
     return await this.tripsRepo.findAccessible(tripId, userId);
   }
 
@@ -208,7 +210,7 @@ export class BudgetService {
   private async rosterMemberIds(tripId: string | number, userIds: number[]): Promise<Set<number>> {
     const unique = new Set(userIds);
     if (unique.size === 0) return new Set();
-    const roster = await this.db.rosterUserIds(tripId);
+    const roster = await this.tripMembersRepo.rosterUserIds(tripId);
     return new Set([...unique].filter(id => roster.has(id)));
   }
 
@@ -1204,7 +1206,7 @@ export class BudgetService {
    * an id it rejected exists at all.
    */
   private async settlementPartiesOnTrip(tripId: string | number, data: { from_user_id: number; to_user_id: number }): Promise<boolean> {
-    const roster = await this.db.rosterUserIds(tripId);
+    const roster = await this.tripMembersRepo.rosterUserIds(tripId);
     return roster.has(data.from_user_id) && roster.has(data.to_user_id);
   }
 

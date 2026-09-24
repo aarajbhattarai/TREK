@@ -21,6 +21,7 @@ import { PackingTemplates } from '../../db/entities/PackingTemplates.entity';
 import { PackingTemplateCategories } from '../../db/entities/PackingTemplateCategories.entity';
 import { PackingTemplateItems } from '../../db/entities/PackingTemplateItems.entity';
 import { Trips } from '../../db/entities/Trips.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
 
 /** Packing domain (S2 — Phase 2 trip sub-domain). Registered in AppModule.
  *  Exports PackingService for in-container consumers (TripsService bundle,
@@ -31,7 +32,7 @@ import { Trips } from '../../db/entities/Trips.entity';
     // `PackingService.notifyTagged`'s PK91 `getTitle` read only, the same
     // "registered here only for one read, never the owning module" shape
     // `CollabModule`'s own forFeature list documents).
-    MikroOrmModule.forFeature([PackingItems, PackingItemContributors, PackingBags, PackingCategoryAssignees, PackingTemplates, PackingTemplateCategories, PackingTemplateItems, Trips]),
+    MikroOrmModule.forFeature([PackingItems, PackingItemContributors, PackingBags, PackingCategoryAssignees, PackingTemplates, PackingTemplateCategories, PackingTemplateItems, Trips, TripMembers]),
     McpSharedModule, NotificationsModule, PermissionsModule, AuthModule, RealtimeModule, PluginGuardsModule, AddonsModule, AuditModule],
   controllers: [PackingController, AdminPackingTemplatesController],
   providers: [PackingService, PackingMcp, PackingRpc],

@@ -7,6 +7,7 @@ import { BudgetCategoryOrder } from '../../db/entities/BudgetCategoryOrder.entit
 import { Reservations } from '../../db/entities/Reservations.entity';
 import { Places } from '../../db/entities/Places.entity';
 import { Trips } from '../../db/entities/Trips.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { Module } from '@nestjs/common';
 import { BudgetController } from './budget.controller';
 import { BudgetService } from './budget.service';
@@ -34,7 +35,7 @@ import { DemoModule } from '../common/demo.module';
  *  DemoService, and a hand-built TestingModule never imports AppModule, so
  *  the @Global broadcast never happens unless this module imports it directly. */
 @Module({
-  imports: [McpSharedModule, PermissionsModule, AppConfigModule, DemoModule, RealtimeModule, PluginGuardsModule, AddonsModule, TripMembershipModule, MikroOrmModule.forFeature([BudgetItems, BudgetItemMembers, BudgetItemPayers, BudgetSettlements, BudgetCategoryOrder, Reservations, Places, Trips])],
+  imports: [McpSharedModule, PermissionsModule, AppConfigModule, DemoModule, RealtimeModule, PluginGuardsModule, AddonsModule, TripMembershipModule, MikroOrmModule.forFeature([BudgetItems, BudgetItemMembers, BudgetItemPayers, BudgetSettlements, BudgetCategoryOrder, Reservations, Places, Trips, TripMembers])],
   controllers: [BudgetController],
   providers: [BudgetService, ExchangeRatesService, BudgetMcp, ExchangeRatesRpc, CostsRpc],
   // For in-container consumers (CostsRpc, TripsService,

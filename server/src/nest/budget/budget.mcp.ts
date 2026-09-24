@@ -11,7 +11,6 @@ import { DemoService } from '../common/demo.service';
 import { ADDON_IDS } from '../../addons';
 import { noAccess, permissionDenied } from '../../mcp/tools/_shared';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
-import { DatabaseService } from '../database/database.service';
 import { BudgetService } from './budget.service';
 import { ExchangeRatesService } from './exchange-rates.service';
 import { addonGate } from '../addons/addon-gate';
@@ -22,6 +21,8 @@ import { Places } from '../../db/entities/Places.entity';
 import type { PlacesRepository } from '../../db/repositories/Places.repository';
 import { Trips } from '../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 
 /** Legacy registrar gate: the whole budget surface rides the budget addon. */
 const budgetAddonOn = addonGate(ADDON_IDS.BUDGET);
@@ -85,7 +86,6 @@ export class BudgetMcp {
   constructor(
     private readonly budget: BudgetService,
     private readonly exchangeRates: ExchangeRatesService,
-    private readonly db: DatabaseService,
     private readonly env: RuntimeEnvService,
     private readonly membership: TripMembershipService,
     readonly addons: AddonsService,
@@ -94,6 +94,9 @@ export class BudgetMcp {
     @InjectRepository(Places) private readonly places: PlacesRepository,
     @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly demo: DemoService,
+    // Plan 4 Task 3 — DatabaseService.rosterUserIds inlined onto
+    // TripMembersRepository.rosterUserIds directly.
+    @InjectRepository(TripMembers) private readonly tripMembers: TripMembersRepository,
   ) {}
 
   /** Plan 3i Task 3: the AuthService.isDemoUser check via the injected DemoService (common/demo.service.ts), not the free-function demo-write.ts helper. */
@@ -132,7 +135,7 @@ export class BudgetMcp {
     // here instead would certify a split against a figure the row never receives.
     // Negative payers count with their sign (#2176) — the write path stores them.
     if (payers !== undefined) {
-      const roster = await this.db.rosterUserIds(tripId);
+      const roster = await this.tripMembers.rosterUserIds(tripId);
       return sumCents(payers.filter(p => p.amount !== 0 && roster.has(p.user_id)).map(p => p.amount));
     }
     if (total_price !== undefined) return toCents(total_price);
@@ -154,7 +157,7 @@ export class BudgetMcp {
     totalCents: number,
     payers?: { user_id: number; amount: number }[],
   ): Promise<string | null> {
-    const roster = await this.db.rosterUserIds(tripId);
+    const roster = await this.tripMembers.rosterUserIds(tripId);
     const strangers = members.filter(m => !roster.has(m.user_id)).map(m => m.user_id);
     if (strangers.length > 0) {
       return `members contains user IDs that are not on this trip: ${strangers.join(', ')}. Resolve them with list_trip_members.`;

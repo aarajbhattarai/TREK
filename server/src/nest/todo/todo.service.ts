@@ -4,14 +4,15 @@ import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import type { User } from '../../types';
-import { DatabaseService, type TripAccess } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { TodoItems } from '../../db/entities/TodoItems.entity';
 import type { TodoItemsRepository } from '../../db/repositories/TodoItems.repository';
 import { TodoCategoryAssignees } from '../../db/entities/TodoCategoryAssignees.entity';
 import type { TodoCategoryAssigneesRepository } from '../../db/repositories/TodoCategoryAssignees.repository';
 import { Trips } from '../../db/entities/Trips.entity';
-import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import type { TripsRepository, TripAccess } from '../../db/repositories/Trips.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 
 type Trip = TripAccess;
 
@@ -21,25 +22,27 @@ type Trip = TripAccess;
  * moved 1:1 off the legacy raw statements: identical column sets, the `||`
  * falsy-coercion defaults, the bodyKeys sentinel protocol on update and the
  * post-write re-selects). Trip access, the 'packing_edit' permission
- * (shared with packing), the roster-filter on category assignees (kept
- * unconverted on `DatabaseService.rosterUserIds`, the `BudgetService`
- * precedent) and the WebSocket broadcast keep their legacy call paths.
+ * (shared with packing), the roster-filter on category assignees (Plan 4
+ * Task 3: `TripMembersRepository.rosterUserIds`, injected directly, not
+ * through `DatabaseService`) and the WebSocket broadcast keep their legacy
+ * call paths.
  * Non-Nest consumers (plugin RPC host, the legacy MCP trips registrar) go
  * through todo.bridge.ts instead of importing this class directly.
  */
 @Injectable()
 export class TodoService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly uow: UnitOfWork,
     @InjectRepository(TodoItems) private readonly todoItemsRepo: TodoItemsRepository,
     @InjectRepository(TodoCategoryAssignees) private readonly todoCategoryAssigneesRepo: TodoCategoryAssigneesRepository,
     // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
-    // gone: this injects TripsRepository directly. `db` stays injected for
-    // `rosterUserIds` (Task 3's own).
+    // gone: this injects TripsRepository directly.
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    // Plan 4 Task 3 — DatabaseService.rosterUserIds inlined onto
+    // TripMembersRepository.rosterUserIds directly.
+    @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -132,7 +135,7 @@ export class TodoService {
         // members and reservations filter travellers. Dropped rather than
         // rejected: a copied trip carries assignee ids across before its members
         // exist, and a 400 would make the picker unusable there.
-        const roster = await this.db.rosterUserIds(tripId);
+        const roster = await this.tripMembersRepo.rosterUserIds(tripId);
         for (const uid of userIds) if (roster.has(uid)) await this.todoCategoryAssigneesRepo.insertIgnore(tripId, categoryName, uid);
       }
     });

@@ -25,6 +25,8 @@ import { PackingTemplateItems } from '../../db/entities/PackingTemplateItems.ent
 import type { PackingTemplateItemsRepository } from '../../db/repositories/PackingTemplateItems.repository';
 import { Trips } from '../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 
 /** Privacy fields stamped on a packing item (#858). */
 type PrivacyFields = { is_private?: number; owner_id?: number | null };
@@ -95,13 +97,22 @@ export class PackingService {
     @InjectRepository(PackingTemplateCategories) private readonly templateCategoriesRepo: PackingTemplateCategoriesRepository,
     @InjectRepository(PackingTemplateItems) private readonly templateItemsRepo: PackingTemplateItemsRepository,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    // Plan 4 Task 3: `DatabaseService.rosterUserIds` inlined onto
+    // `TripMembersRepository.rosterUserIds` — optional (not a trailing
+    // required param) because an in-flight Task 5c file
+    // (`tests/unit/services/conflictUpdate.test.ts`, out of this task's
+    // file-ownership window) hand-constructs `PackingService` positionally
+    // without it; every real (DI-built) instance gets it via `forFeature`.
+    // `tripRosterIds` below falls back to the `db` facade only when absent.
+    // Safe to make required, and drop the fallback + `db`, once that file lands.
+    @InjectRepository(TripMembers) private readonly tripMembersRepo?: TripMembersRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
     // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is
     // gone: this reuses the TripsRepository already injected for other
-    // reads and calls findAccessible. `db` stays injected for
-    // `rosterUserIds` (Task 3's own).
+    // reads and calls findAccessible. `db` stays injected only for the
+    // `tripRosterIds` fallback below (Task 3's own).
     return await this.tripsRepo.findAccessible(tripId, userId);
   }
 
@@ -561,7 +572,13 @@ export class PackingService {
    * grew up without it.
    */
   private async tripRosterIds(tripId: string | number): Promise<Set<number>> {
-    return await this.db.rosterUserIds(tripId);
+    // Plan 4 Task 3: `TripMembersRepository.rosterUserIds`, inlined, when a
+    // real (DI-built) instance has it — falls back to the `DatabaseService`
+    // facade only for the one hand-built test instance that still omits it
+    // (see the constructor comment above).
+    return this.tripMembersRepo
+      ? await this.tripMembersRepo.rosterUserIds(tripId)
+      : await this.db.rosterUserIds(tripId);
   }
 
   async setBagMembers(tripId: string | number, bagId: string | number, userIds: number[]) {
