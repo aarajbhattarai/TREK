@@ -65,7 +65,7 @@ describe('TodoController (parity with the legacy /api/trips/:tripId/todo route)'
       const broadcast = vi.fn();
       const svc = makeService({ updateItem, broadcast } as Partial<TodoService>);
       await new TodoController(svc).update(user, '5', '9', { checked: true }, 'sock');
-      expect(updateItem).toHaveBeenCalledWith('5', '9', expect.objectContaining({ checked: 1 }), ['checked']);
+      expect(updateItem).toHaveBeenCalledWith('5', 9, expect.objectContaining({ checked: 1 }), ['checked']);
       expect(broadcast).toHaveBeenCalledWith('5', 'todo:updated', { item: { id: 9 } }, 'sock');
     });
 
@@ -73,7 +73,7 @@ describe('TodoController (parity with the legacy /api/trips/:tripId/todo route)'
       const updateItem = vi.fn().mockResolvedValue({ id: 9 });
       const svc = makeService({ updateItem, broadcast: vi.fn() } as Partial<TodoService>);
       await new TodoController(svc).update(user, '5', '9', { checked: false });
-      expect(updateItem).toHaveBeenCalledWith('5', '9', expect.objectContaining({ checked: 0 }), ['checked']);
+      expect(updateItem).toHaveBeenCalledWith('5', 9, expect.objectContaining({ checked: 0 }), ['checked']);
     });
   });
 
