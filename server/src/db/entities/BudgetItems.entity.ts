@@ -52,7 +52,7 @@ export const BudgetItemsSchema = defineEntity({
     note: p.text().nullable(),
     sort_order: p.integer().nullable(),
     created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
-    paidByUser: () => p.manyToOne(Users).ref().nullable().hidden(),
+    paidByUser: () => p.manyToOne(Users).ref().deleteRule('no action').nullable().hidden(),
     paid_by_user_id: p.integer().nullable().persist(false),
     expense_date: p.text().nullable().defaultRaw(`NULL`),
     reservation: () => p.manyToOne(Reservations).ref().nullable().hidden().defaultRaw(`NULL`),

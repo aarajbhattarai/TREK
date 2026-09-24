@@ -11,6 +11,8 @@ import {
   assertFilesGenerated,
   BOOLEAN_COLUMNS,
   CheckExpressionFixup,
+  collectForeignKeyDeleteRules,
+  DeleteRuleFixup,
   JoinColumnFixup,
   JsonColumnFixup,
   KNOWN_DIFFS,
@@ -31,6 +33,7 @@ import {
   RULE10_repositoryTypeMarker,
   RULE11_referencedColumns,
   RULE12_fixGarbledCheckExpressions,
+  RULE13_pinDeleteRuleDrift,
   RULE_normalizeLiteralDefaults,
   applyTextPasses,
   checkEntities,
@@ -548,6 +551,137 @@ describe('RULE12_fixGarbledCheckExpressions', () => {
   });
 });
 
+describe('RULE13_pinDeleteRuleDrift', () => {
+  it('RULE13-001: a plain relation (not nullable, not part of an FK-as-PK) whose physical rule is "cascade" gets pinned — no implicit default covers this shape (the real reservation_travelers/assignment_participants case)', () => {
+    const id = fixtureProp({ name: 'id', primary: true, autoincrement: true });
+    const rel = fixtureProp({ name: 'reservation', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['reservation_id'] });
+    const meta = fixtureMeta('ReservationTravelers', 'reservation_travelers', [id, rel]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['reservation_travelers', new Map([['reservation_id', 'cascade']])]]));
+    expect(fixups).toEqual<DeleteRuleFixup[]>([
+      { className: 'ReservationTravelers', propName: 'reservation', from: undefined, to: 'cascade' },
+    ]);
+    expect(rel.deleteRule).toBe('cascade');
+  });
+
+  it('RULE13-002: a nullable relation whose physical rule is "no action" (no ON DELETE at all in its migration) gets pinned — the implicit "set null" default would be wrong (the real trip_members.invited_by case)', () => {
+    const rel = fixtureProp({ name: 'invitedByRef', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['invited_by'], nullable: true });
+    const meta = fixtureMeta('TripMembers', 'trip_members', [rel]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['trip_members', new Map([['invited_by', 'no action']])]]));
+    expect(fixups).toEqual<DeleteRuleFixup[]>([{ className: 'TripMembers', propName: 'invitedByRef', from: undefined, to: 'no action' }]);
+    expect(rel.deleteRule).toBe('no action');
+  });
+
+  it('RULE13-003: a plain relation whose physical rule already agrees with the "no action" fallback is left untouched (the common case — no noise)', () => {
+    const rel = fixtureProp({ name: 'trip', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['trip_id'] });
+    const meta = fixtureMeta('X', 'x', [rel]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['x', new Map([['trip_id', 'no action']])]]));
+    expect(fixups).toEqual([]);
+    expect(rel.deleteRule).toBeUndefined();
+  });
+
+  it('RULE13-004: a composite-PK member (every PK on the entity is itself a relation) whose physical rule is "no action" gets pinned — the implicit "cascade" default for FK-as-PK would be wrong (the real journey_contributors.user_id case)', () => {
+    const journey = fixtureProp({ name: 'journey', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['journey_id'], primary: true });
+    const user = fixtureProp({ name: 'user', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['user_id'], primary: true });
+    const meta = fixtureMeta('JourneyContributors', 'journey_contributors', [journey, user]);
+    const fixups = RULE13_pinDeleteRuleDrift(
+      [meta],
+      new Map([
+        [
+          'journey_contributors',
+          new Map([
+            ['journey_id', 'cascade'],
+            ['user_id', 'no action'],
+          ]),
+        ],
+      ]),
+    );
+    expect(fixups).toEqual<DeleteRuleFixup[]>([{ className: 'JourneyContributors', propName: 'user', from: undefined, to: 'no action' }]);
+    expect(journey.deleteRule).toBeUndefined(); // already correct via the implicit cascade default — left alone
+    expect(user.deleteRule).toBe('no action');
+  });
+
+  it('RULE13-005: a relation that is BOTH nullable AND its entity\'s sole FK-as-PK is always pinned explicitly, even when the implicit default happens to already agree with physical (the DawarichConnections/PlaceRegions/VacayUserSettings wrinkle — order-dependent at runtime, never trusted)', () => {
+    const rel = fixtureProp({ name: 'user', kind: ReferenceKind.ONE_TO_ONE, owner: true, fieldNames: ['user_id'], primary: true, nullable: true });
+    const meta = fixtureMeta('DawarichConnections', 'dawarich_connections', [rel]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['dawarich_connections', new Map([['user_id', 'cascade']])]]));
+    expect(fixups).toEqual<DeleteRuleFixup[]>([{ className: 'DawarichConnections', propName: 'user', from: undefined, to: 'cascade' }]);
+    expect(rel.deleteRule).toBe('cascade');
+  });
+
+  it('RULE13-006: the same ambiguous nullable-FK-as-PK shape is left alone once it already carries the correct explicit deleteRule (idempotent — a second generator run produces no fixup)', () => {
+    const rel = fixtureProp({
+      name: 'day',
+      kind: ReferenceKind.ONE_TO_ONE,
+      owner: true,
+      fieldNames: ['day_id'],
+      primary: true,
+      nullable: true,
+      deleteRule: 'cascade',
+    });
+    const meta = fixtureMeta('RoadtripDayTracks', 'roadtrip_day_tracks', [rel]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['roadtrip_day_tracks', new Map([['day_id', 'cascade']])]]));
+    expect(fixups).toEqual([]);
+    expect(rel.deleteRule).toBe('cascade');
+  });
+
+  it('RULE13-007: a table absent from the fkDeleteRules map (no FK columns queried, or a routine/enum entity) is left untouched, never thrown on', () => {
+    const rel = fixtureProp({ name: 'trip', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['trip_id'] });
+    const meta = fixtureMeta('X', 'x', [rel]);
+    expect(() => RULE13_pinDeleteRuleDrift([meta], new Map())).not.toThrow();
+    expect(RULE13_pinDeleteRuleDrift([meta], new Map())).toEqual([]);
+  });
+
+  it('RULE13-008: a column the map has no entry for (no db FK on it at all) is skipped — PARITY-009 proper\'s job, not this rule\'s', () => {
+    const rel = fixtureProp({ name: 'trip', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['trip_id'] });
+    const meta = fixtureMeta('X', 'x', [rel]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['x', new Map([['other_id', 'cascade']])]]));
+    expect(fixups).toEqual([]);
+    expect(rel.deleteRule).toBeUndefined();
+  });
+
+  it('RULE13-009: an inverse relation (mappedBy set, not owning) is never a candidate, even when its column name collides with a physical FK entry', () => {
+    const inverse = fixtureProp({ name: 'trips_collection', kind: ReferenceKind.ONE_TO_MANY, mappedBy: 'x', fieldNames: ['trip_id'] });
+    const meta = fixtureMeta('X', 'x', [inverse]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['x', new Map([['trip_id', 'cascade']])]]));
+    expect(fixups).toEqual([]);
+  });
+
+  it('RULE13-010: a multi-column owning relation (fieldNames.length !== 1) is never a candidate', () => {
+    const rel = fixtureProp({ name: 'composite', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['a', 'b'] });
+    const meta = fixtureMeta('X', 'x', [rel]);
+    const fixups = RULE13_pinDeleteRuleDrift([meta], new Map([['x', new Map([['a', 'cascade']])]]));
+    expect(fixups).toEqual([]);
+  });
+});
+
+describe('collectForeignKeyDeleteRules', () => {
+  it('COLLECTFKDR-001: reads PRAGMA foreign_key_list(table).on_delete per column, lowercased, against the real migrated schema', async () => {
+    const db = createSnapshotTestDb();
+    const t = await createTestOrm(db);
+    try {
+      const result = await collectForeignKeyDeleteRules(t.orm.em.getConnection(), ['trip_members', 'reservation_travelers']);
+      expect(result.get('trip_members')?.get('trip_id')).toBe('cascade');
+      expect(result.get('trip_members')?.get('invited_by')).toBe('no action');
+      expect(result.get('reservation_travelers')?.get('reservation_id')).toBe('cascade');
+    } finally {
+      await t.close();
+      db.close();
+    }
+  });
+
+  it('COLLECTFKDR-002: a table with no foreign keys at all is absent from the result map, not present with an empty one', async () => {
+    const db = createSnapshotTestDb();
+    const t = await createTestOrm(db);
+    try {
+      const result = await collectForeignKeyDeleteRules(t.orm.em.getConnection(), ['users']);
+      expect(result.has('users')).toBe(false);
+    } finally {
+      await t.close();
+      db.close();
+    }
+  });
+});
+
 describe('RULE9_addImplicitUniqueConstraints', () => {
   it('RULE9-001: a table with a matching implicit-unique entry gets a uniques: block referencing the columns as properties — a plain (non-FK) column keeps its own name', () => {
     const userId = fixtureProp({ name: 'user_id', primary: false });
@@ -979,6 +1113,7 @@ describe('applyTextPasses', () => {
       repositoryMarkers: [{ className: 'X', repositoryClassName: 'XRepository' }],
       referencedColumns: [{ className: 'X', propName: 'countryRef', referencedColumnNames: ['code'] }],
       checkExpressions: [],
+      deleteRules: [],
     });
     expect(out).toContain(".joinColumn('country')");
     expect(out).toContain(".referencedColumnNames('code')");

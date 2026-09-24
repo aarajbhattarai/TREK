@@ -28,6 +28,6 @@ export const TripMembersSchema = defineEntity({
     user_id: p.integer().persist(false).index('idx_trip_members_user_id'),
     invited_by: p.integer().nullable().persist(false),
     added_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
-    invitedByRef: () => p.manyToOne(Users).ref().joinColumn('invited_by').nullable().hidden(),
+    invitedByRef: () => p.manyToOne(Users).ref().joinColumn('invited_by').deleteRule('no action').nullable().hidden(),
   },
 });

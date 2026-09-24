@@ -317,8 +317,17 @@ describe('entity ↔ migrated-schema parity', () => {
    * `school_holiday_regions.country -> school_holiday_countries.code`
    * included (`code` IS that table's primary key, so the generator's default
    * assumption was already correct there — unchanged by Rule 11, confirmed
-   * by this same test). The deleteRule half stays skipped — see
-   * `PARITY-009b` immediately below for why and by how many rows.
+   * by this same test). The deleteRule half is un-skipped by Plan 4 Task 7 —
+   * see `PARITY-009b` immediately below.
+   *
+   * `school_holiday_regions.country` re-verified one more time at Task 7's
+   * own HEAD, directly against the live migration DDL (not the entity, not
+   * an earlier report): `Migration20200101033600_create_school_holiday_countries.ts`
+   * declares `country TEXT NOT NULL REFERENCES school_holiday_countries(code)`
+   * — a real, DB-enforced FK, confirmed here by this very test passing for
+   * that column too (`SchoolHolidayRegions.countryRef`'s `.joinColumn('country')`,
+   * Plan 2 Task 3). 3f's inventory was right; there is no schema gap here to
+   * document for the user.
    */
   it('PARITY-009: FK referenced columns agree with PRAGMA foreign_key_list', () => {
     const failures: string[] = [];
@@ -350,36 +359,43 @@ describe('entity ↔ migrated-schema parity', () => {
   });
 
   /**
-   * The deleteRule half of the same check (Task 0, Step 3). Task 0 found
-   * deleteRule disagreeing on 11 of 180 owning relations; Task 3's rewrite
-   * fixed one of those eleven as a side effect (`school_holiday_regions.
-   * country` now has a real, explicit `joinColumn`, so it reports a genuine
-   * FK row) and re-ran this check against the other 124 rewritten/added
-   * entities, composite-PK relations included (`packing_item_contributors`,
-   * `vacay_user_settings`, `document_connections`, `trip_document_links` —
-   * their `.entity.ts` source never spells `.deleteRule(...)` on those
-   * relations, but MikroORM discovery still resolves the correct rule at
-   * runtime, confirmed by running this check, so they are not drift): the
-   * count was 10. Plan 3b interlude A's `RULE11_referencedColumns` only
-   * touches the referenced COLUMN, never `deleteRule` (`OauthTokens.client`/
-   * `OauthConsents.client` already agreed on `deleteRule('cascade')` —
-   * unaffected either way), so re-running this exact query still finds
-   * **10** disagreements, unchanged: `trip_members.invited_by` entity=set
-   * null vs db=no action, `roadtrip_day_tracks.day_id` entity=set null vs
-   * db=cascade, `reservation_travelers.reservation_id`/`.user_id` and
-   * `assignment_participants.assignment_id`/`.user_id` entity=no action vs
-   * db=cascade, `oauth_tokens.parent_token_id` entity=set null vs db=no
-   * action, `journey_contributors.user_id` entity=cascade vs db=no action,
-   * `budget_settlements.created_by_user_id`/`budget_items.paid_by_user_id`
-   * entity=set null vs db=no action. None of these are in this task's scope
-   * (or Task 0's/Task 3's); an allow-list would need 10 one-line entries for
-   * drift no task so far was asked to fix. Index-name parity looked clean on
-   * inspection but was not exhaustively checked either, and stays out of
-   * scope here too. Left skipped, with the count pinned above (Plan 4 owns
-   * turning this into either fixes or a real allow-list — the number to
-   * reconcile against is exactly 10, not "some").
+   * The deleteRule half of the same check (Task 0, Step 3), un-skipped by
+   * Plan 4 Task 7. Task 0 found deleteRule disagreeing on 11 of 180 owning
+   * relations; Task 3's rewrite fixed one of those eleven as a side effect
+   * (`school_holiday_regions.country`) and re-measured the other 124
+   * rewritten/added entities at 10. Task 7 re-measured again at its own HEAD
+   * (program rule: re-measure, never assume a prior count) and found the
+   * same 10, unchanged: `trip_members.invited_by`, `oauth_tokens.
+   * parent_token_id`, `budget_settlements.created_by_user_id`, `budget_items.
+   * paid_by_user_id` (a nullable relation whose column has no `ON DELETE` at
+   * all in its migration — SQLite ⇒ `no action` — while the entity's bare
+   * `.nullable()` defaults to MikroORM's own `'set null'`), `roadtrip_day_
+   * tracks.day_id` (nullable AND the table's sole PK — migration says
+   * `ON DELETE CASCADE`, entity defaulted to `'set null'` the same way),
+   * `journey_contributors.user_id` (a composite-PK member whose migration
+   * has no `ON DELETE`, while the entity's FK-as-PK shape defaults to
+   * `'cascade'`), and `reservation_travelers.reservation_id`/`.user_id` +
+   * `assignment_participants.assignment_id`/`.user_id` (migrations say
+   * `ON DELETE CASCADE`; the entity had no default at all for that shape,
+   * landing on `'no action'`).
+   *
+   * All 10 are the ENTITY side never having matched its migration's physical
+   * FK to begin with (never a migration defect — program rule: migrations
+   * are append-only, and every one of the 10 migrations above is verified
+   * correct against its own table's real production behavior). Fixed via a
+   * new generator rule, `RULE13_pinDeleteRuleDrift` (`scripts/generate-
+   * entities.ts`), which pins an explicit `.deleteRule(...)` wherever
+   * leaving the relation implicit would produce the wrong effective rule —
+   * see that rule's own doc comment for the full mechanism, including one
+   * more wrinkle it found empirically: `DawarichConnections.user`,
+   * `PlaceRegions.place` and `VacayUserSettings.user` share the exact same
+   * "nullable AND sole FK-as-PK" shape as `roadtrip_day_tracks.day_id` but
+   * were NOT among the 10 — their runtime default already happens to land on
+   * `'cascade'` (matching physical) purely because of `ALL_ENTITIES`
+   * discovery order, not because the shape is safe. `RULE13` pins all four
+   * explicitly rather than trust that order to hold.
    */
-  it.skip('PARITY-009b (report-only, deferred to Plan 4): FK deleteRule agrees — 10 known disagreements, see doc comment', () => {
+  it('PARITY-009b: FK deleteRule agrees with PRAGMA foreign_key_list', () => {
     const failures: string[] = [];
     for (const meta of tableBackedMetas()) {
       const table = meta.tableName;
@@ -404,6 +420,56 @@ describe('entity ↔ migrated-schema parity', () => {
         if (entityRule !== dbRule) {
           failures.push(`${table}.${fieldName}: deleteRule entity=${entityRule} vs db=${dbRule}`);
         }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  /**
+   * The index-name half of the same PRAGMA-allow-listed check (Task 0, Step
+   * 3) — per 3a's own ledger note, "PARITY-009's index half was never
+   * implemented (only deleteRule)." Task 7 writes it fresh.
+   *
+   * `PRAGMA index_list(<table>)` names every index SQLite actually built —
+   * a plain `CREATE INDEX <name> ON ...` or `CREATE UNIQUE INDEX <name>
+   * ON ...`, one row each — MINUS the unnamed `sqlite_autoindex_<table>_<n>`
+   * entries a bare `PRIMARY KEY`/inline `UNIQUE(...)` constraint gets for
+   * free (excluded the same way `collectImplicitUniqueIndexes` in
+   * `scripts/generate-entities.ts` excludes them — those are RULE9's
+   * `uniques:` territory, a DIFFERENT, already-covered check, not a named
+   * index this one can compare against). The entity side collects every
+   * NAMED index a `defineEntity` call can declare: a property-level
+   * `.index('name')`/`.unique('name')` (`prop.index`/`prop.unique`, a string
+   * when named — the codebase never uses the unnamed `boolean` form, see the
+   * `grep` a future author can re-run: `grep -rn '\.index()\|\.unique()' src/db/entities/*.entity.ts`
+   * finds nothing), and every entity-level `indexes:`/`uniques:` block's own
+   * `.name` (composite indexes, e.g. `Notifications.idx_notifications_target_scope`).
+   * The two sets must be equal — a name in one and not the other means
+   * either a migration added/renamed/dropped an index without the entity
+   * following, or the reverse. Measured clean on today's schema (the
+   * generator's own introspection already names every entity index after
+   * its real DB index, RULE9's unnamed `uniques:` entries excluded by
+   * construction from both sides) — this is a drift GUARD for a future
+   * migration, not a fix for a found gap.
+   */
+  it('PARITY-009c: index names agree with PRAGMA index_list', () => {
+    const failures: string[] = [];
+    for (const meta of tableBackedMetas()) {
+      const table = meta.tableName;
+      const dbIndexRows = testDb.prepare(`PRAGMA index_list("${table}")`).all() as { name: string; unique: number }[];
+      const dbNames = new Set(dbIndexRows.filter((row) => !row.name.startsWith('sqlite_autoindex_')).map((row) => row.name));
+      const entityNames = new Set<string>();
+      for (const prop of meta.props) {
+        if (typeof prop.index === 'string') entityNames.add(prop.index);
+        if (typeof prop.unique === 'string') entityNames.add(prop.unique);
+      }
+      for (const idx of meta.indexes) if (idx.name) entityNames.add(idx.name);
+      for (const uniq of meta.uniques) if (uniq.name) entityNames.add(uniq.name);
+      for (const name of dbNames) {
+        if (!entityNames.has(name)) failures.push(`${table}: db index "${name}" has no matching entity index declaration`);
+      }
+      for (const name of entityNames) {
+        if (!dbNames.has(name)) failures.push(`${table}: entity declares index "${name}" with no matching db index`);
       }
     }
     expect(failures).toEqual([]);

@@ -16,7 +16,7 @@ export const PlaceRegionsSchema = defineEntity({
   class: PlaceRegions,
   repository: () => PlaceRegionsRepository,
   properties: {
-    place: () => p.oneToOne(Places).primary().ref().nullable().hidden(),
+    place: () => p.oneToOne(Places).primary().ref().deleteRule('cascade').nullable().hidden(),
     place_id: p.integer().nullable().persist(false),
     country_code: p.text().index('idx_place_regions_country'),
     region_code: p.text().index('idx_place_regions_region'),

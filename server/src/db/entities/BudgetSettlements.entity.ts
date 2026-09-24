@@ -35,7 +35,7 @@ export const BudgetSettlementsSchema = defineEntity({
     to_user_id: p.integer().persist(false),
     amount: p.double().defaultRaw(`0`),
     created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
-    createdByUser: () => p.manyToOne(Users).ref().nullable().hidden(),
+    createdByUser: () => p.manyToOne(Users).ref().deleteRule('no action').nullable().hidden(),
     created_by_user_id: p.integer().nullable().persist(false),
     currency: p.text().nullable(),
     exchange_rate: p.double().defaultRaw(`1`),

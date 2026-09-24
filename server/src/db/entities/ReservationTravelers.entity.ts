@@ -18,9 +18,9 @@ export const ReservationTravelersSchema = defineEntity({
   uniques: [{ properties: ['reservation', 'user'] }],
   properties: {
     id: p.integer().primary(),
-    reservation: () => p.manyToOne(Reservations).ref().hidden().index('idx_reservation_travelers_res'),
+    reservation: () => p.manyToOne(Reservations).ref().deleteRule('cascade').hidden().index('idx_reservation_travelers_res'),
     reservation_id: p.integer().persist(false).index('idx_reservation_travelers_res'),
-    user: () => p.manyToOne(Users).ref().hidden().index('idx_reservation_travelers_user'),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_reservation_travelers_user'),
     user_id: p.integer().persist(false).index('idx_reservation_travelers_user'),
   },
 });

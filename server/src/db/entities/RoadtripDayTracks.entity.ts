@@ -18,7 +18,7 @@ export const RoadtripDayTracksSchema = defineEntity({
   class: RoadtripDayTracks,
   repository: () => RoadtripDayTracksRepository,
   properties: {
-    day: () => p.oneToOne(Days).primary().ref().nullable().hidden(),
+    day: () => p.oneToOne(Days).primary().ref().deleteRule('cascade').nullable().hidden(),
     day_id: p.integer().nullable().persist(false),
     place: () => p.manyToOne(Places).ref().deleteRule('cascade').hidden().index('idx_roadtrip_day_tracks_place'),
     place_id: p.integer().persist(false).index('idx_roadtrip_day_tracks_place'),

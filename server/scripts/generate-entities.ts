@@ -968,6 +968,125 @@ export function RULE12_fixGarbledCheckExpressions(metadata: EntityMetadata[]): C
   return fixups;
 }
 
+/** A relation whose `deleteRule` RULE13 had to pin explicitly because MikroORM's own runtime default would otherwise disagree with `PRAGMA foreign_key_list`. */
+export interface DeleteRuleFixup {
+  className: string;
+  propName: string;
+  from: string | undefined;
+  to: string;
+}
+
+/**
+ * RULE13 (metadata level; DB-dependent — see `collectForeignKeyDeleteRules`
+ * below for the half that queries the schema): every owning to-one
+ * relation's EFFECTIVE `deleteRule` — explicit if the entity sets one,
+ * otherwise whatever `@mikro-orm/core`'s `MetadataDiscovery` infers by
+ * default at runtime — must equal `PRAGMA foreign_key_list`'s `on_delete`
+ * for its column. Plan 4 Task 7's own measurement
+ * (`tests/unit/db/entity-schema-parity.test.ts`, PARITY-009b) found exactly
+ * 10 owning relations across 120 entities where it does not.
+ *
+ * The root cause, read directly out of
+ * `node_modules/@mikro-orm/core/metadata/MetadataDiscovery.js` (not
+ * assumed): a nullable owning relation defaults to `deleteRule ??= 'set
+ * null'` (`initManyToOneFields`/`initOneToOneFields`); separately, when
+ * EVERY one of an entity's primary keys is itself a relation (composite or
+ * single FK-as-PK), each of those relations defaults to `deleteRule ??=
+ * 'cascade'` (`processEntity`'s `fkPks` block) — and the nullable check runs
+ * FIRST, so a relation that is both nullable and part of an all-FK PK still
+ * gets `'set null'`, never `'cascade'`. Neither default is announced by the
+ * generated source when the introspected value happens to equal it — Rule 7
+ * above strips the redundant `deleteRule('no action')` noise, and
+ * `@mikro-orm/entity-generator`'s OWN `cleanUpReferentialIntegrityRules`
+ * (`EntityGenerator.js`) strips a redundant `'cascade'`/`'set null'` the
+ * same way for the FK-as-PK, fixed-order-pivot and nullable-relation shapes
+ * — but neither cleanup step re-derives the SAME default this rule computes
+ * here, so when the physical schema's real `on_delete` differs from what
+ * MikroORM would infer left implicit, the generated entity silently carries
+ * the wrong effective rule. Concretely, of the 10: 5 are a nullable relation
+ * whose column has no `ON DELETE` clause at all in its migration (SQLite ⇒
+ * `NO ACTION`) — `trip_members.invited_by`, `oauth_tokens.parent_token_id`,
+ * `budget_settlements.created_by_user_id`, `budget_items.paid_by_user_id`,
+ * and `roadtrip_day_tracks.day_id` (nullable AND the table's sole PK — its
+ * migration DOES say `ON DELETE CASCADE`, so this one goes the other way:
+ * physical is `cascade`, the nullable default silently gives `set null`);
+ * `journey_contributors.user_id` is a composite-PK member whose migration
+ * has no `ON DELETE` (physical `no action`) while its FK-as-PK sibling
+ * relation, `journey_id`, DOES say `ON DELETE CASCADE` (so its own implicit
+ * `cascade` default is correct — only `user_id` disagrees); the remaining 4
+ * (`reservation_travelers.reservation_id`/`.user_id`,
+ * `assignment_participants.assignment_id`/`.user_id`) are plain non-nullable
+ * relations on a table with its own `id INTEGER PRIMARY KEY AUTOINCREMENT`
+ * — no implicit default applies to them at all (MikroORM has none for that
+ * shape) — but `@mikro-orm/entity-generator`'s pivot-shaped-table cleanup
+ * (Case 2: a single autoincrement PK + exactly 2 many-to-one relations and
+ * no other columns) strips their introspected `'cascade'` on the mistaken
+ * assumption that MikroORM would restore it as a default, which it does not
+ * for a non-composite-PK entity; their migrations DO say `ON DELETE CASCADE`.
+ *
+ * Every one of the 10 is, per the task's own ruling, an entity that never
+ * matched its migration's physical FK to begin with — not a migration
+ * defect — so this rule always fixes the ENTITY side: it pins an explicit
+ * `deleteRule` equal to the physical value whenever leaving the property
+ * alone (explicit-if-set, else the same implicit default computed above)
+ * would produce the wrong effective rule, and otherwise leaves the property
+ * untouched — matching Rule 7's own "no noise where the implicit default is
+ * already correct" intent instead of stamping every relation explicitly.
+ *
+ * One more wrinkle, found empirically (probed `t.orm.getMetadata()` against
+ * the real `ALL_ENTITIES`, not assumed): a relation that is BOTH nullable
+ * AND its entity's sole/composite FK-as-PK member — `RoadtripDayTracks.day`,
+ * `DawarichConnections.user`, `PlaceRegions.place`, `VacayUserSettings.user`,
+ * every one of them shaped exactly like `.primary().ref().nullable()` with
+ * no explicit `deleteRule` — is where BOTH candidate defaults above apply at
+ * once, and the doc comment's "nullable runs first" precedence is only true
+ * WITHIN a single `processEntity(meta)` call. Across entities, `Days`'/
+ * `Users`'/`Places`' own inverse `.mappedBy(...)` side of the same relation
+ * also runs `initManyToOneFields`, and depending on `ALL_ENTITIES`
+ * discovery order that can re-touch the owning prop before ITS OWN
+ * `processEntity` runs — measured outcome: `RoadtripDayTracks.day` really
+ * does resolve to `'set null'` at runtime (matching this task's 10), while
+ * the other three resolve to `'cascade'` (NOT in the 10) despite identical
+ * source. That order dependency is exactly the kind of fact a future entity
+ * addition could silently flip, so this rule does not trust "already
+ * correct" for this one shape — `isAmbiguousNullablePrimaryFk` below always
+ * pins an explicit `deleteRule` on it, matching physical, even on the three
+ * that happen to already be correct today.
+ */
+export function RULE13_pinDeleteRuleDrift(
+  metadata: EntityMetadata[],
+  fkDeleteRules: ReadonlyMap<string, ReadonlyMap<string, string>>,
+): DeleteRuleFixup[] {
+  const fixups: DeleteRuleFixup[] = [];
+  for (const meta of metadata) {
+    const byColumn = fkDeleteRules.get(meta.tableName);
+    if (!byColumn) continue;
+    const pks = meta.getPrimaryProps().filter((pk): pk is EntityProperty => pk !== undefined);
+    const allPksAreFk = pks.length > 0 && pks.every((pk) => pk.kind !== undefined && pk.kind !== ReferenceKind.SCALAR);
+    for (const prop of meta.relations) {
+      if (!isOwningToOne(prop) || prop.fieldNames.length !== 1) continue;
+      const physical = byColumn.get(prop.fieldNames[0]);
+      if (physical === undefined) continue; // no db FK on this column at all — PARITY-009 proper's job, not this rule's
+      // The two candidate implicit defaults collide on this one shape — see
+      // the doc comment's "one more wrinkle" — so never trust "already
+      // correct" here; always pin it explicitly.
+      const isAmbiguousNullablePrimaryFk = !!prop.nullable && !!prop.primary && allPksAreFk;
+      if (!isAmbiguousNullablePrimaryFk) {
+        // The same precedence MetadataDiscovery applies at runtime within a single
+        // entity's own processEntity() call: nullable wins over FK-as-PK.
+        const implicitDefault = prop.nullable ? 'set null' : prop.primary && allPksAreFk ? 'cascade' : 'no action';
+        const effectiveIfLeftAsIs = (prop.deleteRule ?? implicitDefault).toLowerCase();
+        if (effectiveIfLeftAsIs === physical) continue; // already correct, explicit or by the implicit default alike
+      } else if ((prop.deleteRule ?? '').toLowerCase() === physical) {
+        continue; // already pinned explicitly to the right value — nothing to change
+      }
+      fixups.push({ className: meta.className, propName: prop.name, from: prop.deleteRule, to: physical });
+      prop.deleteRule = physical;
+    }
+  }
+  return fixups;
+}
+
 /** A scalar property whose literal default the renderer's own heuristic drops or mis-renders — see below. */
 export interface DefaultFixup {
   className: string;
@@ -1048,17 +1167,21 @@ export interface RuleFixups {
   referencedColumns: ReferencedColumnsFixup[];
   /** Rule 12's garbled-CHECK-expression repairs. */
   checkExpressions: CheckExpressionFixup[];
+  /** Rule 13's deleteRule-drift pins — reporting only, no text pass depends on it (the renderer already emits an explicit `.deleteRule(...)` from `prop.deleteRule` alone). */
+  deleteRules: DeleteRuleFixup[];
 }
 
 /**
  * Every rule above, composed into the single hook MikroORM calls. Order
- * matters (see comments). `implicitUniques` defaults to empty so a caller
- * (the fixture tests) that doesn't care about Rule 9 need not pass it.
+ * matters (see comments). `implicitUniques`/`fkDeleteRules` default to empty
+ * so a caller (the fixture tests) that doesn't care about Rule 9/Rule 13
+ * need not pass them.
  */
 export function applyRules(
   metadata: EntityMetadata[],
   _platform: Platform,
   implicitUniques: ReadonlyMap<string, string[][]> = new Map(),
+  fkDeleteRules: ReadonlyMap<string, ReadonlyMap<string, string>> = new Map(),
 ): RuleFixups {
   const retypedByRule1 = RULE1_fixUnknownScalarTypes(metadata);
   const jsonColumns = RULE1b_markJsonColumns(metadata);
@@ -1089,6 +1212,11 @@ export function applyRules(
   // the renderer dumps verbatim — no text pass depends on it, same as
   // RULE7/RULE9); placed last only by convention (highest rule number).
   const checkExpressions = RULE12_fixGarbledCheckExpressions(metadata);
+  // Must run after RULE7 (which already dropped the genuinely redundant
+  // `deleteRule('no action')` noise) so `prop.deleteRule` reflects what the
+  // generated source would actually carry before this rule decides whether
+  // that's still wrong against the live schema.
+  const deleteRules = RULE13_pinDeleteRuleDrift(metadata, fkDeleteRules);
   return {
     joinColumns,
     defaults,
@@ -1098,6 +1226,7 @@ export function applyRules(
     repositoryMarkers,
     referencedColumns,
     checkExpressions,
+    deleteRules,
   };
 }
 
@@ -1135,6 +1264,31 @@ export async function collectImplicitUniqueIndexes(
       perTable.push([...info].sort((a, b) => a.seqno - b.seqno).map((c) => c.name));
     }
     result.set(tableName, perTable);
+  }
+  return result;
+}
+
+/**
+ * DB-dependent half of Rule 13: for every table name given, `PRAGMA
+ * foreign_key_list`'s `on_delete` per `from` (owning) column, lowercased —
+ * the same physical fact `tests/unit/db/entity-schema-parity.test.ts`'s
+ * PARITY-009b reads at test time, queried once here so `RULE13_pinDeleteRuleDrift`
+ * stays a pure function over plain data, same shape as Rule 9's split.
+ */
+export async function collectForeignKeyDeleteRules(
+  connection: Connection,
+  tableNames: readonly string[],
+): Promise<Map<string, Map<string, string>>> {
+  const result = new Map<string, Map<string, string>>();
+  for (const tableName of tableNames) {
+    const fkRows = (await connection.execute(`pragma foreign_key_list(\`${tableName}\`)`, [], 'all')) as {
+      from: string;
+      on_delete: string;
+    }[];
+    if (fkRows.length === 0) continue;
+    const byColumn = new Map<string, string>();
+    for (const row of fkRows) byColumn.set(row.from, row.on_delete.toLowerCase());
+    result.set(tableName, byColumn);
   }
   return result;
 }
@@ -1749,6 +1903,7 @@ export async function generateEntities(): Promise<GenerateResult> {
         repositoryMarkers: [],
         referencedColumns: [],
         checkExpressions: [],
+        deleteRules: [],
       };
       const rawFiles = await generator.generate({
         entityDefinition: 'defineEntity',
@@ -1762,13 +1917,12 @@ export async function generateEntities(): Promise<GenerateResult> {
         onImport,
         onProcessedMetadata: async (metadata, platform) => {
           // Same connection the generator itself just introspected the schema
-          // through (`orm`, in scope from just above) — Rule 9 needs no
-          // second connection or a second migrated temp DB.
-          const implicitUniques = await collectImplicitUniqueIndexes(
-            orm.em.getConnection(),
-            metadata.map((meta) => meta.tableName),
-          );
-          fixups = applyRules(metadata, platform, implicitUniques);
+          // through (`orm`, in scope from just above) — Rule 9/Rule 13 need
+          // no second connection or a second migrated temp DB.
+          const tableNames = metadata.map((meta) => meta.tableName);
+          const implicitUniques = await collectImplicitUniqueIndexes(orm.em.getConnection(), tableNames);
+          const fkDeleteRules = await collectForeignKeyDeleteRules(orm.em.getConnection(), tableNames);
+          fixups = applyRules(metadata, platform, implicitUniques, fkDeleteRules);
         },
       });
 
@@ -1786,6 +1940,7 @@ export async function generateEntities(): Promise<GenerateResult> {
           repositoryMarkers: fixups.repositoryMarkers.filter((f) => f.className === className),
           referencedColumns: fixups.referencedColumns.filter((f) => f.className === className),
           checkExpressions: fixups.checkExpressions.filter((f) => f.className === className),
+          deleteRules: fixups.deleteRules.filter((f) => f.className === className),
         };
         files.set(`${className}.entity.ts`, applyTextPasses(raw, relevantFixups));
       }

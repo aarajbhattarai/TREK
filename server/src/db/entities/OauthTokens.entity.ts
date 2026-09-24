@@ -44,7 +44,7 @@ export const OauthTokensSchema = defineEntity({
     refresh_token_expires_at: p.type(DbTimestampType),
     revoked_at: p.type(DbTimestampType).nullable(),
     created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
-    parentToken: () => p.manyToOne(OauthTokens).ref().nullable().hidden().index('idx_oauth_tokens_parent'),
+    parentToken: () => p.manyToOne(OauthTokens).ref().deleteRule('no action').nullable().hidden().index('idx_oauth_tokens_parent'),
     parent_token_id: p.integer().nullable().persist(false).index('idx_oauth_tokens_parent'),
     audience: p.text().nullable(),
     oauth_tokens_collection: () => p.oneToMany(OauthTokens).mappedBy('parentToken').hidden(),

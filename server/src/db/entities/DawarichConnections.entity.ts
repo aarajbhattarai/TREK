@@ -24,7 +24,7 @@ export const DawarichConnectionsSchema = defineEntity({
   class: DawarichConnections,
   repository: () => DawarichConnectionsRepository,
   properties: {
-    user: () => p.oneToOne(Users).primary().ref().nullable().hidden(),
+    user: () => p.oneToOne(Users).primary().ref().deleteRule('cascade').nullable().hidden(),
     user_id: p.integer().nullable().persist(false),
     url: p.text().nullable(),
     api_key: p.text().nullable(),

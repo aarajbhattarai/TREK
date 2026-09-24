@@ -22,7 +22,7 @@ export const JourneyContributorsSchema = defineEntity({
   properties: {
     journey: () => p.manyToOne(Journeys).primary().ref().hidden(),
     journey_id: p.integer().persist(false),
-    user: () => p.manyToOne(Users).primary().ref().hidden().index('idx_journey_contributors_user'),
+    user: () => p.manyToOne(Users).primary().ref().deleteRule('no action').hidden().index('idx_journey_contributors_user'),
     user_id: p.integer().persist(false).index('idx_journey_contributors_user'),
     role: p.text(),
     added_at: p.integer(),
