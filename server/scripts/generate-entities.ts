@@ -939,6 +939,18 @@ export interface CheckExpressionFixup {
  * `end_date >= start_date` — or balanced-but-never-closing nested ones) is
  * left byte-identical: this only fires on the specific over-capture shape,
  * never on a clean expression.
+ *
+ * The walk skips a `(`/`)` that falls inside a single-quoted SQL string
+ * literal (a doubled `''` is SQLite's escape for a literal quote *inside*
+ * the literal, so it does not end the string) — an expression like
+ * `status IN ('confirmed)', 'tentative')` has a literal `)` inside its first
+ * string value that is not a real closing paren; without this tracking the
+ * scanner would hit depth 0 at that spurious character and truncate a
+ * perfectly clean expression (losing its own genuine trailing `)` in the
+ * process, corrupting otherwise-valid SQL), not just leave RULE12-003's kind
+ * of case ambiguous the way a false paren-count fires here (Task 8a's own
+ * carry — "nothing affected today" per 3d's ledger, a latent-bug fix, not an
+ * active one — no shipped entity's CHECK expression has hit this shape yet).
  */
 export function RULE12_fixGarbledCheckExpressions(metadata: EntityMetadata[]): CheckExpressionFixup[] {
   const fixups: CheckExpressionFixup[] = [];
@@ -948,9 +960,25 @@ export function RULE12_fixGarbledCheckExpressions(metadata: EntityMetadata[]): C
       const expr = check.expression;
       let depth = 1;
       let cut = -1;
+      let inString = false;
       for (let i = 0; i < expr.length; i++) {
-        if (expr[i] === '(') depth++;
-        else if (expr[i] === ')') {
+        const ch = expr[i];
+        if (inString) {
+          if (ch === "'") {
+            if (expr[i + 1] === "'") {
+              i++; // a doubled '' is an escaped quote inside the literal, not its end
+              continue;
+            }
+            inString = false;
+          }
+          continue;
+        }
+        if (ch === "'") {
+          inString = true;
+          continue;
+        }
+        if (ch === '(') depth++;
+        else if (ch === ')') {
           depth--;
           if (depth === 0) {
             cut = i;

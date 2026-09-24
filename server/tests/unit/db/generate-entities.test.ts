@@ -549,6 +549,18 @@ describe('RULE12_fixGarbledCheckExpressions', () => {
     const fixups = RULE12_fixGarbledCheckExpressions([meta]);
     expect(fixups).toEqual([]);
   });
+
+  it("RULE12-007: a quoted ')' inside a CHECK expression's own string literal is not mistaken for a closing paren — left byte-identical, no fixup", () => {
+    const meta = fixtureMeta('SchoolHolidayPeriods', 'school_holiday_periods', []);
+    // The IN-list's first value itself contains a literal ')'. A naive
+    // char-by-char paren count would hit depth 0 at that in-string
+    // character and truncate the expression, losing the list's own real
+    // closing paren — this fixture pins that it does not.
+    meta.checks = [{ name: 'sh_status_check', expression: "status IN ('confirmed)', 'tentative')" }];
+    const fixups = RULE12_fixGarbledCheckExpressions([meta]);
+    expect(meta.checks[0].expression).toBe("status IN ('confirmed)', 'tentative')");
+    expect(fixups).toEqual([]);
+  });
 });
 
 describe('RULE13_pinDeleteRuleDrift', () => {
