@@ -11,39 +11,34 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock, dataRootRef } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
+const { dataRootRef } = vi.hoisted(() => ({
+  // Points at a directory that does not exist by default, so the orphan scan
+  // takes its "no plugin data root yet" branch unless a test says otherwise.
+  dataRootRef: { value: '' },
+}));
+
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   return {
-    testDb: db,
-    dbMock: {
-      db,
-      closeDb: () => {},
-      reinitialize: () => {},
-      getPlaceWithTags: () => null,
-      canAccessTrip: () => null,
-      isOwner: () => false,
-    },
-    // Points at a directory that does not exist by default, so the orphan scan
-    // takes its "no plugin data root yet" branch unless a test says otherwise.
-    dataRootRef: { value: '' },
+    db,
+    closeDb: () => {},
+    reinitialize: () => {},
+    getPlaceWithTags: () => null,
+    canAccessTrip: () => null,
+    isOwner: () => false,
   };
 });
-
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn() }));
 vi.mock('../../../src/nest/plugins/paths', () => ({ pluginsDataRoot: () => dataRootRef.value }));
 
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import type { EntityManager } from '@mikro-orm/core';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
@@ -62,34 +57,28 @@ import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourney
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
 import { createTestShareTokensRepo, createTestPluginsRepo, createTestPluginUserErasureQueueRepo } from '../../helpers/share-repos';
 
-const dbs = new DatabaseService(testDb);
-
+let em: EntityManager;
 let budget: BudgetService;
 let svc: UserCleanupService;
 beforeAll(async () => {
-  // Plan 3c Task 0b: `dbs` is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — the four
-  // repository-backed methods are spied directly on this instance instead,
-  // routed to a real `DatabaseService` built with one.
-  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
-  vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
-  vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
-  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
-  vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
-  budget = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
+  // Plan 4 Task 4: UserCleanupService's own DatabaseService param is gone —
+  // UC1 goes through MaintenanceRepository, built from a directly-injected
+  // EntityManager instead.
+  em = (await sharedTestOrm(testDb)).em;
+  budget = new BudgetService(new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb), ...(await budgetRepoArgs(testDb)));
   svc = new UserCleanupService(
-    dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection),
+    em, budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb),
     // Plan 4 Task 1 constructor-ripple: UC4's repository.
-    await createTestTripMembersRepo(dbs.connection),
-    await createTestBudgetItemsRepo(dbs.connection),
+    await createTestTripMembersRepo(testDb),
+    await createTestBudgetItemsRepo(testDb),
     // Plan 3g Task 4 constructor-ripple: UC7-10's repositories.
-    await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection),
-    await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+    await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb),
+    await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb),
     // Plan 3h Task 6 constructor-ripple: UC6's repository.
-    await createTestShareTokensRepo(dbs.connection),
+    await createTestShareTokensRepo(testDb),
     // Plan 4 Task 8a constructor-ripple: UC2/UC3's repositories.
-    await createTestPluginsRepo(dbs.connection),
-    await createTestPluginUserErasureQueueRepo(dbs.connection),
+    await createTestPluginsRepo(testDb),
+    await createTestPluginUserErasureQueueRepo(testDb),
   );
 });
 
@@ -105,11 +94,6 @@ const createJourney = (userId: number, title: string): number =>
 const queuedFor = (userId: number): string[] =>
   (testDb.prepare('SELECT plugin_id FROM plugin_user_erasure_queue WHERE user_id = ? ORDER BY plugin_id')
     .all(userId) as Array<{ plugin_id: string }>).map(r => r.plugin_id);
-
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
-});
 
 beforeEach(() => {
   resetTestDb(testDb);
@@ -185,12 +169,17 @@ describe('erasePluginUserData', () => {
     const slim = new (require('better-sqlite3'))(':memory:');
     slim.exec('CREATE TABLE users (id INTEGER PRIMARY KEY)');
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
-    // `erasePluginUserData` (this test's only call) never reaches `tripMembersRepo`
-    // (UC4), `budgetItemsRepo` (UC5's own method) or the Plan 3g Task 4 journey
-    // repositories (UC7-10) — stubs are enough, and the slim schema has no
-    // trip_members/journey tables to bind against.
+    // `erasePluginUserData`'s UC1 (this test's only call) DOES reach
+    // `MaintenanceRepository` now (Plan 4 Task 4) — it needs a real
+    // EntityManager bound to `slim` (MikroORM binds fine against a table-less
+    // connection; only the per-statement query against the missing
+    // plugin_user_config/plugin_oauth_tokens/plugin_oauth_state tables fails,
+    // caught by `deletePluginUserData`'s own try/catch). `tripMembersRepo`
+    // (UC4), `budgetItemsRepo` (UC5's own method) and the Plan 3g Task 4
+    // journey repositories (UC7-10) still never reach their tables from this
+    // call — stubs are enough for those.
     const slimSvc = new UserCleanupService(
-      new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim),
+      (await sharedTestOrm(slim)).em, budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim),
       {} as unknown as TripMembersRepository, {} as unknown as BudgetItemsRepository,
       {} as unknown as JourneyShareTokensRepository, {} as unknown as JourneysRepository,
       {} as unknown as JourneyEntriesRepository, {} as unknown as JourneyContributorsRepository,
@@ -336,7 +325,7 @@ describe('deleteUserCompletely', () => {
     const deleteByIdSpy = vi.spyOn(usersRepo, 'deleteById').mockRejectedValue(new Error('boom'));
     try {
       await expect(new UserCleanupService(
-        dbs, budget, await createTestUnitOfWork(testDb), usersRepo,
+        em, budget, await createTestUnitOfWork(testDb), usersRepo,
         await createTestTripMembersRepo(testDb),
         await createTestBudgetItemsRepo(testDb),
         await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb),
