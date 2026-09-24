@@ -7,21 +7,15 @@
  * stays greppable. Constructed directly (no TestingModule, repo convention).
  */
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => undefined, isOwner: () => false };
-  return { testDb: db, dbMock: mock };
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
+
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => undefined, isOwner: () => false };
 });
 
-vi.mock('../../../src/db/database', () => dbMock);
-
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createAdmin, createTrip, createInviteToken } from '../../helpers/factories';
 import { RegistrationInvitesService } from '../../../src/nest/auth/registration-invites.service';
@@ -30,8 +24,6 @@ import { createTestInviteTokensRepo, createTestTripsRepo } from '../../helpers/t
 let svc: RegistrationInvitesService;
 
 beforeAll(async () => {
-  createTables(testDb);
-  runMigrations(testDb);
   svc = new RegistrationInvitesService(await createTestInviteTokensRepo(testDb), await createTestTripsRepo(testDb));
 });
 beforeEach(() => { resetTestDb(testDb); vi.clearAllMocks(); });

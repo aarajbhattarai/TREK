@@ -24,26 +24,17 @@
 // vi.hoisted: real in-memory DB + the module mock, before any import
 // ---------------------------------------------------------------------------
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
   return {
-    testDb: db,
-    dbMock: {
-      db,
-      closeDb: () => {},
-      reinitialize: () => {},
-      canAccessTrip: () => undefined,
-      isOwner: () => false,
-    },
+    db,
+    closeDb: () => {},
+    reinitialize: () => {},
+    canAccessTrip: () => undefined,
+    isOwner: () => false,
   };
 });
-
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/nest/auth/ephemeral-tokens', () => ({ createEphemeralToken: vi.fn() }));
 vi.mock('../../../src/mcp/sessionManager', () => ({ revokeUserSessions: vi.fn() }));
 vi.mock('../../../src/nest/audit/client-ip', () => ({ getClientIp: vi.fn(() => '1.2.3.4') }));
@@ -67,8 +58,7 @@ import {
   type PublicApiGrant,
   type PublicApiScope,
 } from '@trek/shared';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { TokenService } from '../../../src/nest/tokens/token.service';
@@ -399,8 +389,6 @@ describe('TokenService — storing and resolving a grant', () => {
   let tokens: TokenService;
 
   beforeAll(async () => {
-    createTables(testDb);
-    runMigrations(testDb);
     tokens = new TokenService(await createTestMcpTokensRepo(testDb), await createTestUsersRepo(testDb), new EphemeralTokenService());
   });
 

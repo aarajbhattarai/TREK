@@ -8,13 +8,10 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
+vi.mock('../../../src/db/database', async () => {
+  const { createSnapshotTestDb } = await import('../../helpers/db-mock');
+  const db = createSnapshotTestDb();
+  return {
     db,
     closeDb: () => {},
     reinitialize: () => {},
@@ -22,44 +19,35 @@ const { testDb, dbMock } = vi.hoisted(() => {
     canAccessTrip: () => undefined,
     isOwner: () => false,
   };
-  return { testDb: db, dbMock: mock };
 });
-
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
   updateJwtSecret: () => {},
 }));
 
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
+import { db as testDb } from '../../../src/db/database';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { TripMembershipService } from '../../../src/nest/trip-membership/trip-membership.service';
 import { TripInviteService } from '../../../src/nest/trip-invite/trip-invite.service';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo, createTestTripInviteTokensRepo } from '../../helpers/test-uow';
 
-// One DatabaseService over the shared in-memory handle, so every collaborator
-// reads and writes the same rows.
-const dbs = new DatabaseService(testDb);
 let svc: TripInviteService;
 beforeAll(async () => {
-  const uow = await createTestUnitOfWork(dbs.connection);
+  const uow = await createTestUnitOfWork(testDb);
   svc = new TripInviteService(
     // Plan 4 Task 2 — TripInviteService's own canAccessTrip delegate is now
     // TripsRepository.findAccessible, in the same constructor slot.
-    await createTestTripsRepo(dbs.connection),
-    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), uow),
-    new TripMembershipService(await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection)),
+    await createTestTripsRepo(testDb),
+    new PermissionsService(await createTestAppSettingsRepo(testDb), uow),
+    new TripMembershipService(await createTestTripsRepo(testDb), await createTestTripMembersRepo(testDb)),
     uow,
-    await createTestTripInviteTokensRepo(dbs.connection),
+    await createTestTripInviteTokensRepo(testDb),
   );
 });
 
-beforeAll(() => { createTables(testDb); runMigrations(testDb); });
 beforeEach(() => resetTestDb(testDb));
 afterAll(() => testDb.close());
 
