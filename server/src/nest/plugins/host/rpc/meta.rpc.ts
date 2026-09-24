@@ -4,7 +4,6 @@ import { PluginGuards } from '../plugin-guards.service';
 import { BadParams, ForbiddenResource } from '../rpc-errors';
 import { num, str } from '../rpc-params';
 import type { PluginRpcContext } from '../rpc-kit/types';
-import { DatabaseService } from '../../../database/database.service';
 import { PluginEntityMetadata } from '../../../../db/entities/PluginEntityMetadata.entity';
 import type { PluginEntityMetadataRepository } from '../../../../db/repositories/PluginEntityMetadata.repository';
 import { Trips } from '../../../../db/entities/Trips.entity';
@@ -49,7 +48,8 @@ const EDIT_ACTION: Record<string, string> = {
 @PluginController()
 export class MetaRpc {
   constructor(
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this reuses the `trips: TripsRepository` param below (findAccessible).
     private readonly guards: PluginGuards,
     @InjectRepository(PluginEntityMetadata) private readonly meta: PluginEntityMetadataRepository,
     @InjectRepository(Trips) private readonly trips: TripsRepository,
@@ -124,7 +124,7 @@ export class MetaRpc {
     const entityId = num(params.entityId, 'entityId');
     if (ctx.actingUserId === undefined) throw new ForbiddenResource('metadata requires an authenticated user context');
     const tripId = await this.entityTrip(entityType, entityId);
-    if (tripId === undefined || !(await this.db.canAccessTrip(tripId, ctx.actingUserId))) {
+    if (tripId === undefined || !(await this.trips.findAccessible(tripId, ctx.actingUserId))) {
       throw new ForbiddenResource(`no access to ${entityType} ${entityId}`);
     }
     if (write && !(await this.guards.canEditAs(EDIT_ACTION[entityType], tripId, ctx.actingUserId))) {

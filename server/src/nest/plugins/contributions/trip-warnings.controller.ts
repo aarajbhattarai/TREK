@@ -1,6 +1,8 @@
 import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
-import { DatabaseService } from '../../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
@@ -29,7 +31,7 @@ const MESSAGE_MAX = 300;
 export class TripWarningsController {
   constructor(
     private readonly hooks: PluginHooks,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   @Get(':tripId')
@@ -40,7 +42,7 @@ export class TripWarningsController {
     if (!pluginsEnabled()) return { warnings: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { warnings: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.trips.findAccessible(tripId, userId))) return { warnings: [] };
 
     const ids = this.hooks.providersOf('warningProvider');
     const perProvider = await Promise.all(

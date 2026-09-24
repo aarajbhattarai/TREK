@@ -231,7 +231,6 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   );
   const queryHelpersService = new QueryHelpersService(await createTestTagsRepo(dbService.connection), await createTestPlaceRatingsRepo(dbService.connection), await createTestAssignmentParticipantsRepo(dbService.connection));
   const daysService = new DaysService(
-    dbService,
     permissionsService,
     realtimeService,
     queryHelpersService,
@@ -244,7 +243,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestReservationEndpointsRepo(dbService.connection),
     await createTestDayAccommodationsRepo(dbService.connection),
   );
-  const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection), await createTestTodoItemsRepo(dbService.connection), await createTestTodoCategoryAssigneesRepo(dbService.connection));
+  const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection), await createTestTodoItemsRepo(dbService.connection), await createTestTodoCategoryAssigneesRepo(dbService.connection), await createTestTripsRepo(dbService.connection));
   const packingService = new PackingService(
     dbService, permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection),
     await createTestPackingItemsRepo(dbService.connection), await createTestPackingItemContributorsRepo(dbService.connection), await createTestPackingBagsRepo(dbService.connection),
@@ -252,7 +251,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestPackingTemplateItemsRepo(dbService.connection), await createTestTripsRepo(dbService.connection),
   );
   const collabService = new CollabService(
-    dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbService.connection),
+    permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbService.connection),
     await createTestCollabMessageReactionsRepo(dbService.connection), await createTestCollabNotesRepo(dbService.connection), await createTestCollabPollsRepo(dbService.connection),
     await createTestCollabPollVotesRepo(dbService.connection), await createTestCollabLinksRepo(dbService.connection), await createTestCollabMessagesRepo(dbService.connection),
     await createTestTripsRepo(dbService.connection),
@@ -284,7 +283,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // One instance, four consumers: AssignmentsMcp, ReservationsMcp, PlacesMcp and
   // AccommodationsService, which writes the day stop a booked night implies.
   const assignmentsService = new AssignmentsService(
-    dbService, permissionsService, realtimeService, queryHelpersService, journeyDomain, await createTestUnitOfWork(dbService.connection),
+    await createTestTripsRepo(dbService.connection), permissionsService, realtimeService, queryHelpersService, journeyDomain, await createTestUnitOfWork(dbService.connection),
     await createTestDayAssignmentsRepo(dbService.connection),
     await createTestAssignmentParticipantsRepo(dbService.connection),
     await createTestDaysRepo(dbService.connection),
@@ -294,6 +293,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   );
   const accommodationsService = new AccommodationsService(
     dbService, permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection),
+    await createTestTripsRepo(dbService.connection),
     await createTestDayAccommodationsRepo(dbService.connection),
     await createTestDayAssignmentsRepo(dbService.connection),
     await createTestPlacesRepo(dbService.connection),
@@ -321,8 +321,8 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   await createTestCollectionPlacesRepo(dbService.connection),
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
-  const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection)), accommodationsService, await createTestUnitOfWork(dbService.connection), await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection), await createTestReservationDayPositionsRepo(dbService.connection), await createTestDayAccommodationsRepo(dbService.connection), await createTestDaysRepo(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestDayAssignmentsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), await createTestUsersRepo(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestBudgetItemsRepo(dbService.connection));
-  const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo, await createTestTripMembersRepo(dbService.connection), await createTestBudgetItemsRepo(dbService.connection), await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection), await createTestShareTokensRepo(dbService.connection)), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), usersRepo);
+  const reservationsService = new ReservationsService(permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection)), accommodationsService, await createTestUnitOfWork(dbService.connection), await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection), await createTestReservationDayPositionsRepo(dbService.connection), await createTestDayAccommodationsRepo(dbService.connection), await createTestDaysRepo(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestDayAssignmentsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), await createTestUsersRepo(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestBudgetItemsRepo(dbService.connection));
+  const membersService = new TripMembersService(budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo, await createTestTripMembersRepo(dbService.connection), await createTestBudgetItemsRepo(dbService.connection), await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection), await createTestShareTokensRepo(dbService.connection)), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), usersRepo);
   const tripsService = new TripsService(
     dbService,
     reservationsService,
@@ -349,7 +349,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // once and shared by both consumers below (readModelService, FilesMcp)
   // rather than reconstructed twice with the same seven-repository tail.
   const filesService = new FilesService(
-    dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em,
+    await createTestTripsRepo(dbService.connection), permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em,
     await createTestUnitOfWork(dbService.connection),
     await createTestTripFilesRepo(dbService.connection),
     await createTestFileLinksRepo(dbService.connection),
@@ -379,7 +379,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // stubbed: an empty provider registry would make the backfill answer "unknown
   // provider" for every id and hide a wiring mistake behind a caught error.
   const memoriesAccess = new MemoriesAccessService(
-    dbService, mcpOrm.repo(TripPhotos), mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripAlbumLinks), mcpOrm.repo(Trips),
+    mcpOrm.repo(TripPhotos), mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripAlbumLinks), mcpOrm.repo(Trips),
     // Plan 3g Task 4 constructor-ripple: MA1/MA2/MA6's journey half.
     await createTestJourneysRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection), await createTestJourneyPhotosRepo(dbService.connection),
   );
@@ -399,7 +399,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new PackingMcp(packingService, authService, addonsService, guards),
       new BudgetMcp(budgetService, exchangeRatesService, dbService, new RuntimeEnvService(), new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), addonsService, guards, await createTestUnitOfWork(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestTripsRepo(dbService.connection), demoService),
       new ReservationsMcp(reservationsService, daysService, budgetService, authService, assignmentsService, guards),
-      new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService, await createTestDayNotesRepo(dbService.connection), await createTestDaysRepo(dbService.connection)), authService, guards),
+      new DayNotesMcp(new DayNotesService(await createTestTripsRepo(dbService.connection), permissionsService, realtimeService, await createTestDayNotesRepo(dbService.connection), await createTestDaysRepo(dbService.connection)), authService, guards),
       new DaysMcp(daysService, authService, guards),
       new RoadtripMcp(
         new RoadtripService(
@@ -441,8 +441,8 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new TripsMcp(tripsService, todoService, collabService, authService, calendarService, membersService, readModelService, addonsService, guards),
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
       new ShareMcp(new ShareService(new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection), ...(await shareServiceRepoArgs(dbService.connection))), authService, guards),
-      new FeedsMcp(new FeedsService(await createTestTripsRepo(dbService.connection), usersRepo, calendarService), dbService, new RuntimeEnvService(), guards, demoService),
-      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), await createTestUnitOfWork(dbService.connection), await createTestTripInviteTokensRepo(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo), demoService),
+      new FeedsMcp(new FeedsService(await createTestTripsRepo(dbService.connection), usersRepo, calendarService), await createTestTripsRepo(dbService.connection), new RuntimeEnvService(), guards, demoService),
+      new TripInviteMcp(new TripInviteService(await createTestTripsRepo(dbService.connection), permissionsService, new TripMembershipService(await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection)), await createTestUnitOfWork(dbService.connection), await createTestTripInviteTokensRepo(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo), demoService),
       new MapsMcp(mapsService),
       new PlacesMcp(placesService, mapsService, await createTestTripsRepo(dbService.connection), authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(
@@ -468,7 +468,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
         // (`findUsernameEmail`, UM11's precedent) added in its place.
         usersRepo, authService, addonsService,
       ),
-      new TransitMcp(new TransitService(new GoogleTransitProvider(appSettings, usersRepo)), daysService, reservationsService, dbService, authService, guards),
+      new TransitMcp(new TransitService(new GoogleTransitProvider(appSettings, usersRepo)), daysService, reservationsService, await createTestTripsRepo(dbService.connection), authService, guards),
       new AtlasMcp(new AtlasService(
         await createTestBucketListRepo(dbService.connection), await createTestHiddenCountriesRepo(dbService.connection),
         await createTestHiddenRegionsRepo(dbService.connection), await createTestVisitedCountriesRepo(dbService.connection),
@@ -491,10 +491,10 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new ReservationImportMcp(new AirtrailImportService(
         await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestDaysRepo(dbService.connection),
         realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(usersRepo, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()),
-      ), dbService, authService, guards, addonsService),
+      ), await createTestTripsRepo(dbService.connection), authService, guards, addonsService),
       new SettingsMcp(new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), authService),
       new HelpMcp(), new AddonsMcp(addonsService),
-      new TripWarningsMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService), dbService),
+      new TripWarningsMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService), await createTestTripsRepo(dbService.connection)),
       new PluginSearchMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService)),
     ],
     { accessPolicy: trekMcpAccessPolicy, validateAccess: trekMcpValidateAccess },

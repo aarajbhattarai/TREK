@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PluginGuards } from '../../../src/nest/plugins/host/plugin-guards.service';
 import { BadParams, ForbiddenResource } from '../../../src/nest/plugins/host/rpc-errors';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -47,10 +47,10 @@ const ctx = (actingUserId: number | undefined): PluginRpcContext => ({
  */
 function build(overrides: { role?: string | null; allow?: boolean; addonOn?: boolean } = {}) {
   const db = {
-    canAccessTrip: vi.fn(async (tripId: number, userId: number) =>
+    findAccessible: vi.fn(async (tripId: number, userId: number) =>
       tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined,
     ),
-  } as unknown as DatabaseService;
+  } as unknown as TripsRepository;
   const users = {
     getRole: vi.fn(async () => ('role' in overrides ? (overrides.role ?? null) : 'user')),
   } as unknown as UsersRepository;
@@ -149,8 +149,8 @@ describe('PluginGuards — requireTripEdit and canEditAs', () => {
 
   it('PGUARD-014 a non-owner member is flagged as shared', async () => {
     const db = {
-      canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 7 })),
-    } as unknown as DatabaseService;
+      findAccessible: vi.fn(async () => ({ id: 1, user_id: 7 })),
+    } as unknown as TripsRepository;
     const users = { getRole: vi.fn(async () => 'user') } as unknown as UsersRepository;
     const permissions = { checkPermission: vi.fn(() => true) } as unknown as PermissionsService;
     const guards = new PluginGuards(db, permissions, {} as AddonsService, users);
@@ -201,8 +201,8 @@ describe('PluginGuards — canEditAs/canCreateAs against a real UsersRepository 
     orm = await createTestOrm(testDb);
     const permissions = new PermissionsService(orm.repo(AppSettings), new UnitOfWork(orm.em));
     const db = {
-      canAccessTrip: vi.fn(async (tripId: number) => (tripId === 1 ? { id: 1, user_id: ownerId } : undefined)),
-    } as unknown as DatabaseService;
+      findAccessible: vi.fn(async (tripId: number) => (tripId === 1 ? { id: 1, user_id: ownerId } : undefined)),
+    } as unknown as TripsRepository;
     // The permissions cache is module-scoped (permissions-cache.ts), not
     // per-instance — invalidate before every case so a stored override from
     // another describe block in this same worker can't leak in.

@@ -65,7 +65,6 @@ import { UnreadableLlmResponse } from '../../../src/nest/llm-parse/clients/opena
 import { getPluginDataDb, closePluginDataDb } from '../../../src/nest/plugins/host/plugin-host-state';
 import { verifyChain } from '../../../src/nest/plugins/host/plugin-audit';
 import { db as mockDb } from '../../../src/db/database';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
@@ -154,6 +153,13 @@ type RawDb = {
 const raw = mockDb as unknown as RawDb;
 
 const tripsRepo = {
+  // Plan 4 Task 2 — PluginGuards' own canAccessTrip delegate is now this
+  // repository's findAccessible directly (same access rule the old
+  // `db/database` mock factory above encoded: trip 1 belongs to user 5,
+  // user 6 is a member).
+  async findAccessible(tripId: number | string, userId: number) {
+    return Number(tripId) === 1 && (userId === 5 || userId === 6) ? { id: 1, user_id: 5, currency: null } : undefined;
+  },
   async sharesTripWith(userIdA: number, userIdB: number) {
     return !!raw
       .prepare(
@@ -283,17 +289,6 @@ const scheduledTasksRepo = {
   },
 } as unknown as PluginScheduledTasksRepository;
 
-const dbs = new DatabaseService(mockDb);
-// Plan 3c Task 0b: `canAccessTrip` is `TripsRepository.findAccessible` now,
-// which needs a real EntityManager over the full migrated schema — this
-// file's `mockDb` is a hand-trimmed `:memory:` table set (no `currency`
-// column on `trips`, among others), so a real repository read isn't
-// possible against it. Spied directly with the exact access rule the old
-// `db/database` mock factory above encoded (trip 1 belongs to user 5, user 6
-// is a member), which is now dead code for this purpose.
-vi.spyOn(dbs, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
-  Number(tripId) === 1 && (userId === 5 || userId === 6) ? { id: 1, user_id: 5, currency: null } : undefined,
-);
 // Plan 3j Task 1: PluginGuards' own role lookup (PG3/PG4) now goes through
 // UsersRepository.getRole, not `dbs.prepare(...)`. Same reasoning as the
 // canAccessTrip spy above — a real UsersRepository would need a real
@@ -315,11 +310,14 @@ const usersRepo = {
     );
   },
 } as unknown as UsersRepository;
-const guards = new PluginGuards(dbs, permissions, addons, usersRepo);
+// Plan 4 Task 2 — PluginGuards'/MetaRpc's/HostSurfaceRpc's own DatabaseService
+// params are gone: canAccessTrip now reads through the TripsRepository each
+// already injects (`tripsRepo` above, findAccessible-only).
+const guards = new PluginGuards(tripsRepo, permissions, addons, usersRepo);
 const registry = createTestPluginRegistry([
   new DbRpc(userSettings),
-  new MetaRpc(dbs, guards, metaRepo, tripsRepo, placesRepo, daysRepo, reservationsRepo, dayAccommodationsRepo),
-  new HostSurfaceRpc(dbs, new RealtimeService(), notifications, llmConfig, oauth, guards, pluginAuditRepo, usersRepo, tripsRepo, scheduledTasksRepo),
+  new MetaRpc(guards, metaRepo, tripsRepo, placesRepo, daysRepo, reservationsRepo, dayAccommodationsRepo),
+  new HostSurfaceRpc(new RealtimeService(), notifications, llmConfig, oauth, guards, pluginAuditRepo, usersRepo, tripsRepo, scheduledTasksRepo),
 ]);
 const factory = new PluginRpcHostFactory(pluginAuditRepo, registry as unknown as PluginRpcRegistryService);
 const stubRouter: PluginCallRouter = { callPlugin: async () => undefined, emitPluginEvent: async () => {} };

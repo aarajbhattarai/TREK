@@ -19,7 +19,7 @@ import { FilesRpc } from '../../../src/nest/files/files.rpc';
 import { FilesModule } from '../../../src/nest/files/files.module';
 import { FilesService } from '../../../src/nest/files/files.service';
 import type { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
@@ -47,8 +47,8 @@ function build(opts: { file?: Record<string, unknown> | undefined; foreign?: str
     softDeleteFile: vi.fn(),
   } as unknown as FilesService & Record<string, ReturnType<typeof vi.fn>>;
   const db = {
-    canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-  } as unknown as DatabaseService;
+    findAccessible: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+  } as unknown as TripsRepository;
   // FL28 — `SELECT email FROM users WHERE id = ?`, now `UsersRepository.getEmail`.
   // getRole is PluginGuards' own role lookup (PG3/PG4, Plan 3j Task 1), on the
   // same double — both are UsersRepository methods now.
@@ -291,8 +291,8 @@ describe('FilesRpc writes', () => {
     try {
       const f = build();
       const db = {
-        canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
-      } as unknown as DatabaseService;
+        findAccessible: vi.fn(async () => ({ id: 1, user_id: 42 })),
+      } as unknown as TripsRepository;
       const guards = new PluginGuards(
         db,
         { checkPermission: vi.fn(() => true) } as unknown as PermissionsService,

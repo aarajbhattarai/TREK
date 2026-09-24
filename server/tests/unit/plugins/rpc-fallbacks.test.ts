@@ -24,7 +24,7 @@ import { DaysRpc } from '../../../src/nest/days/days.rpc';
 import { VacayRpc } from '../../../src/nest/vacay/vacay.rpc';
 import { NotFoundError, ValidationError } from '../../../src/nest/trips/trips.service';
 import type { EntityManager } from '@mikro-orm/core';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -42,9 +42,9 @@ const ALL = new Set([
 
 function guardsFor() {
   const db = {
-    canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
+    findAccessible: vi.fn(async () => ({ id: 1, user_id: 42 })),
     prepare: vi.fn(() => ({ get: () => ({ role: 'user' }), all: () => [] })),
-  } as unknown as DatabaseService;
+  } as unknown as TripsRepository;
   // Plan 3c Task 7: TripsRpc's RP1-RP6 resolve `EntityManager.getRepository(...)`
   // now, not `db.prepare(...)` — a generic fake repository (same shape regardless
   // of which entity class was requested) covers every RP method these fallback

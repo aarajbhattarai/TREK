@@ -1,7 +1,8 @@
 import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService } from '../../database/database.service';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { Days } from '../../../db/entities/Days.entity';
 import type { DaysRepository } from '../../../db/repositories/Days.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -160,7 +161,7 @@ function normalize(pluginId: string, tripDayIds: ReadonlySet<number>, raw: unkno
 export class DayTintsController {
   constructor(
     private readonly hooks: PluginHooks,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     // CT2 (Plan 3j Task 5) — the trip's day-id set, converted onto Days.repository.ts.
     @InjectRepository(Days) private readonly days: DaysRepository,
   ) {}
@@ -173,7 +174,7 @@ export class DayTintsController {
     if (!pluginsEnabled()) return { tints: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { tints: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.trips.findAccessible(tripId, userId))) return { tints: [] };
 
     const ids = this.hooks.providersOf('dayTintProvider');
     if (ids.length === 0) return { tints: [] };

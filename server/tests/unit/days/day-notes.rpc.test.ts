@@ -13,7 +13,7 @@ import { DayNotesRpc } from '../../../src/nest/day-notes/day-notes.rpc';
 import { DayNotesModule } from '../../../src/nest/day-notes/day-notes.module';
 import type { DayNotesService } from '../../../src/nest/day-notes/day-notes.service';
 import type { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -36,8 +36,8 @@ function build(canEdit = true) {
   } as unknown as DayNotesService & Record<string, ReturnType<typeof vi.fn>>;
   const realtime = { broadcast: vi.fn() } as unknown as RealtimeService & { broadcast: ReturnType<typeof vi.fn> };
   const db = {
-    canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-  } as unknown as DatabaseService;
+    findAccessible: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+  } as unknown as TripsRepository;
   const guards = new PluginGuards(
     db,
     { checkPermission: vi.fn(() => canEdit) } as unknown as PermissionsService,

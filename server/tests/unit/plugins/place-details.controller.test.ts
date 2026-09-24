@@ -9,7 +9,7 @@ vi.mock('../../../src/db/database', () => ({
   db: { prepare: () => ({ get: (placeId: number) => placeTrip(placeId) }) },
   canAccessTrip,
 }));
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
 import { PlaceDetailsController } from '../../../src/nest/plugins/contributions/place-details.controller';
@@ -26,7 +26,7 @@ function controller(over: Partial<PluginHooks> = {}) {
   } as unknown as PluginHooks;
   // CT7 (Plan 3j Task 5) — the place's owning trip id is now Places.repository.ts#findTripId.
   const places = { findTripId: vi.fn(async (placeId: number) => placeTrip(placeId)?.trip_id) } as unknown as PlacesRepository;
-  return { c: new PlaceDetailsController(runtime, { canAccessTrip } as unknown as DatabaseService, places), runtime };
+  return { c: new PlaceDetailsController(runtime, { findAccessible: canAccessTrip } as unknown as TripsRepository, places), runtime };
 }
 
 describe('PlaceDetailsController', () => {

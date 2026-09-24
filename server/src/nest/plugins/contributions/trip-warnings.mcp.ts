@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { McpController, Tool, TOOL_ANNOTATIONS_READONLY, ok, type McpContext, type McpTextResult } from '../../../nest-mcp';
 import { noAccess } from '../../../mcp/tools/_shared';
-import { DatabaseService } from '../../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
 import { stripEmoji } from '../text-sanitize';
@@ -40,7 +42,7 @@ const MESSAGE_MAX = 300;
 export class TripWarningsMcp {
   constructor(
     private readonly hooks: PluginHooks,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   @Tool({
@@ -55,7 +57,7 @@ export class TripWarningsMcp {
   async getTripWarnings({ tripId }: { tripId: number }, ctx: McpContext): Promise<McpTextResult> {
     // Access first, so the answer to "may I look at this trip" does not depend on
     // whether an admin has the plugin system switched on.
-    if (!(await this.dbs.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    if (!(await this.trips.findAccessible(tripId, ctx.userId))) return noAccess();
     if (!pluginsEnabled()) return ok({ warnings: [] });
 
     const ids = this.hooks.providersOf('warningProvider');

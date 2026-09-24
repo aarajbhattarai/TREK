@@ -1,7 +1,8 @@
 import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService } from '../../database/database.service';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { Plugins } from '../../../db/entities/Plugins.entity';
 import type { PluginsRepository } from '../../../db/repositories/Plugins.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -35,7 +36,7 @@ export type { PluginRouteOut } from './plugin-route-normalize';
 export class PluginRoutesController {
   constructor(
     private readonly hooks: PluginHooks,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     @InjectRepository(Plugins) private readonly plugins: PluginsRepository,
   ) {}
 
@@ -49,7 +50,7 @@ export class PluginRoutesController {
     if (!pluginsEnabled()) return { route: null };
     const userId = req.user?.id;
     const tripId = Number(body?.tripId);
-    if (userId == null || !Number.isFinite(tripId) || !(await this.dbs.canAccessTrip(tripId, userId))) return { route: null };
+    if (userId == null || !Number.isFinite(tripId) || !(await this.trips.findAccessible(tripId, userId))) return { route: null };
     if (!PROFILE_RE.test(profileId)) return { route: null };
     const waypoints = readWaypoints(body?.waypoints);
     if (!waypoints) return { route: null };

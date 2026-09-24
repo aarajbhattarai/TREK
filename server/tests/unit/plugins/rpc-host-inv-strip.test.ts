@@ -18,7 +18,7 @@ import { TripsRpc } from '../../../src/nest/trips/trips.rpc';
 import { DbRpc } from '../../../src/nest/plugins/host/rpc/db.rpc';
 import { PluginGuards } from '../../../src/nest/plugins/host/plugin-guards.service';
 import type { EntityManager } from '@mikro-orm/core';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 
 const req = (method: string, params: Record<string, unknown>): RpcRequest => ({ k: 'req', id: 'x', method, params });
@@ -36,9 +36,9 @@ const dbRegistry = () => {
 /** trips.getById lives on the decorators now, so the audit cases bind it through them. */
 const tripsRegistry = () => {
   const db = {
-    canAccessTrip: async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined),
+    findAccessible: async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined),
     prepare: () => ({ get: () => ({ id: 1, title: 'Japan' }), all: () => [] }),
-  } as unknown as DatabaseService;
+  } as unknown as TripsRepository;
   const guards = new PluginGuards(db, {} as never, {} as never, {} as never);
   // Plan 3c Task 7: trips.getById (RP1) now reads through
   // `EntityManager.getRepository(Trips).findRaw(...)`, not `db.prepare(...)`.

@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { DatabaseService } from '../../database/database.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { AddonsService } from '../../addons/addons.service';
 import { Users } from '../../../db/entities/Users.entity';
 import type { UsersRepository } from '../../../db/repositories/Users.repository';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { BadParams, ForbiddenResource } from './rpc-errors';
 import { num } from './rpc-params';
 import type { PluginRpcContext } from './rpc-kit/types';
@@ -23,7 +24,10 @@ import type { PluginRpcContext } from './rpc-kit/types';
 @Injectable()
 export class PluginGuards {
   constructor(
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly (same constructor slot) and
+    // calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly permissions: PermissionsService,
     private readonly addons: AddonsService,
     @InjectRepository(Users) private readonly users: UsersRepository,
@@ -40,7 +44,7 @@ export class PluginGuards {
     if (ctx.actingUserId === undefined) {
       throw new ForbiddenResource('trip reads require an authenticated user context');
     }
-    if (!(await this.db.canAccessTrip(tripId, ctx.actingUserId))) {
+    if (!(await this.trips.findAccessible(tripId, ctx.actingUserId))) {
       throw new ForbiddenResource(`no access to trip ${tripId}`);
     }
     // The read runs only for a bound, membership-checked user, so hand the id through
@@ -61,7 +65,7 @@ export class PluginGuards {
 
   /** A write is allowed only if the acting user can access AND edit the trip. */
   async requireTripEdit(tripId: number, userId: number, action: string): Promise<void> {
-    if (!(await this.db.canAccessTrip(tripId, userId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
+    if (!(await this.trips.findAccessible(tripId, userId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
     if (!(await this.canEditAs(action, tripId, userId))) throw new ForbiddenResource(`no permission to edit trip ${tripId}`);
   }
 
@@ -71,7 +75,7 @@ export class PluginGuards {
    * message the refusal carries.
    */
   async canEditAs(action: string, tripId: number, userId: number): Promise<boolean> {
-    const trip = await this.db.canAccessTrip(tripId, userId);
+    const trip = await this.trips.findAccessible(tripId, userId);
     if (!trip) return false;
     // UsersRepository.getRole (PG3, Plan 3j Task 1) — `SELECT role FROM users
     // WHERE id = ?`, converted. Its `string | null` return already folds "no

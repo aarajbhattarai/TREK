@@ -7,6 +7,7 @@ import { JourneyEntries } from '../../../db/entities/JourneyEntries.entity';
 import { Plugins } from '../../../db/entities/Plugins.entity';
 import { Days } from '../../../db/entities/Days.entity';
 import { Places } from '../../../db/entities/Places.entity';
+import { Trips } from '../../../db/entities/Trips.entity';
 import { PlaceDetailsController } from './place-details.controller';
 import { PluginSearchController } from './plugin-search.controller';
 import { TripWarningsController } from './trip-warnings.controller';
@@ -59,7 +60,7 @@ import { DemoModule } from '../../common/demo.module';
  * dependency unresolved.
  */
 @Module({
-  imports: [PluginsRuntimeModule, AddonsModule, JourneyDomainModule, DemoModule, MikroOrmModule.forFeature([JourneyEntries, Plugins, Days, Places])],
+  imports: [PluginsRuntimeModule, AddonsModule, JourneyDomainModule, DemoModule, MikroOrmModule.forFeature([JourneyEntries, Plugins, Days, Places, Trips])],
   controllers: [
     PlaceDetailsController,
     PluginSearchController,

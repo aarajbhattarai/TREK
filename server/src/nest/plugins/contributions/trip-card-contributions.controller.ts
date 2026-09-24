@@ -1,6 +1,8 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
-import { DatabaseService } from '../../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
@@ -84,7 +86,7 @@ function normalize(pluginId: string, raw: unknown, allowed: Set<number>): TripCa
 export class TripCardContributionsController {
   constructor(
     private readonly hooks: PluginHooks,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   @Get()
@@ -114,7 +116,7 @@ export class TripCardContributionsController {
     // produces (the filtered `uniqueRequested` order) is load-bearing.
     const accessible: number[] = [];
     for (const id of uniqueRequested) {
-      if (await this.dbs.canAccessTrip(id, userId)) accessible.push(id);
+      if (await this.trips.findAccessible(id, userId)) accessible.push(id);
     }
     if (accessible.length === 0) return { contributions: [] };
     const allowed = new Set(accessible);

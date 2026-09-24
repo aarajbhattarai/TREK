@@ -3,6 +3,7 @@ import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { PermissionsModule } from '../../permissions/permissions.module';
 import { AddonsModule } from '../../addons/addons.module';
 import { Users } from '../../../db/entities/Users.entity';
+import { Trips } from '../../../db/entities/Trips.entity';
 import { PluginGuards } from './plugin-guards.service';
 
 /**
@@ -23,7 +24,7 @@ import { PluginGuards } from './plugin-guards.service';
  * AuthModule <-> NotificationsModule.
  */
 @Module({
-  imports: [PermissionsModule, AddonsModule, MikroOrmModule.forFeature([Users])],
+  imports: [PermissionsModule, AddonsModule, MikroOrmModule.forFeature([Users, Trips])],
   providers: [PluginGuards],
   exports: [PluginGuards],
 })

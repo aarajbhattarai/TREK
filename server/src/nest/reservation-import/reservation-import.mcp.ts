@@ -9,7 +9,9 @@ import { ADDON_IDS } from '../../addons';
 import { addonGate } from '../addons/addon-gate';
 import { AddonsService } from '../addons/addons.service';
 import { AuthService } from '../auth/auth.service';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
 import { noAccess, permissionDenied } from '../../mcp/tools/_shared';
 import { AirtrailImportService } from '../integrations/airtrail-import.service';
@@ -42,7 +44,10 @@ const MAX_MCP_AIRTRAIL_FLIGHTS = 50;
 export class ReservationImportMcp {
   constructor(
     private readonly airtrailImport: AirtrailImportService,
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly (same constructor slot) and
+    // calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly auth: AuthService,
     private readonly guards: McpToolGuardsService,
     readonly addons: AddonsService,
@@ -70,7 +75,7 @@ export class ReservationImportMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    if (!(await this.trips.findAccessible(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
 
     if (flightIds.length > MAX_MCP_AIRTRAIL_FLIGHTS) {

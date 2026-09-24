@@ -11,6 +11,7 @@ import { AuthModule } from '../auth/auth.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
 import { Users } from '../../db/entities/Users.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 
 /**
  * Transit domain (#1065) — the Transitous/MOTIS proxy, with the optional
@@ -18,18 +19,17 @@ import { Users } from '../../db/entities/Users.entity';
  * decorator-registered MCP tools; DaysModule/ReservationsModule feed
  * create_transit_journey. Exports TransitService for in-container consumers.
  *
- * MikroOrmModule.forFeature([AppSettings, Users]): GoogleTransitProvider
+ * MikroOrmModule.forFeature([AppSettings, Users, Trips]): GoogleTransitProvider
  * passes its own AppSettingsRepository/UsersRepository to
  * instance-api-keys.ts's resolveApiKey (Plan 3a Task 5) and, since Plan 4
  * Task 1, to `transit-provider.ts`'s `readTransitProvider`/
  * `writeTransitProvider` too — the SAME `AppSettingsRepository` this module
- * already registers. `transit.mcp.ts`'s remaining `DatabaseService`
- * injection is unrelated: it is the `canAccessTrip` delegate (Plan 4
- * Task 2/3's facade-inline sweep, not this plan's).
+ * already registers. `transit.mcp.ts`'s own `canAccessTrip` delegate is now
+ * `TripsRepository.findAccessible` directly (Plan 4 Task 2).
  */
 @Module({
   // DaysModule + ReservationsModule: TransitMcp's create_transit_journey injects both.
-  imports: [McpSharedModule, RateLimitModule, DaysModule, ReservationsModule, AuthModule, MikroOrmModule.forFeature([AppSettings, Users])],
+  imports: [McpSharedModule, RateLimitModule, DaysModule, ReservationsModule, AuthModule, MikroOrmModule.forFeature([AppSettings, Users, Trips])],
   controllers: [TransitController],
   providers: [TransitService, TransitMcp, GoogleTransitProvider],
   exports: [TransitService],

@@ -16,7 +16,7 @@ vi.mock('../../../src/db/database', () => ({
   db: { prepare: () => ({ get: () => (capabilitiesRow.value === undefined ? undefined : { capabilities: capabilitiesRow.value }) }) },
   canAccessTrip,
 }));
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled }));
 
 import { PluginRoutesController } from '../../../src/nest/plugins/contributions/plugin-routes.controller';
@@ -36,7 +36,7 @@ function controller(invoke: () => unknown, providers = ['ev-plug']) {
   const plugins = {
     findCapabilities: vi.fn(async () => (capabilitiesRow.value === undefined ? null : capabilitiesRow.value)),
   } as unknown as PluginsRepository;
-  return { c: new PluginRoutesController(runtime, { canAccessTrip } as unknown as DatabaseService, plugins), runtime };
+  return { c: new PluginRoutesController(runtime, { findAccessible: canAccessTrip } as unknown as TripsRepository, plugins), runtime };
 }
 const wp = (n = 3) => Array.from({ length: n }, (_, i) => ({ lat: 48 + i * 0.1, lng: 2 + i * 0.1 }));
 const goodRoute = (n = 3, over: Record<string, unknown> = {}) => ({

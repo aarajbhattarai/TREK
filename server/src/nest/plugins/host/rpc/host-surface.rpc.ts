@@ -13,7 +13,6 @@ import { Trips } from '../../../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../../../db/repositories/Trips.repository';
 import { PluginScheduledTasks } from '../../../../db/entities/PluginScheduledTasks.entity';
 import type { PluginScheduledTasksRepository } from '../../../../db/repositories/PluginScheduledTasks.repository';
-import { DatabaseService } from '../../../database/database.service';
 import { RealtimeService } from '../../../realtime/realtime.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { LlmConfigResolver } from '../../../llm-parse/llm-config.resolver';
@@ -45,7 +44,8 @@ const AI_TEXT_MAX = 20_000;
 @PluginController()
 export class HostSurfaceRpc {
   constructor(
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this reuses the `trips: TripsRepository` param below (findAccessible).
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
     private readonly llmConfig: LlmConfigResolver,
@@ -82,7 +82,7 @@ export class HostSurfaceRpc {
     // Namespacing the event type alone does not cross the membership boundary.
     const tripId = num(params.tripId, 'tripId');
     if (ctx.actingUserId === undefined) throw new ForbiddenResource('broadcasts require an authenticated user context');
-    if (!(await this.db.canAccessTrip(tripId, ctx.actingUserId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
+    if (!(await this.trips.findAccessible(tripId, ctx.actingUserId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
     // The host forces the plugin:{id}:{event} namespace, so a plugin cannot forge a
     // core event.
     this.realtime.broadcast(tripId, `plugin:${ctx.pluginId}:${str(params.event, 'event')}`, asPayload(params.data));
@@ -121,7 +121,7 @@ export class HostSurfaceRpc {
     if (scope !== 'user' && scope !== 'trip') throw new BadParams("scope must be 'user' or 'trip'");
     const targetId = num(input.targetId, 'targetId');
     if (scope === 'user' && targetId !== actor) throw new ForbiddenResource('a plugin may only notify the acting user');
-    if (scope === 'trip' && !(await this.db.canAccessTrip(targetId, actor))) {
+    if (scope === 'trip' && !(await this.trips.findAccessible(targetId, actor))) {
       throw new ForbiddenResource('the acting user is not a member of that trip');
     }
     const link = this.safeLink(input.link);

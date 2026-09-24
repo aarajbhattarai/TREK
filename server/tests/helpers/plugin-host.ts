@@ -161,7 +161,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
   const addons = await createTestAddonsService(dbs.connection, dbs);
   const queryHelpers = new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection));
-  const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection), await createTestTodoItemsRepo(dbs.connection), await createTestTodoCategoryAssigneesRepo(dbs.connection));
+  const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection), await createTestTodoItemsRepo(dbs.connection), await createTestTodoCategoryAssigneesRepo(dbs.connection), await createTestTripsRepo(dbs.connection));
   const packing = new PackingService(
     dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection),
     await createTestPackingItemsRepo(dbs.connection), await createTestPackingItemContributorsRepo(dbs.connection), await createTestPackingBagsRepo(dbs.connection),
@@ -171,7 +171,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   // Plan 3e Task 1 (files): FilesService now also takes uow + the repositories
   // its R2 transactions and R12 cross-object trip-scoping guard need.
   const files = new FilesService(
-    dbs, permissions, realtime, new EphemeralTokenService(), generalStorage, (await sharedTestOrm(dbs.connection)).em,
+    await createTestTripsRepo(dbs.connection), permissions, realtime, new EphemeralTokenService(), generalStorage, (await sharedTestOrm(dbs.connection)).em,
     await createTestUnitOfWork(dbs.connection),
     await createTestTripFilesRepo(dbs.connection),
     await createTestFileLinksRepo(dbs.connection),
@@ -181,7 +181,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestBudgetItemsRepo(dbs.connection),
   );
   const collab = new CollabService(
-    dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection),
+    permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection),
     await createTestCollabMessageReactionsRepo(dbs.connection), await createTestCollabNotesRepo(dbs.connection), await createTestCollabPollsRepo(dbs.connection),
     await createTestCollabPollVotesRepo(dbs.connection), await createTestCollabLinksRepo(dbs.connection), await createTestCollabMessagesRepo(dbs.connection),
     await createTestTripsRepo(dbs.connection),
@@ -196,7 +196,6 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection),
   );
   const days = new DaysService(
-    dbs,
     permissions,
     realtime,
     queryHelpers,
@@ -249,9 +248,9 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestTripsRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
     await createTestReservationEndpointsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection),
   );
-  const dayNotes = new DayNotesService(dbs, permissions, realtime, await createTestDayNotesRepo(dbs.connection), await createTestDaysRepo(dbs.connection));
+  const dayNotes = new DayNotesService(await createTestTripsRepo(dbs.connection), permissions, realtime, await createTestDayNotesRepo(dbs.connection), await createTestDaysRepo(dbs.connection));
   const assignments = new AssignmentsService(
-    dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection),
+    await createTestTripsRepo(dbs.connection), permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestAssignmentParticipantsRepo(dbs.connection),
     await createTestDaysRepo(dbs.connection),
@@ -268,6 +267,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const oauth = new PluginOAuthService(pluginOrm.repo(Plugins), pluginOrm.repo(PluginOauthTokens), pluginOrm.repo(PluginOauthState), pluginOrm.repo(PluginSettingsFields));
   const accommodations = new AccommodationsService(
     dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection),
+    await createTestTripsRepo(dbs.connection),
     await createTestDayAccommodationsRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestPlacesRepo(dbs.connection),
@@ -290,13 +290,15 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   await createTestCollectionPlacesRepo(dbs.connection),
   );
   // After accommodations: a hotel booking writes the stay's day stop through it.
-  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection)), accommodations, await createTestUnitOfWork(dbs.connection), await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection), await createTestReservationDayPositionsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection), await createTestDaysRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestDayAssignmentsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
+  const reservations = new ReservationsService(permissions, budget, realtime, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection)), accommodations, await createTestUnitOfWork(dbs.connection), await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection), await createTestReservationDayPositionsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection), await createTestDaysRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestDayAssignmentsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection), (await sharedTestOrm(dbs.connection)).em);
-  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo, await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
+  const members = new TripMembersService(budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo, await createTestTripMembersRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
   // Plan 3j Task 1 — PluginGuards' own role lookup (PG3/PG4) now goes
   // through UsersRepository.getRole; `usersRepo` above is the same
   // sharedTestOrm-backed repository every other service in this file uses.
-  const guards = new PluginGuards(dbs, permissions, addons, usersRepo);
+  // Plan 4 Task 2 — PluginGuards' own canAccessTrip delegate is now
+  // TripsRepository.findAccessible directly, in the same constructor slot.
+  const guards = new PluginGuards(await createTestTripsRepo(dbs.connection), permissions, addons, usersRepo);
 
   const registry = createTestPluginRegistry([
     new TagsRpc(new TagsService(await createTestTagsRepo(dbs.connection))),
@@ -312,7 +314,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     new AccommodationsRpc(accommodations, realtime, guards),
     new ItineraryRpc(assignments, realtime, guards),
     new TripsRpc(trips, reservations, days, membership, realtime, guards, accommodations, members, (await sharedTestOrm(dbs.connection)).em),
-    new CostsRpc(budget, dbs, realtime, guards, membership),
+    new CostsRpc(budget, await createTestTripsRepo(dbs.connection), realtime, guards, membership),
     new ReservationsRpc(reservations, realtime, guards),
     new CollabRpc(collab, realtime, guards),
     new AtlasRpc(atlas, guards),
@@ -327,15 +329,18 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     new DbRpc(new PluginUserSettingsService(pluginOrm.repo(PluginSettingsFields), pluginOrm.repo(PluginUserConfig))),
     // Plan 3j Task 5 — MetaRpc's own MR1–MR9 conversion: PluginEntityMetadata plus
     // one typed trip-id read per entity table (R12's dispatch, no interpolation).
+    // Plan 4 Task 2 — MetaRpc's own DatabaseService param is gone: canAccessTrip
+    // now reads through the TripsRepository it already injects below.
     new MetaRpc(
-      dbs, guards, pluginOrm.repo(PluginEntityMetadata), await createTestTripsRepo(dbs.connection),
+      guards, pluginOrm.repo(PluginEntityMetadata), await createTestTripsRepo(dbs.connection),
       await createTestPlacesRepo(dbs.connection), await createTestDaysRepo(dbs.connection),
       await createTestReservationsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection),
     ),
     // Plan 3j Task 5 — HostSurfaceRpc's own HR1/HR5–HR9 conversion: the plugin-visible
     // user row, the bilateral trip-sharing gate, and its own scheduler.set/cancel.
+    // Plan 4 Task 2 — its own DatabaseService param is gone the same way MetaRpc's is.
     new HostSurfaceRpc(
-      dbs, realtime, notifications, llmConfig, oauth, guards, pluginAuditRepo,
+      realtime, notifications, llmConfig, oauth, guards, pluginAuditRepo,
       usersRepo, await createTestTripsRepo(dbs.connection), pluginOrm.repo(PluginScheduledTasks),
     ),
     new PluginHooks(undefined as never),

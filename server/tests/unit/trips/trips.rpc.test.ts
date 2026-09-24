@@ -24,7 +24,7 @@ import type { AccommodationsService } from '../../../src/nest/accommodations/acc
 import type { TripMembersService } from '../../../src/nest/trip-members/trip-members.service';
 import type { TripMembershipService } from '../../../src/nest/trip-membership/trip-membership.service';
 import type { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -72,8 +72,8 @@ export function build(opts: { allow?: (action: string) => boolean; updateThrows?
   // uses for `TripsRpc.update` itself, but through PluginGuards' own
   // constructor param, stubbed separately just below.
   const db = {
-    canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-  } as unknown as DatabaseService;
+    findAccessible: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+  } as unknown as TripsRepository;
   // Plan 3c Task 7: RP1-RP6's SQL-text-keyed `db.prepare` stub is gone —
   // every raw statement moved to a repository method, so this is a
   // repository-level stub, keyed on the entity CLASS `em.getRepository(...)`
@@ -176,8 +176,8 @@ describe('TripsRpc reads', () => {
       }),
     } as unknown as EntityManager;
     const db = {
-      canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-    } as unknown as DatabaseService;
+      findAccessible: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+    } as unknown as TripsRepository;
     const permissions = { checkPermission: vi.fn(() => true) } as unknown as PermissionsService;
     const guards = new PluginGuards(
       db,

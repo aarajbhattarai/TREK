@@ -12,7 +12,7 @@ import { TodoRpc } from '../../../src/nest/todo/todo.rpc';
 import { TodoModule } from '../../../src/nest/todo/todo.module';
 import type { TodoService } from '../../../src/nest/todo/todo.service';
 import type { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -33,8 +33,8 @@ function build(canEdit = true) {
   const permissions = { checkPermission: vi.fn(() => canEdit) } as unknown as PermissionsService;
   const guards = new PluginGuards(
     {
-      canAccessTrip: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
-    } as unknown as DatabaseService,
+      findAccessible: vi.fn(async (tripId: number, userId: number) => (tripId === 1 && userId === 42 ? { id: 1, user_id: 42 } : undefined)),
+    } as unknown as TripsRepository,
     permissions,
     { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService,
     { getRole: vi.fn(async () => 'user') } as unknown as UsersRepository,

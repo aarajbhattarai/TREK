@@ -1,6 +1,8 @@
 import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
-import { DatabaseService } from '../../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
@@ -147,7 +149,7 @@ function normalize(pluginId: string, raw: unknown): MapLayer[] {
 export class MapLayersController {
   constructor(
     private readonly hooks: PluginHooks,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   @Get(':tripId')
@@ -158,7 +160,7 @@ export class MapLayersController {
     if (!pluginsEnabled()) return { layers: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { layers: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.trips.findAccessible(tripId, userId))) return { layers: [] };
 
     const ids = this.hooks.providersOf('mapLayerProvider');
     const perProvider = await Promise.all(

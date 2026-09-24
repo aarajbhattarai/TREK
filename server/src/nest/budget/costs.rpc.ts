@@ -4,8 +4,10 @@ import { PluginGuards } from '../plugins/host/plugin-guards.service';
 import { BadParams, ForbiddenResource } from '../plugins/host/rpc-errors';
 import { num, schemaMessage } from '../plugins/host/rpc-params';
 import type { PluginRpcContext } from '../plugins/host/rpc-kit/types';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { RealtimeService } from '../realtime/realtime.service';
-import { DatabaseService } from '../database/database.service';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
 import { ADDON_IDS } from '../../addons';
 import { BudgetService } from './budget.service';
@@ -30,7 +32,9 @@ const BUDGET_EDIT_ACTION = 'budget_edit';
 export class CostsRpc {
   constructor(
     private readonly budget: BudgetService,
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly and calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly realtime: RealtimeService,
     private readonly guards: PluginGuards,
     private readonly membership: TripMembershipService,
@@ -120,7 +124,7 @@ export class CostsRpc {
 
   /** Trip access plus budget_edit, with the cost-specific refusal message. */
   private async requireCostEdit(tripId: number, userId: number): Promise<void> {
-    if (!(await this.db.canAccessTrip(tripId, userId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
+    if (!(await this.trips.findAccessible(tripId, userId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
     if (!(await this.guards.canEditAs(BUDGET_EDIT_ACTION, tripId, userId))) {
       throw new ForbiddenResource(`no permission to edit costs on trip ${tripId}`);
     }

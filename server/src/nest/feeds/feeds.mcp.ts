@@ -5,7 +5,9 @@ import {
 } from '../../nest-mcp';
 import { z } from 'zod';
 import { getAppUrl } from '../../app-config';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
 import { DemoService } from '../common/demo.service';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
@@ -35,7 +37,10 @@ import { FeedsService } from './feeds.service';
 export class FeedsMcp {
   constructor(
     private readonly feeds: FeedsService,
-    private readonly db: DatabaseService,
+    // Plan 4 Task 2 — canAccessTrip's own DatabaseService delegation is gone:
+    // this injects TripsRepository directly (same constructor slot) and
+    // calls findAccessible.
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
     private readonly env: RuntimeEnvService,
     private readonly guards: McpToolGuardsService,
     private readonly demo: DemoService,
@@ -59,7 +64,7 @@ export class FeedsMcp {
 
   /** Trip access first (404-equivalent), then share_manage, exactly as TripFeedTokenController is gated. */
   private async denyTripFeed(tripId: number, userId: number) {
-    if (!(await this.db.canAccessTrip(tripId, userId))) return noAccess();
+    if (!(await this.trips.findAccessible(tripId, userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('share_manage', tripId, userId))) return permissionDenied();
     return null;
   }

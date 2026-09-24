@@ -20,7 +20,7 @@ import { VacayRpc } from '../../../src/nest/vacay/vacay.rpc';
 import { JournalRpc } from '../../../src/nest/journey/journal.rpc';
 import { CollectionsRpc } from '../../../src/nest/collections/collections.rpc';
 import { CostsRpc } from '../../../src/nest/budget/costs.rpc';
-import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
@@ -57,9 +57,9 @@ function spyService(calls: string[], name: string) {
 function build(addonOn: boolean) {
   const calls: string[] = [];
   const db = {
-    canAccessTrip: vi.fn(async () => ({ id: 1, user_id: 42 })),
+    findAccessible: vi.fn(async () => ({ id: 1, user_id: 42 })),
     prepare: vi.fn(() => ({ get: () => ({ role: 'user' }), all: () => [] })),
-  } as unknown as DatabaseService;
+  } as unknown as TripsRepository;
   const guards = new PluginGuards(
     db,
     { checkPermission: vi.fn(() => true) } as unknown as PermissionsService,

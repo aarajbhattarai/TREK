@@ -1,6 +1,8 @@
 import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
-import { DatabaseService } from '../../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { Trips } from '../../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../../db/repositories/Trips.repository';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { pluginsEnabled } from '../kill-switch';
 import { PluginHooks } from '../plugin-hooks.service';
@@ -104,7 +106,7 @@ function normalize(pluginId: string, raw: unknown): Contribution[] {
 export class ViewContributionsController {
   constructor(
     private readonly hooks: PluginHooks,
-    private readonly dbs: DatabaseService,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   @Get(':view/:tripId')
@@ -116,7 +118,7 @@ export class ViewContributionsController {
     if (!pluginsEnabled() || !VIEWS.has(view)) return { contributions: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { contributions: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.trips.findAccessible(tripId, userId))) return { contributions: [] };
 
     const ids = this.hooks.providersOf('tableContributor');
     const perProvider = await Promise.all(

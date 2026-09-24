@@ -42,6 +42,7 @@ import { RpcRateLimiter, DEFAULT_RPC_LIMIT } from '../../../src/nest/plugins/hos
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
 import { Users } from '../../../src/db/entities/Users.entity';
+import { Trips } from '../../../src/db/entities/Trips.entity';
 import type { PluginRpcHost } from '../../../src/nest/plugins/host/rpc-host';
 import type { RpcRequest, RpcResponse, RpcError } from '../../../src/nest/plugins/protocol/envelope';
 import type { EntityManager } from '@mikro-orm/core';
@@ -76,7 +77,9 @@ beforeAll(async () => {
   // above), not a stub, because this suite's whole point is proving that
   // read fails outside withRequestContext and succeeds inside it (D6/C3).
   // A mocked UsersRepository would defeat that regression coverage.
-  guards = new PluginGuards(dbs, permissions, await createTestAddonsService(testDb, dbs), t.repo(Users));
+  // Plan 4 Task 2 — PluginGuards' own canAccessTrip delegate is now
+  // TripsRepository.findAccessible; same REAL-repository reasoning applies.
+  guards = new PluginGuards(t.repo(Trips), permissions, await createTestAddonsService(testDb, dbs), t.repo(Users));
   userId = createUser(testDb, { role: 'user' }).user.id;
   // An admin has tightened trip_create from its 'everybody' default.
   testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('perm_trip_create', 'admin')").run();
