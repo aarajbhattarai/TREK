@@ -96,3 +96,37 @@ describe('PhotoProvidersRepository.listAll / findEnabled', () => {
     expect(await photoProviders.findEnabled('does-not-exist')).toBeNull();
   });
 });
+
+// Plan 3i Task 4 fix wave (should-land 5): AD27 (listAllOrdered) and
+// AD31/AD40 (findById) shipped in Task 1 with no repository-level test —
+// full-key parity against the exact legacy SQL each method's own docstring
+// names.
+describe('PhotoProvidersRepository.listAllOrdered (AD27) / findById (AD31/AD40)', () => {
+  it('ADDONSPPREPO-005: listAllOrdered matches SELECT id, name, description, icon, enabled, sort_order FROM photo_providers ORDER BY sort_order, id — unfiltered, including a disabled provider', async () => {
+    insertProvider({ id: 'off', name: 'Off', enabled: 0, sort_order: 1 });
+    insertProvider({ id: 'immich', name: 'Immich', enabled: 1, sort_order: 0 });
+
+    const legacy = testDb.prepare('SELECT id, name, description, icon, enabled, sort_order FROM photo_providers ORDER BY sort_order, id').all();
+    const rows = await photoProviders.listAllOrdered();
+    expect(rows.map((r) => r.id)).toEqual(['immich', 'off']); // includes the disabled one, unlike listEnabled
+    expect(rows).toEqual(legacy);
+  });
+
+  it('ADDONSPPREPO-006: listAllOrdered on an empty table returns an empty array', async () => {
+    expect(await photoProviders.listAllOrdered()).toEqual([]);
+  });
+
+  it('ADDONSPPREPO-007: findById matches SELECT * FROM photo_providers WHERE id = ?, on both a pre-write read and a post-write re-select (byte-identical text at both call sites)', async () => {
+    insertProvider({ id: 'immich', name: 'Immich', description: 'Self-hosted photos', icon: 'image', enabled: 0, sort_order: 2 });
+    const preWrite = await photoProviders.findById('immich');
+    expect(preWrite).toEqual({ id: 'immich', name: 'Immich', description: 'Self-hosted photos', icon: 'image', enabled: 0, sort_order: 2 });
+
+    testDb.prepare('UPDATE photo_providers SET enabled = 1 WHERE id = ?').run('immich');
+    const postWrite = await photoProviders.findById('immich');
+    expect(postWrite?.enabled).toBe(1);
+  });
+
+  it('ADDONSPPREPO-008: findById on a missing id returns null', async () => {
+    expect(await photoProviders.findById('does-not-exist')).toBeNull();
+  });
+});

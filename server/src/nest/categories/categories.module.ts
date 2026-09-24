@@ -7,6 +7,7 @@ import { CategoriesController } from './categories.controller';
 import { CategoriesMcp } from './categories.mcp';
 import { CategoriesService } from './categories.service';
 import { CategoriesRpc } from './categories.rpc';
+import { DemoModule } from '../common/demo.module';
 
 /** Categories domain (L4 leaf module). Registered in AppModule. */
 @Module({
@@ -17,8 +18,10 @@ import { CategoriesRpc } from './categories.rpc';
   // for the same reason budget/ does it. MikroOrmModule.forFeature registers
   // CategoriesRepository for @InjectRepository(Categories) in the service —
   // the forFeature + @InjectRepository wiring pattern every domain copies
-  // (settings.module.ts's precedent comment).
-  imports: [McpSharedModule, AppConfigModule, MikroOrmModule.forFeature([Categories])],
+  // (settings.module.ts's precedent comment). DemoModule is imported for the
+  // same reason: CategoriesMcp injects DemoService, and @Global only reaches a
+  // hand-built e2e TestingModule that actually imports it (Plan 3i Task 4 fix wave).
+  imports: [McpSharedModule, AppConfigModule, DemoModule, MikroOrmModule.forFeature([Categories])],
   controllers: [CategoriesController],
   providers: [CategoriesService, CategoriesMcp, CategoriesRpc],
   // For in-container consumers (CategoriesRpc).

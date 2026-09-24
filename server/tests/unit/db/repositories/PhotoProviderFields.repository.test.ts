@@ -109,3 +109,38 @@ describe('PhotoProviderFieldsRepository.listAllOrdered', () => {
     expect(await fields.listAllOrdered()).toEqual([]);
   });
 });
+
+describe('PhotoProviderFieldsRepository.listAllOrderedForAdminShelf', () => {
+  // Plan 3i Task 4 fix wave: `listAllOrderedForAdminShelf` used to project a
+  // bare `'provider_id'` — the `persist(false)` shadow of the `provider`
+  // relation — which MikroORM's `fields` selector never hydrates (same trap
+  // `RoadtripDayBoundariesRepository` and `TripPhotosRepository` document).
+  // Every row came back with `provider_id: undefined`, so `listAddons`
+  // grouped every photo provider's fields under `undefined` and every
+  // provider answered `fields: []`. Full-key parity against AD28's legacy
+  // `SELECT provider_id, field_key, label, input_type, placeholder,
+  // required, secret, settings_key, payload_key, sort_order FROM
+  // photo_provider_fields ORDER BY sort_order, id` pins every column, not
+  // just `provider_id`, so a future narrowed-projection regression on any
+  // other column fails here too.
+  it('AD28: returns the full legacy row shape, ordered by sort_order then id, across all providers', async () => {
+    insertProvider('immich');
+    insertProvider('synology');
+    insertField({ provider_id: 'synology', field_key: 'url', label: 'Server URL', input_type: 'text', placeholder: 'https://photos.example.com', hint: 'ignored: not in the AD28 shape', required: 1, secret: 0, settings_key: 'synology_url', payload_key: 'url', sort_order: 1 });
+    insertField({ provider_id: 'immich', field_key: 'url', label: 'Server URL', input_type: 'text', placeholder: 'https://immich.example.com', required: 1, secret: 0, settings_key: 'immich_url', payload_key: 'url', sort_order: 0 });
+    insertField({ provider_id: 'immich', field_key: 'api_key', label: 'API Key', input_type: 'password', required: 1, secret: 1, settings_key: 'immich_api_key', payload_key: 'apiKey', sort_order: 1 });
+
+    const rows = await fields.listAllOrderedForAdminShelf();
+    // sort_order 0 first; the sort_order-1 tie breaks by id (insertion order:
+    // synology's url row was inserted before immich's api_key row).
+    expect(rows).toEqual([
+      { provider_id: 'immich', field_key: 'url', label: 'Server URL', input_type: 'text', placeholder: 'https://immich.example.com', required: 1, secret: 0, settings_key: 'immich_url', payload_key: 'url', sort_order: 0 },
+      { provider_id: 'synology', field_key: 'url', label: 'Server URL', input_type: 'text', placeholder: 'https://photos.example.com', required: 1, secret: 0, settings_key: 'synology_url', payload_key: 'url', sort_order: 1 },
+      { provider_id: 'immich', field_key: 'api_key', label: 'API Key', input_type: 'password', placeholder: null, required: 1, secret: 1, settings_key: 'immich_api_key', payload_key: 'apiKey', sort_order: 1 },
+    ]);
+  });
+
+  it('AD28: an empty table returns an empty array', async () => {
+    expect(await fields.listAllOrderedForAdminShelf()).toEqual([]);
+  });
+});

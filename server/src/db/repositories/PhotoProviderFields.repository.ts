@@ -45,17 +45,32 @@ export class PhotoProviderFieldsRepository extends TrekRepository<PhotoProviderF
    * id`. A NARROWER projection than {@link listAllOrdered} — no `id`, no
    * `hint` — a genuinely different column set for a different caller, not a
    * superset reuse (Task 0's report: parity is column-exact here).
+   *
+   * Plan 3i Task 4 fix wave: the `fields` list below names `'provider'` (the
+   * real relation), not `provider_id` — `provider_id` is the `persist(false)`
+   * shadow scalar and MikroORM's `fields` projection never selects it, so
+   * every row came back with `provider_id: undefined` and every photo
+   * provider grouped under `undefined` (`fields: []` in the admin response).
+   * `toRow`'s `AssertRowKeys` maps the populated `provider` relation back onto
+   * the flat `provider_id` column the same way {@link listAllOrdered} does.
    */
   async listAllOrderedForAdminShelf(): Promise<PhotoProviderFieldForAdminRow[]> {
     const rows = await this.find(
       {},
       {
-        fields: ['provider_id', 'field_key', 'label', 'input_type', 'placeholder', 'required', 'secret', 'settings_key', 'payload_key', 'sort_order'],
+        fields: ['provider', 'field_key', 'label', 'input_type', 'placeholder', 'required', 'secret', 'settings_key', 'payload_key', 'sort_order'],
         orderBy: { sort_order: 'asc', id: 'asc' },
       },
     );
     return rows.map((row) => ({
-      provider_id: row.provider_id,
+      // `row.provider.id` reads the raw `provider_id` COLUMN VALUE off the
+      // (unpopulated) relation reference the `fields: ['provider', …]`
+      // projection loaded — the same `row.<relation>.id` shape
+      // `OauthTokens.repository.ts`/`McpTokens.repository.ts` already use,
+      // not `row.provider_id`: that shadow scalar is never selected by a
+      // narrowed `fields` projection (this method's own fix-wave docstring
+      // above).
+      provider_id: row.provider.id,
       field_key: row.field_key,
       label: row.label,
       input_type: row.input_type,

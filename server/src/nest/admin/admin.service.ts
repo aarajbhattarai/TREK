@@ -392,14 +392,14 @@ export class AdminService {
 
   // ── Demo Baseline ──────────────────────────────────────────────────────────
 
-  saveDemoBaseline(): { error?: string; status?: number; message?: string } {
+  async saveDemoBaseline(): Promise<{ error?: string; status?: number; message?: string }> {
     if (!readEnv().demo.enabled) {
       return { error: 'Not found', status: 404 };
     }
     try {
       // Lazy require: demo-reset is a demo-only module.
       const { saveBaseline } = require('../../demo/demo-reset');
-      saveBaseline();
+      await saveBaseline();
       return { message: 'Demo baseline saved. Hourly resets will restore to this state.' };
     } catch (err: unknown) {
       console.error(err);

@@ -72,10 +72,13 @@ const maintenanceRepoMock = vi.hoisted(() => ({
   vacuumInto: vi.fn().mockResolvedValue(undefined),
 }));
 
+const logMock = vi.hoisted(() => ({ logInfo: vi.fn(), logError: vi.fn(), logWarn: vi.fn(), logDebug: vi.fn() }));
+
 vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/db/repositories/MaintenanceRepository', () => ({
   MaintenanceRepository: vi.fn().mockImplementation(() => maintenanceRepoMock),
 }));
+vi.mock('../../../src/nest/audit/audit-log.logger', () => logMock);
 vi.mock('../../../src/config', () => ({
   JWT_SECRET: 'test-secret',
   ENCRYPTION_KEY: 'a'.repeat(64),
@@ -579,6 +582,14 @@ describe('BACKUP-036 createBackup', () => {
       expect.stringContaining('travel-snap-backup-'),
       expect.anything(),
     );
+    // Plan 3i Task 4 fix wave (should-land 7): the missing-EntityManager
+    // fallback used to be entirely silent — same swallowed shape as a real
+    // disk/lock VACUUM INTO failure, with no way for an operator to tell
+    // "archived the live file because no request context wrapped this run"
+    // apart from any other reason. Both guards (BK1's checkpoint skip, BK2's
+    // snapshot skip) now log a warning; the fallback itself is unchanged.
+    expect(logMock.logWarn).toHaveBeenCalledWith(expect.stringContaining('skipping the WAL checkpoint'));
+    expect(logMock.logWarn).toHaveBeenCalledWith(expect.stringContaining('archiving the live travel.db instead of a VACUUM INTO snapshot'));
   });
 
   it('BACKUP-036e — excludes the re-derivable photo caches nested under photos/', async () => {

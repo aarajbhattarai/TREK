@@ -186,10 +186,12 @@ export default tseslint.config(
       // task-3-report.md / the plan's R1 ruling — not debt for a later plan
       // to close.
       'src/nest/backup/backup.impl.ts',
-      // Demo-mode seeding, and the legacy schema/migration/seed scripts the test
-      // suite still builds its throwaway databases from (guarded by
-      // tests/unit/db/schema-parity.test.ts).
-      'src/demo/**',
+      // The legacy schema/migration/seed scripts the test suite still builds
+      // its throwaway databases from (guarded by
+      // tests/unit/db/schema-parity.test.ts). Plan 3i Task 3 converted
+      // `src/demo/**` (demo-seed.ts/demo-reset.ts) onto
+      // DemoRepository/MaintenanceRepository — no file under `src/demo/`
+      // imports `better-sqlite3` anymore, so that entry is dropped here.
       'src/db/schema.ts',
       'src/db/migrations.ts',
       'src/db/seeds.ts',

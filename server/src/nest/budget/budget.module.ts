@@ -21,6 +21,7 @@ import { AppConfigModule } from '../app-config/app-config.module';
 import { TripMembershipModule } from '../trip-membership/trip-membership.module';
 import { AddonsModule } from '../addons/addons.module';
 import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
+import { DemoModule } from '../common/demo.module';
 
 /** Budget domain (S4 — Phase 2 trip sub-domain). Registered in AppModule.
  *  BudgetMcp carries the decorator-registered MCP tools + resources.
@@ -28,9 +29,12 @@ import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
  *  RuntimeEnvService + the users table, not AuthService) — that absence is
  *  what lets AuthModule import BudgetModule for UserCleanupService.
  *  AppConfigModule is @Global in the app graph; the explicit import keeps the
- *  partial e2e TestingModules resolving RuntimeEnvService. */
+ *  partial e2e TestingModules resolving RuntimeEnvService. DemoModule is
+ *  @Global for the same reason (Plan 3i Task 4 fix wave) — BudgetMcp injects
+ *  DemoService, and a hand-built TestingModule never imports AppModule, so
+ *  the @Global broadcast never happens unless this module imports it directly. */
 @Module({
-  imports: [McpSharedModule, PermissionsModule, AppConfigModule, RealtimeModule, PluginGuardsModule, AddonsModule, TripMembershipModule, MikroOrmModule.forFeature([BudgetItems, BudgetItemMembers, BudgetItemPayers, BudgetSettlements, BudgetCategoryOrder, Reservations, Places, Trips])],
+  imports: [McpSharedModule, PermissionsModule, AppConfigModule, DemoModule, RealtimeModule, PluginGuardsModule, AddonsModule, TripMembershipModule, MikroOrmModule.forFeature([BudgetItems, BudgetItemMembers, BudgetItemPayers, BudgetSettlements, BudgetCategoryOrder, Reservations, Places, Trips])],
   controllers: [BudgetController],
   providers: [BudgetService, ExchangeRatesService, BudgetMcp, ExchangeRatesRpc, CostsRpc],
   // For in-container consumers (CostsRpc, TripsService,

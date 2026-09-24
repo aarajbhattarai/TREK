@@ -109,4 +109,41 @@ describe('AddonsRepository', () => {
       });
     });
   });
+
+  // Plan 3i Task 4 fix wave (should-land 5): AD26 (listAllOrdered) and
+  // AD30/AD39 (findById) shipped in Task 1 with no repository-level test —
+  // full-key parity against the exact legacy SQL each method's own docstring
+  // names.
+  describe('listAllOrdered (AD26)', () => {
+    it('ADDONSREPO-010: matches SELECT * FROM addons ORDER BY sort_order, id — unfiltered, including a disabled addon', async () => {
+      insertAddon({ id: 'vacay', name: 'Vacay', type: 'page', icon: 'sun', enabled: 0, sort_order: 1 });
+      insertAddon({ id: 'budget', name: 'Costs', type: 'trip', icon: 'wallet', enabled: 1, sort_order: 0 });
+      const legacy = testDb.prepare('SELECT * FROM addons ORDER BY sort_order, id').all();
+      const rows = await addons.listAllOrdered();
+      expect(rows.map((r) => r.id)).toEqual(['budget', 'vacay']); // includes the disabled one, unlike listEnabled
+      expect(rows).toEqual(
+        (legacy as Array<{ enabled: number; config: string | null }>).map((r) => ({ ...r, enabled: !!r.enabled, config: JSON.parse(r.config ?? '{}') })),
+      );
+    });
+
+    it('ADDONSREPO-011: an empty table returns an empty array', async () => {
+      expect(await addons.listAllOrdered()).toEqual([]);
+    });
+  });
+
+  describe('findById (AD30/AD39)', () => {
+    it('ADDONSREPO-012: matches SELECT * FROM addons WHERE id = ?, on both a pre-write read and a post-write re-select (byte-identical text at both call sites)', async () => {
+      insertAddon({ id: 'budget', name: 'Costs', description: 'Track spend', type: 'trip', icon: 'wallet', enabled: 0, sort_order: 4 });
+      const preWrite = await addons.findById('budget');
+      expect(preWrite).toEqual({ id: 'budget', name: 'Costs', description: 'Track spend', type: 'trip', icon: 'wallet', enabled: false, config: {}, sort_order: 4 });
+
+      testDb.prepare('UPDATE addons SET enabled = 1 WHERE id = ?').run('budget');
+      const postWrite = await addons.findById('budget');
+      expect(postWrite?.enabled).toBe(true);
+    });
+
+    it('ADDONSREPO-013: a missing id returns null', async () => {
+      expect(await addons.findById('does-not-exist')).toBeNull();
+    });
+  });
 });

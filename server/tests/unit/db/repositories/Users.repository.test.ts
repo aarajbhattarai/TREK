@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
-import { createUser, createAdmin } from '../../../helpers/factories';
+import { createUser, createAdmin, type TestUser } from '../../../helpers/factories';
 import { Users } from '../../../../src/db/entities/Users.entity';
 import type { UsersRepository } from '../../../../src/db/repositories/Users.repository';
 
@@ -998,5 +998,103 @@ describe('UsersRepository — feed tokens (Plan 3d Task 5, FD5-FD8/FD10)', () =>
 
     expect(await users.findUsernameEmail(user.id)).toEqual({ username: 'imm-user', email: 'imm@example.com' });
     expect(await users.findUsernameEmail(999999)).toBeUndefined();
+  });
+});
+
+// Plan 3i Task 4 fix wave (should-land 5): admin's AD1-AD17 read methods
+// (listForAdmin, findAdminSummary, findIdEmailMfaEnabled, and the four
+// exact/excluding uniqueness lookups) shipped in Task 1 (862799062) with no
+// repository-level parity test of their own — only the live HTTP surface was
+// checked. One seeded world (an admin, a plain user and a guest, so the
+// `is_guest` exclusion has something to exclude), one full-key `toEqual`
+// test per read method against the exact legacy projection named in each
+// method's own docstring.
+describe('UsersRepository — admin (AD1-AD17) read methods, full-key parity', () => {
+  let admin: TestUser;
+  let plain: TestUser;
+  let guest: TestUser;
+
+  beforeEach(() => {
+    admin = createAdmin(testDb, { username: 'ad-admin', email: 'ad-admin@example.com' }).user;
+    plain = createUser(testDb, { username: 'ad-plain', email: 'ad-plain@example.com' }).user;
+    const { user: guestRow } = createUser(testDb, { username: 'ad-guest', email: 'ad-guest@example.com' });
+    testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(guestRow.id);
+    guest = { ...guestRow, } as TestUser;
+  });
+
+  it('USERSREPO-078 (AD1): listForAdmin matches SELECT id, username, email, role, avatar, created_at, updated_at, last_login FROM users WHERE COALESCE(is_guest, 0) = 0 ORDER BY created_at DESC, and excludes the guest row', async () => {
+    const legacy = testDb
+      .prepare('SELECT id, username, email, role, avatar, created_at, updated_at, last_login FROM users WHERE COALESCE(is_guest, 0) = 0 ORDER BY created_at DESC')
+      .all();
+    const rows = await users.listForAdmin();
+    expect(rows).toEqual(legacy);
+    expect(rows.map((r) => r.id)).not.toContain(guest.id);
+    expect(rows.map((r) => r.id)).toEqual(expect.arrayContaining([admin.id, plain.id]));
+  });
+
+  it('USERSREPO-079 (AD2/AD3): findIdByUsernameExact/findIdByEmailExact are case-sensitive and exclude guests', async () => {
+    expect(await users.findIdByUsernameExact('ad-admin')).toBe(admin.id);
+    expect(await users.findIdByUsernameExact('AD-ADMIN')).toBeNull(); // case-sensitive, unlike findIdByUsernameCIAny
+    expect(await users.findIdByUsernameExact('ad-guest')).toBeNull(); // guest excluded
+    expect(await users.findIdByEmailExact('ad-plain@example.com')).toBe(plain.id);
+    expect(await users.findIdByEmailExact('AD-PLAIN@EXAMPLE.COM')).toBeNull();
+    expect(await users.findIdByEmailExact('ad-guest@example.com')).toBeNull();
+  });
+
+  it('USERSREPO-080 (AD4/AD5): insertAdminCreatedUser stores exactly the four named columns, every other column left to the entity default, then findAdminSummary re-selects it', async () => {
+    const id = await users.insertAdminCreatedUser({ username: 'ad-new', email: 'ad-new@example.com', password_hash: 'hash-x', role: 'user' });
+    const legacyRow = testDb.prepare('SELECT * FROM users WHERE id = ?').get(id) as Record<string, unknown>;
+    expect(legacyRow.username).toBe('ad-new');
+    expect(legacyRow.email).toBe('ad-new@example.com');
+    expect(legacyRow.password_hash).toBe('hash-x');
+    expect(legacyRow.role).toBe('user');
+    // Every column the legacy INSERT omitted falls back to the schema DEFAULT
+    // — the AUDIT for the 3i review's own "INSERT entity defaults" pass.
+    expect(legacyRow.mfa_enabled).toBe(0);
+    expect(legacyRow.first_seen_version).toBe('0.0.0');
+    expect(legacyRow.login_count).toBe(0);
+    expect(legacyRow.is_guest).toBe(0);
+
+    const legacySummary = testDb.prepare('SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = ?').get(id);
+    expect(await users.findAdminSummary(id)).toEqual(legacySummary);
+  });
+
+  it('USERSREPO-081 (AD14): findAdminSummary matches the byte-identical re-select text on an EXISTING (updated) row too', async () => {
+    testDb.prepare('UPDATE users SET username = ?, role = ? WHERE id = ?').run('ad-plain-renamed', 'admin', plain.id);
+    const legacy = testDb.prepare('SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = ?').get(plain.id);
+    expect(await users.findAdminSummary(plain.id)).toEqual(legacy);
+    expect(await users.findAdminSummary(999999)).toBeNull();
+  });
+
+  it('USERSREPO-082 (AD7/AD8): findIdByUsernameExactExcluding/findIdByEmailExactExcluding exclude the caller\'s own row, case-sensitive, guests excluded', async () => {
+    // Renaming plain to admin's own username, excluding plain's own id, must
+    // still find admin's row — that's the whole point of the check.
+    expect(await users.findIdByUsernameExactExcluding('ad-admin', plain.id)).toBe(admin.id);
+    expect(await users.findIdByUsernameExactExcluding('ad-plain', plain.id)).toBeNull(); // excludes self
+    expect(await users.findIdByUsernameExactExcluding('ad-guest', plain.id)).toBeNull(); // guest excluded
+    expect(await users.findIdByEmailExactExcluding('ad-admin@example.com', plain.id)).toBe(admin.id);
+    expect(await users.findIdByEmailExactExcluding('ad-plain@example.com', plain.id)).toBeNull();
+  });
+
+  it('USERSREPO-083 (AD11): applyAdminEdit only touches the keys supplied (coalesceParam semantics) and always stamps updated_at', async () => {
+    const before = testDb.prepare('SELECT email, updated_at FROM users WHERE id = ?').get(plain.id) as { email: string; updated_at: string };
+    // CURRENT_TIMESTAMP has 1-second resolution — wait past a tick so a
+    // genuine "always stamped" pass is distinguishable from a no-op.
+    await new Promise((r) => setTimeout(r, 1100));
+    await users.applyAdminEdit(plain.id, { username: 'ad-plain-2' });
+    const after = testDb.prepare('SELECT username, email, updated_at FROM users WHERE id = ?').get(plain.id) as { username: string; email: string; updated_at: string };
+    expect(after.username).toBe('ad-plain-2');
+    // email was NOT in the patch, so it is unchanged — the coalesceParam
+    // "new value wins when supplied, existing column wins when omitted" shape.
+    expect(after.email).toBe(before.email);
+    // updated_at is stamped unconditionally, even though only username changed.
+    expect(after.updated_at).not.toBe(before.updated_at);
+  });
+
+  it('USERSREPO-084 (AD16): findIdEmailMfaEnabled matches SELECT id, email, mfa_enabled FROM users WHERE id = ?', async () => {
+    testDb.prepare('UPDATE users SET mfa_enabled = 1 WHERE id = ?').run(admin.id);
+    const legacy = testDb.prepare('SELECT id, email, mfa_enabled FROM users WHERE id = ?').get(admin.id);
+    expect(await users.findIdEmailMfaEnabled(admin.id)).toEqual(legacy);
+    expect(await users.findIdEmailMfaEnabled(999999)).toBeNull();
   });
 });

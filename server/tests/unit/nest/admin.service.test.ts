@@ -406,24 +406,45 @@ describe('saveDemoBaseline', () => {
     vi.unstubAllEnvs();
   });
 
-  it('ADMIN-SVC-050 — returns 404 when DEMO_MODE is not "true"', () => {
+  it('ADMIN-SVC-050 — returns 404 when DEMO_MODE is not "true"', async () => {
     vi.stubEnv('DEMO_MODE', 'false');
-    const result = saveDemoBaseline() as any;
+    const result = (await saveDemoBaseline()) as any;
     expect(result.status).toBe(404);
     expect(result.error).toBeDefined();
   });
 
-  it('ADMIN-SVC-051 — returns a defined result object when DEMO_MODE is "true"', () => {
+  it('ADMIN-SVC-051 — returns a defined result object when DEMO_MODE is "true"', async () => {
     // saveDemoBaseline() uses a dynamic CJS require() whose mock cannot be
     // intercepted via vi.mock in this test environment (tsx runtime + CJS loader).
     // The function either succeeds (message) or falls through the catch to a
     // 500 error. Either way the result must be a defined, non-null object.
     vi.stubEnv('DEMO_MODE', 'true');
-    const result = saveDemoBaseline() as any;
+    const result = (await saveDemoBaseline()) as any;
     expect(result).toBeDefined();
     expect(typeof result).toBe('object');
     // The 404 branch must NOT be taken — DEMO_MODE is "true".
     expect(result.status).not.toBe(404);
+  });
+
+  // Plan 3i Task 4 fix wave (must-land 3): before this fix, AdminService
+  // #saveDemoBaseline called the now-async saveBaseline() without awaiting
+  // it, so a copy failure (proven live in task-4-review.md with a real
+  // EISDIR from fs.copyFileSync) went nowhere — the route answered 200 and
+  // the rejection later surfaced as an unhandled rejection that crashed the
+  // process. This suite's dynamic require()s of demo-reset.ts (and, inside
+  // it, db/database.ts) bypass this file's top-of-file vi.mock, same
+  // documented limitation as ADMIN-SVC-051 — so instead of mocking, this
+  // test lets the REAL saveBaseline() run with no RequestContext
+  // established, which deterministically rejects at its own
+  // requireEntityManager() guard: the same "the copy failed" shape a real
+  // EISDIR would produce, without touching the filesystem. Awaiting that
+  // rejection (the fix) means the service's own try/catch converts it into
+  // the legacy 500 body, and this test resolving cleanly (not hanging, no
+  // unhandledRejection) is itself proof the rejection was actually caught.
+  it('ADMIN-SVC-095 — a failed baseline save is awaited and answers the legacy 500, not an unhandled rejection', async () => {
+    vi.stubEnv('DEMO_MODE', 'true');
+    const result = await saveDemoBaseline();
+    expect(result).toEqual({ error: 'Failed to save baseline', status: 500 });
   });
 });
 
@@ -533,6 +554,33 @@ describe('listAddons', () => {
     const addonIds = result.map((a: any) => a.id);
     expect(addonIds).toContain('packing');
     expect(addonIds).toContain('budget');
+  });
+
+  // Plan 3i Task 4 fix wave (AD28): `listAllOrderedForAdminShelf` used to
+  // project the `persist(false)` shadow `provider_id`, which MikroORM never
+  // hydrates through a narrowed `fields` selection — every photo provider's
+  // `fields` grouped under `undefined` and every provider answered `fields:
+  // []`. Immich's own connection settings live on `users` columns from an
+  // earlier schema shape (see `users_add_immich_url`), so it seeds no
+  // `photo_provider_fields` rows and is not useful for this assertion —
+  // Synology Photos is the seeded provider that actually owns rows in the
+  // generic catalog (url/username/password/otp/skip_ssl), so it is the one
+  // that pins the defect: before the fix every one of its 5 seeded fields
+  // vanished into the `undefined` group instead.
+  it('ADMIN-SVC-066 — Synology Photos carries its seeded field catalog, not fields: []', async () => {
+    const result = await listAddons();
+    const immich = result.find((entry) => entry.id === 'immich');
+    const synology = result.find((entry) => entry.id === 'synologyphotos');
+    expect(immich).toBeDefined();
+    expect(synology).toBeDefined();
+    if (!synology || !('fields' in synology)) throw new Error('synologyphotos entry is missing a fields array');
+    expect(synology.fields.map((f) => f.key)).toEqual([
+      'synology_url',
+      'synology_username',
+      'synology_password',
+      'synology_otp',
+      'synology_skip_ssl',
+    ]);
   });
 });
 

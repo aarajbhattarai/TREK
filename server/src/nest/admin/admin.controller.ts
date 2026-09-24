@@ -135,7 +135,7 @@ export class AdminController {
   @Post('save-demo-baseline')
   @HttpCode(200)
   async saveDemoBaseline(@CurrentUser() user: User, @Req() req: Request) {
-    const result = this.admin.saveDemoBaseline();
+    const result = await this.admin.saveDemoBaseline();
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }

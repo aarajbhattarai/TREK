@@ -9,13 +9,15 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { AuditModule } from '../audit/audit.module';
 import { TripMembershipModule } from '../trip-membership/trip-membership.module';
+import { DemoModule } from '../common/demo.module';
 
 @Module({
-  // The last three carry TripInviteMcp: McpSharedModule for the RBAC check the
-  // controller does inline, and the two @Global modules it injects out of,
-  // which a graph assembled without AppModule (the e2e harness) must
-  // instantiate itself.
-  imports: [RateLimitModule, PermissionsModule, AuditModule, TripMembershipModule, McpSharedModule, AppConfigModule, RealtimeModule],
+  // The last four carry TripInviteMcp: McpSharedModule for the RBAC check the
+  // controller does inline, and the three @Global modules it injects out of
+  // (DemoModule added Plan 3i Task 4 fix wave — TripInviteMcp injects
+  // DemoService), which a graph assembled without AppModule (the e2e harness)
+  // must instantiate itself.
+  imports: [RateLimitModule, PermissionsModule, AuditModule, TripMembershipModule, McpSharedModule, AppConfigModule, RealtimeModule, DemoModule],
   controllers: [TripInviteLinkController, TripInviteController],
   providers: [TripInviteService, TripInviteMcp],
 })

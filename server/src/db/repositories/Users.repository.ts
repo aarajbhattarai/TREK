@@ -1485,8 +1485,10 @@ export class UsersRepository extends TrekRepository<Users> {
    * password_version=COALESCE(?,password_version), updated_at=CURRENT_TIMESTAMP
    * WHERE id=?`. The legacy binds a NULL parameter for "no change" — a
    * `nativeUpdate` that simply omits an unchanged key from `patch` has the
-   * identical net effect (coalesceParam: the new value wins when the
-   * caller supplies a key, the existing column wins when it is left out) —
+   * identical net effect (coalesceOverride: `COALESCE(?, column)` — the new
+   * value wins when the caller supplies a key, the existing column wins
+   * when it is left out; `coalesceParam`'s `COALESCE(column, ?)` is the
+   * opposite direction — see `dialect/sql-functions.ts`) —
    * the caller decides which keys to include, the same discipline
    * `patchProfile` (UP7) already uses for this table. `updated_at` is
    * ALWAYS stamped, even when `patch` is `{}` — matching the legacy

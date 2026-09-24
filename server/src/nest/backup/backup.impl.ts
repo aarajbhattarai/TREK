@@ -17,6 +17,7 @@ import Database from 'better-sqlite3';
 import { RequestContext } from '@mikro-orm/core';
 import { closeDb, reinitialize } from '../../db/database';
 import { MaintenanceRepository } from '../../db/repositories/MaintenanceRepository';
+import { logWarn } from '../audit/audit-log.logger';
 import { VALID_INTERVALS } from './auto-backup.settings';
 import { invalidatePermissionsCache } from '../permissions/permissions-cache';
 import { pluginsCodeRoot, pluginsDataRoot } from '../plugins/paths';
@@ -198,7 +199,18 @@ export async function createBackup(storage: StorageService, prefix: 'backup' | '
     // best-effort: the swallowing try/catch matches the legacy shape.
     try {
       const em = RequestContext.getEntityManager();
-      if (em) await new MaintenanceRepository(em).walCheckpoint();
+      if (em) {
+        await new MaintenanceRepository(em).walCheckpoint();
+      } else {
+        // Plan 3i Task 4 fix wave (should-land 7): this used to fail
+        // silently exactly like a real checkpoint failure would — no signal
+        // distinguished "no request context around this run" (a
+        // mis-wired caller; legacy always snapshotted) from "the checkpoint
+        // itself errored" (best-effort, fine to swallow). Loud enough to
+        // show up in the backup's own logs, still non-fatal: the fallback
+        // (archive the live file) is unchanged.
+        logWarn('Backup: no EntityManager available, skipping the WAL checkpoint before snapshot');
+      }
     } catch (e) {}
 
     // Enumerate the archived categories up front (the archiver reads entries
@@ -255,7 +267,15 @@ export async function createBackup(storage: StorageService, prefix: 'backup' | '
       try {
         if (fs.existsSync(dbSnap)) fs.rmSync(dbSnap, { force: true });
         const em = RequestContext.getEntityManager();
-        if (!em) throw new Error('no EntityManager available for VACUUM INTO');
+        if (!em) {
+          // Plan 3i Task 4 fix wave (should-land 7): same distinction as
+          // BK1 above — without this, a backup silently archiving the LIVE
+          // travel.db (the exact WAL-tear risk this whole snapshot exists to
+          // avoid) left no trace anywhere. The fallback itself is unchanged
+          // (parity with legacy, which always had SOME db to archive).
+          logWarn('Backup: no EntityManager available, archiving the live travel.db instead of a VACUUM INTO snapshot');
+          throw new Error('no EntityManager available for VACUUM INTO');
+        }
         await new MaintenanceRepository(em).vacuumInto(dbSnap);
         dbToArchive = dbSnap;
       } catch (e) {
